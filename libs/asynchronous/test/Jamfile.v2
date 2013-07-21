@@ -1,0 +1,31 @@
+# test/Jamfile.v2 controls building of MSM Library unit tests
+#
+# Copyright (c) 2013 Christophe Henry
+#
+# Use, modification and distribution is subject to the Boost Software License,
+# Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+# http://www.boost.org/LICENSE_1_0.txt)
+
+import testing ;
+
+project asynchronous
+    :
+    requirements
+        <include>.
+       <toolset>gcc:<cxxflags>"-ftemplate-depth-300 -g0"
+       <toolset>darwin:<cxxflags>"-ftemplate-depth-300 -g0"
+       <toolset>intel:<cxxflags>"-g0"
+       <toolset>gcc:<optimization>off
+       <toolset>darwin:<optimization>off
+       <toolset>intel:<optimization>off
+       <library>/boost/test//boost_unit_test_framework/<link>static
+       <library>/boost/system//boost_system/<link>static
+       <library>/boost/thread//boost_thread/<link>static
+       <library>/boost/chrono//boost_chrono/<link>static
+    ;
+
+test-suite msm-unit-tests
+    :
+    [ run create.cpp ]
+    ;
+

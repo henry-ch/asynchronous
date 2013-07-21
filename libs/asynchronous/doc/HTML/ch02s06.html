@@ -1,0 +1,21 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>Design Diagrams</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch02.html" title="Chapter&nbsp;2.&nbsp;Features"><link rel="prev" href="ch02s05.html" title="Diagnostics"><link rel="next" href="pt02.html" title="Part&nbsp;II.&nbsp;User Guide"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Design Diagrams</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch02s05.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;2.&nbsp;Features</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="pt02.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Design Diagrams"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e247"></a>Design Diagrams</h2></div></div></div><p><span class="inlinemediaobject"><img src="../pics/AsynchronousDesign.jpg"></span></p><p>This diagram shows an overview of the design behind Asynchronous. A Servant
+                    object lives in a single-theaded world, communicating with the outside world
+                    only with one or several queues, from which the single-threaded scheduler pops
+                    tasks. Tasks are pushed by calling a member on a proxy object.</p><p>Like an Active Object, a client uses a proxy (a shared object type), which
+                    offers the same members as the real servant, with the same parameters, the only
+                    difference being the return type, a boost::future&lt;R&gt;, with R being the return
+                    type of the servant's member. All calls to a servant from the client side are
+                    posted, which includes the servant constructor and destructor. When the last
+                    instance of a servant is destroyed, be it used inside the Active Component or
+                    outside, the servant destructor is posted.</p><p>any_shared_scheduler is the part of the Active Object scheduler living inside
+                    the Active Component. Servants do not hold it directly but hold an
+                    any_weak_scheduler instead. The library will use it to create a posted callback
+                    when a task executing in a worker threadpool is completed.</p><p>Shutting down an Active Component is done automatically by not needing it. It
+                    happens in the following order:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>While a servant proxy is alive, no shutdown</p></li><li class="listitem"><p>When the last servant proxy goes out of scope, the servant
+                                destructor is posted.</p></li><li class="listitem"><p>if jobs from servants are running in a threadpool, they get a
+                                chance to stop earlier by running into an interruption point or will
+                                not even start.</p></li><li class="listitem"><p>threadpool(s) is (are) shut down.</p></li><li class="listitem"><p>The Active Component scheduler is stopped and its thread
+                                terminates.</p></li><li class="listitem"><p>The last instance of any_shared_scheduler_proxy goes out of scope
+                                with the last servant proxy and joins.</p></li></ul></div></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch02s05.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="ch02.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="pt02.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Diagnostics&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Part&nbsp;II.&nbsp;User Guide</td></tr></table></div></body></html>

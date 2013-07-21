@@ -1,0 +1,30 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>Timers</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s11.html" title="asio_scheduler"><link rel="next" href="ch03s13.html" title="Continuation tasks"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Timers</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s11.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch03s13.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Timers"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e803"></a>Timers</h2></div></div></div><p>Very often, an Active Object servant acting as an asynchronous dispatcher will
+                    post tasks which have to be done until a certain point in the future, or which
+                    will start only at a later point. State machines also regularly make use of a
+                    "time" event.</p><p>For this we need a timer, but a safe one:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>The timer callback has to be posted to the Active Object thread to
+                                avoid races.</p></li><li class="listitem"><p>The timer callback shall not be called in the servant making the
+                                request has been deleted (it can be an awfully long time until the
+                                callback).</p></li></ul></div><p>Asynchronous itself has no timer, but Boost.Asio has, so the library provides
+                    a wrapper around it and will allow us to create a timer using an io_service
+                    running in its own thread or in an asio threadpool, also provided by the
+                    library.</p><div class="sect2" title="Constructing a timer"><div class="titlepage"><div><div><h3 class="title"><a name="d0e819"></a>Constructing a timer</h3></div></div></div><p>One first needs an <code class="code">asio_scheduler</code> with at least one
+                        thread:</p><pre class="programlisting">boost::asynchronous::any_shared_scheduler_proxy&lt;&gt; asio_sched = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::asio_scheduler&lt;&gt;(1));               
+                    </pre><p>The Servant living in its ActiveObject thread then creates a timer (as
+                        attribute to keep it alive as destroying the object will cancel the timer)
+                        using this scheduler and a timer value:</p><pre class="programlisting"> boost::asynchronous::asio_deadline_timer_proxy m_timer (asio_sched,boost::posix_time::milliseconds(1000));                   
+                    </pre><p>It can now start the timer using <code class="code">trackable_servant</code> (its base
+                            class)<code class="code">::async_wait</code>, passing it a functor call when timer
+                        expires / is cancelled:</p><pre class="programlisting"> async_wait(m_timer,
+            [](const ::boost::system::error_code&amp; err)
+            {
+                std::cout &lt;&lt; "timer expired? "&lt;&lt; std::boolalpha &lt;&lt; (bool)err &lt;&lt; std::endl; //true if expired, false if cancelled
+            } 
+            );                  </pre><p>Canceling the timer means destroying (and possibly recreating) the timer
+                        object:</p><pre class="programlisting"> m_timer =  boost::asynchronous::asio_deadline_timer_proxy(get_worker(),boost::posix_time::milliseconds(1000));                                   
+                    </pre><p>The <a class="link" href="examples/example_asio_deadline_timer.cpp" target="_top">following
+                            example </a> displays a servant using an asio scheduler as a thread
+                        pool and creating there its timer object. Not how the timer is created using
+                            <code class="code">trackable_servant</code> (its base
+                            class)<code class="code">::get_worker()</code>.</p></div></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch03s11.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="ch03.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ch03s13.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">asio_scheduler&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Continuation tasks</td></tr></table></div></body></html>

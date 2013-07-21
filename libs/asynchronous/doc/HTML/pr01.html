@@ -1,0 +1,99 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>Preface</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="index.html" title="Boost Asynchronous"><link rel="prev" href="index.html" title="Boost Asynchronous"><link rel="next" href="pt01.html" title="Part&nbsp;I.&nbsp;Concepts"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Preface</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="index.html">Prev</a>&nbsp;</td><th width="60%" align="center">&nbsp;</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="pt01.html">Next</a></td></tr></table><hr></div><div class="preface" title="Preface"><div class="titlepage"><div><div><h2 class="title"><a name="d0e22"></a>Preface</h2></div></div></div><p>
+            <span class="underline">Note</span>: Asynchronous is not part of the Boost
+            library. It is planed to be offered for Review at the end of 2013. At the moment it is
+            still in heavy development.</p><p>Herb Sutter wrote in an article <span class="command"><strong><a class="command" href="http://www.gotw.ca/publications/concurrency-ddj.htm" target="_top"></a></strong></span> "The Free Lunch
+            Is Over", meaning that developpers will be forced to learn to develop multi-threaded
+            applications. This, however, brings a fundamental issue: multithreading is hard, it's
+            full of ugly beasts waiting hidden for our mistakes: races, deadlocks, all kinds of
+            subtle bugs. Worse yet, these bugs are hard to find because they are never reproducible
+            when you are looking for them, which leaves us with backtrace analysis, and this is when
+            we are lucky enough to have a backtrace in the first place.</p><p>This is not even the only danger. CPUs are a magnitude faster than memory, I/O
+            operations, network communications, which all stall our programms and degrade our
+            performance, which means long sessions with coverage or analysis tools.</p><p>Well, maybe the free lunch is not completely over yet, or at least maybe we can still
+            get one a bit longer for a bargain. This is what Boost Asynchronous is helping
+            solve.</p><p>Boost Asynchronous is a library making it easy to write asynchronous code similar to
+            the Proactor<span class="command"><strong><a class="command" href="http://www.cs.wustl.edu/~schmidt/PDF/proactor.pdf" target="_top"></a></strong></span>
+            pattern. To achieve this, it offers tools for asynchronous designs: ActiveObject,
+            threadpools, servants, proxies, queues, algorithms, etc. </p><p>Asynchronous programming has the advantage of making it easier to design your code
+            nonblocking, single-threaded while still getting your cores to work at full capacity.
+            And all this while forgetting what a mutex is. Incorrect mutex usage is a huge source of
+            bugs and Asynchronous helps you avoid them.</p><p>However, the goal of this library is not to help you write massively parallel code.
+            There are other solutions for this. This library is for the other 99% of us who happen
+            to work on 4-12 cores hardware because 1000 cores are not affordable, but would still
+            like to get the best of it while avoiding ugly bugs, get better diagnostic of what our
+            application is doing and planing ourselves what our cores are doing. Asynchronous is not:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>std/boost::async: both are asynchronous in a very limited way. One posts
+                        asynchronously some work, but then? Well, then the choice is between
+                        blocking for the future result (taboo) or polling from time to time, as in
+                        the (bad) old times. Furthermore, one has no control on the
+                        scheduler.</p></li><li class="listitem"><p>Intel TBB: this is a wonderful parallel library. But it's not asynchronous
+                        as one needs to wait for the end of a parallel_ call. Sure, you have
+                        pipelines, but when your application is complex, good luck to understand the
+                        code. Again, one has limited control on the scheduler.</p></li><li class="listitem"><p>N3428: this is an interesting approach as it was at least recognized that
+                        std::async is not asynchronous. So now, you get a kind of state machine
+                        hidden behind a .then, when_any, when_all, which are a poor man's state
+                        machines, besides ugly limitations like finding out which when_all threw an
+                        exception. When did we give up writing design diagrams to document and
+                        understand our code later? When a 15+ states state machine with guards,
+                        event deferring and control flow has to be written with .then, please don't
+                        ask me to review the code.</p></li></ul></div><p>Let's have a quick look at code using futures and .then (taken from N3428):</p><p>
+            </p><pre class="programlisting">future&lt;int&gt; f1 = async([]() { return 123; });
+future&lt;string&gt; f2 = f1.then([](future&lt;int&gt; f) {return f.get().to_string();}); // here .get() won&#8217;t block
+f2.get(); // just a "small get" at the end?</pre><p>
+        </p><p> Saying that there is only a "small get" at the end is, for an application with
+            real-time constraints, equivalent to saying at a lockfree conference something like
+            "what is all the fuss about? Can't we just add a small lock at the end?". Just try
+            it...</p><p>This brings us to a central point of Asynchronous: if we build a system with strict
+            real-time constraints, there is no such thing as a small get(). We need to be able to
+            react to any event in the system in a timely manner. And we can't affort to have lots of
+            functions potentially waiting too long everywhere in our code. Therefore, .then is only
+            good for an application of a few hunderds of lines. What about using a timed_wait
+            instead? Nope. Either we wait too long before handling an error (this just limits the
+            amount of time we wate waiting, that's all), or we wait not enough and we poll. In any
+            case, while waiting, our thread cannot react to other events.</p><p>All these libraries also have the disadvantage of working with functions, not classes.
+            But we, normal developers, do use classes. And we want them safe. And you can hardly
+            make a class safe if you simply pass it to another thread. Consider the following
+            example:</p><p>
+            </p><pre class="programlisting">class Bad : public boost::signals::trackable
+{
+   int foo();
+};
+boost::shared_ptr&lt;Bad&gt; b;
+future&lt;int&gt; f = async([b](){return b-&gt;foo()});          </pre><p>
+        </p><p> Now you have the ugly problem of not knowing in which thread Bad will be destroyed.
+            And as it's pretty hard to have a thread-safe destructor, you find yourself with a race
+            condition in it. Maybe you'll find a solution for signals, but are you sure nobody is
+            ever going to do something dangerous in the destructor? This clearly is not thinking in
+            the future sense.</p><p>Another particularity of Asynchronous is that it's not hiding anything: one gets to
+            pick a pool for a particular application, choose how many threads are to be used, and
+            the type of queue which best corresponds to the job to do, which allows finer
+            tuning.</p><p>An image being more worth than thousand words, the following story will explain in a
+            few minutes what Asynchronous is about. Consider some fast-food restaurant:</p><p><span class="inlinemediaobject"><img src="../pics/Proactor1.jpg"></span>
+        </p><p>This restaurant has a single employee, Worker, delivers burgers through a burger queue
+            and drinks. A Customer comes. Then another, who waits until the first customer is
+            served.</p><p><span class="inlinemediaobject"><img src="../pics/Proactor2.jpg"></span></p><p>To keep customers happy by reducing waiting time, the restaurant owner hires a second
+            employee:</p><p><span class="inlinemediaobject"><img src="../pics/Proactor3.jpg"></span></p><p>Unfortunately, this brings chaos in the restaurant. Sometimes, employes fight to get a
+            burger to their own customer first:</p><p><span class="inlinemediaobject"><img src="../pics/Proactor-RC.jpg"></span></p><p>And sometimes, they stay in each other's way:</p><p><span class="inlinemediaobject"><img src="../pics/Proactor-DL.jpg"></span></p><p>This clearly is a not an optimal solution. Not only the additional employee brings
+            additional costs, but both employees now spend much more time waiting. It also is not a
+            scalable solution if even more customers want to eat because it's lunch-time right now.
+            Even worse, as they fight for resources and stay in each other's way, the restaurant now
+            serves people less fast than before. Customers flee and the restaurant gets bankrupt. A
+            sad story, isn't it? To avoid this, the owner decides to go asynchronous. He keeps a
+            single worker, who moves from cash desk to cash desk:</p><p><span class="inlinemediaobject"><img src="../pics/Proactor-async.jpg"></span></p><p>The worker never waits because it would increase customer's waiting time. Instead, he
+            runs from cash desks to the burger queue, beverage machine using a self-made strategy: </p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>ask what the customer wants and keep an up-to-date information of the
+                        customer's state.</p></li><li class="listitem"><p>if we have another customer at a desk, ask what he wants. For both
+                        customers, remember the state of the order (waiting for customer choice,
+                        getting food, getting drink, delivering, getting payment, etc.)</p></li><li class="listitem"><p>as soon as some new state is detected (customer choice, burger in the
+                        queue, drink ready), handle it.</p></li><li class="listitem"><p>priorities are defined: start the longest-lasting tasks first, serve
+                        angry-looking customers first, etc.</p></li></ul></div><p>The following diagram shows us the busy worker in action:</p><p><span class="inlinemediaobject"><img src="../pics/Proactor-async2.jpg"></span></p><p>Of course the owner needs a worker who runs fast, and has a pretty good memory so he
+            can remember what customers are waiting for. </p><p>This is what Asynchronous is for. A worker (thread) runs as long as there are waiting
+            customers, following a precisely defined algorithm, and lots of state machines to manage
+            the asynchronous behaviour. In case of customers, we could have a state machine: Waiting
+            -&gt; PickingMenu -&gt; WaitingForFood -&gt; Paying.</p><p>We also need some queues (Burger queue, Beverage glass positioning) and some
+            Asynchronous Operation Processor (for example a threadpool made of workers in the
+            kitchen), event of different types (Drinks delivery). Maybe you also want some work
+            stealing (someone in the kitchen serving drinks as he has no more burger to prepare. He
+            will be slower than the machine, but still bring some time gain).</p><p><span class="bold"><strong>To make this work, the worker must not block, never,
+                ever</strong></span>. And whatever he's doing has to be as fast as possible, otherwise
+            the whole process stalls.</p></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="index.html">Prev</a>&nbsp;</td><td width="20%" align="center">&nbsp;</td><td width="40%" align="right">&nbsp;<a accesskey="n" href="pt01.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Boost Asynchronous&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Part&nbsp;I.&nbsp;Concepts</td></tr></table></div></body></html>

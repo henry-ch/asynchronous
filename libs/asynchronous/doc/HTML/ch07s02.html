@@ -1,0 +1,31 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>threadpool_scheduler</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch07.html" title="Chapter&nbsp;7.&nbsp;Schedulers"><link rel="prev" href="ch07.html" title="Chapter&nbsp;7.&nbsp;Schedulers"><link rel="next" href="ch07s03.html" title="multiqueue_threadpool_scheduler"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">threadpool_scheduler</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch07.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;7.&nbsp;Schedulers</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch07s03.html">Next</a></td></tr></table><hr></div><div class="sect1" title="threadpool_scheduler"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e1156"></a>threadpool_scheduler</h2></div></div></div><p>The simplest and easiest threadpool using a single queue, though multiqueue
+                    behavior could be done using <code class="code">any_queue_container</code>. The advantage is
+                    that it allows the pool to be given 0 thread and only be stolen from. The cost
+                    is a slight performance loss due to higher contention on the single
+                    queue.</p><p>This pool does not steal from other pool's queues.</p><p>Use this pool as default for a quickstart with Asynchronous.</p><p>Declaration:</p><pre class="programlisting">template&lt;class Queue&gt;
+class threadpool_scheduler;                 
+                </pre><p>Creation:</p><pre class="programlisting">boost::asynchronous::any_shared_scheduler_proxy&lt;&gt; scheduler = 
+    boost::asynchronous::create_shared_scheduler_proxy(
+                    new boost::asynchronous::threadpool_scheduler&lt;
+                          boost::asynchronous::threadsafe_list&lt;&gt; &gt;(4)); // 4 threads in pool  
+
+boost::asynchronous::any_shared_scheduler_proxy&lt;&gt; scheduler = 
+    boost::asynchronous::create_shared_scheduler_proxy(
+                    new boost::asynchronous::threadpool_scheduler&lt;
+                          boost::asynchronous::lockfree_queue&lt;&gt; &gt;(4,10)); // size of queue=10, 4 threads in pool
+                </pre><p>Or, using logging:</p><pre class="programlisting">typedef boost::asynchronous::any_loggable&lt;boost::chrono::high_resolution_clock&gt; <span class="bold"><strong>servant_job</strong></span>;
+
+boost::asynchronous::any_shared_scheduler_proxy&lt;<span class="bold"><strong>servant_job</strong></span>&gt; scheduler = 
+    boost::asynchronous::create_shared_scheduler_proxy(
+                    new boost::asynchronous::threadpool_scheduler&lt;
+                          boost::asynchronous::threadsafe_list&lt;<span class="bold"><strong>servant_job</strong></span>&gt; &gt;(4)); // 4 threads in pool                                      
+                
+boost::asynchronous::any_shared_scheduler_proxy&lt;<span class="bold"><strong>servant_job</strong></span>&gt; scheduler = 
+    boost::asynchronous::create_shared_scheduler_proxy(
+                    new boost::asynchronous::threadpool_scheduler&lt;
+                          boost::asynchronous::lockfree_queue&lt;<span class="bold"><strong>servant_job</strong></span>&gt; &gt;(4,10)); // size of queue=10, 4 threads in pool  </pre><p>
+                    </p><div class="table"><a name="d0e1197"></a><p class="title"><b>Table&nbsp;7.2.&nbsp;#include
+                            &lt;boost/asynchronous/scheduler/threadpool_scheduler.hpp&gt;</b></p><div class="table-contents"><table summary="#include&#xA;                            <boost/asynchronous/scheduler/threadpool_scheduler.hpp&gt;" border="1"><colgroup><col><col></colgroup><thead><tr><th>Characteristics</th><th>&nbsp;</th></tr></thead><tbody><tr><td>Number of threads</td><td><span class="bold"><strong>0</strong></span>-n</td></tr><tr><td>Can be stolen from?</td><td>Yes</td></tr><tr><td>Can steal from other threads in this pool?</td><td>N/A (only 1 queue)</td></tr><tr><td>Can steal from other threads in other pools?</td><td>No</td></tr></tbody></table></div></div><p><br class="table-break">
+                </p></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch07.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="ch07.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ch07s03.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Chapter&nbsp;7.&nbsp;Schedulers&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;multiqueue_threadpool_scheduler</td></tr></table></div></body></html>

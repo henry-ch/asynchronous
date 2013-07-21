@@ -1,0 +1,79 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>Logging tasks</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s05.html" title="Interrupting tasks"><link rel="next" href="ch03s07.html" title="Queue container with priority"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Logging tasks</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s05.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch03s07.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Logging tasks"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e411"></a>Logging tasks</h2></div></div></div><p>Developers are notoriously famous for being bad at guessing which part of
+                    their code is inefficient or has potential for long execution time. This is bad
+                    in itself, but even worse for a control class like our post-callback servant as
+                    it reduces responsiveness. Knowing how long a posted call or a callback lasts is
+                    therefore very useful. Knowing how long take tasks executing in the threadpools
+                    is also essential to plan what hardware one needs for an application(4 cores? Or
+                    100?). We need to know what our program is doing. Asynchronous provides some
+                    logging per task to help there. Let's have a look at some code. It's also time
+                    to start using our template parameters, in case you wondered why they are
+                    here.</p><pre class="programlisting">// we will be using loggable jobs internally
+typedef boost::asynchronous::any_loggable&lt;boost::chrono::high_resolution_clock&gt; <span class="bold"><strong>servant_job</strong></span>;
+// the type of our log
+typedef std::map&lt;std::string,std::list&lt;boost::asynchronous::diagnostic_item&lt;boost::chrono::high_resolution_clock&gt; &gt; &gt; <span class="bold"><strong>diag_type</strong></span>;
+// we log our scheduler and our threadpool scheduler (both use servant_job)
+struct Servant : boost::asynchronous::trackable_servant&lt;<span class="bold"><strong>servant_job</strong></span>,<span class="bold"><strong>servant_job</strong></span>&gt;
+{
+    Servant(boost::asynchronous::any_weak_scheduler&lt;servant_job&gt; scheduler) //servant_job is our job type
+        : boost::asynchronous::trackable_servant&lt;<span class="bold"><strong>servant_job,servant_job</strong></span>&gt;(scheduler,
+                                               boost::asynchronous::create_shared_scheduler_proxy(
+                                                   // threadpool with 3 threads and a simple threadsafe_list queue
+                                                   // Furthermore, it logs posted tasks
+                                                   new boost::asynchronous::threadpool_scheduler&lt;
+                                                           //servant_job is our job type
+                                                           boost::asynchronous::threadsafe_list&lt; <span class="bold"><strong>servant_job</strong></span> &gt; &gt;(3))){}
+    void start_async_work()
+    {
+         post_callback(
+               // task posted to threadpool
+               [](){...},
+               // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
+               [this](boost::shared_future&lt;int&gt; res){...},// callback functor.
+               // the task / callback name for logging
+               "int_async_work"
+        );
+    }
+    // we happily provide a way for the outside world to know what our threadpool did.
+    // get_worker is provided by trackable_servant and gives the proxy of our threadpool
+    diag_type get_diagnostics() const
+    {
+        return (*get_worker()).get_diagnostics();
+    }
+};</pre><p>The proxy is also slightly different, as it uses a LOG macro and an argument
+                    representing the name of the task.</p><pre class="programlisting">class ServantProxy : public boost::asynchronous::servant_proxy&lt;ServantProxy,Servant,servant_job&gt;
+{
+public:
+    template &lt;class Scheduler&gt;
+    ServantProxy(Scheduler s):
+        boost::asynchronous::servant_proxy&lt;ServantProxy,Servant,servant_job&gt;(s)
+    {}
+    // the _LOG macros do the same as the others, but take an extra argument, the logged task name
+    BOOST_ASYNC_FUTURE_MEMBER<span class="bold"><strong>_LOG</strong></span>(start_async_work,<span class="bold"><strong>"proxy::start_async_work"</strong></span>)
+    BOOST_ASYNC_FUTURE_MEMBER<span class="bold"><strong>_LOG</strong></span>(get_diagnostics,<span class="bold"><strong>"proxy::get_diagnostics"</strong></span>)
+    };               </pre><p> We now can get diagnostics from both schedulers, the single-threaded and the
+                    threadpool (as external code has no access to it, we ask Servant to help us
+                    there through a get_diagnostics() member).</p><pre class="programlisting">// create a scheduler with logging
+auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
+                                new boost::asynchronous::single_thread_scheduler&lt;
+                                    boost::asynchronous::threadsafe_list&lt;servant_job&gt; &gt;);
+// create a Servant                    
+ServantProxy proxy(scheduler); 
+...
+// let's ask the single-threaded scheduler what it did.
+diag_type single_thread_sched_diag = (*scheduler).get_diagnostics(); 
+for (auto mit = single_thread_sched_diag.begin(); mit != single_thread_sched_diag.end() ; ++mit)
+{
+     std::cout &lt;&lt; "job type: " &lt;&lt; (*mit).first &lt;&lt; std::endl;
+     for (auto jit = (*mit).second.begin(); jit != (*mit).second.end();++jit)
+     {
+          std::cout &lt;&lt; "job waited in us: " &lt;&lt; boost::chrono::nanoseconds((*jit).get_started_time() - (*jit).get_posted_time()).count() / 1000 &lt;&lt; std::endl;
+          std::cout &lt;&lt; "job lasted in us: " &lt;&lt; boost::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() / 1000 &lt;&lt; std::endl;
+          std::cout &lt;&lt; "job interrupted? "  &lt;&lt; std::boolalpha &lt;&lt; (*jit).is_interrupted() &lt;&lt; std::endl;
+     }
+     }              </pre><p>It goes similarly with the threapool scheduler, with the slight difference
+                    that we ask the Servant to deliver diagnostic information through a proxy
+                    member. The <a class="link" href="examples/example_log.cpp" target="_top">complete example</a>
+                    shows all this, plus an interrupted job (you might have noticed in the previous
+                    listing that a diagnostic offers an <code class="code">is_interrupted</code> member).</p></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch03s05.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="ch03.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ch03s07.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Interrupting tasks&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Queue container with priority</td></tr></table></div></body></html>
