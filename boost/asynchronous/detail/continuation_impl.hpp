@@ -1,3 +1,12 @@
+// Boost.Asynchronous library
+//  Copyright (C) Christophe Henry 2013
+//
+//  Use, modification and distribution is subject to the Boost
+//  Software License, Version 1.0.  (See accompanying file
+//  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+// For more information, see http://www.boost.org
+
 #ifndef BOOST_ASYNCHRONOUS_CONTINUATION_IMPL_HPP
 #define BOOST_ASYNCHRONOUS_CONTINUATION_IMPL_HPP
 
@@ -13,6 +22,7 @@
 #include <boost/asynchronous/scheduler/detail/interrupt_state.hpp>
 
 BOOST_MPL_HAS_XXX_TRAIT_DEF(state)
+BOOST_MPL_HAS_XXX_TRAIT_DEF(iterator)
 
 namespace boost { namespace asynchronous { namespace detail {
 
@@ -133,6 +143,51 @@ struct continuation
 
 };
 
+// version for sequences of futures
+template <class Return, typename Job, typename Seq>
+struct continuation_as_seq
+{
+    typedef int is_continuation_task;
+    typedef Return return_type;
+
+    continuation_as_seq(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state,Seq&& seq)
+    : m_futures(new Seq(std::forward<Seq>(seq)))
+    , m_state(state)
+    {
+        //TODO interruptible
+    }
+
+    void operator()()
+    {
+        m_done(std::move(*m_futures));
+    }
+
+    template <class Func>
+    void on_done(Func f)
+    {
+        m_done = f;
+    }
+    bool is_ready()
+    {
+        if (!!m_state && m_state->is_interrupted())
+        {
+            // we are interrupted => we are ready
+            return true;
+        }
+        for (typename Seq::const_iterator it = m_futures->begin(); it != m_futures->end() ;++it)
+        {
+            if (!(*it).is_ready())
+                return false;
+        }
+        return true;
+    }
+//TODO temporary
+//private:
+    boost::shared_ptr<Seq> m_futures;
+    std::function<void(Seq&&)> m_done;
+    boost::shared_ptr<boost::asynchronous::detail::interrupt_state> m_state;
+};
+
 // used by variadic make_future_tuple
 template <typename T>
 auto call_get_future(T& t) -> decltype(t.get_future())
@@ -160,6 +215,18 @@ template <typename... Args>
 struct has_future_args
 {
     typedef typename has_future_args_helper<Args...>::type type;
+};
+
+template <typename Front,typename... Tail>
+struct has_iterator_args_helper
+{
+    typedef typename has_iterator<Front>::type type;
+};
+
+template <typename... Args>
+struct has_iterator_args
+{
+    typedef typename has_iterator_args_helper<Args...>::type type;
 };
 
 }}}

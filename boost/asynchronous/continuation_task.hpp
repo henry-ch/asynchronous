@@ -1,3 +1,12 @@
+// Boost.Asynchronous library
+//  Copyright (C) Christophe Henry 2013
+//
+//  Use, modification and distribution is subject to the Boost
+//  Software License, Version 1.0.  (See accompanying file
+//  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+// For more information, see http://www.boost.org
+
 #ifndef BOOST_ASYNCHRONOUS_CONTINUATION_TASK_HPP
 #define BOOST_ASYNCHRONOUS_CONTINUATION_TASK_HPP
 
@@ -7,6 +16,7 @@
 #include <boost/asynchronous/scheduler/detail/any_continuation.hpp>
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/scheduler/detail/interrupt_state.hpp>
+
 
 namespace boost { namespace asynchronous {
 
@@ -64,7 +74,10 @@ private:
 
 // inside a task, create a continuation handling any number of subtasks
 template <class Return, class OnDone, typename... Args>
-typename boost::disable_if< typename boost::asynchronous::detail::has_future_args<Args...>::type ,void >::type
+typename boost::disable_if< typename boost::mpl::or_<
+                            typename boost::asynchronous::detail::has_future_args<Args...>::type ,
+                            typename boost::asynchronous::detail::has_iterator_args<Args...>::type >
+                          ,void >::type
 create_continuation(OnDone&& on_done, Args&&... args)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
@@ -89,7 +102,20 @@ create_continuation(OnDone&& on_done, boost::future<Args>&&... args)
     boost::asynchronous::any_continuation a(c);
     boost::asynchronous::get_continuations().push_front(a);
 }
+// version with containers of futures
+template <class Return, class OnDone, typename Seq>
+typename boost::enable_if< typename has_iterator<Seq>::type ,void >::type
+create_continuation(OnDone&& on_done, Seq&& seq)
+{
+    boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
 
+    boost::asynchronous::detail::continuation_as_seq<Return,boost::asynchronous::any_callable,Seq> c (state,std::forward<Seq>(seq));
+    c.on_done(on_done);
+    boost::asynchronous::any_continuation a(c);
+    boost::asynchronous::get_continuations().push_front(a);
+}
+
+// versions with logging
 template <class Return, typename Job, class OnDone, typename... Args>
 typename boost::enable_if< typename boost::asynchronous::detail::has_future_args<boost::future<Args>...>::type ,void >::type
 create_continuation_log(OnDone&& on_done, boost::future<Args>&&... args)
@@ -105,17 +131,12 @@ create_continuation_log(OnDone&& on_done, boost::future<Args>&&... args)
     boost::asynchronous::get_continuations().push_front(a);
 }
 
-//  create the first continuation in the serie
-template <class Return, class FirstTask>
-boost::asynchronous::detail::continuation<Return,boost::asynchronous::any_callable> top_level_continuation(FirstTask&& t)
-{
-    boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
-    return boost::asynchronous::detail::continuation<Return,boost::asynchronous::any_callable>(state,boost::make_shared<std::tuple<boost::future<Return> > >
-                                                     (std::make_tuple(t.get_future())),std::forward<FirstTask>(t));
-}
-// version with logging
+
 template <class Return, typename Job, class OnDone, typename... Args>
-typename boost::disable_if< typename boost::asynchronous::detail::has_future_args<Args...>::type ,void >::type
+typename boost::disable_if< typename boost::mpl::or_<
+                            typename boost::asynchronous::detail::has_future_args<Args...>::type ,
+                            typename boost::asynchronous::detail::has_iterator_args<Args...>::type >
+                          ,void >::type
 create_continuation_log(OnDone&& on_done, Args&&... args)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
@@ -128,6 +149,28 @@ create_continuation_log(OnDone&& on_done, Args&&... args)
     boost::asynchronous::get_continuations().push_front(a);
 }
 
+// version with containers of futures
+template <class Return, typename Job, class OnDone, typename Seq>
+typename boost::enable_if< typename has_iterator<Seq>::type ,void >::type
+create_continuation_log(OnDone&& on_done, Seq&& seq)
+{
+    boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
+
+    boost::asynchronous::detail::continuation_as_seq<Return,Job,Seq> c (state,std::forward<Seq>(seq));
+    c.on_done(on_done);
+    boost::asynchronous::any_continuation a(c);
+    boost::asynchronous::get_continuations().push_front(a);
+}
+
+// top level task
+//  create the first continuation in the serie
+template <class Return, class FirstTask>
+boost::asynchronous::detail::continuation<Return,boost::asynchronous::any_callable> top_level_continuation(FirstTask&& t)
+{
+    boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
+    return boost::asynchronous::detail::continuation<Return,boost::asynchronous::any_callable>(state,boost::make_shared<std::tuple<boost::future<Return> > >
+                                                     (std::make_tuple(t.get_future())),std::forward<FirstTask>(t));
+}
 //  create the first continuation in the serie
 template <class Return, typename Job, class FirstTask>
 boost::asynchronous::detail::continuation<Return,Job> top_level_continuation_log(FirstTask&& t)
