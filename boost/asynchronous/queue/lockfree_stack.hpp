@@ -86,7 +86,12 @@ public:
         bool res = m_queue.pop(jptr);
         if (res)
         {
-            job=*jptr;
+            boost::scoped_ptr<JOB> for_cleanup(jptr);
+#ifndef BOOST_NO_RVALUE_REFERENCES
+            job = std::move(*jptr);
+#else
+            job = *jptr;
+#endif
             return true;
         }
         return false;
@@ -97,7 +102,12 @@ public:
         bool res = m_queue.pop(jptr);
         if (res)
         {
-            job=*jptr;
+            boost::scoped_ptr<JOB> for_cleanup(jptr);
+#ifndef BOOST_NO_RVALUE_REFERENCES
+            job = std::move(*jptr);
+#else
+            job = *jptr;
+#endif
             return true;
         }
         return false;
