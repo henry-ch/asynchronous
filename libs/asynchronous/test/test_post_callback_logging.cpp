@@ -31,6 +31,7 @@ typedef std::map<std::string,std::list<boost::asynchronous::diagnostic_item<boos
 
 // main thread id
 boost::thread::id main_thread_id;
+bool servant_dtor=false;
 struct my_exception : virtual boost::exception, virtual std::exception
 {
     virtual const char* what() const throw()
@@ -49,7 +50,10 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
                                                            boost::asynchronous::lockfree_queue< servant_job > >(3,5)))
     {
     }
-    
+    ~Servant()
+    {
+        servant_dtor = true;
+    }
     boost::shared_future<void> start_void_async_work()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_void_async_work not posted.");
@@ -151,26 +155,42 @@ public:
 }
 
 BOOST_AUTO_TEST_CASE( test_void_post_callback_logging )
-{        
-    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-                                                                    boost::asynchronous::threadsafe_list<servant_job> >);
+{
+    servant_dtor=false;
     {
-        main_thread_id = boost::this_thread::get_id();   
-        ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_void_async_work();
-        try
+        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
+                                                                        boost::asynchronous::threadsafe_list<servant_job> >);
         {
-            boost::shared_future<void> resfuv = fuv.get();
-            resfuv.get();
+            main_thread_id = boost::this_thread::get_id();
+            ServantProxy proxy(scheduler);
+            boost::shared_future<boost::shared_future<void> > fuv = proxy.start_void_async_work();
+            try
+            {
+                boost::shared_future<void> resfuv = fuv.get();
+                resfuv.get();
+            }
+            catch(...)
+            {
+                BOOST_FAIL( "unexpected exception" );
+            }
+            boost::shared_future<diag_type> fu_diag = proxy.get_diagnostics();
+            diag_type diag = fu_diag.get();
+            BOOST_CHECK_MESSAGE(diag.size()==1,"servant tp worker didn't log the number of works we expected.");// start_void_async_work's task
+            for (auto mit = diag.begin(); mit != diag.end() ; ++mit)
+            {
+                for (auto jit = (*mit).second.begin(); jit != (*mit).second.end();++jit)
+                {
+                    BOOST_CHECK_MESSAGE(boost::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() > 0,"task finished before it started.");
+                    BOOST_CHECK_MESSAGE(!(*jit).is_interrupted(),"no task should have been interrupted.");
+                }
+            }
         }
-        catch(...)
-        {
-            BOOST_FAIL( "unexpected exception" );
-        }
-        boost::shared_future<diag_type> fu_diag = proxy.get_diagnostics();
-        diag_type diag = fu_diag.get();
-        BOOST_CHECK_MESSAGE(diag.size()==1,"servant tp worker didn't log the number of works we expected.");// start_void_async_work's task
-        for (auto mit = diag.begin(); mit != diag.end() ; ++mit)
+        // wait for servant dtor
+        boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
+        diag_type single_thread_sched_diag = scheduler.get_diagnostics();
+        // start_void_async_work + get_diagnostics + servant dtor + void_async_work (cvallback)
+        BOOST_CHECK_MESSAGE(single_thread_sched_diag.size()==4,"servant scheduler worker didn't log the number of works we expected.");
+        for (auto mit = single_thread_sched_diag.begin(); mit != single_thread_sched_diag.end() ; ++mit)
         {
             for (auto jit = (*mit).second.begin(); jit != (*mit).second.end();++jit)
             {
@@ -178,67 +198,62 @@ BOOST_AUTO_TEST_CASE( test_void_post_callback_logging )
                 BOOST_CHECK_MESSAGE(!(*jit).is_interrupted(),"no task should have been interrupted.");
             }
         }
-    }  
-    // wait for servant dtor
-    boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
-    diag_type single_thread_sched_diag = scheduler.get_diagnostics();
-    // start_void_async_work + get_diagnostics + servant dtor + void_async_work (cvallback)    
-    BOOST_CHECK_MESSAGE(single_thread_sched_diag.size()==4,"servant scheduler worker didn't log the number of works we expected.");
-    for (auto mit = single_thread_sched_diag.begin(); mit != single_thread_sched_diag.end() ; ++mit)
-    {
-        for (auto jit = (*mit).second.begin(); jit != (*mit).second.end();++jit)
-        {
-            BOOST_CHECK_MESSAGE(boost::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() > 0,"task finished before it started.");
-            BOOST_CHECK_MESSAGE(!(*jit).is_interrupted(),"no task should have been interrupted.");
-        }
     }
-    
+    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
 }
     
 
 
 BOOST_AUTO_TEST_CASE( test_int_post_callback_logging )
-{        
-    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-                                                                    boost::asynchronous::threadsafe_list<servant_job> >);
-    
-    main_thread_id = boost::this_thread::get_id();   
-    ServantProxy proxy(scheduler);
-    boost::shared_future<boost::shared_future<int> > fuv = proxy.start_async_work();
-    try
+{
+    servant_dtor=false;
     {
-        boost::shared_future<int> resfuv = fuv.get();
-        int res= resfuv.get();
-        BOOST_CHECK_MESSAGE(res==42,"servant work return wrong result.");
+        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
+                                                                        boost::asynchronous::threadsafe_list<servant_job> >);
+
+        main_thread_id = boost::this_thread::get_id();
+        ServantProxy proxy(scheduler);
+        boost::shared_future<boost::shared_future<int> > fuv = proxy.start_async_work();
+        try
+        {
+            boost::shared_future<int> resfuv = fuv.get();
+            int res= resfuv.get();
+            BOOST_CHECK_MESSAGE(res==42,"servant work return wrong result.");
+        }
+        catch(...)
+        {
+            BOOST_FAIL( "unexpected exception" );
+        }
     }
-    catch(...)
-    {
-        BOOST_FAIL( "unexpected exception" );
-    }
+    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
 }
 
 BOOST_AUTO_TEST_CASE( test_post_callback_logging_exception )
-{        
-    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-                                                                    boost::asynchronous::threadsafe_list<servant_job> >);
-    
-    main_thread_id = boost::this_thread::get_id();   
-    ServantProxy proxy(scheduler);
-    boost::shared_future<boost::shared_future<int> > fuv = proxy.start_exception_async_work();
-    bool got_exception=false;
-    try
+{
+    servant_dtor=false;
     {
-        boost::shared_future<int> resfuv = fuv.get();
-        resfuv.get();
+        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
+                                                                        boost::asynchronous::threadsafe_list<servant_job> >);
+
+        main_thread_id = boost::this_thread::get_id();
+        ServantProxy proxy(scheduler);
+        boost::shared_future<boost::shared_future<int> > fuv = proxy.start_exception_async_work();
+        bool got_exception=false;
+        try
+        {
+            boost::shared_future<int> resfuv = fuv.get();
+            resfuv.get();
+        }
+        catch ( my_exception& e)
+        {
+            got_exception=true;
+        }
+        catch(...)
+        {
+            BOOST_FAIL( "unexpected exception" );
+        }
+        BOOST_CHECK_MESSAGE(got_exception,"servant didn't send an expected exception.");
     }
-    catch ( my_exception& e)
-    {
-        got_exception=true;
-    }
-    catch(...)
-    {
-        BOOST_FAIL( "unexpected exception" );
-    }
-    BOOST_CHECK_MESSAGE(got_exception,"servant didn't send an expected exception.");
+    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
 }
 
