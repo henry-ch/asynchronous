@@ -35,7 +35,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     void timer_expired(boost::shared_ptr<boost::promise<void> > p)
     {
         boost::asynchronous::any_shared_scheduler<> s = get_scheduler().lock();
-        BOOST_CHECK_MESSAGE((*s).contains_id(boost::this_thread::get_id()),"timer_expired running in wrong thread.");
+        BOOST_CHECK_MESSAGE(s.contains_id(boost::this_thread::get_id()),"timer_expired running in wrong thread.");
         boost::thread::id threadid = m_threadid;
         
         typename boost::chrono::high_resolution_clock::time_point start = boost::chrono::high_resolution_clock::now();
@@ -64,9 +64,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
     }
     void timer_cancelled(boost::shared_ptr<boost::promise<void> > p)
     {
-        m_timer =  boost::asynchronous::asio_deadline_timer<>(get_scheduler(),boost::posix_time::milliseconds(50000));
+        m_timer =  boost::asynchronous::asio_deadline_timer(get_scheduler(),boost::posix_time::milliseconds(50000));
         boost::asynchronous::any_shared_scheduler<> s = get_scheduler().lock();
-        BOOST_CHECK_MESSAGE((*s).contains_id(boost::this_thread::get_id()),"timer_cancelled running in wrong thread.");
+        BOOST_CHECK_MESSAGE(s.contains_id(boost::this_thread::get_id()),"timer_cancelled running in wrong thread.");
         boost::thread::id threadid = m_threadid;
         
         typename boost::chrono::high_resolution_clock::time_point start = boost::chrono::high_resolution_clock::now();
@@ -85,7 +85,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         m_timer =  boost::asynchronous::asio_deadline_timer<>(get_scheduler(),boost::posix_time::milliseconds(500));
     }
 private:
-    boost::asynchronous::asio_deadline_timer<> m_timer;
+    boost::asynchronous::asio_deadline_timer m_timer;
     boost::thread::id m_threadid;
 };
 

@@ -40,7 +40,7 @@ struct Servant : boost::asynchronous::trackable_servant<>, boost::asynchronous::
     void resolve(boost::shared_ptr<boost::promise<void> > p)
     {
         boost::asynchronous::any_shared_scheduler<> s = get_scheduler().lock();
-        std::vector<boost::thread::id> ids = (*s).thread_ids();
+        std::vector<boost::thread::id> ids = s.thread_ids();
         BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"resolve running in wrong thread.");
         boost::thread::id threadid = m_threadid;
         

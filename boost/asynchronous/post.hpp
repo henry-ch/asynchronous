@@ -300,13 +300,13 @@ namespace detail
                 ,m_work(w)
                 ,m_fu(boost::make_shared<boost::future<typename Work::result_type> >(std::move(fu))){}
             // TODO type_erasure problem?
-//            callback_fct(callback_fct&& rhs):m_work(std::move(rhs.m_work)),m_fu(std::move(rhs.m_fu)){}
-//            callback_fct& operator= (callback_fct&& rhs)
-//            {
-//                m_work = std::move(rhs.m_work);
-//                m_fu = std::move(rhs.m_fu);
-//                return *this;
-//            }
+            callback_fct(callback_fct&& rhs):m_work(std::move(rhs.m_work)),m_fu(std::move(rhs.m_fu)){}
+            callback_fct& operator= (callback_fct&& rhs)
+            {
+                m_work = std::move(rhs.m_work);
+                m_fu = std::move(rhs.m_fu);
+                return *this;
+            }
             callback_fct(callback_fct const& rhs)
                 :boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type()
                 ,m_work(rhs.m_work)
