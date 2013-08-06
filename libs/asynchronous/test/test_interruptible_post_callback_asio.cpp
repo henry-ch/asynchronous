@@ -59,7 +59,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         // post blocking funtion, until dtor done
         boost::shared_future<void> fu=m_ready->get_future();
         auto blocking = [fu]() mutable {fu.get();};
-        (*(get_worker())).post(blocking);
+        get_worker().post(blocking);
         
         boost::promise<boost::asynchronous::any_interruptible> apromise;
         boost::shared_future<boost::asynchronous::any_interruptible> fu2 = apromise.get_future();

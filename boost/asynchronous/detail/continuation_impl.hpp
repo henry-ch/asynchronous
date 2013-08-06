@@ -115,17 +115,6 @@ struct continuation
 
     template<std::size_t I = 0, typename... Tp>
     inline typename std::enable_if<I == sizeof...(Tp), void>::type
-    abort_futures(std::tuple<Tp...> const& )const
-    { }
-    template<std::size_t I = 0, typename... Tp>
-    inline typename std::enable_if<I < sizeof...(Tp), void>::type
-    abort_futures(std::tuple<Tp...> const& t)const
-    {
-
-    }
-
-    template<std::size_t I = 0, typename... Tp>
-    inline typename std::enable_if<I == sizeof...(Tp), void>::type
     check_ready(bool& ,std::tuple<Tp...> const& )const
     { }
 

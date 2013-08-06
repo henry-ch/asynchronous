@@ -27,6 +27,8 @@ typedef ::boost::mpl::vector<
     boost::type_erasure::callable<void()>,
     boost::type_erasure::relaxed,
     boost::type_erasure::copy_constructible<>,
+    //boost::type_erasure::constructible<boost::type_erasure::_self(boost::type_erasure::_self&&)>,
+    //boost::type_erasure::destructible<>,
     boost::type_erasure::typeid_<>
 > any_callable_concept;
 typedef boost::type_erasure::any<any_callable_concept> any_callable;

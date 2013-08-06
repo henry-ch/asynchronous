@@ -193,7 +193,7 @@ public:
                             {
                                 if ((*it).is_ready())
                                 {
-                                    auto c = (*it);
+                                    boost::asynchronous::any_continuation c = *it;
                                     it = waiting.erase(it);
                                     c();
                                 }

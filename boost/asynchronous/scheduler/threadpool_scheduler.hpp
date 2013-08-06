@@ -163,11 +163,12 @@ public:
                         if (!waiting.empty())
                         {
                             for (std::deque<boost::asynchronous::any_continuation>::iterator it = waiting.begin(); it != waiting.end();)
-                            {
+                            {                               
                                 if ((*it).is_ready())
                                 {
-                                    (*it)();
+                                    boost::asynchronous::any_continuation c = *it;
                                     it = waiting.erase(it);
+                                    c();
                                 }
                                 else
                                 {

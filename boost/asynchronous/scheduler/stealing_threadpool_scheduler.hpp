@@ -188,8 +188,9 @@ public:
                             {
                                 if ((*it).is_ready())
                                 {
-                                    (*it)();
+                                    boost::asynchronous::any_continuation c = *it;
                                     it = waiting.erase(it);
+                                    c();
                                 }
                                 else
                                 {
