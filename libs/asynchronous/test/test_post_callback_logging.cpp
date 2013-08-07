@@ -180,7 +180,7 @@ BOOST_AUTO_TEST_CASE( test_void_post_callback_logging )
             {
                 for (auto jit = (*mit).second.begin(); jit != (*mit).second.end();++jit)
                 {
-                    BOOST_CHECK_MESSAGE(boost::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() > 0,"task finished before it started.");
+                    BOOST_CHECK_MESSAGE(boost::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() >= 0,"task finished before it started.");
                     BOOST_CHECK_MESSAGE(!(*jit).is_interrupted(),"no task should have been interrupted.");
                 }
             }
@@ -194,7 +194,7 @@ BOOST_AUTO_TEST_CASE( test_void_post_callback_logging )
         {
             for (auto jit = (*mit).second.begin(); jit != (*mit).second.end();++jit)
             {
-                BOOST_CHECK_MESSAGE(boost::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() > 0,"task finished before it started.");
+                BOOST_CHECK_MESSAGE(boost::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() >= 0,"task finished before it started.");
                 BOOST_CHECK_MESSAGE(!(*jit).is_interrupted(),"no task should have been interrupted.");
             }
         }
