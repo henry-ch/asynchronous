@@ -59,8 +59,15 @@ struct main_task : public boost::asynchronous::continuation_task<long>
                     // called when subtasks are done, set our result
                     [task_res](std::tuple<boost::future<int>,boost::future<int>,boost::future<int> >&& res)
                     {
-                        long r = std::get<0>(res).get() + std::get<1>(res).get()+ std::get<2>(res).get();
-                        task_res.set_value(r);
+                        try
+                        {
+                            long r = std::get<0>(res).get() + std::get<1>(res).get()+ std::get<2>(res).get();
+                            task_res.set_value(r);
+                        }
+                        catch(std::exception& e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
                     },
                     // future results of recursive tasks
                     std::move(fu1),std::move(fu2),std::move(fu3));
@@ -103,7 +110,15 @@ struct Servant : boost::asynchronous::trackable_servant<>
                ,
                // callback with result.
                [this](boost::future<long> res){
-                            this->on_callback(res.get());
+                    try
+                    {
+                        this->on_callback(res.get());
+                    }
+                    catch(std::exception& e)
+                    {
+                        // do something useful
+                        this->on_callback(-1);
+                    }
                }// callback functor.
         );
         return fu;

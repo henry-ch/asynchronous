@@ -1,27 +1,40 @@
+
 #include <iostream>
+#include <tuple>
+#include <utility>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/threadsafe_list.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/scheduler/multiqueue_threadpool_scheduler.hpp>
-#include <boost/asynchronous/continuation_task.hpp>
+#include <boost/asynchronous/scheduler/detail/any_continuation.hpp>
 
 #include <boost/asynchronous/servant_proxy.h>
+#include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/trackable_servant.hpp>
+#include <boost/asynchronous/continuation_task.hpp>
 
-using namespace std;
-
+#include "test_common.hpp"
+#include <boost/test/unit_test.hpp>
+using namespace boost::asynchronous::test;
 namespace
 {
-
+// main thread id
+boost::thread::id main_thread_id;
+std::vector<boost::thread::id> tpids;
+struct some_exception : virtual std::exception
+{
+};
 // dummy task started by the main algorithm
 // could be a lambda too of course
 struct sub_task
 {
     int operator()()const
     {
+        BOOST_CHECK_MESSAGE(contains_id(tpids.begin(),tpids.end(),boost::this_thread::get_id()),"sub_task executed in the wrong thread");
+        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"sub_task in main thread.");
         boost::this_thread::sleep(boost::posix_time::milliseconds(100));
-        return 1;
+        throw some_exception();
     }
 };
 
@@ -30,6 +43,9 @@ struct main_task : public boost::asynchronous::continuation_task<long>
 {
     void operator()()const
     {
+        BOOST_CHECK_MESSAGE(contains_id(tpids.begin(),tpids.end(),boost::this_thread::get_id()),"main_task executed in the wrong thread");
+        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"main_task in main thread.");
+
         // the result of this task
         boost::asynchronous::continuation_result<long> task_res = this_task_result();
 
@@ -42,39 +58,34 @@ struct main_task : public boost::asynchronous::continuation_task<long>
             // ok, we are shutting down, ok give up
             return;
         // simulate algo work
-        std::vector<boost::future<int> > fus;
         boost::this_thread::sleep(boost::posix_time::milliseconds(100));
         // let's say we just found a subtask
         boost::future<int> fu1 = boost::asynchronous::post_future(locked_scheduler,sub_task());
-        fus.emplace_back(std::move(fu1));
         // simulate more algo work
         boost::this_thread::sleep(boost::posix_time::milliseconds(100));
         // let's say we just found a subtask
         boost::future<int> fu2 = boost::asynchronous::post_future(locked_scheduler,sub_task());
-        fus.emplace_back(std::move(fu2));
         // simulate algo work
         boost::this_thread::sleep(boost::posix_time::milliseconds(100));
         // let's say we just found a subtask
         boost::future<int> fu3 = boost::asynchronous::post_future(locked_scheduler,sub_task());
-        fus.emplace_back(std::move(fu3));
 
         // our algo is now done, wrap all and return
         boost::asynchronous::create_continuation<long>(
                     // called when subtasks are done, set our result
-                    [task_res](std::vector<boost::future<int>>&& res)
+                    [task_res](std::tuple<boost::future<int>,boost::future<int>,boost::future<int> >&& res)
                     {
-                        try
-                        {
-                            long r = res[0].get() + res[1].get() + res[2].get();
+                        try{
+                            long r = std::get<0>(res).get() + std::get<1>(res).get()+ std::get<2>(res).get();
                             task_res.set_value(r);
                         }
-                        catch(std::exception& e)
+                        catch(some_exception& e)
                         {
                             task_res.set_exception(boost::copy_exception(e));
                         }
                     },
                     // future results of recursive tasks
-                    std::move(fus));
+                    std::move(fu1),std::move(fu2),std::move(fu3));
     }
 };
 
@@ -103,6 +114,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
     {
         // for testing purpose
         boost::shared_future<long> fu = m_promise->get_future();
+        boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
+        tpids = tp.thread_ids();
         // start long tasks in threadpool (first lambda) and callback in our thread
         post_callback(
                 []()
@@ -114,15 +127,17 @@ struct Servant : boost::asynchronous::trackable_servant<>
                ,
                // callback with result.
                [this](boost::future<long> res){
-                    try
-                    {
-                        this->on_callback(res.get());
-                    }
-                    catch(std::exception& e)
-                    {
-                        // do something useful
-                        this->on_callback(-1);
-                    }
+                            BOOST_CHECK_MESSAGE(!contains_id(tpids.begin(),tpids.end(),boost::this_thread::get_id()),"algo callback executed in the wrong thread(pool)");
+                            BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
+                            BOOST_CHECK_MESSAGE(!res.has_value(),"callback has an unexpected value.");
+                            BOOST_CHECK_MESSAGE(res.has_exception(),"callback has no exception.");
+                            try{
+                                this->on_callback(res.get());
+                            }
+                            catch(std::exception& e)
+                            {
+                                this->on_callback(-1);
+                            }
                }// callback functor.
         );
         return fu;
@@ -144,9 +159,8 @@ public:
 
 }
 
-void example_continuation_algo2()
+BOOST_AUTO_TEST_CASE( test_continuation_algo_except )
 {
-    std::cout << "example_continuation_algo2" << std::endl;
     {
         // a single-threaded world, where Servant will live.
         auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
@@ -157,10 +171,9 @@ void example_continuation_algo2()
             boost::shared_future<boost::shared_future<long> > fu = proxy.calc_algo();
             boost::shared_future<long> resfu = fu.get();
             long res = resfu.get();
-            std::cout << "res= " << res << std::endl; //expect 3 (3 subtasks)
+            BOOST_CHECK_MESSAGE(-1 == res,"we didn't get the expected task result");
         }
     }
-    std::cout << "end example_continuation_algo2 \n" << std::endl;
 }
 
 

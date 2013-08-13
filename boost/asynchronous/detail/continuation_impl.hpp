@@ -122,7 +122,7 @@ struct continuation
     inline typename std::enable_if<I < sizeof...(Tp), void>::type
     check_ready(bool& ready,std::tuple<Tp...> const& t)const
     {
-        if (!(std::get<I>(t)).has_value())
+        if ( !((std::get<I>(t)).has_value() || (std::get<I>(t)).has_exception()) )
         {
             ready=false;
             return;
@@ -165,7 +165,7 @@ struct continuation_as_seq
         }
         for (typename Seq::const_iterator it = m_futures->begin(); it != m_futures->end() ;++it)
         {
-            if (!(*it).is_ready())
+            if (!((*it).is_ready() || (*it).has_exception() ) )
                 return false;
         }
         return true;

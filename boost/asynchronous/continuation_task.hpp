@@ -30,6 +30,11 @@ public:
     {
         m_promise->set_value(val);
     }
+    void set_exception(boost::exception_ptr p)const
+    {
+        m_promise->set_exception(p);
+    }
+
 private:
     boost::shared_ptr<boost::promise<Return> > m_promise;
 };
