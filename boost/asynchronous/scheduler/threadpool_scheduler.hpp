@@ -18,6 +18,9 @@
 #define BOOST_THREAD_PROVIDES_FUTURE
 #endif
 
+//#include <chrono>
+//#include <thread>
+
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
 #include <boost/thread/thread.hpp>
@@ -128,8 +131,11 @@ public:
         boost::asynchronous::any_weak_scheduler<job_type> self_as_weak = boost::asynchronous::detail::lockable_weak_scheduler<this_type>(this_);
         boost::asynchronous::get_thread_scheduler<job_type>(self_as_weak,true);
 
-        boost::asynchronous::get_continuations(std::deque<boost::asynchronous::any_continuation>(),true);
+        std::deque<boost::asynchronous::any_continuation>& waiting =
+                boost::asynchronous::get_continuations(std::deque<boost::asynchronous::any_continuation>(),true);
 
+//        unsigned int cpt_nojob=0;
+        /*std::chrono::high_resolution_clock::time_point*/ auto start = std::chrono::high_resolution_clock::now();
         while(true)
         {
             try
@@ -148,6 +154,7 @@ public:
                     // did we manage to pop or steal?
                     if (popped)
                     {
+//                        cpt_nojob = 0;
                         // automatic closing of log
                         boost::asynchronous::detail::job_diagnostic_closer<typename Q::job_type,diag_type> closer
                                 (&job,diagnostics.get());
@@ -159,11 +166,11 @@ public:
                     else
                     {
                         // look for waiting tasks
-                        std::deque<boost::asynchronous::any_continuation>& waiting = boost::asynchronous::get_continuations();
+//                        std::deque<boost::asynchronous::any_continuation>& waiting = boost::asynchronous::get_continuations();
                         if (!waiting.empty())
                         {
                             for (std::deque<boost::asynchronous::any_continuation>::iterator it = waiting.begin(); it != waiting.end();)
-                            {                               
+                            {
                                 if ((*it).is_ready())
                                 {
                                     boost::asynchronous::any_continuation c = *it;
@@ -176,6 +183,22 @@ public:
                                 }
                             }
                         }
+//                        ++cpt_nojob;
+//                        if (cpt_nojob >= 100)
+//                        {
+//                            cpt_nojob = 0;
+//                            /*std::chrono::high_resolution_clock::time_point*/ auto elapsed = std::chrono::high_resolution_clock::now() - start;
+//                            if(std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count() <= 80000)
+//                            {
+//                                //std::cout << "sleep..." << std::endl;
+//                                std::this_thread::sleep_for( std::chrono::microseconds(500) );
+//                                start = std::chrono::high_resolution_clock::now();
+//                            }
+//                            else
+//                            {
+//                                //std::cout << "did happen..." << std::endl;
+//                            }
+//                        }
                         // nothing for us to do, give up our time slice
                         boost::this_thread::yield();
                     }
