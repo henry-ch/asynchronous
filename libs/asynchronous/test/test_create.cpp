@@ -49,7 +49,8 @@ BOOST_AUTO_TEST_CASE( create_stealing_threadpool_scheduler )
     {
         boost::asynchronous::create_shared_scheduler_proxy(
                     new boost::asynchronous::stealing_threadpool_scheduler<
-                    boost::asynchronous::any_queue_container<>,true >(4,boost::asynchronous::any_queue_container_config<boost::asynchronous::threadsafe_list<> >(4)));
+                    boost::asynchronous::any_queue_container<>,
+                    boost::asynchronous::no_cpu_load_saving,true >(4,boost::asynchronous::any_queue_container_config<boost::asynchronous::threadsafe_list<> >(4)));
     }
 }
 BOOST_AUTO_TEST_CASE( create_stealing_multiqueue_threadpool_scheduler )
@@ -57,7 +58,8 @@ BOOST_AUTO_TEST_CASE( create_stealing_multiqueue_threadpool_scheduler )
     {
         boost::asynchronous::create_shared_scheduler_proxy(
                     new boost::asynchronous::stealing_multiqueue_threadpool_scheduler<
-                    boost::asynchronous::any_queue_container<>,boost::asynchronous::default_find_position<>,true >
+                    boost::asynchronous::any_queue_container<>,boost::asynchronous::default_find_position<>,
+                    boost::asynchronous::no_cpu_load_saving,true >
                         (3,boost::asynchronous::any_queue_container_config<boost::asynchronous::threadsafe_list<> >(3)));
     }
 }

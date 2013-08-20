@@ -31,18 +31,25 @@
 #include <boost/asynchronous/detail/any_joinable.hpp>
 #include <boost/asynchronous/scheduler/tss_scheduler.hpp>
 #include <boost/asynchronous/scheduler/detail/lockable_weak_scheduler.hpp>
+#include <boost/asynchronous/scheduler/cpu_load_policies.hpp>
 
 namespace boost { namespace asynchronous
 {
 
-template<class Q>
+template<class Q, class CPULoad =
+#ifndef BOOST_ASYNCHRONOUS_SAVE_CPU_LOAD
+        boost::asynchronous::no_cpu_load_saving
+#else
+        boost::asynchronous::default_save_cpu_load<>
+#endif
+                  >
 class single_thread_scheduler: public boost::asynchronous::detail::single_queue_scheduler_policy<Q>
 {
 public:
     typedef Q queue_type;
     typedef typename Q::job_type job_type;
     typedef typename boost::asynchronous::job_traits<typename Q::job_type>::diagnostic_table_type diag_type;
-    typedef single_thread_scheduler<Q> this_type;
+    typedef single_thread_scheduler<Q,CPULoad> this_type;
 
 #ifndef BOOST_NO_RVALUE_REFERENCES
     single_thread_scheduler(boost::shared_ptr<queue_type>&& queue)
@@ -131,6 +138,7 @@ public:
         std::deque<boost::asynchronous::any_continuation>& waiting =
                 boost::asynchronous::get_continuations(std::deque<boost::asynchronous::any_continuation>(),true);
 
+        CPULoad cpu_load;
         while(true)
         {
             try
@@ -143,6 +151,7 @@ public:
                     bool popped = queue->try_pop(job);
                     if (popped)
                     {
+                        cpu_load.popped_job();
                         // automatic closing of log
                         boost::asynchronous::detail::job_diagnostic_closer<typename Q::job_type,diag_type> closer
                                 (&job,diagnostics.get());
@@ -170,6 +179,7 @@ public:
                                 }
                             }
                         }
+                        cpu_load.loop_done_no_job();
                         // nothing for us to do, give up our time slice
                         boost::this_thread::yield();
                     }

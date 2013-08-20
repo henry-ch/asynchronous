@@ -17,8 +17,6 @@
 #include <boost/asynchronous/queue/any_queue_container.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/scheduler/threadpool_scheduler.hpp>
-#include <boost/asynchronous/scheduler/stealing_threadpool_scheduler.hpp>
-#include <boost/asynchronous/scheduler/stealing_multiqueue_threadpool_scheduler.hpp>
 #include <boost/asynchronous/scheduler/multiqueue_threadpool_scheduler.hpp>
 #include <boost/asynchronous/servant_proxy.h>
 #include <boost/asynchronous/post.hpp>

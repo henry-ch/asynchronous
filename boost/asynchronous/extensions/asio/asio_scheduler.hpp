@@ -29,12 +29,20 @@
 #include <boost/asynchronous/scheduler/detail/lockable_weak_scheduler.hpp>
 #include <boost/asynchronous/scheduler/detail/any_continuation.hpp>
 #include <boost/asynchronous/scheduler/tss_scheduler.hpp>
+#include <boost/asynchronous/scheduler/cpu_load_policies.hpp>
 
 // partial implementation of any_shared_scheduler_impl using boost::asio
 namespace boost { namespace asynchronous
 {
 
-template<class FindPosition=boost::asynchronous::default_find_position<boost::asynchronous::sequential_push_policy > >
+template<class FindPosition=boost::asynchronous::default_find_position<boost::asynchronous::sequential_push_policy > ,
+         class CPULoad =
+#ifndef BOOST_ASYNCHRONOUS_SAVE_CPU_LOAD
+         boost::asynchronous::no_cpu_load_saving
+#else
+         boost::asynchronous::default_save_cpu_load<>
+#endif
+         >
 class asio_scheduler : 
 #ifdef BOOST_ASYNCHRONOUS_NO_TYPE_ERASURE
         public any_shared_scheduler_concept<boost::asynchronous::any_callable>,
@@ -43,7 +51,7 @@ class asio_scheduler :
 {
 public:
     typedef boost::asynchronous::any_callable job_type;
-    typedef asio_scheduler<FindPosition> this_type;
+    typedef asio_scheduler<FindPosition,CPULoad> this_type;
     
     asio_scheduler(size_t number_of_workers=1,bool immediate=true)
         : m_next_shutdown_bucket(0)
@@ -305,6 +313,7 @@ private:
         std::deque<boost::asynchronous::any_continuation>& waiting =
                 boost::asynchronous::get_continuations(std::deque<boost::asynchronous::any_continuation>(),true);
 
+        CPULoad cpu_load;
         while(true)
         {
             try
@@ -314,7 +323,10 @@ private:
                 {
                     popped = (other_ioservices[i]->poll_one() != 0);
                     if (popped)
+                    {
+                        cpu_load.popped_job();
                         break;
+                    }
                 }
                 bool stolen=false;
                 if (!popped)
@@ -328,8 +340,11 @@ private:
                             break;
                     }
                     if (stolen)
+                    {
+                        cpu_load.popped_job();
                         // execute stolen job
                         job();
+                    }
                 }
                 if (!popped && !stolen)
                 {
@@ -350,6 +365,7 @@ private:
                             }
                         }
                     }
+                    cpu_load.loop_done_no_job();
                     // nothing for us to do, give up our time slice
                     boost::this_thread::yield();
                 }
@@ -381,9 +397,9 @@ private:
     bool m_immediate;
 };
 
-template<class FindPosition>
+template<class FindPosition,class CPULoad>
 boost::thread_specific_ptr<thread_ptr_wrapper>
-asio_scheduler<FindPosition>::m_self_thread;
+asio_scheduler<FindPosition,CPULoad>::m_self_thread;
 
 }}
 #endif // BOOST_ASYNCHRON_EXTENSIONS_ASIO_SCHEDULER_HPP

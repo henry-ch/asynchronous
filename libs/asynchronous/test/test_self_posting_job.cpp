@@ -81,7 +81,8 @@ BOOST_AUTO_TEST_CASE( self_posting_job_stealing_multiqueue_threadpool_scheduler)
     auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                         new boost::asynchronous::stealing_multiqueue_threadpool_scheduler<
                                                       boost::asynchronous::threadsafe_list<>,
-                                                      boost::asynchronous::default_find_position<>,true >(4));
+                                                      boost::asynchronous::default_find_position<>,
+                                                      boost::asynchronous::no_cpu_load_saving,true >(4));
 
     sched_ids = scheduler.thread_ids();
     boost::shared_ptr<boost::promise<void> > done (new boost::promise<void>);
@@ -106,7 +107,8 @@ BOOST_AUTO_TEST_CASE( self_posting_job_stealing_threadpool_scheduler)
     main_thread_id = boost::this_thread::get_id();
 
     auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::stealing_threadpool_scheduler<
-                                                                        boost::asynchronous::threadsafe_list<>,true >(4));
+                                                                        boost::asynchronous::threadsafe_list<>,
+                                                                        boost::asynchronous::no_cpu_load_saving,true >(4));
 
     sched_ids = scheduler.thread_ids();
     boost::shared_ptr<boost::promise<void> > done (new boost::promise<void>);

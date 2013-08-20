@@ -18,9 +18,6 @@
 #define BOOST_THREAD_PROVIDES_FUTURE
 #endif
 
-//#include <chrono>
-//#include <thread>
-
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
 #include <boost/thread/thread.hpp>
@@ -40,15 +37,22 @@
 #include <boost/asynchronous/scheduler/tss_scheduler.hpp>
 #include <boost/asynchronous/scheduler/detail/lockable_weak_scheduler.hpp>
 #include <boost/asynchronous/scheduler/detail/any_continuation.hpp>
+#include <boost/asynchronous/scheduler/cpu_load_policies.hpp>
 
 namespace boost { namespace asynchronous
 {
 
-template<class Q>
+template<class Q, class CPULoad =
+#ifndef BOOST_ASYNCHRONOUS_SAVE_CPU_LOAD
+         boost::asynchronous::no_cpu_load_saving
+#else
+         boost::asynchronous::default_save_cpu_load<>
+#endif
+         >
 class threadpool_scheduler: public boost::asynchronous::detail::single_queue_scheduler_policy<Q>
 {
 public:
-    typedef boost::asynchronous::threadpool_scheduler<Q> this_type;
+    typedef boost::asynchronous::threadpool_scheduler<Q,CPULoad> this_type;
     typedef Q queue_type;
     typedef typename Q::job_type job_type;
     typedef typename boost::asynchronous::job_traits<typename Q::job_type>::diagnostic_table_type diag_type;
@@ -134,8 +138,7 @@ public:
         std::deque<boost::asynchronous::any_continuation>& waiting =
                 boost::asynchronous::get_continuations(std::deque<boost::asynchronous::any_continuation>(),true);
 
-//        unsigned int cpt_nojob=0;
-        /*std::chrono::high_resolution_clock::time_point*/ auto start = std::chrono::high_resolution_clock::now();
+        CPULoad cpu_load;
         while(true)
         {
             try
@@ -154,7 +157,7 @@ public:
                     // did we manage to pop or steal?
                     if (popped)
                     {
-//                        cpt_nojob = 0;
+                        cpu_load.popped_job();
                         // automatic closing of log
                         boost::asynchronous::detail::job_diagnostic_closer<typename Q::job_type,diag_type> closer
                                 (&job,diagnostics.get());
@@ -166,7 +169,6 @@ public:
                     else
                     {
                         // look for waiting tasks
-//                        std::deque<boost::asynchronous::any_continuation>& waiting = boost::asynchronous::get_continuations();
                         if (!waiting.empty())
                         {
                             for (std::deque<boost::asynchronous::any_continuation>::iterator it = waiting.begin(); it != waiting.end();)
@@ -183,22 +185,7 @@ public:
                                 }
                             }
                         }
-//                        ++cpt_nojob;
-//                        if (cpt_nojob >= 100)
-//                        {
-//                            cpt_nojob = 0;
-//                            /*std::chrono::high_resolution_clock::time_point*/ auto elapsed = std::chrono::high_resolution_clock::now() - start;
-//                            if(std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count() <= 80000)
-//                            {
-//                                //std::cout << "sleep..." << std::endl;
-//                                std::this_thread::sleep_for( std::chrono::microseconds(500) );
-//                                start = std::chrono::high_resolution_clock::now();
-//                            }
-//                            else
-//                            {
-//                                //std::cout << "did happen..." << std::endl;
-//                            }
-//                        }
+                        cpu_load.loop_done_no_job();
                         // nothing for us to do, give up our time slice
                         boost::this_thread::yield();
                     }

@@ -41,6 +41,7 @@
 #include <boost/asynchronous/scheduler/tss_scheduler.hpp>
 #include <boost/asynchronous/scheduler/detail/lockable_weak_scheduler.hpp>
 #include <boost/asynchronous/scheduler/detail/any_continuation.hpp>
+#include <boost/asynchronous/scheduler/cpu_load_policies.hpp>
 
 namespace boost { namespace asynchronous
 {
@@ -48,6 +49,13 @@ namespace boost { namespace asynchronous
 //TODO boost.parameter
 template<class Q,
          class FindPosition=boost::asynchronous::default_find_position< >,
+         class CPULoad =
+#ifndef BOOST_ASYNCHRONOUS_SAVE_CPU_LOAD
+         boost::asynchronous::no_cpu_load_saving
+#else
+         boost::asynchronous::default_save_cpu_load<>
+#endif
+         ,
          // just for testing, ignore
          bool IsImmediate=false >
 class stealing_multiqueue_threadpool_scheduler: public boost::asynchronous::detail::multi_queue_scheduler_policy<Q,FindPosition>
@@ -56,7 +64,7 @@ public:
     typedef Q queue_type;
     typedef typename Q::job_type job_type;
     typedef typename boost::asynchronous::job_traits<typename Q::job_type>::diagnostic_table_type diag_type;
-    typedef stealing_multiqueue_threadpool_scheduler<Q,FindPosition,IsImmediate> this_type;
+    typedef stealing_multiqueue_threadpool_scheduler<Q,FindPosition,CPULoad,IsImmediate> this_type;
 
 #ifndef BOOST_NO_CXX11_VARIADIC_TEMPLATES
     template<typename... Args>
@@ -147,6 +155,7 @@ public:
         std::deque<boost::asynchronous::any_continuation>& waiting =
                 boost::asynchronous::get_continuations(std::deque<boost::asynchronous::any_continuation>(),true);
 
+        CPULoad cpu_load;
         while(true)
         {
             try
@@ -191,6 +200,7 @@ public:
                     // did we manage to pop or steal?
                     if (popped)
                     {
+                        cpu_load.popped_job();
                         // automatic closing of log
                         boost::asynchronous::detail::job_diagnostic_closer<typename Q::job_type,diag_type> closer
                                 (&job,diagnostics.get());
@@ -217,6 +227,7 @@ public:
                                 }
                             }
                         }
+                        cpu_load.loop_done_no_job();
                         // nothing for us to do, give up our time slice
                         boost::this_thread::yield();
                     }
