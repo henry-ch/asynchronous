@@ -65,40 +65,31 @@ public:
     template<typename... Args>
     io_threadpool_scheduler(size_t min_number_of_workers, size_t max_number_of_workers, Args... args)
         : boost::asynchronous::detail::single_queue_scheduler_policy<Q>(boost::make_shared<queue_type>(args...))
+        , m_data (boost::make_shared<internal_data>(min_number_of_workers,max_number_of_workers))
         , m_private_queue (boost::make_shared<boost::asynchronous::threadsafe_list<job_type> >())
-        , m_min_number_of_workers(min_number_of_workers <= max_number_of_workers ? min_number_of_workers:max_number_of_workers)
-        , m_max_number_of_workers(min_number_of_workers <= max_number_of_workers ? max_number_of_workers:min_number_of_workers)
-        , m_current_number_of_workers(0)
-        , m_done_threads()
-        , m_weak_self()
     {
     }
 #endif
     io_threadpool_scheduler(size_t min_number_of_workers, size_t max_number_of_workers)
         : boost::asynchronous::detail::single_queue_scheduler_policy<Q>()
+        , m_data (boost::make_shared<internal_data>(min_number_of_workers,max_number_of_workers))
         , m_private_queue (boost::make_shared<boost::asynchronous::threadsafe_list<job_type> >())
-        , m_min_number_of_workers(min_number_of_workers <= max_number_of_workers ? min_number_of_workers:max_number_of_workers)
-        , m_max_number_of_workers(min_number_of_workers <= max_number_of_workers ? max_number_of_workers:min_number_of_workers)
-        , m_current_number_of_workers(0)
-        , m_done_threads()
-        , m_weak_self()
     {
     }
     void constructor_done(boost::weak_ptr<this_type> weak_self)
     {
         m_diagnostics = boost::make_shared<diag_type>();
-        m_group.reset(new boost::thread_group);
-        m_weak_self = weak_self;
-        for (size_t i = 0; i< m_min_number_of_workers;++i)
+        m_data->m_weak_self = weak_self;
+        for (size_t i = 0; i< m_data->m_min_number_of_workers;++i)
         {
             boost::promise<boost::thread*> new_thread_promise;
             boost::shared_future<boost::thread*> fu = new_thread_promise.get_future();
-            boost::function<void()> d = boost::bind(&io_threadpool_scheduler::basic_thread_not_busy,this);
+            boost::function<void()> d = boost::bind(&io_threadpool_scheduler::internal_data::basic_thread_not_busy,m_data);
             boost::thread* new_thread =
-                    m_group->create_thread(
+                    m_data->m_group->create_thread(
                         boost::bind(&io_threadpool_scheduler::run_always,this->m_queue,m_private_queue,m_diagnostics,fu,weak_self,d));
             new_thread_promise.set_value(new_thread);
-            m_thread_ids.insert(new_thread->get_id());
+            m_data->m_thread_ids.insert(new_thread->get_id());
         }
     }
     std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues()const
@@ -108,9 +99,9 @@ public:
     }
     ~io_threadpool_scheduler()
     {
-        for (size_t i = 0; i< m_thread_ids.size();++i)
+        for (size_t i = 0; i< m_data->m_thread_ids.size();++i)
         {
-            boost::asynchronous::detail::default_termination_task<typename Q::diagnostic_type,boost::thread_group> ttask(m_group);
+            boost::asynchronous::detail::default_termination_task<typename Q::diagnostic_type,boost::thread_group> ttask(m_data->m_group);
             // this task has to be executed lat => lowest prio
 #ifndef BOOST_NO_RVALUE_REFERENCES
             typename queue_type::job_type job(ttask);
@@ -120,98 +111,19 @@ public:
 #endif
         }
         // join older threads
-        cleanup_threads();
-    }
-    // checks if worker thread should continue
-    bool test_worker_loop()
-    {
-       boost::mutex::scoped_lock lock(m_current_number_of_workers_mutex);
-       bool res = (m_current_number_of_workers > m_min_number_of_workers);
-       if (res)
-           --m_current_number_of_workers;
-       return res;
-    }
-
-    void try_create_thread()
-    {
-        boost::mutex::scoped_lock lock(m_current_number_of_workers_mutex);
-        if ((m_current_number_of_workers+1 <= m_max_number_of_workers) && (m_current_number_of_workers+1 > m_min_number_of_workers))
-        {
-            ++m_current_number_of_workers;
-            lock.unlock();
-            boost::promise<boost::thread*> new_thread_promise;
-            boost::shared_future<boost::thread*> fu = new_thread_promise.get_future();
-            boost::function<void(boost::thread*)> d = boost::bind(&io_threadpool_scheduler::thread_finished,this,_1);
-            boost::function<bool()> c = boost::bind(&io_threadpool_scheduler::test_worker_loop,this);
-            boost::thread* new_thread =
-                     m_group->create_thread(boost::bind(&io_threadpool_scheduler::run_once,this->m_queue,m_private_queue,
-                                                        m_diagnostics,fu,m_weak_self,d,c));
-            lock.lock();
-            m_thread_ids.insert(new_thread->get_id());
-            new_thread_promise.set_value(new_thread);
-        }
-        else
-        {
-            ++m_current_number_of_workers;
-        }
-    }
-    void basic_thread_not_busy()
-    {
-        // update number of workers
-        boost::mutex::scoped_lock lock(m_current_number_of_workers_mutex);
-        --m_current_number_of_workers;
-    }
-
-    void thread_finished(boost::thread* finished_thread)
-    {
-        // update number of workers
-        {
-            boost::mutex::scoped_lock lock(m_current_number_of_workers_mutex);
-            --m_current_number_of_workers;
-            m_thread_ids.erase(finished_thread->get_id());
-        }
-        // update set of finished threads
-        {
-            boost::mutex::scoped_lock lock(m_done_threads_mutex);
-            m_done_threads.insert(finished_thread);
-        }
-    }
-    // checks which threads are finished and can be removed from thread group and joined
-    // this is called when a new job is posted or at pool destrution
-    void cleanup_threads()
-    {
-        // look for finished threads
-        std::set<boost::thread*> to_join_threads;
-        {
-            boost::mutex::scoped_lock lock(m_done_threads_mutex);
-#ifndef BOOST_NO_RVALUE_REFERENCES
-            to_join_threads = std::move(m_done_threads);
-#else
-            to_join_threads = m_done_threads;
-#endif
-            m_done_threads.clear();
-        }
-        // remove from group and join
-        boost::thread_group cleanup_group;
-        for (std::set<boost::thread*>::iterator it = to_join_threads.begin(); it != to_join_threads.end();++it)
-        {
-            m_group->remove_thread(*it);
-            cleanup_group.add_thread(*it);
-        }
-        // join. Not blocking as all these threads are finished
-        cleanup_group.join_all();
+        m_data->cleanup_threads();
     }
 
     //TODO move?
     boost::asynchronous::any_joinable get_worker()const
     {
-        return boost::asynchronous::any_joinable (boost::asynchronous::detail::worker_wrap<boost::thread_group>(m_group));
+        return boost::asynchronous::any_joinable (boost::asynchronous::detail::worker_wrap<boost::thread_group>(m_data->m_group));
     }
 
     std::vector<boost::thread::id> thread_ids()const
     {
-        boost::mutex::scoped_lock lock(m_current_number_of_workers_mutex);
-        return std::vector<boost::thread::id>(m_thread_ids.begin(),m_thread_ids.end());
+        boost::mutex::scoped_lock lock(m_data->m_current_number_of_workers_mutex);
+        return std::vector<boost::thread::id>(m_data->m_thread_ids.begin(),m_data->m_thread_ids.end());
     }
     std::map<std::string,
              std::list<typename boost::asynchronous::job_traits<typename queue_type::job_type>::diagnostic_item_type > >
@@ -223,6 +135,31 @@ public:
     {
         // this scheduler does not steal
     }
+
+    void try_create_thread()
+    {
+        boost::mutex::scoped_lock lock(m_data->m_current_number_of_workers_mutex);
+        if ((m_data->m_current_number_of_workers+1 <= m_data->m_max_number_of_workers) &&
+            (m_data->m_current_number_of_workers+1 > m_data->m_min_number_of_workers))
+        {
+            ++m_data->m_current_number_of_workers;
+            lock.unlock();
+            boost::promise<boost::thread*> new_thread_promise;
+            boost::shared_future<boost::thread*> fu = new_thread_promise.get_future();
+            boost::function<void(boost::thread*)> d = boost::bind(&io_threadpool_scheduler::internal_data::thread_finished,m_data,_1);
+            boost::function<bool()> c = boost::bind(&io_threadpool_scheduler::internal_data::test_worker_loop,m_data);
+            boost::thread* new_thread =
+                     m_data->m_group->create_thread(boost::bind(&io_threadpool_scheduler::run_once,this->m_queue,m_private_queue,
+                                                        m_diagnostics,fu,m_data->m_weak_self,d,c));
+            lock.lock();
+            m_data->m_thread_ids.insert(new_thread->get_id());
+            new_thread_promise.set_value(new_thread);
+        }
+        else
+        {
+            ++m_data->m_current_number_of_workers;
+        }
+    }
     // overwrite from base
 #ifndef BOOST_NO_RVALUE_REFERENCES
     void post(typename queue_type::job_type && job, std::size_t prio)
@@ -230,9 +167,9 @@ public:
         boost::asynchronous::job_traits<typename queue_type::job_type>::set_posted_time(job);
         this->m_queue->push(std::forward<typename queue_type::job_type>(job),prio);
         // create a new thread if needed
-        try_create_thread();
+        this->try_create_thread();
         // join older threads
-        cleanup_threads();
+        this->m_data->cleanup_threads();
     }
     void post(typename queue_type::job_type && job)
     {
@@ -266,9 +203,9 @@ public:
         boost::asynchronous::interrupt_helper interruptible(std::move(fu),state);
 
         // create a new thread if needed
-        try_create_thread();
+        this->try_create_thread();
         // join older threads
-        cleanup_threads();
+        this->m_data->cleanup_threads();
 
         return boost::asynchronous::any_interruptible(interruptible);
     }
@@ -294,6 +231,10 @@ public:
     {
         boost::asynchronous::job_traits<typename queue_type::job_type>::set_posted_time(job);
         m_queue->push(job,prio);
+        // create a new thread if needed
+        this->try_create_thread();
+        // join older threads
+        this->m_data->cleanup_threads();
     }
     boost::asynchronous::any_interruptible interruptible_post(typename queue_type::job_type& job, std::size_t prio=0)
     {
@@ -308,8 +249,10 @@ public:
         boost::shared_future<boost::thread*> fu = wpromise->get_future();
         boost::asynchronous::interrupt_helper interruptible(fu,state);
 
+        // create a new thread if needed
+        this->try_create_thread();
         // join older threads
-        cleanup_threads();
+        m_data->cleanup_threads();
 
         return boost::asynchronous::any_interruptible(interruptible);
     }
@@ -470,19 +413,90 @@ public:
     }
 
 private:
-    boost::shared_ptr<boost::thread_group> m_group;
-    std::set<boost::thread::id> m_thread_ids;
+    struct internal_data
+    {
+        internal_data(size_t min_number_of_workers, size_t max_number_of_workers)
+        : m_min_number_of_workers(min_number_of_workers <= max_number_of_workers ? min_number_of_workers:max_number_of_workers)
+        , m_max_number_of_workers(min_number_of_workers <= max_number_of_workers ? max_number_of_workers:min_number_of_workers)
+        , m_current_number_of_workers(0)
+        , m_done_threads()
+        , m_weak_self()
+        , m_group(boost::make_shared<boost::thread_group>())
+        {}
+
+        // checks if worker thread should continue
+        bool test_worker_loop()
+        {
+           boost::mutex::scoped_lock lock(m_current_number_of_workers_mutex);
+           bool res = (m_current_number_of_workers > m_min_number_of_workers);
+           if (res)
+               --m_current_number_of_workers;
+           return res;
+        }
+        void basic_thread_not_busy()
+        {
+            // update number of workers
+            boost::mutex::scoped_lock lock(m_current_number_of_workers_mutex);
+            --m_current_number_of_workers;
+        }
+
+        void thread_finished(boost::thread* finished_thread)
+        {
+            // update number of workers
+            {
+                boost::mutex::scoped_lock lock(m_current_number_of_workers_mutex);
+                --m_current_number_of_workers;
+                m_thread_ids.erase(finished_thread->get_id());
+            }
+            // update set of finished threads
+            {
+                boost::mutex::scoped_lock lock(m_done_threads_mutex);
+                m_done_threads.insert(finished_thread);
+            }
+        }
+        // checks which threads are finished and can be removed from thread group and joined
+        // this is called when a new job is posted or at pool destrution
+        void cleanup_threads()
+        {
+            // look for finished threads
+            std::set<boost::thread*> to_join_threads;
+            {
+                boost::mutex::scoped_lock lock(m_done_threads_mutex);
+    #ifndef BOOST_NO_RVALUE_REFERENCES
+                to_join_threads = std::move(m_done_threads);
+    #else
+                to_join_threads = m_done_threads;
+    #endif
+                m_done_threads.clear();
+            }
+            // remove from group and join
+            boost::thread_group cleanup_group;
+            for (std::set<boost::thread*>::iterator it = to_join_threads.begin(); it != to_join_threads.end();++it)
+            {
+                m_group->remove_thread(*it);
+                cleanup_group.add_thread(*it);
+            }
+            // join. Not blocking as all these threads are finished
+            cleanup_group.join_all();
+        }
+
+        std::set<boost::thread::id> m_thread_ids;
+        size_t m_min_number_of_workers;
+        size_t m_max_number_of_workers;
+        size_t m_current_number_of_workers;
+        std::set<boost::thread*> m_done_threads;
+        boost::weak_ptr<this_type> m_weak_self;
+        boost::shared_ptr<boost::thread_group> m_group;
+        // protects m_done_threads
+        boost::mutex m_done_threads_mutex;
+        // protects m_current_number_of_workers
+        mutable boost::mutex m_current_number_of_workers_mutex;
+    };
+    boost::shared_ptr<internal_data> m_data;
+
     boost::shared_ptr<diag_type> m_diagnostics;
     boost::shared_ptr<boost::asynchronous::threadsafe_list<job_type> > m_private_queue;
-    size_t m_min_number_of_workers;
-    size_t m_max_number_of_workers;
-    size_t m_current_number_of_workers;
-    std::set<boost::thread*> m_done_threads;
-    boost::weak_ptr<this_type> m_weak_self;
-    // protects m_done_threads
-    boost::mutex m_done_threads_mutex;
-    // protects m_current_number_of_workers
-    mutable boost::mutex m_current_number_of_workers_mutex;
+
 };
 
 }} // boost::asynchronous::scheduler
