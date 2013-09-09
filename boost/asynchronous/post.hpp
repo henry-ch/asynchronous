@@ -29,6 +29,7 @@
 #include <boost/asynchronous/exceptions.hpp>
 #include <boost/asynchronous/job_traits.hpp>
 #include <boost/asynchronous/scheduler/detail/any_continuation.hpp>
+#include <boost/asynchronous/scheduler/tss_scheduler.hpp>
 
 BOOST_MPL_HAS_XXX_TRAIT_DEF(is_continuation_task)
 
