@@ -31,7 +31,7 @@ public:
     }
 };
 
-template <unsigned Loops=100, unsigned MinDurationUs=80000, unsigned SleepTimeUs=1000>
+template <unsigned Loops=10, unsigned MinDurationUs=80000, unsigned SleepTimeUs=1000>
 struct default_save_cpu_load
 {
 public:
@@ -39,8 +39,9 @@ public:
     // called each time a job is popped and executed
     void popped_job()
     {
-        // reset counter
+        // reset counter and timer
         m_cpt_nojob=0;
+        m_start = boost::chrono::high_resolution_clock::now();
     }
     // called each time a loop on all queues is done and no job was found
     void loop_done_no_job()
