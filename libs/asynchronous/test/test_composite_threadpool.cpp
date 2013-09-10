@@ -14,7 +14,6 @@
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/threadsafe_list.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
-#include <boost/asynchronous/queue/lockfree_spsc_queue.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/scheduler/threadpool_scheduler.hpp>
 #include <boost/asynchronous/scheduler/stealing_multiqueue_threadpool_scheduler.hpp>
@@ -46,7 +45,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         // a multiqueue_threadpool_scheduler, 0 thread
         // This scheduler does not steal from other schedulers, but will lend its queues for stealing
         auto tp = boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<> > (0,100));
+                    new boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<> > (0));
         // a stealing_multiqueue_threadpool_scheduler, 3 threads, each with a threadsafe_list
         // this scheduler will steal from other schedulers if it can. In this case it will manage only with tp, not tp3
         auto tp2 = boost::asynchronous::create_shared_scheduler_proxy(

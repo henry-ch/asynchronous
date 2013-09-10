@@ -47,7 +47,7 @@ struct Servant
     {
         m_threadpool = boost::asynchronous::create_shared_scheduler_proxy(
                             new boost::asynchronous::threadpool_scheduler<
-                                    boost::asynchronous::lockfree_queue<> >(3,5));
+                                    boost::asynchronous::lockfree_queue<> >(3));
     }
     boost::shared_future<void> start_void_async_work()
     {

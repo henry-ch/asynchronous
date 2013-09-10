@@ -230,7 +230,7 @@ BOOST_AUTO_TEST_CASE( test_void_post_callback_trackable_lf )
     servant_dtor=false;
     {
         auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-                                                                            boost::asynchronous::lockfree_queue<> >(10));
+                                                                            boost::asynchronous::lockfree_queue<> >());
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
@@ -253,7 +253,7 @@ BOOST_AUTO_TEST_CASE( test_int_post_callback_trackable_lf )
     servant_dtor=false;
     {
         auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-                                                                            boost::asynchronous::lockfree_queue<> >(10));
+                                                                            boost::asynchronous::lockfree_queue<> >());
         {
             main_thread_id = boost::this_thread::get_id();
             ServantProxy proxy(scheduler);
@@ -278,7 +278,7 @@ BOOST_AUTO_TEST_CASE( test_post_callback_trackable_exception_lf )
     servant_dtor=false;
     {
         auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-                                                                            boost::asynchronous::lockfree_queue<> >(10));
+                                                                            boost::asynchronous::lockfree_queue<> >());
 
         {
             main_thread_id = boost::this_thread::get_id();

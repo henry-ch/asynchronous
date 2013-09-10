@@ -35,7 +35,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         : boost::asynchronous::trackable_servant<>(scheduler,
                                                boost::asynchronous::create_shared_scheduler_proxy(
                                                    new boost::asynchronous::io_threadpool_scheduler<
-                                                           boost::asynchronous::lockfree_queue<> >(2,4,10)))
+                                                           boost::asynchronous::lockfree_queue<> >(2,4)))
         , m_dtor_done(new boost::promise<void>)
         , m_counter(0)
         , m_current(0)
@@ -116,7 +116,7 @@ BOOST_AUTO_TEST_CASE( test_io_threadpool_scheduler_2 )
     main_thread_id = boost::this_thread::get_id();
     {
        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-                                                                           boost::asynchronous::lockfree_queue<> >(10));
+                                                                           boost::asynchronous::lockfree_queue<> >());
 
        {
            ServantProxy proxy(scheduler);
@@ -135,7 +135,7 @@ BOOST_AUTO_TEST_CASE( test_io_threadpool_scheduler_5 )
     main_thread_id = boost::this_thread::get_id();
     {
        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-                                                                           boost::asynchronous::lockfree_queue<> >(10));
+                                                                           boost::asynchronous::lockfree_queue<> >());
 
        {
            ServantProxy proxy(scheduler);
@@ -154,7 +154,7 @@ BOOST_AUTO_TEST_CASE( test_io_threadpool_scheduler_9 )
     main_thread_id = boost::this_thread::get_id();
     {
        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-                                                                           boost::asynchronous::lockfree_queue<> >(10));
+                                                                           boost::asynchronous::lockfree_queue<> >());
 
        {
            ServantProxy proxy(scheduler);
@@ -173,7 +173,7 @@ BOOST_AUTO_TEST_CASE( test_io_threadpool_scheduler_5_2 )
     main_thread_id = boost::this_thread::get_id();
     {
        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-                                                                           boost::asynchronous::lockfree_queue<> >(10));
+                                                                           boost::asynchronous::lockfree_queue<> >());
 
        {
            ServantProxy proxy(scheduler);

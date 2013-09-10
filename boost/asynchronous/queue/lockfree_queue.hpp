@@ -34,8 +34,9 @@ public:
 #ifndef BOOST_NO_CXX11_VARIADIC_TEMPLATES
     template<typename... Args>
     lockfree_queue(Args... args):m_queue(args...){}
+    lockfree_queue():m_queue(16){}
 #else
-    lockfree_queue(std::size_t size):m_queue(size){}
+    lockfree_queue(std::size_t size=16):m_queue(size){}
 #endif
 #ifndef BOOST_NO_RVALUE_REFERENCES
 

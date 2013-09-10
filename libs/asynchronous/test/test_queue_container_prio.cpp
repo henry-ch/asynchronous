@@ -81,7 +81,7 @@ BOOST_AUTO_TEST_CASE( test_queue_container_prio_single_scheduler )
                             new boost::asynchronous::single_thread_scheduler<
                                     boost::asynchronous::any_queue_container<> >
                     (boost::asynchronous::any_queue_container_config<boost::asynchronous::threadsafe_list<> >(1),
-                     boost::asynchronous::any_queue_container_config<boost::asynchronous::lockfree_queue<> >(3,10)
+                     boost::asynchronous::any_queue_container_config<boost::asynchronous::lockfree_queue<> >(3)
                      ));
     
     main_thread_id = boost::this_thread::get_id();   

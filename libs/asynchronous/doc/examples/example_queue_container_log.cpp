@@ -28,7 +28,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
                                                // a threadpool with 1 thread using a lockfree queue of capacity 100
                                                boost::asynchronous::create_shared_scheduler_proxy(
                                                    new boost::asynchronous::threadpool_scheduler<
-                                                           boost::asynchronous::lockfree_queue< servant_job > >(1,100)))
+                                                           boost::asynchronous::lockfree_queue< servant_job > >(1)))
         , m_promise(new boost::promise<int>)
     {
     }
@@ -89,7 +89,7 @@ void example_queue_container_log()
                                 new boost::asynchronous::single_thread_scheduler<
                                         boost::asynchronous::any_queue_container<servant_job> >
                                 (boost::asynchronous::any_queue_container_config<boost::asynchronous::threadsafe_list<servant_job> >(1),
-                                 boost::asynchronous::any_queue_container_config<boost::asynchronous::lockfree_queue<servant_job> >(3,100)
+                                 boost::asynchronous::any_queue_container_config<boost::asynchronous::lockfree_queue<servant_job> >(3)
                                  ));
         {
             ServantProxy proxy(scheduler);

@@ -47,7 +47,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
         : boost::asynchronous::trackable_servant<servant_job,servant_job>(scheduler,
                                                boost::asynchronous::create_shared_scheduler_proxy(
                                                    new boost::asynchronous::threadpool_scheduler<
-                                                           boost::asynchronous::lockfree_queue< servant_job > >(3,5)))
+                                                           boost::asynchronous::lockfree_queue< servant_job > >(3)))
     {
     }
     ~Servant()

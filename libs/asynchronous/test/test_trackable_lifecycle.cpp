@@ -12,7 +12,6 @@
 #include <set>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
-#include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/queue/threadsafe_list.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/scheduler/threadpool_scheduler.hpp>
