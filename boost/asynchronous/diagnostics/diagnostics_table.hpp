@@ -11,8 +11,6 @@
 #define BOOST_ASYNC_DIAGNOSTICS_DIAGNOSTICS_TABLE_HPP
 
 #include <memory>
-#include <condition_variable>
-#include <mutex>
 #include <vector>
 #include <list>
 
@@ -38,7 +36,7 @@ private:
 
         void add(Key const& key,Value const& value)
         {
-            std::unique_lock<boost::shared_mutex> lock(mutex);
+            boost::unique_lock<boost::shared_mutex> lock(mutex);
             data.push_back(bucket_value(key,value));
         }
     };
@@ -79,11 +77,11 @@ public:
     // TODO chose returned sequence container
     std::map<Key,std::list<Value> > get_map() const
     {
-        std::vector<std::unique_lock<boost::shared_mutex> > locks;
+        std::vector<boost::unique_lock<boost::shared_mutex> > locks;
         for(unsigned i=0;i<m_buckets.size();++i)
         {
             locks.push_back(
-                        std::unique_lock<boost::shared_mutex>((*m_buckets[i]).mutex));
+                        boost::unique_lock<boost::shared_mutex>((*m_buckets[i]).mutex));
         }
         std::map<Key,std::list<Value> > res;
         for(unsigned i=0;i<m_buckets.size();++i)

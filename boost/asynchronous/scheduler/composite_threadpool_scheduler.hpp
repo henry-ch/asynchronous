@@ -34,7 +34,6 @@
 #include <boost/asynchronous/scheduler/detail/interruptible_job.hpp>
 #include <boost/asynchronous/diagnostics/default_loggable_job.hpp>
 #include <boost/asynchronous/job_traits.hpp>
-#include <boost/asynchronous/scheduler/detail/any_scheduler_impl.hpp>
 #include <boost/asynchronous/detail/any_joinable.hpp>
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/any_shared_scheduler_proxy.hpp>

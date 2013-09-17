@@ -34,6 +34,7 @@ BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_get_queues), get_queues,0);
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_set_steal_from_queues), set_steal_from_queues,1);
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_get_internal_scheduler_aspect), get_internal_scheduler_aspect,0);
 
+#ifndef BOOST_ASYNCHRONOUS_NO_TYPE_ERASURE
 #ifndef BOOST_NO_RVALUE_REFERENCES
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_post), post);
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_interruptible_post), interruptible_post);
@@ -222,5 +223,5 @@ struct concept_interface< ::boost::asynchronous::interruptible_post<T, U, V, W>,
 }
 }
 #endif
-
+#endif
 #endif // BOOST_ASYNC_CONCEPT_MEMBERS_HPP

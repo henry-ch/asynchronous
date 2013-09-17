@@ -12,7 +12,6 @@
 #define BOOST_ASYNC_QUEUE_THREADSAFE_LIST_HPP
 
 #include <memory>
-#include <condition_variable>
 #include <mutex>
 
 #include <boost/thread/mutex.hpp>
@@ -39,11 +38,11 @@ private:
         std::unique_ptr<node> next;
     };
 
-    std::mutex m_head_mutex;
+    boost::mutex m_head_mutex;
     std::unique_ptr<node> m_head;
-    std::mutex m_tail_mutex;
+    boost::mutex m_tail_mutex;
     node* m_tail;
-    std::condition_variable m_data_cond;
+    boost::condition_variable m_data_cond;
 
 public:
     typedef threadsafe_list<JOB> this_type;
@@ -60,7 +59,7 @@ public:
     {
         std::unique_ptr<node> p (new node);
         {
-            std::lock_guard<std::mutex> tail_lock(m_tail_mutex);
+            boost::lock_guard<boost::mutex> tail_lock(m_tail_mutex);
             m_tail->data = std::forward<JOB>(j);
             node* const new_tail = p.get();
             m_tail->next = std::move(p);
@@ -72,7 +71,7 @@ public:
     {
         std::unique_ptr<node> p (new node);
         {
-            std::lock_guard<std::mutex> tail_lock(m_tail_mutex);
+            boost::lock_guard<boost::mutex> tail_lock(m_tail_mutex);
             m_tail->data = std::forward<JOB>(j);
             node* const new_tail = p.get();
             m_tail->next = std::move(p);
@@ -85,7 +84,7 @@ public:
     {
         std::unique_ptr<node> p (new node);
         {
-            std::lock_guard<std::mutex> tail_lock(m_tail_mutex);
+            boost::lock_guard<boost::mutex> tail_lock(m_tail_mutex);
             m_tail->data = j;
             node* const new_tail = p.get();
             m_tail->next = std::move(p);
@@ -114,12 +113,12 @@ public:
 private:
     node* get_tail()
     {
-        std::lock_guard<std::mutex> tail_lock(m_tail_mutex);
+        boost::lock_guard<boost::mutex> tail_lock(m_tail_mutex);
         return m_tail;
     }
     std::unique_ptr<node> try_pop_head(JOB& value)
     {
-        std::lock_guard<std::mutex> head_lock(m_head_mutex);
+        boost::lock_guard<boost::mutex> head_lock(m_head_mutex);
         if(m_head.get()==get_tail())
         {
             return std::unique_ptr<node>();
@@ -135,9 +134,9 @@ private:
         return old_head;
     }
 
-    std::unique_lock<std::mutex> wait_for_data()
+    boost::unique_lock<boost::mutex> wait_for_data()
     {
-        std::unique_lock<std::mutex> head_lock(m_head_mutex);
+        boost::unique_lock<boost::mutex> head_lock(m_head_mutex);
         //TODO correct timing
 //        while( !m_data_cond.wait_for(head_lock,std::chrono::milliseconds(10),[&]{return (this->m_head.get()!= this->get_tail());}))
 //        {
@@ -148,7 +147,7 @@ private:
 
     std::unique_ptr<node> wait_pop_head()
     {
-        std::unique_lock<std::mutex> head_lock(wait_for_data());
+        boost::unique_lock<boost::mutex> head_lock(wait_for_data());
         return pop_head();
     }
 };
