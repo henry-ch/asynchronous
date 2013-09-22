@@ -4,29 +4,24 @@
 #include <boost/enable_shared_from_this.hpp>
 
 #include <boost/asynchronous/scheduler/threadpool_scheduler.hpp>
-#include <boost/asynchronous/queue/threadsafe_list.hpp>
+#include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include "example_qt_servant.hpp"
 
 using namespace std;
 
 QtServant::QtServant()
-    : boost::asynchronous::qt_servant<void>()
-    , boost::asynchronous::qt_servant<int>()
+    : boost::asynchronous::qt_servant<>
+      // threadpool with 3 threads
+      (boost::asynchronous::create_shared_scheduler_proxy(
+            new boost::asynchronous::threadpool_scheduler<
+                    boost::asynchronous::lockfree_queue<> >(3)))
 {
-    // threadpool with 3 threads and a simple threadsafe_list queue
-    boost::asynchronous::any_shared_scheduler_proxy<> worker_pool =
-            boost::asynchronous::create_shared_scheduler_proxy(
-                new boost::asynchronous::threadpool_scheduler<
-                        boost::asynchronous::threadsafe_list<> >(3));
-
-    boost::asynchronous::qt_servant<void>::set_worker(worker_pool);
-    boost::asynchronous::qt_servant<int>::set_worker(worker_pool);
 }
 void QtServant::signaled()
 {
     // start long tasks in threadpool (first lambda) and callback in our thread
-    boost::asynchronous::qt_servant<void>::post_callback(
+    post_callback(
            [](){
                     std::cout << "Long Work" << std::endl;
                     std::cout << "in thread: " << boost::this_thread::get_id() << std::endl;
@@ -42,7 +37,7 @@ void QtServant::signaled()
 void QtServant::signaled2()
 {
     // start long tasks in threadpool (first lambda) and callback in our thread
-    boost::asynchronous::qt_servant<int>::post_callback(
+    post_callback(
            [](){
                     std::cout << "Long Work" << std::endl;
                     std::cout << "in thread: " << boost::this_thread::get_id() << std::endl;

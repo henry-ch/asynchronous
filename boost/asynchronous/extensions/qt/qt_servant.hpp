@@ -120,12 +120,13 @@ struct dymmy_weak_qt_scheduler
 // servant for using a Qt event loop for callback dispatching.
 // hides threadpool, adds automatic trackability for callbacks and tasks
 // inherit from it to get functionality
-template <class T,class WJOB = boost::asynchronous::any_callable>
+template <class WJOB = boost::asynchronous::any_callable>
 class qt_servant
 {
 public:
-    qt_servant()
-        : m_next_helper_id(0)
+    qt_servant(boost::asynchronous::any_shared_scheduler_proxy<WJOB> w=boost::asynchronous::any_shared_scheduler_proxy<WJOB>())
+        : m_worker(w)
+        , m_next_helper_id(0)
     {}
     // copy-ctor and operator= are needed for correct tracking
     qt_servant(qt_servant const& rhs)
@@ -146,6 +147,7 @@ public:
     template <class F1, class F2>
     void post_callback(F1&& func,F2&& cb_func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
     {
+        typedef decltype(func()) f1_result_type;
         unsigned long connect_id = m_next_helper_id;
         boost::shared_ptr<F2> cbptr(boost::make_shared<F2>(std::forward<F2>(cb_func)));
 
@@ -154,7 +156,8 @@ public:
                 (m_next_helper_id,
                  [this,connect_id,cbptr](QEvent* e)
                  {
-                    detail::qt_async_custom_event<boost::future<T> >* ce = static_cast<detail::qt_async_custom_event<boost::future<T> >* >(e);
+                    detail::qt_async_custom_event<boost::future<f1_result_type> >* ce =
+                            static_cast<detail::qt_async_custom_event<boost::future<f1_result_type> >* >(e);
                     (*cbptr)(std::move(ce->m_future));
                     this->m_waiting_callbacks.erase(this->m_waiting_callbacks.find(connect_id));
                  }
@@ -175,6 +178,7 @@ public:
     boost::asynchronous::any_interruptible interruptible_post_callback(F1&& func,F2&& cb_func, std::string const& task_name="",
                                                                     std::size_t post_prio=0, std::size_t cb_prio=0)
     {
+        typedef decltype(func()) f1_result_type;
         unsigned long connect_id = m_next_helper_id;
         boost::shared_ptr<F2> cbptr(boost::make_shared<F2>(std::forward<F2>(cb_func)));
         boost::shared_ptr<boost::asynchronous::detail::connect_functor_helper> c =
@@ -182,7 +186,8 @@ public:
                 (m_next_helper_id,
                  [this,connect_id,cbptr](QEvent* e)
                  {
-                    detail::qt_async_custom_event<boost::future<T> >* ce = static_cast<detail::qt_async_custom_event<boost::future<T> >* >(e);
+                    detail::qt_async_custom_event<boost::future<f1_result_type> >* ce =
+                            static_cast<detail::qt_async_custom_event<boost::future<f1_result_type> >* >(e);
                     (*cbptr)(std::move(ce->m_future));
                     this->m_waiting_callbacks.erase(this->m_waiting_callbacks.find(connect_id));
                  }
@@ -212,8 +217,6 @@ private:
     boost::asynchronous::any_shared_scheduler_proxy<WJOB> m_worker;
     unsigned long m_next_helper_id;
     std::map<unsigned long, boost::shared_ptr<boost::asynchronous::detail::connect_functor_helper> > m_waiting_callbacks;
-
-
 };
 
 }}

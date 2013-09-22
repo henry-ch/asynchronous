@@ -4,8 +4,7 @@
 #include <boost/asynchronous/extensions/qt/qt_servant.hpp>
 
 struct QtServant : public QObject
-                 , public boost::asynchronous::qt_servant<void>
-                 , public boost::asynchronous::qt_servant<int>
+                 , public boost::asynchronous::qt_servant<>
 {
     Q_OBJECT
 
