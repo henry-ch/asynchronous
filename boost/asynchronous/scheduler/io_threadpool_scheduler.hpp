@@ -36,7 +36,7 @@
 #include <boost/asynchronous/scheduler/detail/job_diagnostic_closer.hpp>
 #include <boost/asynchronous/scheduler/detail/single_queue_scheduler_policy.hpp>
 #include <boost/asynchronous/detail/any_joinable.hpp>
-#include <boost/asynchronous/queue/threadsafe_list.hpp>
+#include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/scheduler/tss_scheduler.hpp>
 #include <boost/asynchronous/scheduler/detail/lockable_weak_scheduler.hpp>
 #include <boost/asynchronous/scheduler/detail/any_continuation.hpp>
@@ -66,14 +66,14 @@ public:
     io_threadpool_scheduler(size_t min_number_of_workers, size_t max_number_of_workers, Args... args)
         : boost::asynchronous::detail::single_queue_scheduler_policy<Q>(boost::make_shared<queue_type>(args...))
         , m_data (boost::make_shared<internal_data>(min_number_of_workers,max_number_of_workers))
-        , m_private_queue (boost::make_shared<boost::asynchronous::threadsafe_list<job_type> >())
+        , m_private_queue (boost::make_shared<boost::asynchronous::lockfree_queue<job_type> >())
     {
     }
 #endif
     io_threadpool_scheduler(size_t min_number_of_workers, size_t max_number_of_workers)
         : boost::asynchronous::detail::single_queue_scheduler_policy<Q>()
         , m_data (boost::make_shared<internal_data>(min_number_of_workers,max_number_of_workers))
-        , m_private_queue (boost::make_shared<boost::asynchronous::threadsafe_list<job_type> >())
+        , m_private_queue (boost::make_shared<boost::asynchronous::lockfree_queue<job_type> >())
     {
     }
     void constructor_done(boost::weak_ptr<this_type> weak_self)
@@ -260,7 +260,7 @@ public:
     // end overwrite from base
 
 
-    static bool run_loop(boost::shared_ptr<queue_type> queue,boost::shared_ptr<boost::asynchronous::threadsafe_list<job_type> > private_queue,
+    static bool run_loop(boost::shared_ptr<queue_type> queue,boost::shared_ptr<boost::asynchronous::lockfree_queue<job_type> > private_queue,
                          std::deque<boost::asynchronous::any_continuation>& waiting,
                          boost::shared_ptr<diag_type> diagnostics,CPULoad* cpu_load)
     {
@@ -321,7 +321,7 @@ public:
         return executed_job;
     }
 
-    static void run_always(boost::shared_ptr<queue_type> queue,boost::shared_ptr<boost::asynchronous::threadsafe_list<job_type> > private_queue,
+    static void run_always(boost::shared_ptr<queue_type> queue,boost::shared_ptr<boost::asynchronous::lockfree_queue<job_type> > private_queue,
                            boost::shared_ptr<diag_type> diagnostics,
                            boost::shared_future<boost::thread*> self,
                            boost::weak_ptr<this_type> this_,
@@ -368,7 +368,7 @@ public:
             }
         }
     }
-    static void run_once(boost::shared_ptr<queue_type> queue,boost::shared_ptr<boost::asynchronous::threadsafe_list<job_type> > private_queue,
+    static void run_once(boost::shared_ptr<queue_type> queue,boost::shared_ptr<boost::asynchronous::lockfree_queue<job_type> > private_queue,
                          boost::shared_ptr<diag_type> diagnostics,
                          boost::shared_future<boost::thread*> self,
                          boost::weak_ptr<this_type> this_,
@@ -495,7 +495,7 @@ private:
     boost::shared_ptr<internal_data> m_data;
 
     boost::shared_ptr<diag_type> m_diagnostics;
-    boost::shared_ptr<boost::asynchronous::threadsafe_list<job_type> > m_private_queue;
+    boost::shared_ptr<boost::asynchronous::lockfree_queue<job_type> > m_private_queue;
 
 };
 

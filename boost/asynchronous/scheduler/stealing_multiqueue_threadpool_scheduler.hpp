@@ -37,7 +37,7 @@
 #include <boost/asynchronous/queue/any_queue.hpp>
 #include <boost/asynchronous/scheduler/detail/multi_queue_scheduler_policy.hpp>
 #include <boost/asynchronous/detail/any_joinable.hpp>
-#include <boost/asynchronous/queue/threadsafe_list.hpp>
+#include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/scheduler/tss_scheduler.hpp>
 #include <boost/asynchronous/scheduler/detail/lockable_weak_scheduler.hpp>
 #include <boost/asynchronous/scheduler/detail/any_continuation.hpp>
@@ -71,14 +71,14 @@ public:
     stealing_multiqueue_threadpool_scheduler(size_t number_of_workers, Args... args)
         : boost::asynchronous::detail::multi_queue_scheduler_policy<Q,FindPosition>(number_of_workers,args...)
         , m_number_of_workers(number_of_workers)
-        , m_private_queue (boost::make_shared<boost::asynchronous::threadsafe_list<job_type> >())
+        , m_private_queue (boost::make_shared<boost::asynchronous::lockfree_queue<job_type> >())
     {
     }
 #endif
     stealing_multiqueue_threadpool_scheduler(size_t number_of_workers)
         : boost::asynchronous::detail::multi_queue_scheduler_policy<Q,FindPosition>(number_of_workers)
         , m_number_of_workers(number_of_workers)
-        , m_private_queue (boost::make_shared<boost::asynchronous::threadsafe_list<job_type> >())
+        , m_private_queue (boost::make_shared<boost::asynchronous::lockfree_queue<job_type> >())
     {
     }
     void constructor_done(boost::weak_ptr<this_type> weak_self)
@@ -141,7 +141,7 @@ public:
         init(m_number_of_workers,others,m_weak_self);
     }
 
-    static void run(std::vector<boost::shared_ptr<queue_type> > queues,boost::shared_ptr<boost::asynchronous::threadsafe_list<job_type> > private_queue,
+    static void run(std::vector<boost::shared_ptr<queue_type> > queues,boost::shared_ptr<boost::asynchronous::lockfree_queue<job_type> > private_queue,
                     std::vector<boost::asynchronous::any_queue_ptr<job_type> > other_queues,
                     size_t index,boost::shared_ptr<diag_type> diagnostics,boost::shared_future<boost::thread*> self,
                     boost::weak_ptr<this_type> this_)
@@ -257,7 +257,7 @@ private:
     std::vector<boost::thread::id> m_thread_ids;
     boost::shared_ptr<diag_type> m_diagnostics;
     boost::weak_ptr<this_type> m_weak_self;
-    boost::shared_ptr<boost::asynchronous::threadsafe_list<job_type> > m_private_queue;
+    boost::shared_ptr<boost::asynchronous::lockfree_queue<job_type> > m_private_queue;
 };
 
 }} // boost::async::scheduler
