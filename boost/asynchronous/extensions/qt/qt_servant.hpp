@@ -49,23 +49,37 @@ class connect_functor_helper : public QObject
 {
     Q_OBJECT
 public:
+    virtual ~connect_functor_helper(){}
     connect_functor_helper(unsigned long id, const boost::function<void(QEvent*)> &f)
+#ifdef BOOST_ASYNCHRONOUS_QT_WORKAROUND
+;
+#else    
         : QObject(0)
         , m_id(id)
         , m_function(f)
     {}
-    connect_functor_helper(connect_functor_helper const& rhs):QObject(0), m_id(rhs.m_id),m_function(rhs.m_function){}
-
+#endif
+    connect_functor_helper(connect_functor_helper const& rhs)
+#ifdef BOOST_ASYNCHRONOUS_QT_WORKAROUND
+  ;
+#else
+  :QObject(0), m_id(rhs.m_id),m_function(rhs.m_function)
+  {}
+#endif
     unsigned long get_id()const
     {
         return m_id;
     }
-    void customEvent(QEvent* event)
+    virtual void customEvent(QEvent* event)
+#ifdef BOOST_ASYNCHRONOUS_QT_WORKAROUND
+;
+#else    
     {
         m_function(event);
         QObject::customEvent(event);
     }
-
+#endif
+    
 private:
     unsigned long m_id;
     boost::function<void(QEvent*)> m_function;
@@ -75,18 +89,33 @@ class qt_post_helper : public QObject
 {
     Q_OBJECT
 public:
+    virtual ~qt_post_helper()
+#ifdef BOOST_ASYNCHRONOUS_QT_WORKAROUND
+    ;
+#else
+    {}
+#endif
+   
     typedef boost::asynchronous::any_callable job_type;
     qt_post_helper(connect_functor_helper* c)
+#ifdef BOOST_ASYNCHRONOUS_QT_WORKAROUND
+    ;
+#else
     : QObject(0)
     , m_connect(c)
     {}
+#endif
     qt_post_helper(qt_post_helper const& rhs)
+#ifdef BOOST_ASYNCHRONOUS_QT_WORKAROUND
+;
+#else    
     : QObject(0)
     , m_connect(rhs.m_connect)
     {}
-
+#endif
+    
     template <class Future>
-    void operator()(Future f)
+    void operator()(Future f)   
     {
         QApplication::postEvent(m_connect,new qt_async_custom_event<Future>(std::move(f)));
     }
