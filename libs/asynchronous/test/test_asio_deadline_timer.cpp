@@ -27,7 +27,6 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                    // as timer servant we use an asio-based scheduler with 1 thread
                                                    boost::asynchronous::create_shared_scheduler_proxy(
                                                        new boost::asynchronous::asio_scheduler<>(1)))
-        , m_timer(get_worker(),boost::posix_time::milliseconds(500))
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant ctor not posted.");
         m_threadid = boost::this_thread::get_id();
@@ -45,8 +44,11 @@ struct Servant : boost::asynchronous::trackable_servant<>
         
         typename boost::chrono::high_resolution_clock::time_point start = boost::chrono::high_resolution_clock::now();
 
-        async_wait(m_timer,
-                   [p,start,threadid](const ::boost::system::error_code& err){
+        boost::asynchronous::asio_deadline_timer_proxy timer(get_worker(),boost::posix_time::milliseconds(500));
+
+        // capture the timer in lambda to force keeping alive
+        async_wait(timer,
+                   [p,start,threadid,timer](const ::boost::system::error_code& err){
                        BOOST_CHECK_MESSAGE(threadid==boost::this_thread::get_id(),"timer callback in wrong thread.");
                        BOOST_CHECK_MESSAGE(!err,"timer not expired.");
                        typename boost::chrono::high_resolution_clock::time_point stop = boost::chrono::high_resolution_clock::now();
@@ -59,7 +61,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     }
     void timer_cancelled(boost::shared_ptr<boost::promise<void> > p)
     {
-        m_timer =  boost::asynchronous::asio_deadline_timer_proxy(get_worker(),boost::posix_time::milliseconds(50000));
+        boost::asynchronous::asio_deadline_timer_proxy timer(get_worker(),boost::posix_time::milliseconds(50000));
         boost::asynchronous::any_shared_scheduler<> s = get_scheduler().lock();
         std::vector<boost::thread::id> ids = s.thread_ids();
         BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"timer_cancelled running in wrong thread.");
@@ -67,7 +69,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         
         typename boost::chrono::high_resolution_clock::time_point start = boost::chrono::high_resolution_clock::now();
         
-        async_wait(m_timer,
+        async_wait(timer,
                    [p,start,threadid](const ::boost::system::error_code& err){
                        BOOST_CHECK_MESSAGE(threadid==boost::this_thread::get_id(),"timer callback in wrong thread.");
                        BOOST_CHECK_MESSAGE(err,"timer not expired.");
@@ -78,10 +80,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
                        p->set_value();
         });
         // cancel timer
-        m_timer =  boost::asynchronous::asio_deadline_timer_proxy(get_worker(),boost::posix_time::milliseconds(500));
+        timer =  boost::asynchronous::asio_deadline_timer_proxy(get_worker(),boost::posix_time::milliseconds(500));
     }
 private:
-    boost::asynchronous::asio_deadline_timer_proxy m_timer;
     boost::thread::id m_threadid;
 };
 

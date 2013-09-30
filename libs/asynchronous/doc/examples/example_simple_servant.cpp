@@ -14,7 +14,7 @@ struct Servant
 {
     // optional, ctor is simple enough not to be posted
     typedef int simple_ctor;
-    Servant(int data): m_data(data){}
+    Servant(boost::asynchronous::any_weak_scheduler<>,int data): m_data(data){}
     int doIt()const
     {
         std::cout << "Servant::doIt with m_data:" << m_data << std::endl;

@@ -38,7 +38,7 @@ struct my_exception : virtual boost::exception, virtual std::exception
 struct Servant
 {
     typedef int simple_ctor;
-    Servant(int data): m_data(data)
+    Servant(boost::asynchronous::any_weak_scheduler<>,int data): m_data(data)
     {
         BOOST_CHECK_MESSAGE(m_data==42,"servant got incorrect data in ctor. Expected 42.");
         BOOST_CHECK_MESSAGE(main_thread_id==boost::this_thread::get_id(),"servant ctor posted instead of being called directly.");

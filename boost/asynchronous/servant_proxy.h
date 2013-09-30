@@ -329,6 +329,8 @@ public:
         {
             // our thread, not possible to wait for a future
             // TODO forward
+            // if a servant has a simple_ctor, then he MUST get a weak scheduler as he might get it too late with tss
+            //m_servant = boost::make_shared<servant_type>(m_proxy.get_weak_scheduler(),args...);
             m_servant = servant_create_helper::template create<servant_type>(m_proxy,args...);
         }
         else
@@ -394,7 +396,9 @@ private:
     init(Args... args)
     {
         // TODO forward
-        m_servant = servant_create_helper::template create<servant_type>(m_proxy,args...);
+        // if a servant has a simple_ctor, then he MUST get a weak scheduler as he might get it too late with tss
+        m_servant = boost::make_shared<servant_type>(m_proxy.get_weak_scheduler(),args...);
+        //m_servant = servant_create_helper::template create<servant_type>(m_proxy,args...);
     }
     // ctor has to be posted
     template <typename S,typename... Args>
@@ -452,8 +456,14 @@ private:
     {
         template <typename S,typename... Args>
         static
-        typename boost::enable_if<typename has_requires_weak_scheduler<S>::type,
-                                  boost::shared_ptr<servant_type> >::type
+        typename boost::enable_if<  typename ::boost::mpl::or_<
+                                            typename has_requires_weak_scheduler<S>::type,
+                                            typename ::boost::mpl::or_<
+                                                typename boost::has_trivial_constructor<S>::type,
+                                                typename has_simple_ctor<S>::type
+                                            >::type
+                                          >::type,
+        boost::shared_ptr<servant_type> >::type
         create(scheduler_proxy_type proxy,Args... args)
         {
             boost::shared_ptr<servant_type> res = boost::make_shared<servant_type>(proxy.get_weak_scheduler(),args...);
@@ -461,8 +471,14 @@ private:
         }
         template <typename S,typename... Args>
         static
-        typename boost::disable_if<typename has_requires_weak_scheduler<S>::type,
-                                   boost::shared_ptr<servant_type> >::type
+        typename boost::disable_if<  typename ::boost::mpl::or_<
+                                            typename has_requires_weak_scheduler<S>::type,
+                                            typename ::boost::mpl::or_<
+                                                typename boost::has_trivial_constructor<S>::type,
+                                                typename has_simple_ctor<S>::type
+                                            >::type
+                                          >::type,
+        boost::shared_ptr<servant_type> >::type
         create(scheduler_proxy_type ,Args... args)
         {
             boost::shared_ptr<servant_type> res = boost::make_shared<servant_type>(args...);
