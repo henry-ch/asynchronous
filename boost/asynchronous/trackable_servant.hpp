@@ -110,6 +110,7 @@ public:
         // we want to log if possible
         boost::asynchronous::post_callback(m_worker,
                                         boost::asynchronous::check_alive_before_exec(std::forward<F1>(func),m_tracking),
+                                        //std::forward<F1>(func),
                                         m_scheduler,
                                         boost::asynchronous::check_alive(std::forward<F2>(cb_func),m_tracking),
                                         task_name,

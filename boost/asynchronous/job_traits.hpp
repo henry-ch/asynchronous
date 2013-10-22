@@ -10,11 +10,16 @@
 #ifndef BOOST_ASYNC_JOB_TRAITS_HPP
 #define BOOST_ASYNC_JOB_TRAITS_HPP
 
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/serialization/split_member.hpp>
+
 #include <boost/asynchronous/diagnostics/any_loggable.hpp>
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/diagnostics/default_loggable_job.hpp>
 #include <boost/asynchronous/diagnostics/diagnostics_table.hpp>
 #include <boost/chrono/chrono.hpp>
+#include <boost/asynchronous/any_serializable.hpp>
 
 namespace boost { namespace asynchronous
 {
@@ -63,6 +68,37 @@ namespace detail
         void operator()()/*const*/ //TODO
         {
             m_callable();
+        }
+        Fct m_callable;
+    };
+    template <class Base, class Fct>
+    struct serializable_base_job : public Base
+    {
+        #ifndef BOOST_NO_RVALUE_REFERENCES
+        serializable_base_job(Fct&& c) : m_callable(std::forward<Fct>(c))
+        #else
+        serializable_base_job(Fct const& c) : m_callable(c)
+        #endif
+        {
+        }
+        void operator()()/*const*/ //TODO
+        {
+            m_callable();
+        }
+        template <class Archive>
+        void save(Archive & ar, const unsigned int version)const
+        {
+            const_cast<Fct&>(m_callable).serialize(ar,version);
+        }
+        template <class Archive>
+        void load(Archive & ar, const unsigned int version)
+        {
+            m_callable.serialize(ar,version);
+        }
+        BOOST_SERIALIZATION_SPLIT_MEMBER()
+        std::string get_task_name()const
+        {
+            return const_cast<Fct&>(m_callable).get_task_name();
         }
         Fct m_callable;
     };
@@ -196,6 +232,48 @@ struct job_traits< boost::asynchronous::any_loggable<Clock> >
     }
 };
 
+template< >
+struct job_traits< boost::asynchronous::any_serializable >
+{
+    typedef typename boost::asynchronous::default_loggable_job<
+                                  boost::chrono::high_resolution_clock >            diagnostic_type;
+//    typedef boost::asynchronous::detail::base_job<
+//            diagnostic_type,boost::asynchronous::any_callable >                     wrapper_type;
+    typedef boost::asynchronous::detail::serializable_base_job<
+            diagnostic_type,boost::asynchronous::any_serializable >                     wrapper_type;
+
+    typedef typename diagnostic_type::diagnostic_item_type                          diagnostic_item_type;
+    typedef boost::asynchronous::diagnostics_table<
+            std::string,diagnostic_item_type>                                       diagnostic_table_type;
+
+    static void set_posted_time(boost::asynchronous::any_serializable& )
+    {
+    }
+    static void set_started_time(boost::asynchronous::any_serializable& )
+    {
+    }
+    static void set_finished_time(boost::asynchronous::any_serializable& )
+    {
+    }
+    static void set_name(boost::asynchronous::any_serializable& , std::string const& )
+    {
+    }
+    static std::string get_name(boost::asynchronous::any_serializable& )
+    {
+      return "";
+    }
+    static diagnostic_item_type get_diagnostic_item(boost::asynchronous::any_serializable& )
+    {
+      return diagnostic_item_type();
+    }
+    static void set_interrupted(boost::asynchronous::any_serializable& , bool )
+    {
+    }
+    template <class Diag>
+    static void add_diagnostic(boost::asynchronous::any_serializable& ,Diag* )
+    {
+    }
+};
 
 }} // boost::asynchron
 #endif // BOOST_ASYNC_JOB_TRAITS_HPP

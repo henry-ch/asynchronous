@@ -127,7 +127,8 @@ private:
 // a stupid scheduler which just calls the functor passed. It doesn't even post as the functor already contains a post call.
 struct dummy_qt_scheduler
 {
-    void post(boost::asynchronous::any_callable&& c, const std::string&,std::size_t) const
+    typedef boost::asynchronous::any_callable job_type;
+    void post(boost::asynchronous::any_callable&& c,std::size_t) const
     {
         c();
     }

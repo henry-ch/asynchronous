@@ -14,8 +14,11 @@
 #include <boost/weak_ptr.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/exception/all.hpp>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
 
 #include <boost/asynchronous/exceptions.hpp>
+#include <boost/asynchronous/detail/metafunctions.hpp>
 
 namespace boost { namespace asynchronous
 {
@@ -65,7 +68,7 @@ struct call_if_alive<Func,T,void>
     boost::weak_ptr<T> m_tracked;
 };
 
-template <class Func, class T,class R>
+template <class Func, class T,class R,class Enable=void>
 struct call_if_alive_exec
 {
 #ifndef BOOST_NO_RVALUE_REFERENCES
@@ -83,6 +86,45 @@ struct call_if_alive_exec
         }
         // throw exception, will be caught, then ignored
         boost::throw_exception(boost::asynchronous::task_aborted_exception());
+    }
+    Func m_wrapped;
+    boost::weak_ptr<T> m_tracked;
+};
+template <class Func, class T,class R>
+struct call_if_alive_exec<Func,T,R,typename ::boost::enable_if<boost::asynchronous::detail::is_serializable<Func> >::type>
+{
+#ifndef BOOST_NO_RVALUE_REFERENCES
+    call_if_alive_exec(Func&& f, boost::weak_ptr<T> tracked):m_wrapped(std::forward<Func>(f)),m_tracked(tracked){}
+#else
+    call_if_alive_exec(Func const& f, boost::weak_ptr<T> tracked):m_wrapped(f),m_tracked(tracked){}
+#endif
+
+    R operator()()
+    {
+        // call only if tracked object is alive
+        if (!m_tracked.expired())
+        {
+            return m_wrapped();
+        }
+        // throw exception, will be caught, then ignored
+        boost::throw_exception(boost::asynchronous::task_aborted_exception());
+    }
+    typedef int serializable_type;
+
+    template <class Archive>
+    void save(Archive & ar, const unsigned int version)const
+    {
+        const_cast<Func&>(m_wrapped).serialize(ar,version);
+    }
+    template <class Archive>
+    void load(Archive & ar, const unsigned int version)
+    {
+        m_wrapped.serialize(ar,version);
+    }
+    BOOST_SERIALIZATION_SPLIT_MEMBER()
+    std::string get_task_name()const
+    {
+        return m_wrapped.get_task_name();
     }
     Func m_wrapped;
     boost::weak_ptr<T> m_tracked;
