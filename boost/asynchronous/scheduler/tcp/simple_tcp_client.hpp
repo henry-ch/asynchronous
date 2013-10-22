@@ -49,6 +49,13 @@ struct simple_tcp_client : boost::asynchronous::trackable_servant<>
     }
 
 private:
+    // called in case of an error
+    void stop()
+    {
+         m_socket.close();
+         m_connection_state = connection_state::none;
+    }
+
     void check_for_work()
     {
         //TODO string&
@@ -118,6 +125,10 @@ private:
                 boost::asio::placeholders::error,cb));
         }
         // else bad luck, will try later
+        else
+        {
+            stop();
+        }
     }
     void handle_connect(const boost::system::error_code& err,std::function<void(std::string)> cb)
     {
@@ -128,6 +139,10 @@ private:
             get_task(cb);
         }
         // else bad luck, will try later
+        else
+        {
+            stop();
+        }
     }
     void get_task(std::function<void(std::string)> cb)
     {
@@ -142,7 +157,7 @@ private:
         if (!header_stream || header_stream.str().size() != m_header_length)
         {
           // Something went wrong
-          // TODO
+          stop();
         }
         m_outbound_header = header_stream.str();
         // Write the serialized data to the socket. We use "gather-write" to send
@@ -169,7 +184,7 @@ private:
         if (!header_stream || header_stream.str().size() != m_header_length)
         {
           // Something went wrong
-          // TODO
+          stop();
         }
         m_outbound_header = header_stream.str();
         // Write the serialized data to the socket. We use "gather-write" to send
@@ -184,6 +199,7 @@ private:
         if (err)
         {
             // ok, we'll try again later
+            stop();
             return;
         }
         boost::asio::async_read(m_socket,boost::asio::buffer(m_inbound_header),
@@ -197,6 +213,7 @@ private:
                     {
                         // Header doesn't seem to be valid. Inform the caller.
                         // ok, we'll try again later
+                        this->stop();
                         return;
                     }
                     // read message
@@ -207,6 +224,7 @@ private:
                                                 if (ec)
                                                 {
                                                     // ok, we'll try again later
+                                                    this->stop();
                                                 }
                                                 else
                                                 {
@@ -217,6 +235,7 @@ private:
                 }
                 else
                 {
+                    this->stop();
                 }
             });
     }
