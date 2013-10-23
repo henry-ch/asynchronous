@@ -45,7 +45,8 @@
 namespace boost { namespace asynchronous
 {
 
-template<class Q, class CPULoad =
+template<class Q, class PoolJobType = boost::asynchronous::any_callable,
+         class CPULoad =
 #ifndef BOOST_ASYNCHRONOUS_SAVE_CPU_LOAD
         boost::asynchronous::no_cpu_load_saving
 #else
@@ -55,18 +56,20 @@ template<class Q, class CPULoad =
 class tcp_server_scheduler: public boost::asynchronous::detail::single_queue_scheduler_policy<Q>
 {
 public:
+    typedef PoolJobType pool_job_type;
     typedef Q queue_type;
     typedef typename Q::job_type job_type;
     typedef typename boost::asynchronous::job_traits<typename Q::job_type>::diagnostic_table_type diag_type;
-    typedef tcp_server_scheduler<Q,CPULoad> this_type;
+    typedef tcp_server_scheduler<Q,pool_job_type,CPULoad> this_type;
 
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    tcp_server_scheduler(boost::shared_ptr<queue_type>&& queue, unsigned int worker_pool_size,
+    tcp_server_scheduler(boost::shared_ptr<queue_type>&& queue,
+                         boost::asynchronous::any_shared_scheduler_proxy<pool_job_type> worker_pool,
                          std::string const & address,
                          unsigned int port)
         : boost::asynchronous::detail::single_queue_scheduler_policy<Q>(std::forward<boost::shared_ptr<queue_type> >(queue))
         , m_private_queue (boost::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >())
-        , m_worker_pool_size(worker_pool_size)
+        , m_worker_pool(worker_pool)
         , m_address(address)
         , m_port(port)
     {
@@ -74,25 +77,25 @@ public:
 #endif
 #ifndef BOOST_NO_CXX11_VARIADIC_TEMPLATES
     template<typename... Args>
-    tcp_server_scheduler(unsigned int worker_pool_size,
+    tcp_server_scheduler(boost::asynchronous::any_shared_scheduler_proxy<pool_job_type> worker_pool,
                          std::string const & address,
                          unsigned int port,
                          Args... args)
         : boost::asynchronous::detail::single_queue_scheduler_policy<Q>(boost::make_shared<queue_type>(args...))
         , m_private_queue (boost::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >())
-        , m_worker_pool_size(worker_pool_size)
+        , m_worker_pool(worker_pool)
         , m_address(address)
         , m_port(port)
     {
     }
 #endif
 
-    tcp_server_scheduler(unsigned int worker_pool_size,
+    tcp_server_scheduler(boost::asynchronous::any_shared_scheduler_proxy<pool_job_type> worker_pool,
                          std::string const & address,
                          unsigned int port)
         : boost::asynchronous::detail::single_queue_scheduler_policy<Q>()
         , m_private_queue (boost::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >())
-        , m_worker_pool_size(worker_pool_size)
+        , m_worker_pool(worker_pool)
         , m_address(address)
         , m_port(port)
     {
@@ -103,7 +106,8 @@ public:
         boost::promise<boost::thread*> new_thread_promise;
         boost::shared_future<boost::thread*> fu = new_thread_promise.get_future();
         boost::thread* new_thread =
-                new boost::thread(boost::bind(&tcp_server_scheduler::run,this->m_queue,m_diagnostics,m_private_queue,fu,weak_self,m_worker_pool_size,m_address,m_port));
+                new boost::thread(boost::bind(&tcp_server_scheduler::run,this->m_queue,m_diagnostics,m_private_queue,
+                                              fu,weak_self,m_worker_pool,m_address,m_port));
         new_thread_promise.set_value(new_thread);
         m_thread.reset(new_thread);
     }
@@ -211,7 +215,7 @@ public:
                     boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > private_queue,
                     boost::shared_future<boost::thread*> self,
                     boost::weak_ptr<this_type> this_,
-                    unsigned int worker_pool_size,
+                    boost::asynchronous::any_shared_scheduler_proxy<pool_job_type> worker_pool,
                     std::string const& address,
                     unsigned int port)
     {
@@ -225,10 +229,8 @@ public:
         auto simplescheduler = boost::asynchronous::create_shared_scheduler_proxy(
                                 new boost::asynchronous::single_thread_scheduler<
                                      boost::asynchronous::lockfree_queue<> >);
-        boost::asynchronous::tcp::job_server_proxy server(simplescheduler,
-                                                          boost::asynchronous::create_shared_scheduler_proxy(
-                                                              new boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<> >(worker_pool_size)),
-                                                          address,port);
+        typename boost::asynchronous::tcp::get_correct_job_server_proxy<pool_job_type>::type
+                server(simplescheduler,worker_pool,address,port);
 
         CPULoad cpu_load;
         while(true)
@@ -285,7 +287,7 @@ private:
     boost::shared_ptr<boost::thread> m_thread;
     boost::shared_ptr<diag_type> m_diagnostics;
     boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > m_private_queue;
-    unsigned int m_worker_pool_size;
+    boost::asynchronous::any_shared_scheduler_proxy<pool_job_type> m_worker_pool;
     std::string m_address;
     unsigned int m_port;
 };

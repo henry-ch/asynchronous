@@ -21,16 +21,24 @@ struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any
     // optional, ctor is simple enough not to be posted
     //typedef int simple_ctor;
     Servant(boost::asynchronous::any_weak_scheduler<> scheduler)
-        : boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,boost::asynchronous::any_serializable>(scheduler,
-                                               // we use a tcp pool with 3 worker threads
-                                               boost::asynchronous::create_shared_scheduler_proxy(
-                                                   new boost::asynchronous::tcp_server_scheduler<
-                                                           boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable> >(3,"localhost",12345)))
+        : boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,boost::asynchronous::any_serializable>(scheduler)
         // for testing purpose
         , m_promise(new boost::promise<int>)
         , m_total(0)
         , m_tasks_done(0)
     {
+        // let's build our pool step by step. First we need a worker pool
+        // possibly for us, and we want to share it with the tcp pool for its serialization work
+        boost::asynchronous::any_shared_scheduler_proxy<> workers = boost::asynchronous::create_shared_scheduler_proxy(
+            new boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<> >(3));
+        // we use a tcp pool using the 3 worker threads we just built
+        auto pool= boost::asynchronous::create_shared_scheduler_proxy(
+                    new boost::asynchronous::tcp_server_scheduler<
+                            boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable> >
+                                (workers,"localhost",12345));
+        // and this will be the worker pool for post_callback
+        set_worker(pool);
+
     }
     // called when task done, in our thread
     void on_callback(int res)

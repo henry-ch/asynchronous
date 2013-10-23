@@ -27,16 +27,18 @@
 #include <boost/asynchronous/scheduler/tcp/detail/server_connection.hpp>
 #include <boost/asynchronous/scheduler/tcp/detail/asio_comm_server.hpp>
 #include <boost/asynchronous/scheduler/tcp/detail/client_request.hpp>
+#include <boost/asynchronous/diagnostics/any_loggable.hpp>
 
 namespace boost { namespace asynchronous { namespace tcp {
-struct job_server : boost::asynchronous::trackable_servant<>
+template <class PoolJobType>
+struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,PoolJobType>
 {
     typedef int simple_ctor;
-    job_server(boost::asynchronous::any_weak_scheduler<> scheduler,
-               boost::asynchronous::any_shared_scheduler_proxy<> worker,
+    job_server(boost::asynchronous::any_weak_scheduler<boost::asynchronous::any_callable> scheduler,
+               boost::asynchronous::any_shared_scheduler_proxy<PoolJobType> worker,
                std::string const & address,
                unsigned int port)
-        : boost::asynchronous::trackable_servant<>(scheduler,worker)
+        : boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,PoolJobType>(scheduler,worker)
         , m_next_task_id(0)
     {
         // For TCP communication we use an asio-based scheduler with 1 thread
@@ -58,7 +60,7 @@ struct job_server : boost::asynchronous::trackable_servant<>
     void add_task(boost::asynchronous::any_serializable job)
     {
         boost::shared_ptr<boost::asynchronous::any_serializable> moved_job(boost::make_shared<boost::asynchronous::any_serializable>(std::move(job)));
-        post_callback(
+        this->post_callback(
                     [moved_job]()mutable
                     {
                         // serialize job
@@ -71,7 +73,8 @@ struct job_server : boost::asynchronous::trackable_servant<>
                     {
                         waiting_job new_job(std::move(*moved_job),boost::asynchronous::tcp::server_reponse(this->m_next_task_id++,fu.get(),moved_job->get_task_name()));
                         this->m_unprocessed_jobs.emplace_back(std::move(new_job));
-                    }
+                    },
+                    "boost::asynchronous::tcp::job_server::serialize"
         );
     }
 
@@ -98,7 +101,7 @@ private:
         {
             // dummy job just to find with it
             waiting_job searched_job(boost::asynchronous::any_serializable(),boost::asynchronous::tcp::server_reponse(request.m_task_id,"",""));
-            std::set<waiting_job,sort_tasks>::iterator it = m_waiting_jobs.find(searched_job);
+            typename std::set<waiting_job,sort_tasks>::iterator it = m_waiting_jobs.find(searched_job);
             if (it != m_waiting_jobs.end())
             {
                 // return result. Serialize data and exception
@@ -143,17 +146,41 @@ private:
     std::set<waiting_job,sort_tasks> m_waiting_jobs;
     std::vector<boost::asynchronous::tcp::asio_comm_server_proxy> m_asio_comm;
 };
-
-class job_server_proxy : public boost::asynchronous::servant_proxy<job_server_proxy,job_server>
+class job_server_proxy : public boost::asynchronous::servant_proxy<job_server_proxy,job_server<boost::asynchronous::any_callable> >
 {
 public:
     template <class Scheduler,class Worker>
     job_server_proxy(Scheduler s, Worker w,std::string const & address,unsigned int port):
-        boost::asynchronous::servant_proxy<job_server_proxy,job_server>(s,w,address,port)
+        boost::asynchronous::servant_proxy<job_server_proxy,job_server<boost::asynchronous::any_callable> >(s,w,address,port)
+    {}
+    // get_data is posted, no future, no callback
+    BOOST_ASYNC_FUTURE_MEMBER(add_task)
+};
+class job_server_proxy_log :
+        public boost::asynchronous::servant_proxy<job_server_proxy,
+        job_server<boost::asynchronous::any_loggable<boost::chrono::high_resolution_clock> > >
+{
+public:
+    template <class Scheduler,class Worker>
+    job_server_proxy_log(Scheduler s, Worker w,std::string const & address,unsigned int port):
+        boost::asynchronous::servant_proxy<job_server_proxy,
+                                           job_server<boost::asynchronous::any_loggable<boost::chrono::high_resolution_clock> > >
+        (s,w,address,port)
     {}
     // get_data is posted, no future, no callback
     BOOST_ASYNC_FUTURE_MEMBER(add_task)
 };
 
+// choose correct proxy
+template <class Job>
+struct get_correct_job_server_proxy
+{
+    typedef boost::asynchronous::tcp::job_server_proxy type;
+};
+template <>
+struct get_correct_job_server_proxy<boost::asynchronous::any_loggable<boost::chrono::high_resolution_clock> >
+{
+    typedef boost::asynchronous::tcp::job_server_proxy_log type;
+};
 }}}
 #endif // BOOST_ASYNCHRONOUS_SCHEDULER_TCP_JOB_SERVER_HPP
