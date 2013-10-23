@@ -289,5 +289,9 @@ public:
     BOOST_ASYNC_FUTURE_MEMBER(run)
 };
 
+// macro to make registration of tasks shorter
+#define BOOST_ASYNCHRONOUS_DESERIALIZE_AND_CALL(task,in,out)    \
+    in >> task;auto task_res = task();out << task_res;
+
 }}}
 #endif // BOOST_ASYNCHRONOUS_SCHEDULER_TCP_SIMPLE_TCP_CLIENT_HPP

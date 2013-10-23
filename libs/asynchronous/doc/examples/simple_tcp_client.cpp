@@ -21,11 +21,13 @@ int main()
             if (task_name=="dummy_tcp_task")
             {
                 dummy_tcp_task t(0);
-                in >> t;
-                // call task
-                auto task_res = t();
-                // serialize result
-                out << task_res;
+                // use macro or following, commented out code
+                BOOST_ASYNCHRONOUS_DESERIALIZE_AND_CALL(t,in,out)
+//                in >> t;
+//                // call task
+//                auto task_res = t();
+//                // serialize result
+//                out << task_res;
             }
             // else whatever functor we support
             else
