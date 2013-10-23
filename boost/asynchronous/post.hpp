@@ -31,6 +31,7 @@
 #include <boost/asynchronous/scheduler/detail/any_continuation.hpp>
 #include <boost/asynchronous/scheduler/tss_scheduler.hpp>
 #include <boost/asynchronous/detail/metafunctions.hpp>
+#include <boost/asynchronous/scheduler/tcp/detail/client_request.hpp>
 
 BOOST_MPL_HAS_XXX_TRAIT_DEF(is_continuation_task)
 
@@ -475,13 +476,24 @@ namespace detail
         template <class Archive>
         void load(Archive & ar, const unsigned int /*version*/)
         {
-            typename Work::result_type res;
-            ar >> res;
+            boost::asynchronous::tcp::client_request::message_payload payload;
+            ar >> payload;
             boost::promise<typename Work::result_type> work_p;
             boost::future<typename Work::result_type> work_fu = work_p.get_future();
-            work_p.set_value(res);
-            calback_ready(std::move(work_fu));
-            //ar & *(m_work.m_task);
+            if (!payload.m_has_exception)
+            {
+                std::istringstream archive_stream(payload.m_data);
+                boost::archive::text_iarchive archive(archive_stream);
+
+                typename Work::result_type res;
+                archive >> res;
+                work_p.set_value(res);
+            }
+            else
+            {
+                work_p.set_exception(boost::copy_exception(payload.m_exception));
+            }
+            callback_ready(std::move(work_fu));
         }
         BOOST_SERIALIZATION_SPLIT_MEMBER()
         void operator()()
@@ -518,7 +530,7 @@ namespace detail
         }
 
         //void operator()(boost::future<typename Work::result_type> work_fu)
-        void calback_ready(boost::future<typename Work::result_type> work_fu)
+        void callback_ready(boost::future<typename Work::result_type> work_fu)
         {
             try
             {

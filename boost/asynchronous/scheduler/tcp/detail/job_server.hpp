@@ -101,8 +101,13 @@ private:
             std::set<waiting_job,sort_tasks>::iterator it = m_waiting_jobs.find(searched_job);
             if (it != m_waiting_jobs.end())
             {
-                // return result
-                std::istringstream archive_stream(request.m_data);
+                // return result. Serialize data and exception
+                std::ostringstream load_archive_stream;
+                boost::archive::text_oarchive load_archive(load_archive_stream);
+                load_archive << request.m_load;
+                std::string msg_load=load_archive_stream.str();
+
+                std::istringstream archive_stream(msg_load);
                 boost::archive::text_iarchive archive(archive_stream);
                 const_cast<boost::asynchronous::any_serializable&>((*it).m_job).serialize(archive,0);
             }

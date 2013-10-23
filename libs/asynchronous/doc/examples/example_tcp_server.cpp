@@ -59,7 +59,14 @@ struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any
                 ,
                // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
                [this](boost::future<int> res){
-                            this->on_callback(res.get());
+                            try{
+                                this->on_callback(res.get());
+                            }
+                            catch(std::exception& e)
+                            {
+                                std::cout << "got exception: " << e.what() << std::endl;
+                                this->on_callback(0);
+                            }
                }// callback functor.
         );
         post_callback(
@@ -68,7 +75,14 @@ struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any
                 ,
                // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
                [this](boost::future<int> res){
-                            this->on_callback(res.get());
+                            try{
+                                this->on_callback(res.get());
+                            }
+                            catch(std::exception& e)
+                            {
+                                std::cout << "got exception: " << e.what() << std::endl;
+                                this->on_callback(0);
+                            }
                }// callback functor.
         );
         return fu;

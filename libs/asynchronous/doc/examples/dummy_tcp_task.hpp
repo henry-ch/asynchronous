@@ -11,6 +11,7 @@
 #define DUMMY_TCP_TASK_HPP
 
 #include <iostream>
+#include <boost/thread/thread.hpp>
 #include <boost/asynchronous/scheduler/serializable_task.hpp>
 
 // for first tests
@@ -26,6 +27,8 @@ struct dummy_tcp_task : public boost::asynchronous::serializable_task
     int operator()()const
     {
         std::cout << "dummy_tcp_task operator(): " << m_data << std::endl;
+        boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
+        std::cout << "dummy_tcp_task operator() finished" << std::endl;
         return m_data;
     }
 
