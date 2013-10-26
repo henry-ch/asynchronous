@@ -92,7 +92,7 @@ struct move_task_helper
 
 namespace detail
 {
-    template <class R,class F,class JOB, class OP>
+    template <class R,class F,class JOB, class OP,class Enable=void>
     struct post_future_helper_base : public boost::asynchronous::job_traits<JOB>::diagnostic_type
     {
         post_future_helper_base():boost::asynchronous::job_traits<JOB>::diagnostic_type(){}
@@ -116,6 +116,68 @@ namespace detail
         post_future_helper_base(boost::shared_ptr<boost::promise<R> > p, F const& f)
             :boost::asynchronous::job_traits<JOB>::diagnostic_type(),m_promise(p),m_func(f){}
     //#endif
+        void operator()()
+        {
+            OP()(m_promise,m_func);
+        }
+        boost::shared_ptr<boost::promise<R> > m_promise;
+        F m_func;
+    };
+
+    // version for serializable tasks
+    template <class R,class F,class JOB, class OP>
+    struct post_future_helper_base<R,F,JOB,OP,typename ::boost::enable_if<boost::asynchronous::detail::is_serializable<F> >::type>
+            : public boost::asynchronous::job_traits<JOB>::diagnostic_type
+    {
+        post_future_helper_base():boost::asynchronous::job_traits<JOB>::diagnostic_type(){}
+#ifndef BOOST_NO_RVALUE_REFERENCES
+        post_future_helper_base(boost::shared_ptr<boost::promise<R> > p, F&& f)
+            : boost::asynchronous::job_traits<JOB>::diagnostic_type(),
+              m_promise(p),m_func(std::forward<F>(f)) {}
+        post_future_helper_base(post_future_helper_base&& rhs)
+            : boost::asynchronous::job_traits<JOB>::diagnostic_type(),
+              m_promise(std::move(rhs.m_promise)),m_func(std::move(rhs.m_func)) {}
+        post_future_helper_base& operator= (post_future_helper_base&& rhs)
+        {
+            m_promise = std::move(rhs.m_promise);
+            m_func = std::move(rhs.m_func);
+            return *this;
+        }
+#endif
+    //#else
+        post_future_helper_base(post_future_helper_base const& rhs)
+            :boost::asynchronous::job_traits<JOB>::diagnostic_type(),m_promise(rhs.m_promise),m_func(rhs.m_func){}
+        post_future_helper_base(boost::shared_ptr<boost::promise<R> > p, F const& f)
+            :boost::asynchronous::job_traits<JOB>::diagnostic_type(),m_promise(p),m_func(f){}
+    //#endif
+        template <class Archive>
+        void save(Archive & ar, const unsigned int /*version*/)const
+        {
+            ar & m_func;
+        }
+        template <class Archive>
+        void load(Archive & ar, const unsigned int /*version*/)
+        {
+            boost::asynchronous::tcp::client_request::message_payload payload;
+            ar >> payload;
+            if (!payload.m_has_exception)
+            {
+                std::istringstream archive_stream(payload.m_data);
+                boost::archive::text_iarchive archive(archive_stream);
+                R res;
+                archive >> res;
+                m_promise->set_value(res);
+            }
+            else
+            {
+                m_promise->set_exception(boost::copy_exception(payload.m_exception));
+            }
+        }
+        std::string get_task_name()const
+        {
+            return m_func.get_task_name();
+        }
+        BOOST_SERIALIZATION_SPLIT_MEMBER()
         void operator()()
         {
             OP()(m_promise,m_func);
@@ -498,35 +560,35 @@ namespace detail
         BOOST_SERIALIZATION_SPLIT_MEMBER()
         void operator()()
         {
-//            // by convention, we decide to lock the caller scheduler only from from task callback
-//            // but not start if calling scheduler is gone
-//            {
-//                auto shared_scheduler = m_scheduler.lock();
-//                if (!shared_scheduler.is_valid())
-//                    // no need to do any work as there is no way to callback
-//                    return;
-//            }
-//            boost::promise<typename Work::result_type> work_result;
-//            boost::future<typename Work::result_type> work_fu = work_result.get_future();
-//            // TODO check not empty
-//            try
-//            {
-//                // call task
-//                OP()(m_work,work_result);
-//            }
-//            catch(boost::asynchronous::task_aborted_exception& e){work_result.set_exception(boost::copy_exception(e));}
-//            catch(...){work_result.set_exception(boost::current_exception());}
-//            try
-//            {
-//                auto shared_scheduler = m_scheduler.lock();
-//                if (!shared_scheduler.is_valid())
-//                    // no need to do any work as there is no way to callback
-//                    return;
-//                // call callback
-//                callback_fct cb(std::move(m_work),std::move(work_fu));
-//                CB()(shared_scheduler,std::move(cb),m_task_name,m_cb_prio);
-//            }
-//            catch(std::exception& ){/* TODO */}
+            // by convention, we decide to lock the caller scheduler only from from task callback
+            // but not start if calling scheduler is gone
+            {
+                auto shared_scheduler = m_scheduler.lock();
+                if (!shared_scheduler.is_valid())
+                    // no need to do any work as there is no way to callback
+                    return;
+            }
+            boost::promise<typename Work::result_type> work_result;
+            boost::future<typename Work::result_type> work_fu = work_result.get_future();
+            // TODO check not empty
+            try
+            {
+                // call task
+                OP()(m_work,work_result);
+            }
+            catch(boost::asynchronous::task_aborted_exception& e){work_result.set_exception(boost::copy_exception(e));}
+            catch(...){work_result.set_exception(boost::current_exception());}
+            try
+            {
+                auto shared_scheduler = m_scheduler.lock();
+                if (!shared_scheduler.is_valid())
+                    // no need to do any work as there is no way to callback
+                    return;
+                // call callback
+                callback_fct cb(std::move(m_work),std::move(work_fu));
+                CB()(shared_scheduler,std::move(cb),m_task_name,m_cb_prio);
+            }
+            catch(std::exception& ){/* TODO */}
         }
 
         //void operator()(boost::future<typename Work::result_type> work_fu)
@@ -551,7 +613,7 @@ namespace detail
     };
 
     //TODO no copy/paste
-    template <class Func,class F1, class F2,class Work,class Sched,class CB>
+    template <class Func,class F1, class F2,class Work,class Sched,class CB,class Enable=void>
     struct post_callback_helper_continuation : public boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type
     {
 #ifndef BOOST_NO_RVALUE_REFERENCES
@@ -606,7 +668,7 @@ namespace detail
 
         void operator()()
         {
-            // by convention, we dforwardecide to lock the caller scheduler only from from task callback
+            // by convention, we decide to lock the caller scheduler only from from task callback
             // but not start if calling scheduler is gone
             {
                 auto shared_scheduler = m_scheduler.lock();
@@ -641,6 +703,177 @@ namespace detail
                                 // no need to do any work as there is no way to callback
                                 return;
                             // call callback                            
+                            boost::future<typename Work::result_type> work_fu = work_result->get_future();
+                            if(!std::get<0>(continuation_res).has_value())
+                            {
+                                boost::asynchronous::task_aborted_exception ta;
+                                work_result->set_exception(boost::copy_exception(ta));
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    work_result->set_value(std::get<0>(continuation_res).get());
+                                }
+                                catch(std::exception& e)
+                                {
+                                    work_result->set_exception(boost::copy_exception(e));
+                                }
+                            }
+
+                            callback_fct cb(std::move(work),std::move(work_fu));
+                            CB()(shared_scheduler,std::move(cb),task_name,cb_prio);
+                        }
+                        catch(std::exception& ){/* TODO */}
+                    }
+                );
+                boost::asynchronous::any_continuation ac(cont);
+                boost::asynchronous::get_continuations().push_front(ac);
+            }
+        };
+        Work m_work;
+        Sched m_scheduler;
+        std::string m_task_name;
+        std::size_t m_cb_prio;
+    };
+
+    //TODO no copy/paste
+    template <class Func,class F1, class F2,class Work,class Sched,class CB>
+    struct post_callback_helper_continuation<Func,F1,F2,Work,Sched,CB,typename ::boost::enable_if<boost::asynchronous::detail::is_serializable<typename Work::task_type> >::type>
+            : public boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type
+    {
+#ifndef BOOST_NO_RVALUE_REFERENCES
+        post_callback_helper_continuation(Work&& w, Sched const& s, const std::string& task_name="",
+                                  std::size_t cb_prio=0)
+            : m_work(std::forward<Work>(w)),m_scheduler(s),m_task_name(task_name),m_cb_prio(cb_prio) {}
+        post_callback_helper_continuation(post_callback_helper_continuation&& rhs)
+            : m_work(std::move(rhs.m_work)),m_scheduler(rhs.m_scheduler)
+            , m_task_name(std::move(rhs.m_task_name)),m_cb_prio(rhs.m_cb_prio) {}
+        post_callback_helper_continuation& operator= (post_callback_helper_continuation&& rhs)
+        {
+            m_work = std::move(rhs.m_work);
+            m_scheduler = rhs.m_scheduler;
+            m_task_name = std::move(rhs.m_task_name);
+            m_cb_prio = rhs.m_cb_prio;
+            return *this;
+        }
+#endif
+    //#else
+        post_callback_helper_continuation(post_callback_helper_continuation const& rhs)
+            : boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type(),
+              m_work(rhs.m_work),m_scheduler(rhs.m_scheduler),m_task_name(rhs.m_task_name),m_cb_prio(rhs.m_cb_prio){}
+        post_callback_helper_continuation(Work const& w, Sched const& s, const std::string& task_name="",std::size_t cb_prio=0)
+            : boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type(),
+              m_work(w),m_scheduler(s),m_task_name(task_name),m_cb_prio(cb_prio){}
+    //#endif
+
+        struct callback_fct : public boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type
+        {
+            callback_fct(Work const& w,boost::future<typename Work::result_type> fu)
+                :boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type()
+                ,m_work(w)
+                ,m_fu(boost::make_shared<boost::future<typename Work::result_type> >(std::move(fu))){}
+            callback_fct(callback_fct const& rhs)
+                :boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type()
+                ,m_work(rhs.m_work)
+                ,m_fu(rhs.m_fu){}
+            callback_fct& operator= (callback_fct const& rhs)
+            {
+                m_work = rhs.m_work;
+                m_fu = rhs.m_fu;
+                rhs.m_fu.reset();
+                return *this;
+            }
+            void operator()()const
+            {
+                m_work(std::move(*m_fu));
+            }
+            Work m_work;
+            boost::shared_ptr<boost::future<typename Work::result_type> > m_fu;
+        };
+        std::string get_task_name()const
+        {
+            return (*(m_work.m_task)).get_task_name();
+        }
+        template <class Archive>
+        void save(Archive & ar, const unsigned int /*version*/)const
+        {
+            ar & *(m_work.m_task);
+        }
+        template <class Archive>
+        void load(Archive & ar, const unsigned int /*version*/)
+        {
+            boost::asynchronous::tcp::client_request::message_payload payload;
+            ar >> payload;
+            boost::promise<typename Work::result_type> work_p;
+            boost::future<typename Work::result_type> work_fu = work_p.get_future();
+            if (!payload.m_has_exception)
+            {
+                std::istringstream archive_stream(payload.m_data);
+                boost::archive::text_iarchive archive(archive_stream);
+
+                typename Work::result_type res;
+                archive >> res;
+                work_p.set_value(res);
+            }
+            else
+            {
+                work_p.set_exception(boost::copy_exception(payload.m_exception));
+            }
+            callback_ready(std::move(work_fu));
+        }
+        BOOST_SERIALIZATION_SPLIT_MEMBER()
+        void callback_ready(boost::future<typename Work::result_type> work_fu)
+        {
+            try
+            {
+                auto shared_scheduler = m_scheduler.lock();
+                if (!shared_scheduler.is_valid())
+                    // no need to do any work as there is no way to callback
+                    return;
+                // call callback
+                callback_fct cb(std::move(m_work),std::move(work_fu));
+                CB()(shared_scheduler,std::move(cb),m_task_name,m_cb_prio);
+            }
+            catch(std::exception& ){/* TODO */}
+        }
+        void operator()()
+        {
+            // by convention, we decide to lock the caller scheduler only from from task callback
+            // but not start if calling scheduler is gone
+            {
+                auto shared_scheduler = m_scheduler.lock();
+                if (!shared_scheduler.is_valid())
+                    // no need to do any work as there is no way to callback
+                    return;
+            }
+            boost::shared_ptr<boost::promise<typename Work::result_type> > work_result(new boost::promise<typename Work::result_type>);
+            // TODO check not empty
+            try
+            {
+                // call task
+                post_helper()(m_task_name,m_cb_prio,m_scheduler,m_work,work_result);
+            }
+            catch(boost::asynchronous::task_aborted_exception& e){work_result->set_exception(boost::copy_exception(e));}
+            catch(...){work_result->set_exception(boost::current_exception());}
+        }
+        struct post_helper
+        {
+            void operator()(std::string const& task_name,std::size_t cb_prio, Sched scheduler,
+                            move_task_helper<typename Func::return_type,F1,F2>& work,
+                            boost::shared_ptr<boost::promise<typename Func::return_type> > work_result)const
+            {
+                auto cont = (*work.m_task.get())();
+                //cont.on_done(detail::promise_mover<typename Func::return_type>(res));
+                cont.on_done([work,scheduler,work_result,task_name,cb_prio](std::tuple<boost::future<typename Func::return_type> >&& continuation_res)
+                    {
+                        try
+                        {
+                            auto shared_scheduler = scheduler.lock();
+                            if (!shared_scheduler.is_valid())
+                                // no need to do any work as there is no way to callback
+                                return;
+                            // call callback
                             boost::future<typename Work::result_type> work_fu = work_result->get_future();
                             if(!std::get<0>(continuation_res).has_value())
                             {

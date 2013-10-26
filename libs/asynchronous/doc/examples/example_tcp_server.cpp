@@ -135,5 +135,22 @@ void example_post_tcp()
     std::cout << "end example_post_tcp \n" << std::endl;
 }
 
+void example_tcp_post_future()
+{
+    std::cout << "example_tcp_post_future" << std::endl;
+    {
+        boost::asynchronous::any_shared_scheduler_proxy<> workers = boost::asynchronous::create_shared_scheduler_proxy(
+            new boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<> >(3));
+        // we use a tcp pool using the 3 worker threads we just built
+        auto pool= boost::asynchronous::create_shared_scheduler_proxy(
+                    new boost::asynchronous::tcp_server_scheduler<
+                            boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable> >
+                                (workers,"localhost",12345));
+        boost::shared_future<int> fui = boost::asynchronous::post_future(pool, dummy_tcp_task(42));
+        int res = fui.get();
+        std::cout << "res==42? " << std::boolalpha << (res == 42) << std::endl;// of course 42.
+    }
+    std::cout << "end example_tcp_post_future \n" << std::endl;
+}
 
 

@@ -40,8 +40,6 @@
 #include <boost/asynchronous/scheduler/threadpool_scheduler.hpp>
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
-////TODO temporary
-//#include <libs/asynchronous/doc/examples/dummy_tcp_task.hpp>
 namespace boost { namespace asynchronous
 {
 

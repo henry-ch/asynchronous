@@ -1,7 +1,8 @@
 #include <iostream>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
-#include <boost/asynchronous/queue/threadsafe_list.hpp>
+#include <boost/asynchronous/queue/lockfree_stack.hpp>
+#include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/scheduler/multiqueue_threadpool_scheduler.hpp>
 #include <boost/asynchronous/continuation_task.hpp>
@@ -13,7 +14,7 @@ using namespace std;
 
 namespace
 {
-// a simnple, single-threaded fibonacci function used for cutoff
+// a simple, single-threaded fibonacci function used for cutoff
 long serial_fib( long n ) {
     if( n<2 )
         return n;
@@ -62,7 +63,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                // threadpool and a simple threadsafe_list queue
                                                boost::asynchronous::create_shared_scheduler_proxy(
                                                    new boost::asynchronous::multiqueue_threadpool_scheduler<
-                                                           boost::asynchronous::threadsafe_list<> >(threads)))
+                                                           boost::asynchronous::lockfree_queue<> >(threads)))
         // for testing purpose
         , m_promise(new boost::promise<long>)
     {
@@ -128,7 +129,7 @@ void example_fibonacci(long fibo_val,long cutoff, int threads)
         // a single-threaded world, where Servant will live.
         auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                                 new boost::asynchronous::single_thread_scheduler<
-                                     boost::asynchronous::threadsafe_list<> >);
+                                     boost::asynchronous::lockfree_queue<> >);
         {
             ServantProxy proxy(scheduler,threads);
             start = boost::chrono::high_resolution_clock::now();

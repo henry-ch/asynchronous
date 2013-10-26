@@ -25,6 +25,7 @@
 #include <boost/asynchronous/scheduler/tcp/detail/client_request.hpp>
 #include <boost/asynchronous/scheduler/tcp/detail/server_response.hpp>
 #include <boost/asynchronous/scheduler/tcp/detail/transport_exception.hpp>
+#include <boost/asynchronous/scheduler/tss_scheduler.hpp>
 
 namespace boost { namespace asynchronous { namespace tcp {
 
@@ -33,28 +34,54 @@ struct simple_tcp_client : boost::asynchronous::trackable_servant<>
     simple_tcp_client(boost::asynchronous::any_weak_scheduler<> scheduler,
                       const std::string& server, const std::string& path,
                       long time_in_ms_between_requests,
-                      std::function<void(std::string const&,boost::archive::text_iarchive&, boost::archive::text_oarchive&)> const& executor)
+                      std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,
+                                         std::function<void(boost::asynchronous::tcp::client_request const&)>)> const& executor)
         : boost::asynchronous::trackable_servant<>(scheduler)
         , m_connection_state(connection_state::none)
         , m_server(server)
         , m_path(path)
         , m_resolver(*boost::asynchronous::get_io_service<>())
-        , m_socket(*boost::asynchronous::get_io_service<>())
+        , m_socket(boost::make_shared<boost::asio::ip::tcp::socket>(*boost::asynchronous::get_io_service<>()))
         , m_time_in_ms_between_requests(time_in_ms_between_requests)
         , m_executor(executor)
-    {}
+    {
+        // no delay
+        boost::asio::ip::tcp::no_delay option(true);
+        boost::system::error_code ec;
+        m_socket->set_option(option,ec);
+    }
     boost::future<void> run()
     {
         check_for_work();
         // start continuous task
         return m_done.get_future();
     }
-
+    static void send_task_result(boost::asynchronous::tcp::client_request const& request, boost::shared_ptr<boost::asio::ip::tcp::socket> asocket)
+    {
+        std::ostringstream archive_stream;
+        boost::archive::text_oarchive archive(archive_stream);
+        archive << request;
+        boost::shared_ptr<std::string> outbound_buffer = boost::make_shared<std::string>(archive_stream.str());
+        // Format the header.
+        std::ostringstream header_stream;
+        header_stream << std::setw(m_header_length)<< std::hex << outbound_buffer->size();
+        if (!header_stream || header_stream.str().size() != m_header_length)
+        {
+          // Something went wrong, ignore
+        }
+        boost::shared_ptr<std::string> outbound_header = boost::make_shared<std::string>(header_stream.str());
+        // Write the serialized data to the socket. We use "gather-write" to send
+        // both the header and the data in a single write operation.
+        std::vector<boost::asio::const_buffer> buffers;
+        buffers.push_back(boost::asio::buffer(*outbound_header));
+        buffers.push_back(boost::asio::buffer(*outbound_buffer));
+        boost::asio::async_write(*asocket, buffers,[outbound_buffer,outbound_header](const boost::system::error_code&,std::size_t) {/*ignore*/});
+    }
 private:
     // called in case of an error
     void stop()
     {
-         m_socket.close();
+         m_socket->close();
          m_connection_state = connection_state::none;
     }
 
@@ -63,36 +90,21 @@ private:
         //TODO string&
         std::function<void(std::string)> cb =
         [this](std::string archive_data)
-        {
+        {            
             // got work, deserialize message
             std::istringstream archive_stream(archive_data);
             boost::archive::text_iarchive archive(archive_stream);
             boost::asynchronous::tcp::server_reponse resp(0,"","");
             archive >> resp;
-            // deserialize job, execute code, serialize result
-            std::istringstream task_stream(resp.m_task);
-            boost::archive::text_iarchive task_archive(task_stream);
-            std::ostringstream res_archive_stream;
-            boost::archive::text_oarchive res_archive(res_archive_stream);
-            boost::asynchronous::tcp::client_request request (BOOST_ASYNCHRONOUS_TCP_CLIENT_JOB_RESULT);
-            request.m_task_id = resp.m_task_id;
-            try
+            // if no task, give up
+            if (resp.m_task.empty())
             {
-                m_executor(resp.m_task_name,task_archive,res_archive);
-                request.m_load.m_data = res_archive_stream.str();
+                return;
             }
-            catch (std::exception& e)
-            {
-                request.m_load.m_has_exception=true;
-                request.m_load.m_exception=boost::asynchronous::tcp::transport_exception(e.what());
-            }
-            catch(...)
-            {
-                request.m_load.m_has_exception=true;
-                request.m_load.m_exception=boost::asynchronous::tcp::transport_exception("...");
-            }
-
-            this->send_task_result(request);
+            boost::shared_ptr<boost::asio::ip::tcp::socket> asocket = this->m_socket;
+            //TODO why does gcc insist on this?
+            this->m_executor(resp.m_task_name,resp,
+                             [asocket,this](boost::asynchronous::tcp::client_request const& req){boost::asynchronous::tcp::simple_tcp_client::send_task_result(req,asocket);});
         };
         boost::shared_ptr<boost::asio::deadline_timer> atimer
                 (boost::make_shared<boost::asio::deadline_timer>(*boost::asynchronous::get_io_service<>(),
@@ -134,7 +146,7 @@ private:
         {
             // Attempt a connection to each endpoint in the list until we
             // successfully establish a connection.
-            boost::asio::async_connect(m_socket, endpoint_iterator,
+            boost::asio::async_connect(*m_socket, endpoint_iterator,
               boost::bind(&simple_tcp_client::handle_connect, this,
                 boost::asio::placeholders::error,cb));
         }
@@ -180,31 +192,9 @@ private:
         std::vector<boost::asio::const_buffer> buffers;
         buffers.push_back(boost::asio::buffer(*outbound_header));
         buffers.push_back(boost::asio::buffer(*outbound_buffer));
-        boost::asio::async_write(m_socket, buffers,
+        boost::asio::async_write(*m_socket, buffers,
                                boost::bind(&simple_tcp_client::handle_write_request, this,
                                  boost::asio::placeholders::error,cb,outbound_buffer,outbound_header) );
-    }
-    void send_task_result(boost::asynchronous::tcp::client_request const& request)
-    {
-        std::ostringstream archive_stream;
-        boost::archive::text_oarchive archive(archive_stream);
-        archive << request;
-        boost::shared_ptr<std::string> outbound_buffer = boost::make_shared<std::string>(archive_stream.str());
-        // Format the header.
-        std::ostringstream header_stream;
-        header_stream << std::setw(m_header_length)<< std::hex << outbound_buffer->size();
-        if (!header_stream || header_stream.str().size() != m_header_length)
-        {
-          // Something went wrong
-          stop();
-        }
-        boost::shared_ptr<std::string> outbound_header = boost::make_shared<std::string>(header_stream.str());
-        // Write the serialized data to the socket. We use "gather-write" to send
-        // both the header and the data in a single write operation.
-        std::vector<boost::asio::const_buffer> buffers;
-        buffers.push_back(boost::asio::buffer(*outbound_header));
-        buffers.push_back(boost::asio::buffer(*outbound_buffer));
-        boost::asio::async_write(m_socket, buffers,[outbound_buffer,outbound_header](const boost::system::error_code&,std::size_t) {/*ignore*/});
     }
     void handle_write_request(const boost::system::error_code& err,std::function<void(std::string)> callback,
                               boost::shared_ptr<std::string> /*ignored*/,boost::shared_ptr<std::string> /*ignored*/)
@@ -216,7 +206,7 @@ private:
             return;
         }
         boost::shared_ptr<std::vector<char> > inbound_header = boost::make_shared<std::vector<char> >(m_header_length);
-        boost::asio::async_read(m_socket,boost::asio::buffer(*inbound_header),
+        boost::asio::async_read(*m_socket,boost::asio::buffer(*inbound_header),
             [this, callback,inbound_header](boost::system::error_code ec, size_t /*bytes_transferred*/)mutable
             {
                 if (!ec)
@@ -233,7 +223,7 @@ private:
                     // read message
                     boost::shared_ptr<std::vector<char> > inbound_buffer = boost::make_shared<std::vector<char> >();
                     inbound_buffer->resize(inbound_data_size);
-                    boost::asio::async_read(this->m_socket,boost::asio::buffer(*inbound_buffer),
+                    boost::asio::async_read(*(this->m_socket),boost::asio::buffer(*inbound_buffer),
                                             [this, callback,inbound_buffer](boost::system::error_code ec, size_t /*bytes_transferred*/) mutable
                                             {
                                                 if (ec)
@@ -266,9 +256,10 @@ private:
     std::string m_server;
     std::string m_path;
     boost::asio::ip::tcp::resolver m_resolver;
-    boost::asio::ip::tcp::socket m_socket;
+    boost::shared_ptr<boost::asio::ip::tcp::socket> m_socket;
     long m_time_in_ms_between_requests;
-    std::function<void(std::string const&,boost::archive::text_iarchive&, boost::archive::text_oarchive&)> m_executor;
+    std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,
+                       std::function<void(boost::asynchronous::tcp::client_request const&)>)> m_executor;
     boost::promise<void> m_done;
     // The size of a fixed length header.
     // TODO not fixed
@@ -282,16 +273,85 @@ public:
     // ctor arguments are forwarded to AsioCommunicationServant
     template <class Scheduler>
     simple_tcp_client_proxy(Scheduler s,const std::string& server, const std::string& path,long time_in_ms_between_requests,
-                            std::function<void(std::string const&,boost::archive::text_iarchive&, boost::archive::text_oarchive&)> const& executor):
+                            std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,
+                                               std::function<void(boost::asynchronous::tcp::client_request const&)>)> const& executor):
         boost::asynchronous::servant_proxy<simple_tcp_client_proxy,boost::asynchronous::tcp::simple_tcp_client >(s,server,path,time_in_ms_between_requests,executor)
     {}
     // we offer a single member for posting
     BOOST_ASYNC_FUTURE_MEMBER(run)
 };
 
-// macro to make registration of tasks shorter
-#define BOOST_ASYNCHRONOUS_DESERIALIZE_AND_CALL(task,in,out)    \
-    in >> task;auto task_res = task();out << task_res;
+// register a task for deserialization
+template <class Task>
+void deserialize_and_call_task(Task& t,boost::asynchronous::tcp::server_reponse const& resp,
+                               std::function<void(boost::asynchronous::tcp::client_request const&)>const& when_done)
+{
+    std::istringstream task_stream(resp.m_task);
+    boost::archive::text_iarchive task_archive(task_stream);
+    std::ostringstream res_archive_stream;
+    boost::archive::text_oarchive res_archive(res_archive_stream);
+    boost::asynchronous::tcp::client_request request (BOOST_ASYNCHRONOUS_TCP_CLIENT_JOB_RESULT);
+    request.m_task_id = resp.m_task_id;
+    try
+    {
+        task_archive >> t;
+        auto task_res = t();
+        res_archive << task_res;
+        request.m_load.m_data = res_archive_stream.str();
+    }
+    catch (std::exception& e)
+    {
+        request.m_load.m_has_exception=true;
+        request.m_load.m_exception=boost::asynchronous::tcp::transport_exception(e.what());
+    }
+    catch(...)
+    {
+        request.m_load.m_has_exception=true;
+        request.m_load.m_exception=boost::asynchronous::tcp::transport_exception("...");
+    }
+    when_done(request);
+}
+                                                                  \
+// register a continuation task for deserialization
+template <class Task>
+void deserialize_and_call_continuation_task(Task& t,boost::asynchronous::tcp::server_reponse const& resp,
+                                            std::function<void(boost::asynchronous::tcp::client_request const&)>const& when_done)
+{
+    // deserialize job, execute code, serialize result
+    std::istringstream task_stream(resp.m_task);
+    boost::archive::text_iarchive task_archive(task_stream);
+    boost::asynchronous::tcp::client_request request (BOOST_ASYNCHRONOUS_TCP_CLIENT_JOB_RESULT);
+    request.m_task_id = resp.m_task_id;
+    task_archive >> t;
+    // call task
+    auto cont = t();
+    cont.on_done([request,when_done](std::tuple<boost::future<typename decltype(t())::return_type> >&& continuation_res)mutable
+        {
+            std::ostringstream res_archive_stream;
+            boost::archive::text_oarchive res_archive(res_archive_stream);
+            try
+            {
+                // serialize result
+                long bla = (std::get<0>(continuation_res)).get();
+                res_archive << bla;
+                request.m_load.m_data = res_archive_stream.str();
+            }
+            catch (std::exception& e)
+            {
+                request.m_load.m_has_exception=true;
+                request.m_load.m_exception=boost::asynchronous::tcp::transport_exception(e.what());
+            }
+            catch(...)
+            {
+                request.m_load.m_has_exception=true;
+                request.m_load.m_exception=boost::asynchronous::tcp::transport_exception("...");
+            }
+            when_done(request);
+        }
+    );
+    boost::asynchronous::any_continuation ac(cont);
+    boost::asynchronous::get_continuations().push_front(ac);
+}
 
 }}}
 #endif // BOOST_ASYNCHRONOUS_SCHEDULER_TCP_SIMPLE_TCP_CLIENT_HPP

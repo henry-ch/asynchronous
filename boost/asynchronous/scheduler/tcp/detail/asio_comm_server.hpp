@@ -41,7 +41,9 @@ struct asio_comm_server : boost::asynchronous::trackable_servant<>
         m_acceptor.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
         m_acceptor.bind(endpoint);
         m_acceptor.listen();
-
+        boost::asio::ip::tcp::no_delay option(true);
+        boost::system::error_code ec;
+        m_socket.set_option(option,ec);
         do_accept();
     }
 
