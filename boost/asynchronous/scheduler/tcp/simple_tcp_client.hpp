@@ -332,8 +332,8 @@ void deserialize_and_call_continuation_task(Task& t,boost::asynchronous::tcp::se
             try
             {
                 // serialize result
-                long bla = (std::get<0>(continuation_res)).get();
-                res_archive << bla;
+                auto res = (std::get<0>(continuation_res)).get();
+                res_archive << res;
                 request.m_load.m_data = res_archive_stream.str();
             }
             catch (std::exception& e)
