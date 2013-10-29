@@ -3,6 +3,7 @@
 #include <boost/asynchronous/extensions/asio/asio_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
+#include <boost/asynchronous/scheduler/threadpool_scheduler.hpp>
 
 // our app-specific functors
 #include <libs/asynchronous/doc/examples/dummy_tcp_task.hpp>
@@ -16,7 +17,7 @@ int main(int argc, char* argv[])
     cout << "Starting with " << threads << " threads" << endl;
 
     auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                new boost::asynchronous::asio_scheduler<>(threads));
+                new boost::asynchronous::asio_scheduler<>);
     {
         std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,std::function<void(boost::asynchronous::tcp::client_request const&)>)> executor=
         [](std::string const& task_name,boost::asynchronous::tcp::server_reponse resp,
@@ -39,7 +40,9 @@ int main(int argc, char* argv[])
                 throw boost::asynchronous::tcp::transport_exception("unknown task");
             }
         };
-        boost::asynchronous::tcp::simple_tcp_client_proxy proxy(scheduler,"localhost","12345",100/*ms between calls to server*/,executor);
+        auto pool = boost::asynchronous::create_shared_scheduler_proxy(
+                    new boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<> >(threads));
+        boost::asynchronous::tcp::simple_tcp_client_proxy proxy(scheduler,pool,"localhost","12345",100/*ms between calls to server*/,executor);
         boost::future<boost::future<void> > fu = proxy.run();
         boost::future<void> fu_end = fu.get();
         fu_end.get();

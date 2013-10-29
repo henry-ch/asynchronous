@@ -32,11 +32,12 @@ namespace boost { namespace asynchronous { namespace tcp {
 struct simple_tcp_client : boost::asynchronous::trackable_servant<>
 {
     simple_tcp_client(boost::asynchronous::any_weak_scheduler<> scheduler,
+                      boost::asynchronous::any_shared_scheduler_proxy<> pool,
                       const std::string& server, const std::string& path,
                       long time_in_ms_between_requests,
                       std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,
                                          std::function<void(boost::asynchronous::tcp::client_request const&)>)> const& executor)
-        : boost::asynchronous::trackable_servant<>(scheduler)
+        : boost::asynchronous::trackable_servant<>(scheduler,pool)
         , m_connection_state(connection_state::none)
         , m_server(server)
         , m_path(path)
@@ -102,9 +103,26 @@ private:
                 return;
             }
             boost::shared_ptr<boost::asio::ip::tcp::socket> asocket = this->m_socket;
-            //TODO why does gcc insist on this?
-            this->m_executor(resp.m_task_name,resp,
-                             [asocket,this](boost::asynchronous::tcp::client_request const& req){boost::asynchronous::tcp::simple_tcp_client::send_task_result(req,asocket);});
+            //TODO why does gcc insist on capturing this?
+            auto executor = m_executor;
+            auto this_scheduler = get_scheduler();
+            this->get_worker().post(
+                        [this,asocket,resp,executor,this_scheduler]()
+                        {
+                            executor(resp.m_task_name,resp,
+                                [asocket,this,this_scheduler](boost::asynchronous::tcp::client_request const& req)
+                                {
+                                    auto locked_scheduler = this_scheduler.lock();
+                                    if (locked_scheduler.is_valid())
+                                    {
+                                        locked_scheduler.post(
+                                                    [req,asocket,this](){
+                                                    boost::asynchronous::tcp::simple_tcp_client::send_task_result(req,asocket);});
+                                    }
+                                }
+                            );
+                        }
+            );
         };
         boost::shared_ptr<boost::asio::deadline_timer> atimer
                 (boost::make_shared<boost::asio::deadline_timer>(*boost::asynchronous::get_io_service<>(),
@@ -272,10 +290,13 @@ class simple_tcp_client_proxy: public boost::asynchronous::servant_proxy<simple_
 public:
     // ctor arguments are forwarded to AsioCommunicationServant
     template <class Scheduler>
-    simple_tcp_client_proxy(Scheduler s,const std::string& server, const std::string& path,long time_in_ms_between_requests,
+    simple_tcp_client_proxy(Scheduler s,
+                            boost::asynchronous::any_shared_scheduler_proxy<> pool,
+                            const std::string& server, const std::string& path,long time_in_ms_between_requests,
                             std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,
                                                std::function<void(boost::asynchronous::tcp::client_request const&)>)> const& executor):
-        boost::asynchronous::servant_proxy<simple_tcp_client_proxy,boost::asynchronous::tcp::simple_tcp_client >(s,server,path,time_in_ms_between_requests,executor)
+        boost::asynchronous::servant_proxy<simple_tcp_client_proxy,boost::asynchronous::tcp::simple_tcp_client >
+            (s,pool,server,path,time_in_ms_between_requests,executor)
     {}
     // we offer a single member for posting
     BOOST_ASYNC_FUTURE_MEMBER(run)
