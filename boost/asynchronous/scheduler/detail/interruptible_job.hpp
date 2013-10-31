@@ -92,6 +92,14 @@ struct interruptible_job : public boost::asynchronous::job_traits<Job>::diagnost
         this->set_interrupted(false);
         m_state->complete();
     }
+    template<class Archive>
+    void serialize(Archive & , const unsigned int /* version */){/* not implemented */}
+    std::string get_task_name()const
+    {
+        // not implemented
+        return "";
+    }
+
     boost::shared_ptr<boost::promise<boost::thread*> >    m_worker;
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state>                    m_state;
     Job                                                   m_job;

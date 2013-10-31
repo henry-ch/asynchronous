@@ -37,10 +37,13 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
     job_server(boost::asynchronous::any_weak_scheduler<boost::asynchronous::any_callable> scheduler,
                boost::asynchronous::any_shared_scheduler_proxy<PoolJobType> worker,
                std::string const & address,
-               unsigned int port)
+               unsigned int port,
+               bool stealing)
         : boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,PoolJobType>(scheduler,worker)
         , m_next_task_id(0)
+        , m_stealing(stealing)
     {
+        //std::cout << "stealing? " << m_stealing << std::endl;
         // For TCP communication we use an asio-based scheduler with 1 thread
         auto asioWorkers =
                 boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::asio_scheduler<>(1));
@@ -63,6 +66,7 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
         this->post_callback(
                     [moved_job]()mutable
                     {
+                        //std::cout << "serializing job" << std::endl;
                         // serialize job
                         std::ostringstream archive_stream;
                         boost::archive::text_oarchive archive(archive_stream);
@@ -71,30 +75,74 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
                     },
                     [moved_job,this](boost::future<std::string> fu)mutable
                     {
-                        waiting_job new_job(std::move(*moved_job),boost::asynchronous::tcp::server_reponse(this->m_next_task_id++,fu.get(),moved_job->get_task_name()));
+                        //std::cout << "serialized job" << std::endl;
+                        waiting_job new_job(std::move(*moved_job),
+                                            boost::asynchronous::tcp::server_reponse(this->m_next_task_id++,fu.get(),
+                                                                                     moved_job->get_task_name()));
+                        // TODO better
+                        if (this->m_stealing)
+                        {
+                            // remember it was stolen
+                            //std::cout << "job_server stole a job" << std::endl;
+                            new_job.m_serialized.m_stolen=true;
+                        }
                         this->m_unprocessed_jobs.emplace_back(std::move(new_job));
+                        // if we have a waiting connection, immediately send
+                        if (!this->m_waiting_connections.empty())
+                        {
+                            //std::cout << "just stole job" << std::endl;
+                            // send
+                            this->send_first_job(this->m_waiting_connections.front());
+                            this->m_waiting_connections.pop_front();
+                        }
                     },
                     "boost::asynchronous::tcp::job_server::serialize"
         );
     }
+    bool requests_stealing()const
+    {
+        //std::cout << "connections waiting: " << m_waiting_connections.size() << std::endl;
+        return !m_waiting_connections.empty();
+    }
+    void no_jobs()
+    {
+        // inform waiting connections
+        for (std::deque<boost::shared_ptr<boost::asynchronous::tcp::server_connection> >::iterator it = m_waiting_connections.begin();
+             it != m_waiting_connections.end(); ++it)
+        {
+             (*it)->send(boost::asynchronous::tcp::server_reponse(0,"",""));
+        }
+        m_waiting_connections.clear();
+    }
 
 private:
+    void send_first_job(boost::shared_ptr<boost::asynchronous::tcp::server_connection> connection)
+    {
+        //std::cout << "sending task name:" << m_unprocessed_jobs.front().m_serialized.m_task_name << std::endl;
+        connection->send(m_unprocessed_jobs.front().m_serialized);
+        m_waiting_jobs.insert(m_unprocessed_jobs.front());
+        m_unprocessed_jobs.pop_front();
+    }
     void handleRequest(boost::asynchronous::tcp::client_request request, boost::shared_ptr<boost::asynchronous::tcp::server_connection> connection)
-    {        
+    {
         // is it a request for job?
         if (request.m_cmd_id == BOOST_ASYNCHRONOUS_TCP_CLIENT_GET_JOB)
         {
             // send the first available job if any
             if (!m_unprocessed_jobs.empty())
             {
-                connection->send(m_unprocessed_jobs.front().m_serialized);
-                m_waiting_jobs.insert(m_unprocessed_jobs.front());
-                m_unprocessed_jobs.pop_front();
+                send_first_job(connection);
+            }
+            else if(!m_stealing)
+            {
+                // no job and no stealing => immediate answer
+                connection->send(boost::asynchronous::tcp::server_reponse(0,"",""));
             }
             else
             {
-                // no job
-                connection->send(boost::asynchronous::tcp::server_reponse(0,"",""));
+                //std::cout << "added waiting connection" << std::endl;
+                // short wait to see if we can steal some job
+                m_waiting_connections.push_back(connection);
             }
         }
         else if (request.m_cmd_id == BOOST_ASYNCHRONOUS_TCP_CLIENT_JOB_RESULT)
@@ -140,21 +188,25 @@ private:
     };
     // always increasing task counter for ids
     long m_next_task_id;
+    bool m_stealing;
     // jobs waiting for a client offer to process
     std::deque<waiting_job> m_unprocessed_jobs;
     // job being executed and waiting for a result
     std::set<waiting_job,sort_tasks> m_waiting_jobs;
     std::vector<boost::asynchronous::tcp::asio_comm_server_proxy> m_asio_comm;
+    std::deque<boost::shared_ptr<boost::asynchronous::tcp::server_connection> > m_waiting_connections;
 };
 class job_server_proxy : public boost::asynchronous::servant_proxy<job_server_proxy,job_server<boost::asynchronous::any_callable> >
 {
 public:
     template <class Scheduler,class Worker>
-    job_server_proxy(Scheduler s, Worker w,std::string const & address,unsigned int port):
-        boost::asynchronous::servant_proxy<job_server_proxy,job_server<boost::asynchronous::any_callable> >(s,w,address,port)
+    job_server_proxy(Scheduler s, Worker w,std::string const & address,unsigned int port, bool stealing):
+        boost::asynchronous::servant_proxy<job_server_proxy,job_server<boost::asynchronous::any_callable> >(s,w,address,port,stealing)
     {}
     // get_data is posted, no future, no callback
     BOOST_ASYNC_FUTURE_MEMBER(add_task)
+    BOOST_ASYNC_FUTURE_MEMBER(requests_stealing)
+    BOOST_ASYNC_FUTURE_MEMBER(no_jobs)
 };
 class job_server_proxy_log :
         public boost::asynchronous::servant_proxy<job_server_proxy,
@@ -162,13 +214,15 @@ class job_server_proxy_log :
 {
 public:
     template <class Scheduler,class Worker>
-    job_server_proxy_log(Scheduler s, Worker w,std::string const & address,unsigned int port):
+    job_server_proxy_log(Scheduler s, Worker w,std::string const & address,unsigned int port, bool stealing):
         boost::asynchronous::servant_proxy<job_server_proxy,
                                            job_server<boost::asynchronous::any_loggable<boost::chrono::high_resolution_clock> > >
-        (s,w,address,port)
+        (s,w,address,port,stealing)
     {}
     // get_data is posted, no future, no callback
     BOOST_ASYNC_FUTURE_MEMBER(add_task)
+    BOOST_ASYNC_FUTURE_MEMBER(requests_stealing)
+    BOOST_ASYNC_FUTURE_MEMBER(no_jobs)
 };
 
 // choose correct proxy

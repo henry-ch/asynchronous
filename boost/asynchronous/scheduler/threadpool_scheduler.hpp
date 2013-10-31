@@ -61,14 +61,14 @@ public:
     template<typename... Args>
     threadpool_scheduler(size_t number_of_workers, Args... args)
         : boost::asynchronous::detail::single_queue_scheduler_policy<Q>(boost::make_shared<queue_type>(args...))
-        , m_private_queue (boost::make_shared<boost::asynchronous::lockfree_queue<job_type> >())
+        , m_private_queue (boost::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >())
         , m_number_of_workers(number_of_workers)
     {
     }
 #endif
     threadpool_scheduler(size_t number_of_workers)
         : boost::asynchronous::detail::single_queue_scheduler_policy<Q>()
-        , m_private_queue (boost::make_shared<boost::asynchronous::lockfree_queue<job_type> >())
+        , m_private_queue (boost::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >())
         , m_number_of_workers(number_of_workers)
     {
     }
@@ -95,10 +95,10 @@ public:
             boost::asynchronous::detail::default_termination_task<typename Q::diagnostic_type,boost::thread_group> ttask(m_group);
             // this task has to be executed lat => lowest prio
 #ifndef BOOST_NO_RVALUE_REFERENCES
-            typename queue_type::job_type job(ttask);
+            boost::asynchronous::any_callable job(ttask);
             m_private_queue->push(std::move(job),std::numeric_limits<std::size_t>::max());
 #else
-            m_private_queue->push(typename queue_type::job_type(ttask),std::numeric_limits<std::size_t>::max());
+            m_private_queue->push(boost::asynchronous::any_callable(ttask),std::numeric_limits<std::size_t>::max());
 #endif
         }
     }
@@ -124,7 +124,7 @@ public:
         // this scheduler does not steal
     }
 
-    static void run(boost::shared_ptr<queue_type> queue,boost::shared_ptr<boost::asynchronous::lockfree_queue<job_type> > private_queue,
+    static void run(boost::shared_ptr<queue_type> queue,boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > private_queue,
                     boost::shared_ptr<diag_type> diagnostics,
                     boost::shared_future<boost::thread*> self,
                     boost::weak_ptr<this_type> this_)
@@ -149,11 +149,6 @@ public:
                     typename Q::job_type job;
                     // try from queue
                     bool popped = queue->try_pop(job);
-                    if (!popped)
-                    {
-                        // try from private queue
-                        popped = private_queue->try_pop(job);
-                    }
                     // did we manage to pop or steal?
                     if (popped)
                     {
@@ -189,6 +184,13 @@ public:
                         // nothing for us to do, give up our time slice
                         boost::this_thread::yield();
                     }
+                    // check for shutdown
+                    boost::asynchronous::any_callable djob;
+                    popped = private_queue->try_pop(djob);
+                    if (popped)
+                    {
+                        djob();
+                    }
                 } // job destroyed (for destruction useful)
                 // check if we got an interruption job
                 boost::this_thread::interruption_point();
@@ -212,7 +214,7 @@ private:
     boost::shared_ptr<boost::thread_group> m_group;
     std::vector<boost::thread::id> m_thread_ids;
     boost::shared_ptr<diag_type> m_diagnostics;
-    boost::shared_ptr<boost::asynchronous::lockfree_queue<job_type> > m_private_queue;
+    boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > m_private_queue;
     size_t m_number_of_workers;
 };
 

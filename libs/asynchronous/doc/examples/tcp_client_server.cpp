@@ -1,9 +1,12 @@
+
 #include <iostream>
 #include <boost/asynchronous/scheduler/tcp/simple_tcp_client.hpp>
 #include <boost/asynchronous/extensions/asio/asio_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/scheduler/threadpool_scheduler.hpp>
+#include <boost/asynchronous/scheduler/tcp/tcp_server_scheduler.hpp>
+#include <boost/asynchronous/scheduler/composite_threadpool_scheduler.hpp>
 
 // our app-specific functors
 #include <libs/asynchronous/doc/examples/dummy_tcp_task.hpp>
@@ -40,10 +43,25 @@ int main(int argc, char* argv[])
                 throw boost::asynchronous::tcp::transport_exception("unknown task");
             }
         };
+        // create pools
+        // we need a pool where the tasks execute
         auto pool = boost::asynchronous::create_shared_scheduler_proxy(
                     new boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable> >(threads));
-        boost::asynchronous::tcp::simple_tcp_client_proxy proxy(scheduler,pool,"localhost","12346",100/*ms between calls to server*/,executor);
-        boost::future<boost::future<void> > fu = proxy.run();
+        boost::asynchronous::tcp::simple_tcp_client_proxy client_proxy(scheduler,pool,"localhost","12345",100/*ms between calls to server*/,executor);
+        // we need a server
+        // we use a tcp pool using 1 worker
+        auto server_pool = boost::asynchronous::create_shared_scheduler_proxy(
+                    new boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<> >(1));
+        auto tcp_server= boost::asynchronous::create_shared_scheduler_proxy(
+                    new boost::asynchronous::tcp_server_scheduler<
+                            boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable>,boost::asynchronous::any_callable,true >
+                                (server_pool,"localhost",12346));
+        // we need a composite for stealing
+        auto composite =
+                boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::composite_threadpool_scheduler<boost::asynchronous::any_serializable>
+                                                                   (pool,tcp_server));
+
+        boost::future<boost::future<void> > fu = client_proxy.run();
         boost::future<void> fu_end = fu.get();
         fu_end.get();
     }

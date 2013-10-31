@@ -12,6 +12,9 @@
 
 #include <string>
 #include <boost/asynchronous/scheduler/tcp/detail/transport_exception.hpp>
+#include <boost/serialization/serialization.hpp>
+#include <boost/serialization/level.hpp>
+#include <boost/serialization/tracking.hpp>
 
 // supported commands:
 // 1 => get job
@@ -60,6 +63,7 @@ struct client_request
     long m_task_id;
     message_payload m_load;
 };
-
 }}}
+BOOST_CLASS_TRACKING(boost::asynchronous::tcp::client_request, boost::serialization::track_never)
+BOOST_CLASS_TRACKING(boost::asynchronous::tcp::client_request::message_payload, boost::serialization::track_never)
 #endif // BOOST_ASYNCHRONOUS_SCHEDULER_TCP_CLIENT_REQUEST_HPP

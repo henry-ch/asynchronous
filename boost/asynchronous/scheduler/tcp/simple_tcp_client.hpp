@@ -26,18 +26,45 @@
 #include <boost/asynchronous/scheduler/tcp/detail/server_response.hpp>
 #include <boost/asynchronous/scheduler/tcp/detail/transport_exception.hpp>
 #include <boost/asynchronous/scheduler/tss_scheduler.hpp>
+#include <boost/asynchronous/any_serializable.hpp>
+#include <boost/asynchronous/callable_any.hpp>
 
 namespace boost { namespace asynchronous { namespace tcp {
 
-struct simple_tcp_client : boost::asynchronous::trackable_servant<>
+namespace detail {
+static void send_task_result(boost::asynchronous::tcp::client_request const& request, boost::shared_ptr<boost::asio::ip::tcp::socket> asocket, unsigned int header_length)
 {
-    simple_tcp_client(boost::asynchronous::any_weak_scheduler<> scheduler,
-                      boost::asynchronous::any_shared_scheduler_proxy<> pool,
+    std::ostringstream archive_stream;
+    boost::archive::text_oarchive archive(archive_stream);
+    archive << request;
+    boost::shared_ptr<std::string> outbound_buffer = boost::make_shared<std::string>(archive_stream.str());
+    // Format the header.
+    std::ostringstream header_stream;
+    header_stream << std::setw(header_length)<< std::hex << outbound_buffer->size();
+    if (!header_stream || header_stream.str().size() != header_length)
+    {
+      // Something went wrong, ignore
+    }
+    boost::shared_ptr<std::string> outbound_header = boost::make_shared<std::string>(header_stream.str());
+    // Write the serialized data to the socket. We use "gather-write" to send
+    // both the header and the data in a single write operation.
+    std::vector<boost::asio::const_buffer> buffers;
+    buffers.push_back(boost::asio::buffer(*outbound_header));
+    buffers.push_back(boost::asio::buffer(*outbound_buffer));
+    boost::asio::async_write(*asocket, buffers,[outbound_buffer,outbound_header](const boost::system::error_code&,std::size_t) {/*ignore*/});
+}
+
+}
+
+struct simple_tcp_client : boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,boost::asynchronous::any_serializable>
+{
+    simple_tcp_client(boost::asynchronous::any_weak_scheduler<boost::asynchronous::any_callable> scheduler,
+                      boost::asynchronous::any_shared_scheduler_proxy<boost::asynchronous::any_serializable> pool,
                       const std::string& server, const std::string& path,
                       long time_in_ms_between_requests,
                       std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,
                                          std::function<void(boost::asynchronous::tcp::client_request const&)>)> const& executor)
-        : boost::asynchronous::trackable_servant<>(scheduler,pool)
+        : boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,boost::asynchronous::any_serializable>(scheduler,pool)
         , m_connection_state(connection_state::none)
         , m_server(server)
         , m_path(path)
@@ -57,27 +84,7 @@ struct simple_tcp_client : boost::asynchronous::trackable_servant<>
         // start continuous task
         return m_done.get_future();
     }
-    static void send_task_result(boost::asynchronous::tcp::client_request const& request, boost::shared_ptr<boost::asio::ip::tcp::socket> asocket)
-    {
-        std::ostringstream archive_stream;
-        boost::archive::text_oarchive archive(archive_stream);
-        archive << request;
-        boost::shared_ptr<std::string> outbound_buffer = boost::make_shared<std::string>(archive_stream.str());
-        // Format the header.
-        std::ostringstream header_stream;
-        header_stream << std::setw(m_header_length)<< std::hex << outbound_buffer->size();
-        if (!header_stream || header_stream.str().size() != m_header_length)
-        {
-          // Something went wrong, ignore
-        }
-        boost::shared_ptr<std::string> outbound_header = boost::make_shared<std::string>(header_stream.str());
-        // Write the serialized data to the socket. We use "gather-write" to send
-        // both the header and the data in a single write operation.
-        std::vector<boost::asio::const_buffer> buffers;
-        buffers.push_back(boost::asio::buffer(*outbound_header));
-        buffers.push_back(boost::asio::buffer(*outbound_buffer));
-        boost::asio::async_write(*asocket, buffers,[outbound_buffer,outbound_header](const boost::system::error_code&,std::size_t) {/*ignore*/});
-    }
+
 private:
     // called in case of an error
     void stop()
@@ -86,12 +93,102 @@ private:
          m_connection_state = connection_state::none;
     }
 
+    struct stealable_job
+    {
+        stealable_job(boost::shared_ptr<boost::asio::ip::tcp::socket> asocket, boost::asynchronous::tcp::server_reponse&& resp,
+                      std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,
+                                         std::function<void(boost::asynchronous::tcp::client_request const&)>)> executor,
+                      boost::asynchronous::any_weak_scheduler<> this_scheduler,unsigned int header_length)
+            : m_socket(asocket)
+            , m_response(std::forward<boost::asynchronous::tcp::server_reponse>(resp))
+            , m_executor(executor)
+            , m_scheduler(this_scheduler)
+            , m_header_length(header_length)
+        {
+        }
+
+        void operator()()
+        {
+            //std::cout << "stealable_job::operator" << std::endl;
+            auto this_scheduler = m_scheduler;
+            boost::shared_ptr<boost::asio::ip::tcp::socket> asocket = this->m_socket;
+            unsigned int header_length = m_header_length;
+            // if job was stolen, we need to deserialize to a string first
+            if(m_response.m_stolen)
+            {
+                //std::cout << "m_task: " << m_response.m_task << std::endl;
+                std::istringstream task_stream(m_response.m_task);
+                boost::archive::text_iarchive task_archive(task_stream);
+                std::string as_string;
+                task_archive >> as_string;
+                //std::cout << "as_string: " << as_string << std::endl;
+                // replace
+                m_response.m_task = as_string;
+            }
+
+            m_executor(m_response.m_task_name,m_response,
+                [asocket,this_scheduler,header_length](boost::asynchronous::tcp::client_request const& req)
+                {
+                    auto locked_scheduler = this_scheduler.lock();
+                    if (locked_scheduler.is_valid())
+                    {
+                        locked_scheduler.post(
+                                    [req,asocket,header_length](){
+                                    boost::asynchronous::tcp::detail::send_task_result(req,asocket,header_length);});
+                    }
+                }
+            );
+        }
+        std::string get_task_name()const
+        {
+            return m_response.m_task_name;
+        }
+        template <class Archive>
+        void save(Archive & ar, const unsigned int /*version*/)const
+        {
+            //std::cout << "stealable_job::save" << std::endl;
+            ar & m_response.m_task;
+        }
+        template <class Archive>
+        void load(Archive & ar, const unsigned int /*version*/)
+        {
+            //std::cout << "stealable_job::load" << std::endl;
+            // copy result
+            boost::asynchronous::tcp::client_request::message_payload payload;
+            ar >> payload;
+            // send to original server
+            boost::asynchronous::tcp::client_request request (BOOST_ASYNCHRONOUS_TCP_CLIENT_JOB_RESULT);
+            request.m_task_id = m_response.m_task_id;
+            request.m_load = payload;
+
+            auto locked_scheduler = m_scheduler.lock();
+            boost::shared_ptr<boost::asio::ip::tcp::socket> asocket = this->m_socket;
+            unsigned int header_length = m_header_length;
+
+            if (locked_scheduler.is_valid())
+            {
+                locked_scheduler.post(
+                            [request,asocket,header_length](){
+                            boost::asynchronous::tcp::detail::send_task_result(request,asocket,header_length);});
+            }
+        }
+        BOOST_SERIALIZATION_SPLIT_MEMBER()
+
+        boost::shared_ptr<boost::asio::ip::tcp::socket> m_socket;
+        boost::asynchronous::tcp::server_reponse m_response;
+        std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,
+                           std::function<void(boost::asynchronous::tcp::client_request const&)>)> m_executor;
+        boost::asynchronous::any_weak_scheduler<> m_scheduler;
+        unsigned int m_header_length;
+    };
+
     void check_for_work()
     {
         //TODO string&
         std::function<void(std::string)> cb =
         [this](std::string archive_data)
-        {            
+        {
+            //std::cout << "got message: " << archive_data << std::endl;
             // got work, deserialize message
             std::istringstream archive_stream(archive_data);
             boost::archive::text_iarchive archive(archive_stream);
@@ -102,26 +199,9 @@ private:
             {
                 return;
             }
-            boost::shared_ptr<boost::asio::ip::tcp::socket> asocket = this->m_socket;
-            //TODO why does gcc insist on capturing this?
-            auto executor = m_executor;
-            auto this_scheduler = get_scheduler();
+            //std::cout << "got work" << std::endl;
             this->get_worker().post(
-                        [this,asocket,resp,executor,this_scheduler]()
-                        {
-                            executor(resp.m_task_name,resp,
-                                [asocket,this,this_scheduler](boost::asynchronous::tcp::client_request const& req)
-                                {
-                                    auto locked_scheduler = this_scheduler.lock();
-                                    if (locked_scheduler.is_valid())
-                                    {
-                                        locked_scheduler.post(
-                                                    [req,asocket,this](){
-                                                    boost::asynchronous::tcp::simple_tcp_client::send_task_result(req,asocket);});
-                                    }
-                                }
-                            );
-                        }
+                        stealable_job(this->m_socket,std::move(resp),m_executor,get_scheduler(),m_header_length)
             );
         };
         boost::shared_ptr<boost::asio::deadline_timer> atimer
@@ -291,7 +371,7 @@ public:
     // ctor arguments are forwarded to AsioCommunicationServant
     template <class Scheduler>
     simple_tcp_client_proxy(Scheduler s,
-                            boost::asynchronous::any_shared_scheduler_proxy<> pool,
+                            boost::asynchronous::any_shared_scheduler_proxy<boost::asynchronous::any_serializable> pool,
                             const std::string& server, const std::string& path,long time_in_ms_between_requests,
                             std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,
                                                std::function<void(boost::asynchronous::tcp::client_request const&)>)> const& executor):

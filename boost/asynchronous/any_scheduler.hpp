@@ -48,27 +48,27 @@ struct any_shared_scheduler_concept :
 #ifndef BOOST_NO_RVALUE_REFERENCES
     boost::asynchronous::has_post<void(JOB&&), boost::type_erasure::_a>,
     boost::asynchronous::has_post<void(JOB&&, std::size_t), boost::type_erasure::_a>,
-    boost::asynchronous::has_post<void(boost::asynchronous::any_callable&&, const std::string&), boost::type_erasure::_a>,
-    boost::asynchronous::has_post<void(boost::asynchronous::any_callable&&, const std::string&,std::size_t), boost::type_erasure::_a>,
+//    boost::asynchronous::has_post<void(boost::asynchronous::any_callable&&, const std::string&), boost::type_erasure::_a>,
+//    boost::asynchronous::has_post<void(boost::asynchronous::any_callable&&, const std::string&,std::size_t), boost::type_erasure::_a>,
     boost::asynchronous::has_interruptible_post<boost::asynchronous::any_interruptible(JOB&&), boost::type_erasure::_a>,
     boost::asynchronous::has_interruptible_post<boost::asynchronous::any_interruptible(JOB&&, std::size_t),
                                              boost::type_erasure::_a>,
-    boost::asynchronous::has_interruptible_post<boost::asynchronous::any_interruptible(boost::asynchronous::any_callable&&, const std::string&),
-                                             boost::type_erasure::_a>,
-    boost::asynchronous::has_interruptible_post<boost::asynchronous::any_interruptible(boost::asynchronous::any_callable&&, const std::string&,std::size_t),
-                                             boost::type_erasure::_a>,
+//    boost::asynchronous::has_interruptible_post<boost::asynchronous::any_interruptible(boost::asynchronous::any_callable&&, const std::string&),
+//                                             boost::type_erasure::_a>,
+//    boost::asynchronous::has_interruptible_post<boost::asynchronous::any_interruptible(boost::asynchronous::any_callable&&, const std::string&,std::size_t),
+//                                             boost::type_erasure::_a>,
 #else
     boost::asynchronous::has_post<void(JOB), boost::type_erasure::_a>,
     boost::asynchronous::has_post<void(JOB, std::size_t), boost::type_erasure::_a>,
-    boost::asynchronous::has_post<void(boost::asynchronous::any_callable, const std::string&), boost::type_erasure::_a>,
-    boost::asynchronous::has_post<void(boost::asynchronous::any_callable, const std::string&,std::size_t), boost::type_erasure::_a>,
+//    boost::asynchronous::has_post<void(boost::asynchronous::any_callable, const std::string&), boost::type_erasure::_a>,
+//    boost::asynchronous::has_post<void(boost::asynchronous::any_callable, const std::string&,std::size_t), boost::type_erasure::_a>,
     boost::asynchronous::has_interruptible_post<boost::asynchronous::any_interruptible(JOB), boost::type_erasure::_a>,
     boost::asynchronous::has_interruptible_post<boost::asynchronous::any_interruptible(JOB, std::size_t),
                                              boost::type_erasure::_a>,
-    boost::asynchronous::has_interruptible_post<boost::asynchronous::any_interruptible(boost::asynchronous::any_callable, const std::string&),
-                                             boost::type_erasure::_a>,
-    boost::asynchronous::has_interruptible_post<boost::asynchronous::any_interruptible(boost::asynchronous::any_callable, const std::string&,std::size_t),
-                                             boost::type_erasure::_a>,
+//    boost::asynchronous::has_interruptible_post<boost::asynchronous::any_interruptible(boost::asynchronous::any_callable, const std::string&),
+//                                             boost::type_erasure::_a>,
+//    boost::asynchronous::has_interruptible_post<boost::asynchronous::any_interruptible(boost::asynchronous::any_callable, const std::string&,std::size_t),
+//                                             boost::type_erasure::_a>,
 #endif
     boost::asynchronous::has_thread_ids<std::vector<boost::thread::id>(), const boost::type_erasure::_a>,
 #ifndef BOOST_NO_RVALUE_REFERENCES
@@ -98,12 +98,12 @@ struct any_shared_scheduler_concept
     virtual ~any_shared_scheduler_concept<JOB,Clock>(){}
     virtual void post(JOB&&) =0;
     virtual void post(JOB&&, std::size_t) =0;
-    virtual void post(boost::asynchronous::any_callable&&, const std::string&) =0;
-    virtual void post(boost::asynchronous::any_callable&&, const std::string&,std::size_t) =0;
+//    virtual void post(boost::asynchronous::any_callable&&, const std::string&) =0;
+//    virtual void post(boost::asynchronous::any_callable&&, const std::string&,std::size_t) =0;
     virtual boost::asynchronous::any_interruptible interruptible_post(JOB&&) =0;
     virtual boost::asynchronous::any_interruptible interruptible_post(JOB&&, std::size_t) =0;
-    virtual boost::asynchronous::any_interruptible interruptible_post(boost::asynchronous::any_callable&&, const std::string&) =0;
-    virtual boost::asynchronous::any_interruptible interruptible_post(boost::asynchronous::any_callable&&, const std::string&,std::size_t) =0;
+//    virtual boost::asynchronous::any_interruptible interruptible_post(boost::asynchronous::any_callable&&, const std::string&) =0;
+//    virtual boost::asynchronous::any_interruptible interruptible_post(boost::asynchronous::any_callable&&, const std::string&,std::size_t) =0;
     
     virtual std::vector<boost::thread::id> thread_ids() const =0;
     virtual std::map<std::string,std::list<boost::asynchronous::diagnostic_item<Clock> > > get_diagnostics(std::size_t =0)const =0;
@@ -153,14 +153,14 @@ public:
     {
         (*my_ptr).post(std::forward<JOB>(job),priority);
     }
-    void post(boost::asynchronous::any_callable&& job, const std::string& name) const
-    {
-        (*my_ptr).post(std::forward<boost::asynchronous::any_callable>(job),name);
-    }
-    void post(boost::asynchronous::any_callable&& job, const std::string& name,std::size_t prority)const
-    {
-        (*my_ptr).post(std::forward<boost::asynchronous::any_callable>(job),name,prority);
-    }
+//    void post(boost::asynchronous::any_callable&& job, const std::string& name) const
+//    {
+//        (*my_ptr).post(std::forward<boost::asynchronous::any_callable>(job),name);
+//    }
+//    void post(boost::asynchronous::any_callable&& job, const std::string& name,std::size_t prority)const
+//    {
+//        (*my_ptr).post(std::forward<boost::asynchronous::any_callable>(job),name,prority);
+//    }
     boost::asynchronous::any_interruptible interruptible_post(JOB&& job) const
     {
         return (*my_ptr).interruptible_post(std::forward<JOB>(job));
@@ -169,14 +169,14 @@ public:
     {
         return (*my_ptr).interruptible_post(std::forward<JOB>(job),priority);
     }
-    boost::asynchronous::any_interruptible interruptible_post(boost::asynchronous::any_callable&& job, const std::string& name) const
-    {
-        return (*my_ptr).interruptible_post(std::forward<boost::asynchronous::any_callable>(job),name);
-    }
-    boost::asynchronous::any_interruptible interruptible_post(boost::asynchronous::any_callable&& job, const std::string& name,std::size_t priority) const
-    {
-        return (*my_ptr).interruptible_post(std::forward<boost::asynchronous::any_callable>(job),name,priority);
-    }
+//    boost::asynchronous::any_interruptible interruptible_post(boost::asynchronous::any_callable&& job, const std::string& name) const
+//    {
+//        return (*my_ptr).interruptible_post(std::forward<boost::asynchronous::any_callable>(job),name);
+//    }
+//    boost::asynchronous::any_interruptible interruptible_post(boost::asynchronous::any_callable&& job, const std::string& name,std::size_t priority) const
+//    {
+//        return (*my_ptr).interruptible_post(std::forward<boost::asynchronous::any_callable>(job),name,priority);
+//    }
     std::vector<boost::thread::id> thread_ids() const
     {
         return (*my_ptr).thread_ids();

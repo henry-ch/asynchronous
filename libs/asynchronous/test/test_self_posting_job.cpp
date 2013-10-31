@@ -37,7 +37,7 @@ std::vector<boost::thread::id> sched_ids;
 
 struct DummyJob
 {
-    DummyJob(boost::shared_ptr<boost::promise<void> > done):m_done(done){}
+    DummyJob(boost::shared_ptr<boost::promise<void> > done,std::string const& name=""):m_done(done),m_name(name){}
     void operator()()const
     {
         BOOST_CHECK_MESSAGE(contains_id(sched_ids.begin(),sched_ids.end(),boost::this_thread::get_id()),"2nd work called in wrong thread.");
@@ -45,6 +45,69 @@ struct DummyJob
         m_done->set_value();
     }
     boost::shared_ptr<boost::promise<void> > m_done;
+    // for logging test cases
+    std::string m_name;
+    void set_name(std::string const& name)
+    {
+        m_name = name;
+    }
+    std::string get_name() const
+    {
+        return m_name;
+    }
+    void set_posted_time()
+    {
+    }
+    void set_started_time()
+    {
+    }
+    void set_finished_time()
+    {
+    }
+    boost::asynchronous::diagnostic_item<boost::chrono::high_resolution_clock> get_diagnostic_item() const
+    {
+        return boost::asynchronous::diagnostic_item<boost::chrono::high_resolution_clock>();
+    }
+};
+typedef boost::asynchronous::any_loggable<boost::chrono::high_resolution_clock> servant_job;
+typedef std::map<std::string,std::list<boost::asynchronous::diagnostic_item<boost::chrono::high_resolution_clock> > > diag_type;
+struct PostJob
+{
+    PostJob(boost::shared_ptr<boost::promise<void> > done,std::string const& name=""):m_done(done),m_name(name){}
+    void operator()()const
+    {
+        BOOST_CHECK_MESSAGE(contains_id(sched_ids.begin(),sched_ids.end(),boost::this_thread::get_id()),"1st work called in wrong thread.");
+        BOOST_CHECK_MESSAGE(boost::this_thread::get_id()!=main_thread_id,"1st work called in main thread.");
+        boost::asynchronous::any_weak_scheduler<servant_job> weak_scheduler = boost::asynchronous::get_thread_scheduler<servant_job>();
+        boost::asynchronous::any_shared_scheduler<servant_job> locked_scheduler = weak_scheduler.lock();
+        if (locked_scheduler.is_valid())
+        {
+            locked_scheduler.post(DummyJob(m_done,"DummyJob"));
+        }
+    }
+    boost::shared_ptr<boost::promise<void> > m_done;
+    std::string m_name;
+    void set_name(std::string const& name)
+    {
+        m_name = name;
+    }
+    std::string get_name() const
+    {
+        return m_name;
+    }
+    void set_posted_time()
+    {
+    }
+    void set_started_time()
+    {
+    }
+    void set_finished_time()
+    {
+    }
+    boost::asynchronous::diagnostic_item<boost::chrono::high_resolution_clock> get_diagnostic_item() const
+    {
+        return boost::asynchronous::diagnostic_item<boost::chrono::high_resolution_clock>();
+    }
 };
 
 }
@@ -234,9 +297,6 @@ BOOST_AUTO_TEST_CASE( self_posting_job_asio_scheduler)
 
 BOOST_AUTO_TEST_CASE( self_posting_job_threadpool_scheduler_log)
 {
-    typedef boost::asynchronous::any_loggable<boost::chrono::high_resolution_clock> servant_job;
-    typedef std::map<std::string,std::list<boost::asynchronous::diagnostic_item<boost::chrono::high_resolution_clock> > > diag_type;
-
     main_thread_id = boost::this_thread::get_id();
 
     auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::threadpool_scheduler<
@@ -246,16 +306,6 @@ BOOST_AUTO_TEST_CASE( self_posting_job_threadpool_scheduler_log)
     boost::shared_ptr<boost::promise<void> > done (new boost::promise<void>);
     boost::future<void> fu = done->get_future();
 
-    scheduler.post([done]()
-        {
-            BOOST_CHECK_MESSAGE(contains_id(sched_ids.begin(),sched_ids.end(),boost::this_thread::get_id()),"1st work called in wrong thread.");
-            BOOST_CHECK_MESSAGE(boost::this_thread::get_id()!=main_thread_id,"1st work called in main thread.");
-            boost::asynchronous::any_weak_scheduler<servant_job> weak_scheduler = boost::asynchronous::get_thread_scheduler<servant_job>();
-            boost::asynchronous::any_shared_scheduler<servant_job> locked_scheduler = weak_scheduler.lock();
-            if (locked_scheduler.is_valid())
-            {
-                locked_scheduler.post(DummyJob(done),"DummyJob");
-            }
-        },"first job");
+    scheduler.post(PostJob(done,"PostJob"));
     fu.get();
 }

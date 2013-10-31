@@ -17,17 +17,20 @@ namespace boost { namespace asynchronous { namespace tcp {
 
 struct server_reponse
 {
-    server_reponse(long task_id, std::string const& task,std::string const& task_name ):m_task_id(task_id),m_task(task),m_task_name(task_name){}
+    server_reponse(long task_id, std::string const& task,std::string const& task_name )
+        : m_task_id(task_id),m_task(task),m_task_name(task_name),m_stolen(false){}
     template <typename Archive>
     void serialize(Archive& ar, const unsigned int /*version*/)
     {
       ar & m_task_id;
       ar & m_task;
       ar & m_task_name;
+      ar & m_stolen;
     }
     long m_task_id;
     std::string m_task;
     std::string m_task_name;
+    bool m_stolen;
 };
 }}}
 
