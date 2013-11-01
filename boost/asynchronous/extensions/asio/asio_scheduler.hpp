@@ -112,7 +112,7 @@ public:
         for (size_t i = 0; i< m_ioservices.size();++i)
         {
             boost::asynchronous::detail::default_termination_task<typename boost::asynchronous::job_traits<job_type>::diagnostic_type,boost::thread_group> ttask(m_group);
-            // this task has to be executed lat => lowest prio
+            // this task has to be executed last => lowest prio
 #ifndef BOOST_NO_RVALUE_REFERENCES
             job_type job(ttask);
             this->post(std::move(job),std::numeric_limits<std::size_t>::max());

@@ -143,12 +143,15 @@ private:
         {
             return m_response.m_task_name;
         }
+        // the task is about to be stolen
         template <class Archive>
         void save(Archive & ar, const unsigned int /*version*/)const
         {
             //std::cout << "stealable_job::save" << std::endl;
             ar & m_response.m_task;
         }
+        // for non-continuation tasks, this being called means that the task was tolen
+        // then excuted elsewhere. We're now getting the result of the task execution
         template <class Archive>
         void load(Archive & ar, const unsigned int /*version*/)
         {

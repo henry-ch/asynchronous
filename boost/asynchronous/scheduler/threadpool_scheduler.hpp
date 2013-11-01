@@ -124,7 +124,8 @@ public:
         // this scheduler does not steal
     }
 
-    static void run(boost::shared_ptr<queue_type> queue,boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > private_queue,
+    static void run(boost::shared_ptr<queue_type> queue,
+                    boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > private_queue,
                     boost::shared_ptr<diag_type> diagnostics,
                     boost::shared_future<boost::thread*> self,
                     boost::weak_ptr<this_type> this_)
