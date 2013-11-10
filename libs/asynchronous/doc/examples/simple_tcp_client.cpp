@@ -13,8 +13,10 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
-    int threads = (argc>1) ? strtol(argv[1],0,0) : 4;
-    cout << "Starting with " << threads << " threads" << endl;
+    std::string server_address = (argc>1) ? argv[1]:"localhost";
+    std::string server_port = (argc>2) ? argv[2]:"12346";
+    int threads = (argc>3) ? strtol(argv[3],0,0) : 4;
+    cout << "Starting connecting to " << server_address << " port " << server_port << " with " << threads << " threads" << endl;
 
     auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                 new boost::asynchronous::asio_scheduler<>);
@@ -47,7 +49,8 @@ int main(int argc, char* argv[])
         };
         auto pool = boost::asynchronous::create_shared_scheduler_proxy(
                     new boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable> >(threads));
-        boost::asynchronous::tcp::simple_tcp_client_proxy proxy(scheduler,pool,"localhost","12346",100/*ms between calls to server*/,executor);
+        boost::asynchronous::tcp::simple_tcp_client_proxy proxy(scheduler,pool,server_address,server_port,
+                                                                100/*ms between calls to server*/,executor);
         boost::future<boost::future<void> > fu = proxy.run();
         boost::future<void> fu_end = fu.get();
         fu_end.get();

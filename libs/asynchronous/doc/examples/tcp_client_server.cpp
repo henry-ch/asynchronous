@@ -16,8 +16,14 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
-    int threads = (argc>1) ? strtol(argv[1],0,0) : 4;
-    cout << "Starting with " << threads << " threads" << endl;
+    std::string server_address = (argc>1) ? argv[1]:"localhost";
+    std::string server_port = (argc>2) ? argv[2]:"12345";
+    std::string own_server_address = (argc>3) ? argv[3]:"localhost";
+    long own_server_port = (argc>4) ? strtol(argv[4],0,0):12346;
+    int threads = (argc>5) ? strtol(argv[5],0,0) : 4;
+    cout << "Starting connecting to " << server_address << " port " << server_port
+         << " listening on " << own_server_address << " port " << own_server_port << " with " << threads << " threads" << endl;
+
 
     auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                 new boost::asynchronous::asio_scheduler<
@@ -56,7 +62,8 @@ int main(int argc, char* argv[])
                     new boost::asynchronous::threadpool_scheduler<
                             boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable>,
                             boost::asynchronous::default_save_cpu_load<1,80000,5000>>(threads));
-        boost::asynchronous::tcp::simple_tcp_client_proxy client_proxy(scheduler,pool,"localhost","12345",100/*ms between calls to server*/,executor);
+        boost::asynchronous::tcp::simple_tcp_client_proxy client_proxy(scheduler,pool,server_address,server_port,
+                                                                       100/*ms between calls to server*/,executor);
         // we need a server
         // we use a tcp pool using 1 worker
         auto server_pool = boost::asynchronous::create_shared_scheduler_proxy(
@@ -69,7 +76,7 @@ int main(int argc, char* argv[])
                             boost::asynchronous::any_callable,
                             true,
                             boost::asynchronous::default_save_cpu_load<10,80000,5000>>
-                                (server_pool,"localhost",12346));
+                                (server_pool,own_server_address,(unsigned int)own_server_port));
         // we need a composite for stealing
         auto composite =
                 boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::composite_threadpool_scheduler<boost::asynchronous::any_serializable>
