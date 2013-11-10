@@ -28,6 +28,7 @@
 #include <boost/asynchronous/scheduler/tss_scheduler.hpp>
 #include <boost/asynchronous/any_serializable.hpp>
 #include <boost/asynchronous/callable_any.hpp>
+#include <boost/asynchronous/continuation_task.hpp>
 
 namespace boost { namespace asynchronous { namespace tcp {
 
@@ -109,19 +110,16 @@ private:
 
         void operator()()
         {
-            //std::cout << "stealable_job::operator" << std::endl;
             auto this_scheduler = m_scheduler;
             boost::shared_ptr<boost::asio::ip::tcp::socket> asocket = this->m_socket;
             unsigned int header_length = m_header_length;
             // if job was stolen, we need to deserialize to a string first
             if(m_response.m_stolen)
             {
-                //std::cout << "m_task: " << m_response.m_task << std::endl;
                 std::istringstream task_stream(m_response.m_task);
                 boost::archive::text_iarchive task_archive(task_stream);
                 std::string as_string;
                 task_archive >> as_string;
-                //std::cout << "as_string: " << as_string << std::endl;
                 // replace
                 m_response.m_task = as_string;
             }
@@ -147,7 +145,6 @@ private:
         template <class Archive>
         void save(Archive & ar, const unsigned int /*version*/)const
         {
-            //std::cout << "stealable_job::save" << std::endl;
             ar & m_response.m_task;
         }
         // for non-continuation tasks, this being called means that the task was tolen
@@ -155,7 +152,6 @@ private:
         template <class Archive>
         void load(Archive & ar, const unsigned int /*version*/)
         {
-            //std::cout << "stealable_job::load" << std::endl;
             // copy result
             boost::asynchronous::tcp::client_request::message_payload payload;
             ar >> payload;
@@ -191,7 +187,6 @@ private:
         std::function<void(std::string)> cb =
         [this](std::string archive_data)
         {
-            //std::cout << "got message: " << archive_data << std::endl;
             // got work, deserialize message
             std::istringstream archive_stream(archive_data);
             boost::archive::text_iarchive archive(archive_stream);
@@ -202,7 +197,6 @@ private:
             {
                 return;
             }
-            //std::cout << "got work" << std::endl;
             this->get_worker().post(
                         stealable_job(this->m_socket,std::move(resp),m_executor,get_scheduler(),m_header_length)
             );
@@ -416,10 +410,11 @@ void deserialize_and_call_task(Task& t,boost::asynchronous::tcp::server_reponse 
     when_done(request);
 }
                                                                   \
-// register a continuation task for deserialization
+// register a top-levelcontinuation task for deserialization
 template <class Task>
-void deserialize_and_call_continuation_task(Task& t,boost::asynchronous::tcp::server_reponse const& resp,
-                                            std::function<void(boost::asynchronous::tcp::client_request const&)>const& when_done)
+void deserialize_and_call_top_level_continuation_task(
+        Task& t,boost::asynchronous::tcp::server_reponse const& resp,
+        std::function<void(boost::asynchronous::tcp::client_request const&)>const& when_done)
 {
     // deserialize job, execute code, serialize result
     std::istringstream task_stream(resp.m_task);
@@ -456,6 +451,47 @@ void deserialize_and_call_continuation_task(Task& t,boost::asynchronous::tcp::se
     boost::asynchronous::any_continuation ac(cont);
     boost::asynchronous::get_continuations().push_front(ac);
 }
-
+// register a top-levelcontinuation task for deserialization
+template <class Task>
+void deserialize_and_call_continuation_task(
+        Task& t,boost::asynchronous::tcp::server_reponse const& resp,
+        std::function<void(boost::asynchronous::tcp::client_request const&)>const& when_done)
+{
+    // deserialize job, execute code, serialize result
+    std::istringstream task_stream(resp.m_task);
+    boost::archive::text_iarchive task_archive(task_stream);
+    boost::asynchronous::tcp::client_request request (BOOST_ASYNCHRONOUS_TCP_CLIENT_JOB_RESULT);
+    request.m_task_id = resp.m_task_id;
+    task_archive >> t;
+    // call task
+    t();
+    // create continuation waiting for task completion
+    boost::asynchronous::create_continuation<typename Task::res_type>
+        ([request,when_done](std::tuple<boost::future<typename Task::res_type> >&& continuation_res)mutable
+         {
+            std::ostringstream res_archive_stream;
+            boost::archive::text_oarchive res_archive(res_archive_stream);
+            try
+            {
+                // serialize result
+                auto res = (std::get<0>(continuation_res)).get();
+                res_archive << res;
+                request.m_load.m_data = res_archive_stream.str();
+            }
+            catch (std::exception& e)
+            {
+                request.m_load.m_has_exception=true;
+                request.m_load.m_exception=boost::asynchronous::tcp::transport_exception(e.what());
+            }
+            catch(...)
+            {
+                request.m_load.m_has_exception=true;
+                request.m_load.m_exception=boost::asynchronous::tcp::transport_exception("...");
+            }
+            when_done(request);
+         }
+    , t.get_future()
+    );
+}
 }}}
 #endif // BOOST_ASYNCHRONOUS_SCHEDULER_TCP_SIMPLE_TCP_CLIENT_HPP

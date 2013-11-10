@@ -23,6 +23,7 @@
 #include <boost/mpl/not.hpp>
 #include <boost/mpl/and.hpp>
 #include <boost/mpl/has_xxx.hpp>
+#include <boost/type_traits/is_same.hpp>
 
 #include <boost/asynchronous/any_shared_scheduler_proxy.hpp>
 #include <boost/asynchronous/callable_any.hpp>
@@ -124,9 +125,13 @@ namespace detail
         F m_func;
     };
 
-    // version for serializable tasks
+    // version for serializable tasks but not continuations
+    // TODO a bit better than checking R...
     template <class R,class F,class JOB, class OP>
-    struct post_future_helper_base<R,F,JOB,OP,typename ::boost::enable_if<boost::asynchronous::detail::is_serializable<F> >::type>
+    struct post_future_helper_base<R,F,JOB,OP,
+            typename ::boost::enable_if<boost::mpl::and_<
+                boost::asynchronous::detail::is_serializable<F>,
+                boost::mpl::not_<boost::is_same<R,void> > > >::type >
             : public boost::asynchronous::job_traits<JOB>::diagnostic_type
     {
         post_future_helper_base():boost::asynchronous::job_traits<JOB>::diagnostic_type(){}
@@ -172,6 +177,63 @@ namespace detail
             {
                 m_promise->set_exception(boost::copy_exception(payload.m_exception));
             }
+        }
+        std::string get_task_name()const
+        {
+            return m_func.get_task_name();
+        }
+        BOOST_SERIALIZATION_SPLIT_MEMBER()
+        void operator()()
+        {
+            OP()(m_promise,m_func);
+        }
+        boost::shared_ptr<boost::promise<R> > m_promise;
+        F m_func;
+    };
+    // version for tasks which are serializable AND continuations
+    // TODO a bit better than checking R...
+    template <class R,class F,class JOB, class OP>
+    struct post_future_helper_base<R,F,JOB,OP,
+            typename ::boost::enable_if<boost::mpl::and_<
+                boost::asynchronous::detail::is_serializable<F>,
+                boost::is_same<R,void> > >::type >
+            : public boost::asynchronous::job_traits<JOB>::diagnostic_type
+    {
+        post_future_helper_base():boost::asynchronous::job_traits<JOB>::diagnostic_type(){}
+#ifndef BOOST_NO_RVALUE_REFERENCES
+        post_future_helper_base(boost::shared_ptr<boost::promise<R> > p, F&& f)
+            : boost::asynchronous::job_traits<JOB>::diagnostic_type(),
+              m_promise(p),m_func(std::forward<F>(f)) {}
+        post_future_helper_base(post_future_helper_base&& rhs)
+            : boost::asynchronous::job_traits<JOB>::diagnostic_type(),
+              m_promise(std::move(rhs.m_promise)),m_func(std::move(rhs.m_func)) {}
+        post_future_helper_base& operator= (post_future_helper_base&& rhs)
+        {
+            m_promise = std::move(rhs.m_promise);
+            m_func = std::move(rhs.m_func);
+            return *this;
+        }
+#endif
+    //#else
+        post_future_helper_base(post_future_helper_base const& rhs)
+            :boost::asynchronous::job_traits<JOB>::diagnostic_type(),m_promise(rhs.m_promise),m_func(rhs.m_func){}
+        post_future_helper_base(boost::shared_ptr<boost::promise<R> > p, F const& f)
+            :boost::asynchronous::job_traits<JOB>::diagnostic_type(),m_promise(p),m_func(f){}
+    //#endif
+        template <class Archive>
+        void save(Archive & ar, const unsigned int /*version*/)const
+        {
+            // TODO using a string is just a temporary hack because of stealing
+            std::ostringstream archive_stream;
+            boost::archive::text_oarchive archive(archive_stream);
+            archive & m_func;
+            std::string as_string = archive_stream.str();
+            ar & as_string;
+        }
+        template <class Archive>
+        void load(Archive & ar, const unsigned int version)
+        {
+            m_func.as_result(ar,version);
         }
         std::string get_task_name()const
         {

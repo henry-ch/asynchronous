@@ -12,6 +12,7 @@
 #include <iostream>
 #include <boost/asynchronous/scheduler/serializable_task.hpp>
 #include <boost/asynchronous/continuation_task.hpp>
+#include <boost/asynchronous/any_serializable.hpp>
 
 namespace tcp_example
 {
@@ -25,8 +26,27 @@ long serial_fib( long n ) {
 
 // our recursive fibonacci tasks. Needs to inherit continuation_task<value type returned by this task>
 struct fib_task : public boost::asynchronous::continuation_task<long>
+                , public boost::asynchronous::serializable_task
 {
-    fib_task(long n,long cutoff):n_(n),cutoff_(cutoff){}
+    fib_task(long n,long cutoff)
+        :  boost::asynchronous::continuation_task<long>()
+        , boost::asynchronous::serializable_task("serializable_sub_fib_task")
+        ,n_(n),cutoff_(cutoff)
+    {
+    }
+    template <class Archive>
+    void save(Archive & ar, const unsigned int /*version*/)const
+    {
+        ar & n_;
+        ar & cutoff_;
+    }
+    template <class Archive>
+    void load(Archive & ar, const unsigned int /*version*/)
+    {
+        ar & n_;
+        ar & cutoff_;
+    }
+    BOOST_SERIALIZATION_SPLIT_MEMBER()
     void operator()()const
     {
         // the result of this task, will be either set directly if < cutoff, otherwise when taks is ready
@@ -39,7 +59,7 @@ struct fib_task : public boost::asynchronous::continuation_task<long>
         else
         {
             // n> cutoff, create 2 new tasks and when both are done, set our result (res(task1) + res(task2))
-            boost::asynchronous::create_continuation<long>(
+            boost::asynchronous::create_continuation_log<long,boost::asynchronous::any_serializable>(
                         // called when subtasks are done, set our result
                         [task_res](std::tuple<boost::future<long>,boost::future<long> >&& res)
                         {
@@ -64,10 +84,14 @@ struct serializable_fib_task : public boost::asynchronous::serializable_task
         ar & n_;
         ar & cutoff_;
     }
-    auto operator()()const -> decltype(boost::asynchronous::top_level_continuation<long>(tcp_example::fib_task(long(0),long(0))))
+    auto operator()()const
+        -> decltype(boost::asynchronous::top_level_continuation_log<long,boost::asynchronous::any_serializable>
+                    (tcp_example::fib_task(long(0),long(0))))
     {
-        std::cout << "serializable_fib_task operator(): " << n_ << "," << cutoff_ << std::endl;
-        return boost::asynchronous::top_level_continuation<long>(tcp_example::fib_task(n_,cutoff_));
+        //TODO better than _log...
+        auto cont =  boost::asynchronous::top_level_continuation_log<long,boost::asynchronous::any_serializable>
+                (tcp_example::fib_task(n_,cutoff_));
+        return cont;
 
     }
     long n_;

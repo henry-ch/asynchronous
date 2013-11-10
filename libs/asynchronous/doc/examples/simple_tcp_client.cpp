@@ -31,6 +31,11 @@ int main(int argc, char* argv[])
             else if (task_name=="serializable_fib_task")
             {
                 tcp_example::serializable_fib_task fib(0,0);
+                boost::asynchronous::tcp::deserialize_and_call_top_level_continuation_task(fib,resp,when_done);
+            }
+            else if (task_name=="serializable_sub_fib_task")
+            {
+                tcp_example::fib_task fib(0,0);
                 boost::asynchronous::tcp::deserialize_and_call_continuation_task(fib,resp,when_done);
             }
             // else whatever functor we support

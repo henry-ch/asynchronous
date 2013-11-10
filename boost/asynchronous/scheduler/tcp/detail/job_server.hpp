@@ -43,7 +43,6 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
         , m_next_task_id(0)
         , m_stealing(stealing)
     {
-        //std::cout << "stealing? " << m_stealing << std::endl;
         // For TCP communication we use an asio-based scheduler with 1 thread
         auto asioWorkers =
                 boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::asio_scheduler<>(1));
@@ -66,7 +65,6 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
         this->post_callback(
                     [moved_job]()mutable
                     {
-                        //std::cout << "serializing job" << std::endl;
                         // serialize job
                         std::ostringstream archive_stream;
                         boost::archive::text_oarchive archive(archive_stream);
@@ -75,7 +73,6 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
                     },
                     [moved_job,this](boost::future<std::string> fu)mutable
                     {
-                        //std::cout << "serialized job" << std::endl;
                         waiting_job new_job(std::move(*moved_job),
                                             boost::asynchronous::tcp::server_reponse(this->m_next_task_id++,fu.get(),
                                                                                      moved_job->get_task_name()));
@@ -83,14 +80,12 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
                         if (this->m_stealing)
                         {
                             // remember it was stolen
-                            //std::cout << "job_server stole a job" << std::endl;
                             new_job.m_serialized.m_stolen=true;
                         }
                         this->m_unprocessed_jobs.emplace_back(std::move(new_job));
                         // if we have a waiting connection, immediately send
                         if (!this->m_waiting_connections.empty())
                         {
-                            //std::cout << "just stole job" << std::endl;
                             // send
                             this->send_first_job(this->m_waiting_connections.front());
                             this->m_waiting_connections.pop_front();
@@ -101,7 +96,6 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
     }
     bool requests_stealing()const
     {
-        //std::cout << "connections waiting: " << m_waiting_connections.size() << std::endl;
         return !m_waiting_connections.empty();
     }
     void no_jobs()
@@ -118,7 +112,6 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
 private:
     void send_first_job(boost::shared_ptr<boost::asynchronous::tcp::server_connection> connection)
     {
-        //std::cout << "sending task name:" << m_unprocessed_jobs.front().m_serialized.m_task_name << std::endl;
         connection->send(m_unprocessed_jobs.front().m_serialized);
         m_waiting_jobs.insert(m_unprocessed_jobs.front());
         m_unprocessed_jobs.pop_front();
@@ -140,7 +133,6 @@ private:
             }
             else
             {
-                //std::cout << "added waiting connection" << std::endl;
                 // short wait to see if we can steal some job
                 m_waiting_connections.push_back(connection);
             }

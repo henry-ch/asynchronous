@@ -11,12 +11,14 @@
 #define BOOST_ASYNCHRONOUS_CONTINUATION_TASK_HPP
 
 #include <string>
+#include <sstream>
+#include <boost/archive/text_iarchive.hpp>
 #include <boost/asynchronous/scheduler/tss_scheduler.hpp>
 #include <boost/asynchronous/detail/continuation_impl.hpp>
 #include <boost/asynchronous/scheduler/detail/any_continuation.hpp>
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/scheduler/detail/interrupt_state.hpp>
-
+#include <boost/asynchronous/scheduler/tcp/detail/client_request.hpp>
 
 namespace boost { namespace asynchronous {
 
@@ -71,7 +73,26 @@ public:
     {
         return continuation_result<Return>(m_promise);
     }
+    // called in case task is stolen by some client and only the result is returned
+    template <class Archive>
+    void as_result(Archive & ar, const unsigned int /*version*/)
+    {
+        boost::asynchronous::tcp::client_request::message_payload payload;
+        ar >> payload;
+        if (!payload.m_has_exception)
+        {
+            std::istringstream archive_stream(payload.m_data);
+            boost::archive::text_iarchive archive(archive_stream);
 
+            long res;
+            archive >> res;
+            get_promise()->set_value(res);
+        }
+        else
+        {
+            get_promise()->set_exception(boost::copy_exception(payload.m_exception));
+        }
+    }
 private:
     boost::shared_ptr<boost::promise<Return> > m_promise;
     std::string m_name;

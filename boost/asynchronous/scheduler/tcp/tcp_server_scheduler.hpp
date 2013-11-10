@@ -261,7 +261,6 @@ public:
                             popped = (*other_queues[i]).try_steal(job);
                             if (popped)
                             {
-                                //std::cout << "stole job in scheduler" << std::endl;
                                 // forward to server
                                 server.add_task(job);
                                 break;
