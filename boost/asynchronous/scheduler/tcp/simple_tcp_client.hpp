@@ -187,28 +187,33 @@ private:
         std::function<void(std::string)> cb =
         [this](std::string archive_data)
         {
-            // got work, deserialize message
-            std::istringstream archive_stream(archive_data);
-            boost::archive::text_iarchive archive(archive_stream);
-            boost::asynchronous::tcp::server_reponse resp(0,"","");
-            archive >> resp;
-            // if no task, give up
-            if (resp.m_task.empty())
+            // if no data, give up
+            if (!archive_data.empty())
             {
-                return;
+                // got work, deserialize message
+                std::istringstream archive_stream(archive_data);
+                boost::archive::text_iarchive archive(archive_stream);
+                boost::asynchronous::tcp::server_reponse resp(0,"","");
+                archive >> resp;
+                // if no task, give up
+                if (!resp.m_task.empty())
+                {
+                    this->get_worker().post(
+                                stealable_job(this->m_socket,std::move(resp),m_executor,get_scheduler(),m_header_length)
+                    );
+                }
             }
-            this->get_worker().post(
-                        stealable_job(this->m_socket,std::move(resp),m_executor,get_scheduler(),m_header_length)
-            );
+            // start timer to check for work again later
+            boost::shared_ptr<boost::asio::deadline_timer> atimer
+                    (boost::make_shared<boost::asio::deadline_timer>(*boost::asynchronous::get_io_service<>(),
+                                                                     boost::posix_time::milliseconds(m_time_in_ms_between_requests)));
+
+            std::function<void(const boost::system::error_code&)> checked =
+                    [this,atimer](const boost::system::error_code&){this->check_for_work();};
+
+            atimer->async_wait(make_safe_callback(checked));
         };
-        boost::shared_ptr<boost::asio::deadline_timer> atimer
-                (boost::make_shared<boost::asio::deadline_timer>(*boost::asynchronous::get_io_service<>(),
-                                                                 boost::posix_time::milliseconds(m_time_in_ms_between_requests)));
-
-        std::function<void(const boost::system::error_code&)> checked =
-                [this,cb,atimer](const boost::system::error_code&){this->request_content(cb);this->check_for_work();};
-
-        atimer->async_wait(make_safe_callback(checked));
+        request_content(cb);
     }
     void request_content(std::function<void(std::string)> cb)
     {
@@ -248,7 +253,9 @@ private:
         // else bad luck, will try later
         else
         {
-            stop();
+            //ignore
+            m_connection_state = connection_state::none;
+            cb(std::string(""));
         }
     }
     void handle_connect(const boost::system::error_code& err,std::function<void(std::string)> cb)
@@ -262,7 +269,9 @@ private:
         // else bad luck, will try later
         else
         {
-            stop();
+            //ignore
+            m_connection_state = connection_state::none;
+            cb(std::string(""));
         }
     }
     void get_task(std::function<void(std::string)> cb)
@@ -300,7 +309,8 @@ private:
             stop();
             return;
         }
-        boost::shared_ptr<std::vector<char> > inbound_header = boost::make_shared<std::vector<char> >(m_header_length);
+        boost::shared_ptr<std::vector<char> > inbound_header = boost::make_shared<std::vector<char> >();
+        inbound_header->resize(m_header_length);
         boost::asio::async_read(*m_socket,boost::asio::buffer(*inbound_header),
             [this, callback,inbound_header](boost::system::error_code ec, size_t /*bytes_transferred*/)mutable
             {

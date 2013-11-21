@@ -25,6 +25,7 @@ int main(int argc, char* argv[])
         [](std::string const& task_name,boost::asynchronous::tcp::server_reponse resp,
            std::function<void(boost::asynchronous::tcp::client_request const&)> when_done)
         {
+            //std::cout << "got task: " << task_name << "task: " << resp.m_task << std::endl;
             if (task_name=="dummy_tcp_task")
             {
                 dummy_tcp_task t(0);
@@ -48,9 +49,10 @@ int main(int argc, char* argv[])
             }
         };
         auto pool = boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable> >(threads));
+                    new boost::asynchronous::threadpool_scheduler<
+                        boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable> >(threads));
         boost::asynchronous::tcp::simple_tcp_client_proxy proxy(scheduler,pool,server_address,server_port,
-                                                                100/*ms between calls to server*/,executor);
+                                                                10/*ms between calls to server*/,executor);
         boost::future<boost::future<void> > fu = proxy.run();
         boost::future<void> fu_end = fu.get();
         fu_end.get();

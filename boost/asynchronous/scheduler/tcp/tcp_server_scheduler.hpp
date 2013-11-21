@@ -270,7 +270,7 @@ public:
                     if (!popped)
                     {
                         // no job stolen
-                        server.no_jobs();
+                        server.no_jobs().get();
                     }
                     // check for shutdown
                     boost::asynchronous::any_callable djob;

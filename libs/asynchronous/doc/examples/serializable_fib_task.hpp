@@ -17,7 +17,8 @@
 namespace tcp_example
 {
 // a simple, single-threaded fibonacci function used for cutoff
-long serial_fib( long n ) {
+template <class T>
+long serial_fib( T n ) {
     if( n<2 )
         return n;
     else

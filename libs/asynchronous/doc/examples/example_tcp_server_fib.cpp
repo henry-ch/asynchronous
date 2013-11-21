@@ -52,12 +52,6 @@ struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any
         // start long tasks in threadpool (first lambda) and callback in our thread
         post_callback(
                     tcp_example::serializable_fib_task(n,cutoff)
-//                [n,cutoff]()
-//                {
-//                     // a top-level continuation is the first one in a recursive serie.
-//                     // Its result will be passed to callback
-//                     return boost::asynchronous::top_level_continuation<long>(fib_task(n,cutoff));
-//                 }// work
                ,
                // callback with fibonacci result.
                [this](boost::future<long> res){
@@ -92,7 +86,7 @@ void example_post_tcp_fib(long fibo_val,long cutoff)
     long sres = tcp_example::serial_fib(fibo_val);
     stop = boost::chrono::high_resolution_clock::now();
     std::cout << "sres= " << sres << std::endl;
-    std::cout << "ibonacci single-threaded single took in us:"
+    std::cout << "fibonacci single-threaded single took in us:"
               <<  (boost::chrono::nanoseconds(stop - start).count() / 1000) <<"\n" <<std::endl;
     {
         std::cout << "fibonacci parallel TCP" << std::endl;

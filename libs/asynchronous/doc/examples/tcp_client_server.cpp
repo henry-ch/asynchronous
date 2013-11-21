@@ -30,10 +30,12 @@ int main(int argc, char* argv[])
                     boost::asynchronous::default_find_position<boost::asynchronous::sequential_push_policy >
                    ,boost::asynchronous::default_save_cpu_load<10,80000,5000> >);
     {
-        std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,std::function<void(boost::asynchronous::tcp::client_request const&)>)> executor=
+        std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,
+                           std::function<void(boost::asynchronous::tcp::client_request const&)>)> executor=
         [](std::string const& task_name,boost::asynchronous::tcp::server_reponse resp,
            std::function<void(boost::asynchronous::tcp::client_request const&)> when_done)
         {
+            //std::cout << "got task" << std::endl;
             if (task_name=="dummy_tcp_task")
             {
                 dummy_tcp_task t(0);
@@ -41,11 +43,13 @@ int main(int argc, char* argv[])
             }
             else if (task_name=="serializable_fib_task")
             {
+                //std::cout << "got serializable_fib_task" << std::endl;
                 tcp_example::serializable_fib_task fib(0,0);
                 boost::asynchronous::tcp::deserialize_and_call_top_level_continuation_task(fib,resp,when_done);
             }
             else if (task_name=="serializable_sub_fib_task")
             {
+                //std::cout << "got serializable_sub_fib_task" << std::endl;
                 tcp_example::fib_task fib(0,0);
                 boost::asynchronous::tcp::deserialize_and_call_continuation_task(fib,resp,when_done);
             }
