@@ -61,6 +61,8 @@ struct fib_task : public boost::asynchronous::continuation_task<long>
             boost::asynchronous::create_continuation<long>(
                         [task_res](std::tuple<boost::future<long>,boost::future<long> >&& res)
                         {
+                            BOOST_CHECK_MESSAGE(std::get<0>(res).has_exception(),"Fib subtask 99 got no exception");
+                            BOOST_CHECK_MESSAGE(std::get<1>(res).has_exception(),"Fib subtask 98 got no exception");
                             long r = std::get<0>(res).get() + std::get<1>(res).get();
                             task_res.set_value(r);
                         },
@@ -136,10 +138,10 @@ public:
 };
 }
 
-BOOST_AUTO_TEST_CASE( test_fibonacci_100_99_interrupt )
+BOOST_AUTO_TEST_CASE( test_fibonacci_100_100_interrupt )
 {
     long fibo_val = 100;
-    long cutoff = 99;
+    long cutoff = 100;
     main_thread_id = boost::this_thread::get_id();
 
     {

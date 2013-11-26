@@ -87,6 +87,10 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(std::get<0>(res).has_value(),"first task should be finished");
                         BOOST_CHECK_MESSAGE(!std::get<1>(res).has_value(),"second task should not be finished");
                         BOOST_CHECK_MESSAGE(!std::get<2>(res).has_value(),"third task should not be finished");
+                        BOOST_CHECK_MESSAGE(!std::get<0>(res).has_exception(),"first task got exception");
+                        BOOST_CHECK_MESSAGE(!std::get<1>(res).has_exception(),"second task got exception");
+                        BOOST_CHECK_MESSAGE(!std::get<2>(res).has_exception(),"third task got exception");
+
                         long r = 0;
                         if ( std::get<0>(res).has_value())
                             r += std::get<0>(res).get();
