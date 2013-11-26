@@ -130,6 +130,15 @@ public:
                                         post_prio,
                                         cb_prio);
     }
+    template <class F1>
+    void post_self(F1&& func, std::string const& task_name="", std::size_t post_prio=0)
+    {
+        // we want to log if possible
+        boost::asynchronous::post_future(m_scheduler.lock(),
+                                        boost::asynchronous::check_alive_before_exec(std::forward<F1>(func),m_tracking),
+                                        task_name,
+                                        post_prio);
+    }
     template <class CallerSched,class F1, class F2>
     void call_callback(CallerSched s, F1&& func,F2&& cb_func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
     {
