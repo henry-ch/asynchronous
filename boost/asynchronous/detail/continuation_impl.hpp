@@ -16,6 +16,7 @@
 
 #include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/chrono.hpp>
 
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/any_scheduler.hpp>
@@ -27,7 +28,7 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(iterator)
 namespace boost { namespace asynchronous { namespace detail {
 
 // the continuation task implementation
-template <class Return, typename Job, typename Tuple=std::tuple<boost::future<Return> > >
+template <class Return, typename Job, typename Tuple=std::tuple<boost::future<Return> > , typename Duration = boost::chrono::milliseconds >
 struct continuation
 {
     typedef int is_continuation_task;
@@ -35,10 +36,14 @@ struct continuation
     typedef Tuple tuple_type;
 
     template <typename... Args>
-    continuation(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state,boost::shared_ptr<Tuple> t,Args&&... args)
+    continuation(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state,boost::shared_ptr<Tuple> t, Duration d, Args&&... args)
     : m_futures(t)
     , m_state(state)
+    , m_timeout(d)
     {
+        // remember when we started
+        m_start = boost::chrono::high_resolution_clock::now();
+
         boost::asynchronous::any_weak_scheduler<Job> weak_scheduler = boost::asynchronous::get_thread_scheduler<Job>();
         boost::asynchronous::any_shared_scheduler<Job> locked_scheduler = weak_scheduler.lock();
         std::vector<boost::asynchronous::any_interruptible> interruptibles;
@@ -50,10 +55,13 @@ struct continuation
             m_state->add_subs(interruptibles.begin(),interruptibles.end());
     }
     // version where we already get futures
-    continuation(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state,boost::shared_ptr<Tuple> t)
+    continuation(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state,boost::shared_ptr<Tuple> t, Duration d)
     : m_futures(t)
     , m_state(state)
+    , m_timeout(d)
     {
+        // remember when we started
+        m_start = boost::chrono::high_resolution_clock::now();
         //TODO interruptible
     }
     template <typename T,typename Interruptibles,typename Last>
@@ -103,6 +111,13 @@ struct continuation
             // we are interrupted => we are ready
             return true;
         }
+        // if timeout, we are ready too
+        typename boost::chrono::high_resolution_clock::time_point time_now = boost::chrono::high_resolution_clock::now();
+        if (m_timeout.count() != 0 && (time_now - m_start >= m_timeout))
+        {
+            return true;
+        }
+
         bool ready=true;
         check_ready(ready,*m_futures);
         return ready;
@@ -112,6 +127,8 @@ struct continuation
     boost::shared_ptr<Tuple> m_futures;
     std::function<void(Tuple&&)> m_done;
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> m_state;
+    Duration m_timeout;
+    typename boost::chrono::high_resolution_clock::time_point m_start;
 
     template<std::size_t I = 0, typename... Tp>
     inline typename std::enable_if<I == sizeof...(Tp), void>::type
@@ -133,16 +150,19 @@ struct continuation
 };
 
 // version for sequences of futures
-template <class Return, typename Job, typename Seq>
+template <class Return, typename Job, typename Seq, typename Duration = boost::chrono::milliseconds>
 struct continuation_as_seq
 {
     typedef int is_continuation_task;
     typedef Return return_type;
 
-    continuation_as_seq(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state,Seq&& seq)
+    continuation_as_seq(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state, Duration d,Seq&& seq)
     : m_futures(new Seq(std::forward<Seq>(seq)))
     , m_state(state)
+    , m_timeout(d)
     {
+        // remember when we started
+        m_start = boost::chrono::high_resolution_clock::now();
         //TODO interruptible
     }
 
@@ -163,6 +183,12 @@ struct continuation_as_seq
             // we are interrupted => we are ready
             return true;
         }
+        // if timeout, we are ready too
+        typename boost::chrono::high_resolution_clock::time_point time_now = boost::chrono::high_resolution_clock::now();
+        if (m_timeout.count() != 0 && (time_now - m_start >= m_timeout))
+        {
+            return true;
+        }
         for (typename Seq::const_iterator it = m_futures->begin(); it != m_futures->end() ;++it)
         {
             if (!((*it).is_ready() || (*it).has_exception() ) )
@@ -175,6 +201,8 @@ struct continuation_as_seq
     boost::shared_ptr<Seq> m_futures;
     std::function<void(Seq&&)> m_done;
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> m_state;
+    Duration m_timeout;
+    typename boost::chrono::high_resolution_clock::time_point m_start;
 };
 
 // used by variadic make_future_tuple

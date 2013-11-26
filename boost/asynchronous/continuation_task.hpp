@@ -109,7 +109,7 @@ create_continuation(OnDone&& on_done, Args&&... args)
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
     typedef decltype(boost::asynchronous::detail::make_future_tuple(args...)) future_type;
     boost::asynchronous::detail::continuation<Return,boost::asynchronous::any_callable,typename future_type::element_type> c (
-                state,boost::asynchronous::detail::make_future_tuple(args...),std::forward<Args>(args)...);
+                state,boost::asynchronous::detail::make_future_tuple(args...), boost::chrono::milliseconds(0), std::forward<Args>(args)...);
     c.on_done(on_done);
     boost::asynchronous::any_continuation a(c);
     boost::asynchronous::get_continuations().push_front(a);
@@ -123,7 +123,7 @@ create_continuation(OnDone&& on_done, boost::future<Args>&&... args)
     typedef decltype(std::make_tuple(std::forward<boost::future<Args> >(args)...)) future_type;
     boost::shared_ptr<future_type> sp = boost::make_shared<future_type> (std::make_tuple( std::forward<boost::future<Args> >(args)...));
 
-    boost::asynchronous::detail::continuation<Return,boost::asynchronous::any_callable,future_type> c (state,sp);
+    boost::asynchronous::detail::continuation<Return,boost::asynchronous::any_callable,future_type> c (state,sp, boost::chrono::milliseconds(0));
     c.on_done(on_done);
     boost::asynchronous::any_continuation a(c);
     boost::asynchronous::get_continuations().push_front(a);
@@ -135,7 +135,49 @@ create_continuation(OnDone&& on_done, Seq&& seq)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
 
-    boost::asynchronous::detail::continuation_as_seq<Return,boost::asynchronous::any_callable,Seq> c (state,std::forward<Seq>(seq));
+    boost::asynchronous::detail::continuation_as_seq<Return,boost::asynchronous::any_callable,Seq> c (state,boost::chrono::milliseconds(0),std::forward<Seq>(seq));
+    c.on_done(on_done);
+    boost::asynchronous::any_continuation a(c);
+    boost::asynchronous::get_continuations().push_front(a);
+}
+// standard version as above but with timeout
+template <class Return, class OnDone, class Duration, typename... Args>
+typename boost::disable_if< typename boost::mpl::or_<
+                            typename boost::asynchronous::detail::has_future_args<Args...>::type ,
+                            typename boost::asynchronous::detail::has_iterator_args<Args...>::type >
+                          ,void >::type
+create_continuation_timeout(OnDone&& on_done, Duration const& d, Args&&... args)
+{
+    boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
+    typedef decltype(boost::asynchronous::detail::make_future_tuple(args...)) future_type;
+    boost::asynchronous::detail::continuation<Return,boost::asynchronous::any_callable,typename future_type::element_type,Duration> c (
+                state,boost::asynchronous::detail::make_future_tuple(args...), d, std::forward<Args>(args)...);
+    c.on_done(on_done);
+    boost::asynchronous::any_continuation a(c);
+    boost::asynchronous::get_continuations().push_front(a);
+}
+template <class Return, class OnDone, class Duration, typename... Args>
+typename boost::enable_if< typename boost::asynchronous::detail::has_future_args<boost::future<Args>...>::type ,void >::type
+create_continuation_timeout(OnDone&& on_done, Duration const& d, boost::future<Args>&&... args)
+{
+    boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
+
+    typedef decltype(std::make_tuple(std::forward<boost::future<Args> >(args)...)) future_type;
+    boost::shared_ptr<future_type> sp = boost::make_shared<future_type> (std::make_tuple( std::forward<boost::future<Args> >(args)...));
+
+    boost::asynchronous::detail::continuation<Return,boost::asynchronous::any_callable,future_type,Duration> c (state,sp,d);
+    c.on_done(on_done);
+    boost::asynchronous::any_continuation a(c);
+    boost::asynchronous::get_continuations().push_front(a);
+}
+// with containers of futures
+template <class Return, class OnDone, class Duration, typename Seq>
+typename boost::enable_if< typename has_iterator<Seq>::type ,void >::type
+create_continuation_timeout(OnDone&& on_done, Duration const& d, Seq&& seq)
+{
+    boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
+
+    boost::asynchronous::detail::continuation_as_seq<Return,boost::asynchronous::any_callable,Seq> c (state,d,std::forward<Seq>(seq));
     c.on_done(on_done);
     boost::asynchronous::any_continuation a(c);
     boost::asynchronous::get_continuations().push_front(a);
@@ -151,7 +193,7 @@ create_continuation_log(OnDone&& on_done, boost::future<Args>&&... args)
     typedef decltype(std::make_tuple(std::forward<boost::future<Args> >(args)...)) future_type;
     boost::shared_ptr<future_type> sp = boost::make_shared<future_type> (std::make_tuple( std::forward<boost::future<Args> >(args)...));
 
-    boost::asynchronous::detail::continuation<Return,Job,future_type> c (state,sp);
+    boost::asynchronous::detail::continuation<Return,Job,future_type> c (state,sp, boost::chrono::milliseconds(0));
     c.on_done(on_done);
     boost::asynchronous::any_continuation a(c);
     boost::asynchronous::get_continuations().push_front(a);
@@ -169,7 +211,7 @@ create_continuation_log(OnDone&& on_done, Args&&... args)
 
     typedef decltype(boost::asynchronous::detail::make_future_tuple(args...)) future_type;
     boost::asynchronous::detail::continuation<Return,Job,typename future_type::element_type> c (
-                state,boost::asynchronous::detail::make_future_tuple(args...),std::forward<Args>(args)...);
+                state,boost::asynchronous::detail::make_future_tuple(args...), boost::chrono::milliseconds(0), std::forward<Args>(args)...);
     c.on_done(on_done);
     boost::asynchronous::any_continuation a(c);
     boost::asynchronous::get_continuations().push_front(a);
@@ -182,7 +224,54 @@ create_continuation_log(OnDone&& on_done, Seq&& seq)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
 
-    boost::asynchronous::detail::continuation_as_seq<Return,Job,Seq> c (state,std::forward<Seq>(seq));
+    boost::asynchronous::detail::continuation_as_seq<Return,Job,Seq> c (state, boost::chrono::milliseconds(0),std::forward<Seq>(seq));
+    c.on_done(on_done);
+    boost::asynchronous::any_continuation a(c);
+    boost::asynchronous::get_continuations().push_front(a);
+}
+
+// versions with logging and timeout
+template <class Return, typename Job, class OnDone, class Duration, typename... Args>
+typename boost::enable_if< typename boost::asynchronous::detail::has_future_args<boost::future<Args>...>::type ,void >::type
+create_continuation_log_timeout(OnDone&& on_done, Duration const& d, boost::future<Args>&&... args)
+{
+    boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
+
+    typedef decltype(std::make_tuple(std::forward<boost::future<Args> >(args)...)) future_type;
+    boost::shared_ptr<future_type> sp = boost::make_shared<future_type> (std::make_tuple( std::forward<boost::future<Args> >(args)...));
+
+    boost::asynchronous::detail::continuation<Return,Job,future_type> c (state,sp, d);
+    c.on_done(on_done);
+    boost::asynchronous::any_continuation a(c);
+    boost::asynchronous::get_continuations().push_front(a);
+}
+
+
+template <class Return, typename Job, class OnDone, class Duration, typename... Args>
+typename boost::disable_if< typename boost::mpl::or_<
+                            typename boost::asynchronous::detail::has_future_args<Args...>::type ,
+                            typename boost::asynchronous::detail::has_iterator_args<Args...>::type >
+                          ,void >::type
+create_continuation_log_timeout(OnDone&& on_done, Duration const& d, Args&&... args)
+{
+    boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
+
+    typedef decltype(boost::asynchronous::detail::make_future_tuple(args...)) future_type;
+    boost::asynchronous::detail::continuation<Return,Job,typename future_type::element_type> c (
+                state,boost::asynchronous::detail::make_future_tuple(args...), d, std::forward<Args>(args)...);
+    c.on_done(on_done);
+    boost::asynchronous::any_continuation a(c);
+    boost::asynchronous::get_continuations().push_front(a);
+}
+
+// version with containers of futures and timeout
+template <class Return, typename Job, class OnDone, class Duration, typename Seq>
+typename boost::enable_if< typename has_iterator<Seq>::type ,void >::type
+create_continuation_log_timeout(OnDone&& on_done, Duration const& d, Seq&& seq)
+{
+    boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
+
+    boost::asynchronous::detail::continuation_as_seq<Return,Job,Seq> c (state, d,std::forward<Seq>(seq));
     c.on_done(on_done);
     boost::asynchronous::any_continuation a(c);
     boost::asynchronous::get_continuations().push_front(a);
@@ -195,7 +284,7 @@ boost::asynchronous::detail::continuation<Return,boost::asynchronous::any_callab
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
     return boost::asynchronous::detail::continuation<Return,boost::asynchronous::any_callable>(state,boost::make_shared<std::tuple<boost::future<Return> > >
-                                                     (std::make_tuple(t.get_future())),std::forward<FirstTask>(t));
+                                                     (std::make_tuple(t.get_future())), boost::chrono::milliseconds(0),std::forward<FirstTask>(t));
 }
 //  create the first continuation in the serie
 template <class Return, typename Job, class FirstTask>
@@ -204,7 +293,7 @@ boost::asynchronous::detail::continuation<Return,Job> top_level_continuation_log
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
 
     return boost::asynchronous::detail::continuation<Return,Job>(state,boost::make_shared<std::tuple<boost::future<Return> > >
-                                                     (std::make_tuple(t.get_future())),std::forward<FirstTask>(t));
+                                                     (std::make_tuple(t.get_future())), boost::chrono::milliseconds(0), std::forward<FirstTask>(t));
 }
 
 }}
