@@ -77,9 +77,9 @@ struct main_task : public boost::asynchronous::continuation_task<long>
         fus.emplace_back(std::move(fu3));
 
         // our algo is now done, wrap all and return
-        boost::asynchronous::create_continuation_log<long,servant_job>(
+        boost::asynchronous::create_continuation_log<servant_job>(
                     // called when subtasks are done, set our result
-                    [task_res](std::vector<boost::future<int>>&& res)
+                    [task_res](std::vector<boost::future<int>> res)
                     {
                         long r = res[0].get() + res[1].get() + res[2].get();
                         task_res.set_value(r);

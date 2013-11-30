@@ -59,9 +59,9 @@ struct sub_task : public boost::asynchronous::continuation_task<long>
         fus.emplace_back(std::move(fu3));
 
         // our algo is now done, wrap all and return
-        boost::asynchronous::create_continuation<long>(
+        boost::asynchronous::create_continuation(
                     // called when subtasks are done, set our result
-                    [task_res](std::vector<boost::future<int>>&& res)
+                    [task_res](std::vector<boost::future<int>> res)
                     {
                         try
                         {
@@ -95,9 +95,9 @@ struct main_task : public boost::asynchronous::continuation_task<long>
             return;
         // we need 2 bigger subtasks
         // prepare return
-        boost::asynchronous::create_continuation<long>(
+        boost::asynchronous::create_continuation(
                     // called when subtasks are done, set our result
-                    [task_res](std::tuple<boost::future<long>,boost::future<long> >&& res)
+                    [task_res](std::tuple<boost::future<long>,boost::future<long> > res)
                     {
                         try
                         {

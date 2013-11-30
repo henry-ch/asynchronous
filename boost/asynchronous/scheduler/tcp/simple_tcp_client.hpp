@@ -476,8 +476,8 @@ void deserialize_and_call_continuation_task(
     // call task
     t();
     // create continuation waiting for task completion
-    boost::asynchronous::create_continuation<typename Task::res_type>
-        ([request,when_done](std::tuple<boost::future<typename Task::res_type> >&& continuation_res)mutable
+    boost::asynchronous::create_continuation
+        ([request,when_done](std::tuple<boost::future<typename Task::res_type> > continuation_res)mutable
          {
             std::ostringstream res_archive_stream;
             boost::archive::text_oarchive res_archive(res_archive_stream);

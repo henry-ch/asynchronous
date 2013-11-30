@@ -71,16 +71,16 @@ struct Servant : boost::asynchronous::trackable_servant<>
         tpids = tp.thread_ids();
         // start long tasks in threadpool
         std::vector<boost::future<int> > fus;
-        boost::future<int> fu1 = boost::asynchronous::post_future(get_worker(),sub_task(100));
+        boost::future<int> fu1 = boost::asynchronous::post_future(get_worker(),sub_task(10));
         fus.emplace_back(std::move(fu1));
-        boost::future<int> fu2 = boost::asynchronous::post_future(get_worker(),sub_task(2000));
+        boost::future<int> fu2 = boost::asynchronous::post_future(get_worker(),sub_task(3000));
         fus.emplace_back(std::move(fu2));
-        boost::future<int> fu3 = boost::asynchronous::post_future(get_worker(),sub_task(2000));
+        boost::future<int> fu3 = boost::asynchronous::post_future(get_worker(),sub_task(3000));
         fus.emplace_back(std::move(fu3));
 
-        boost::asynchronous::create_continuation_timeout<long>(
+        boost::asynchronous::create_continuation_timeout(
                     // called when subtasks are done, set our result
-                    [this](std::vector<boost::future<int>>&& res)
+                    [this](std::vector<boost::future<int>> res)
                     {
                         BOOST_CHECK_MESSAGE(!contains_id(tpids.begin(),tpids.end(),boost::this_thread::get_id()),"algo callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
@@ -98,7 +98,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         this->on_callback(r);
                     },
                     // timeout
-                    boost::chrono::milliseconds(1000),
+                    boost::chrono::milliseconds(1500),
                     // future results of recursive tasks
                     std::move(fus));
         return fu;

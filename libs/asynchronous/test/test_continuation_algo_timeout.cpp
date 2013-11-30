@@ -77,9 +77,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
         boost::future<int> fu2 = boost::asynchronous::post_future(get_worker(),sub_task(2000));
         boost::future<int> fu3 = boost::asynchronous::post_future(get_worker(),sub_task(2000));
 
-        boost::asynchronous::create_continuation_timeout<long>(
+        boost::asynchronous::create_continuation_timeout(
                     // called when subtasks are done, set our result
-                    [this](std::tuple<boost::future<int>,boost::future<int>,boost::future<int> >&& res)
+                    [this](std::tuple<boost::future<int>,boost::future<int>,boost::future<int> > res)
                     {
                         BOOST_CHECK_MESSAGE(!contains_id(tpids.begin(),tpids.end(),boost::this_thread::get_id()),"algo callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");

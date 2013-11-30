@@ -81,9 +81,9 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
         boost::future<int> fu3 = boost::asynchronous::post_future(get_worker(),sub_task(2000),"sub_task_3");
         fus.emplace_back(std::move(fu3));
 
-        boost::asynchronous::create_continuation_log_timeout<long,servant_job>(
+        boost::asynchronous::create_continuation_log_timeout<servant_job>(
                     // called when subtasks are done, set our result
-                    [this](std::vector<boost::future<int>>&& res)
+                    [this](std::vector<boost::future<int>> res)
                     {
                         BOOST_CHECK_MESSAGE(!contains_id(tpids.begin(),tpids.end(),boost::this_thread::get_id()),"algo callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");

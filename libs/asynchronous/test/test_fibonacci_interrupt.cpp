@@ -58,8 +58,8 @@ struct fib_task : public boost::asynchronous::continuation_task<long>
         }
         else
         {
-            boost::asynchronous::create_continuation<long>(
-                        [task_res](std::tuple<boost::future<long>,boost::future<long> >&& res)
+            boost::asynchronous::create_continuation(
+                        [task_res](std::tuple<boost::future<long>,boost::future<long> > res)
                         {
                             BOOST_CHECK_MESSAGE(std::get<0>(res).has_exception(),"Fib subtask 99 got no exception");
                             BOOST_CHECK_MESSAGE(std::get<1>(res).has_exception(),"Fib subtask 98 got no exception");

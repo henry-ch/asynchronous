@@ -60,9 +60,9 @@ struct fib_task : public boost::asynchronous::continuation_task<long>
         else
         {
             // n> cutoff, create 2 new tasks and when both are done, set our result (res(task1) + res(task2))
-            boost::asynchronous::create_continuation_log<long,boost::asynchronous::any_serializable>(
+            boost::asynchronous::create_continuation_log<boost::asynchronous::any_serializable>(
                         // called when subtasks are done, set our result
-                        [task_res](std::tuple<boost::future<long>,boost::future<long> >&& res)
+                        [task_res](std::tuple<boost::future<long>,boost::future<long> > res)
                         {
                             long r = std::get<0>(res).get() + std::get<1>(res).get();
                             task_res.set_value(r);

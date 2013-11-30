@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
         [](std::string const& task_name,boost::asynchronous::tcp::server_reponse resp,
            std::function<void(boost::asynchronous::tcp::client_request const&)> when_done)
         {
-            //std::cout << "got task: " << task_name << "task: " << resp.m_task << std::endl;
+            std::cout << "got task: " << task_name << "task: " << resp.m_task << std::endl;
             if (task_name=="dummy_tcp_task")
             {
                 dummy_tcp_task t(0);
