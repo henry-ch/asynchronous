@@ -150,6 +150,26 @@ public:
                                         task_name,
                                         post_prio).second;
     }
+    template <class F1>
+    void post_future(F1&& func, std::string const& task_name="", std::size_t post_prio=0)
+    {
+        // we want to log if possible
+        boost::asynchronous::post_future(m_worker,
+                                        boost::asynchronous::check_alive_before_exec(std::forward<F1>(func),m_tracking),
+                                        task_name,
+                                        post_prio);
+    }
+    template <class F1>
+    boost::asynchronous::any_interruptible interruptible_post_future(F1&& func, std::string const& task_name="",
+                                                                   std::size_t post_prio=0)
+    {
+        // we want to log if possible
+        return boost::asynchronous::interruptible_post_future(
+                                        m_worker,
+                                        boost::asynchronous::check_alive_before_exec(std::forward<F1>(func),m_tracking),
+                                        task_name,
+                                        post_prio).second;
+    }
     template <class CallerSched,class F1, class F2>
     void call_callback(CallerSched s, F1&& func,F2&& cb_func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
     {

@@ -28,7 +28,7 @@ class server_connection
 {
 public:
     explicit server_connection(boost::asio::ip::tcp::socket socket)
-    : m_socket(move(socket))
+        : m_socket(std::move(socket))
     {
     }
 

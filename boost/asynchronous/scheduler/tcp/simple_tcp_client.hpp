@@ -113,6 +113,9 @@ private:
             auto this_scheduler = m_scheduler;
             boost::shared_ptr<boost::asio::ip::tcp::socket> asocket = this->m_socket;
             unsigned int header_length = m_header_length;
+            std::cout << " stealable_job::op() job name: " << m_response.m_task_name
+                      << " task: " << m_response.m_task
+                      << std::endl;
             // if job was stolen, we need to deserialize to a string first
             if(m_response.m_stolen)
             {
@@ -123,7 +126,9 @@ private:
                 // replace
                 m_response.m_task = as_string;
             }
-
+            std::cout << " stealable_job::op()2 job name: " << m_response.m_task_name
+                      << " task: " << m_response.m_task
+                      << std::endl;
             m_executor(m_response.m_task_name,m_response,
                 [asocket,this_scheduler,header_length](boost::asynchronous::tcp::client_request const& req)
                 {

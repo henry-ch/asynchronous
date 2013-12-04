@@ -112,6 +112,10 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
 private:
     void send_first_job(boost::shared_ptr<boost::asynchronous::tcp::server_connection> connection)
     {
+        std::cout << " sending job name: " << m_unprocessed_jobs.front().m_serialized.m_task_name
+                  << " task: " << m_unprocessed_jobs.front().m_serialized.m_task
+                  << " id: " << m_unprocessed_jobs.front().m_serialized.m_task_id
+                  << " stolen: " << m_unprocessed_jobs.front().m_serialized.m_stolen << std::endl;
         connection->send(m_unprocessed_jobs.front().m_serialized);
         m_waiting_jobs.insert(m_unprocessed_jobs.front());
         m_unprocessed_jobs.pop_front();
@@ -188,17 +192,23 @@ private:
     std::vector<boost::asynchronous::tcp::asio_comm_server_proxy> m_asio_comm;
     std::deque<boost::shared_ptr<boost::asynchronous::tcp::server_connection> > m_waiting_connections;
 };
+#ifdef BOOST_ASYNCHRONOUS_NO_TEMPLATE_PROXY_CLASSES
+
 class job_server_proxy : public boost::asynchronous::servant_proxy<job_server_proxy,job_server<boost::asynchronous::any_callable> >
 {
 public:
+
+    typedef job_server<boost::asynchronous::any_callable> servant_type;
     template <class Scheduler,class Worker>
     job_server_proxy(Scheduler s, Worker w,std::string const & address,unsigned int port, bool stealing):
         boost::asynchronous::servant_proxy<job_server_proxy,job_server<boost::asynchronous::any_callable> >(s,w,address,port,stealing)
     {}
+
     // get_data is posted, no future, no callback
     BOOST_ASYNC_FUTURE_MEMBER(add_task)
     BOOST_ASYNC_FUTURE_MEMBER(requests_stealing)
     BOOST_ASYNC_FUTURE_MEMBER(no_jobs)
+
 };
 class job_server_proxy_log :
         public boost::asynchronous::servant_proxy<job_server_proxy,
@@ -216,7 +226,6 @@ public:
     BOOST_ASYNC_FUTURE_MEMBER(requests_stealing)
     BOOST_ASYNC_FUTURE_MEMBER(no_jobs)
 };
-
 // choose correct proxy
 template <class Job>
 struct get_correct_job_server_proxy
@@ -228,5 +237,34 @@ struct get_correct_job_server_proxy<boost::asynchronous::any_loggable<boost::chr
 {
     typedef boost::asynchronous::tcp::job_server_proxy_log type;
 };
+
+#else
+
+template <class T>
+class job_server_proxy : public boost::asynchronous::servant_proxy<job_server_proxy<T>,job_server<boost::asynchronous::any_callable> >
+{
+public:
+    typedef job_server<boost::asynchronous::any_callable> servant_type;
+    template <class Scheduler,class Worker>
+    job_server_proxy(Scheduler s, Worker w,std::string const & address,unsigned int port, bool stealing):
+        boost::asynchronous::servant_proxy<job_server_proxy<T>,job_server<boost::asynchronous::any_callable> >(s,w,address,port,stealing)
+    {}
+
+    // get_data is posted, no future, no callback
+    BOOST_ASYNC_FUTURE_MEMBER(add_task)
+    BOOST_ASYNC_FUTURE_MEMBER(requests_stealing)
+    BOOST_ASYNC_FUTURE_MEMBER(no_jobs)
+
+};
+
+template <class Job>
+struct get_correct_job_server_proxy
+{
+    typedef boost::asynchronous::tcp::job_server_proxy<Job> type;
+};
+
+#endif
+
+
 }}}
 #endif // BOOST_ASYNCHRONOUS_SCHEDULER_TCP_JOB_SERVER_HPP
