@@ -76,12 +76,6 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
                         waiting_job new_job(std::move(*moved_job),
                                             boost::asynchronous::tcp::server_reponse(this->m_next_task_id++,fu.get(),
                                                                                      moved_job->get_task_name()));
-                        // TODO better
-                        if (this->m_stealing)
-                        {
-                            // remember it was stolen
-                            new_job.m_serialized.m_stolen=true;
-                        }
                         this->m_unprocessed_jobs.emplace_back(std::move(new_job));
                         // if we have a waiting connection, immediately send
                         if (!this->m_waiting_connections.empty())
@@ -112,10 +106,6 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
 private:
     void send_first_job(boost::shared_ptr<boost::asynchronous::tcp::server_connection> connection)
     {
-        std::cout << " sending job name: " << m_unprocessed_jobs.front().m_serialized.m_task_name
-                  << " task: " << m_unprocessed_jobs.front().m_serialized.m_task
-                  << " id: " << m_unprocessed_jobs.front().m_serialized.m_task_id
-                  << " stolen: " << m_unprocessed_jobs.front().m_serialized.m_stolen << std::endl;
         connection->send(m_unprocessed_jobs.front().m_serialized);
         m_waiting_jobs.insert(m_unprocessed_jobs.front());
         m_unprocessed_jobs.pop_front();

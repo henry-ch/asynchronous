@@ -158,13 +158,7 @@ namespace detail
         template <class Archive>
         void save(Archive & ar, const unsigned int /*version*/)const
         {
-            // TODO using a string is just a temporary hack because of stealing
-            //std::cout << "post_future_helper_base 1 save called" << std::endl;
-            std::ostringstream archive_stream;
-            boost::archive::text_oarchive archive(archive_stream);
-            archive & m_func;
-            std::string as_string = archive_stream.str();
-            ar & as_string;
+            ar & m_func;
         }
         template <class Archive>
         void load(Archive & ar, const unsigned int /*version*/)
@@ -229,13 +223,7 @@ namespace detail
         template <class Archive>
         void save(Archive & ar, const unsigned int /*version*/)const
         {
-            //std::cout << "post_future_helper_base 2 save called" << std::endl;
-            // TODO using a string is just a temporary hack because of stealing
-            std::ostringstream archive_stream;
-            boost::archive::text_oarchive archive(archive_stream);
-            archive & m_func;
-            std::string as_string = archive_stream.str();
-            ar & as_string;
+            ar & m_func;
         }
         template <class Archive>
         void load(Archive & ar, const unsigned int version)
@@ -602,13 +590,7 @@ namespace detail
         template <class Archive>
         void save(Archive & ar, const unsigned int /*version*/)const
         {
-            //std::cout << "post_callback_helper_base 1 save called" << std::endl;
-            // TODO using a string is just a temporary hack because of stealing
-            std::ostringstream archive_stream;
-            boost::archive::text_oarchive archive(archive_stream);
-            archive & *(m_work.m_task);
-            std::string as_string = archive_stream.str();
-            ar & as_string;
+            ar & *(m_work.m_task);
         }
         template <class Archive>
         void load(Archive & ar, const unsigned int /*version*/)
@@ -873,13 +855,7 @@ namespace detail
         template <class Archive>
         void save(Archive & ar, const unsigned int /*version*/)const
         {
-            //std::cout << "post_callback_helper_base 2 save called" << std::endl;
-            // TODO using a string is just a temporary hack because of stealing
-            std::ostringstream archive_stream;
-            boost::archive::text_oarchive archive(archive_stream);
-            archive & *(m_work.m_task);
-            std::string as_string = archive_stream.str();
-            ar & as_string;
+            ar & *(m_work.m_task);
         }
         template <class Archive>
         void load(Archive & ar, const unsigned int /*version*/)

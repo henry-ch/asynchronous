@@ -89,19 +89,21 @@ void example_post_tcp_fib2(std::string const& server_address,std::string const& 
         // we need a pool where the tasks execute
         auto pool = boost::asynchronous::create_shared_scheduler_proxy(
                     new boost::asynchronous::threadpool_scheduler<
-                            boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable>,
-                            boost::asynchronous::default_save_cpu_load<1,80000,5000>>(threads));
+                            boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable> >(threads));
         // a client will steal jobs in this pool
         auto cscheduler = boost::asynchronous::create_shared_scheduler_proxy(
                             new boost::asynchronous::asio_scheduler<
-                                boost::asynchronous::default_find_position<boost::asynchronous::sequential_push_policy >
-                                ,boost::asynchronous::default_save_cpu_load<10,80000,5000> >);
+                                boost::asynchronous::default_find_position<boost::asynchronous::sequential_push_policy > >);
         // jobs we will support
         std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,
                            std::function<void(boost::asynchronous::tcp::client_request const&)>)> executor=
         [](std::string const& task_name,boost::asynchronous::tcp::server_reponse resp,
            std::function<void(boost::asynchronous::tcp::client_request const&)> when_done)
         {
+            std::cout << "got task: " << task_name
+                      << " task: " << resp.m_task
+                      << " m_task_id: " << resp.m_task_id
+                      << std::endl;
             if (task_name=="serializable_sub_fib_task")
             {
                 tcp_example::fib_task fib(0,0);
@@ -119,20 +121,17 @@ void example_post_tcp_fib2(std::string const& server_address,std::string const& 
                 throw boost::asynchronous::tcp::transport_exception("unknown task");
             }
         };
-        boost::asynchronous::tcp::simple_tcp_client_proxy client_proxy(cscheduler,pool,server_address,server_port,
-                                                                       100/*ms between calls to server*/,executor);
+        boost::asynchronous::tcp::simple_tcp_client_proxy client_proxy(cscheduler,pool,server_address,server_port,executor,
+                                                                       10/*ms between calls to server*/);
         // we need a server
         // we use a tcp pool using 1 worker
         auto server_pool = boost::asynchronous::create_shared_scheduler_proxy(
                     new boost::asynchronous::threadpool_scheduler<
-                            boost::asynchronous::lockfree_queue<>,
-                            boost::asynchronous::default_save_cpu_load<10,80000,5000>>(1));
+                            boost::asynchronous::lockfree_queue<> >(1));
         auto tcp_server= boost::asynchronous::create_shared_scheduler_proxy(
                     new boost::asynchronous::tcp_server_scheduler<
                             boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable>,
-                            boost::asynchronous::any_callable,
-                            true,
-                            boost::asynchronous::default_save_cpu_load<10,80000,5000>>
+                            boost::asynchronous::any_callable,true>
                                 (server_pool,own_server_address,(unsigned int)own_server_port));
         // we need a composite for stealing
         auto composite = boost::asynchronous::create_shared_scheduler_proxy

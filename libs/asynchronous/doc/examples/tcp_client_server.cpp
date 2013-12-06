@@ -64,22 +64,18 @@ int main(int argc, char* argv[])
         // we need a pool where the tasks execute
         auto pool = boost::asynchronous::create_shared_scheduler_proxy(
                     new boost::asynchronous::threadpool_scheduler<
-                            boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable>,
-                            boost::asynchronous::default_save_cpu_load<1,80000,5000>>(threads));
-        boost::asynchronous::tcp::simple_tcp_client_proxy client_proxy(scheduler,pool,server_address,server_port,
-                                                                       100/*ms between calls to server*/,executor);
+                            boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable> >(threads));
+        boost::asynchronous::tcp::simple_tcp_client_proxy client_proxy(scheduler,pool,server_address,server_port,executor,
+                                                                       10/*ms between calls to server*/);
         // we need a server
         // we use a tcp pool using 1 worker
         auto server_pool = boost::asynchronous::create_shared_scheduler_proxy(
                     new boost::asynchronous::threadpool_scheduler<
-                            boost::asynchronous::lockfree_queue<>,
-                            boost::asynchronous::default_save_cpu_load<10,80000,5000>>(1));
+                            boost::asynchronous::lockfree_queue<> >(1));
         auto tcp_server= boost::asynchronous::create_shared_scheduler_proxy(
                     new boost::asynchronous::tcp_server_scheduler<
                             boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable>,
-                            boost::asynchronous::any_callable,
-                            true,
-                            boost::asynchronous::default_save_cpu_load<10,80000,5000>>
+                            boost::asynchronous::any_callable,true>
                                 (server_pool,own_server_address,(unsigned int)own_server_port));
         // we need a composite for stealing
         auto composite =
