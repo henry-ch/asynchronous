@@ -36,6 +36,15 @@ public:
     typedef typename Q::job_type job_type;
     typedef multi_queue_scheduler_policy<Q,FindPosition> this_type;
     
+    std::size_t get_queue_size() const
+    {
+        std::size_t res = 0;
+        for (typename std::vector<boost::shared_ptr<queue_type> >::const_iterator it = m_queues.begin(); it != m_queues.end();++it)
+        {
+            res += (*it)->get_queue_size();
+        }
+        return res;
+    }
 
     std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues()const
     {

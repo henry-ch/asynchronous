@@ -35,6 +35,11 @@ public:
     typedef boost::mutex  mutex_type;
     typedef boost::unique_lock<mutex_type> lock_type;
 
+    std::size_t get_queue_size() const
+    {
+        return m_jobs.size();
+    }
+
     bool is_not_empty() const
     {
         return !m_jobs.empty();

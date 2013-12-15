@@ -46,7 +46,7 @@ struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any
         std::cout << "Callback in our (safe) single-thread scheduler with result: " << res << std::endl;
         ++m_tasks_done;
         m_total += res;
-        if (m_tasks_done==2) // 2 tasks started
+        if (m_tasks_done==10) // 10 tasks started
         {
             // inform test caller
             m_promise->set_value(m_total);
@@ -61,45 +61,33 @@ struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any
         //boost::asynchronous::dummy_tcp_task d(5);
         //boost::asynchronous::any_serializable s(d);
         // start long tasks in threadpool (first lambda) and callback in our thread
-        post_callback(
-                    dummy_tcp_task(42)
-                    //std::move(s)
-                ,
-               // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
-               [this](boost::future<int> res){
-                            try{
-                                this->on_callback(res.get());
-                            }
-                            catch(std::exception& e)
-                            {
-                                std::cout << "got exception: " << e.what() << std::endl;
-                                this->on_callback(0);
-                            }
-               }// callback functor.
-        );
-        post_callback(
-                    dummy_tcp_task(43)
-                    //std::move(s)
-                ,
-               // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
-               [this](boost::future<int> res){
-                            try{
-                                this->on_callback(res.get());
-                            }
-                            catch(std::exception& e)
-                            {
-                                std::cout << "got exception: " << e.what() << std::endl;
-                                this->on_callback(0);
-                            }
-               }// callback functor.
-        );
+        for (int i =0 ;i < 10 ; ++i)
+        {
+            std::cout << "call post_callback with i: " << i << std::endl;
+            post_callback(
+                        dummy_tcp_task(i)
+                        //std::move(s)
+                    ,
+                   // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
+                   [this](boost::future<int> res){
+                                try{
+                                    this->on_callback(res.get());
+                                }
+                                catch(std::exception& e)
+                                {
+                                    std::cout << "got exception: " << e.what() << std::endl;
+                                    this->on_callback(0);
+                                }
+                   }// callback functor.
+            );
+        }
         return fu;
     }
 private:
 // for testing
 boost::shared_ptr<boost::promise<int> > m_promise;
 int m_total;
-unsigned int m_tasks_done;//will count until 2, then we are done (we start 2 tasks)
+unsigned int m_tasks_done;//will count until 10, then we are done (we start 10 tasks)
 };
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>
 {
@@ -129,7 +117,7 @@ void example_post_tcp()
             boost::shared_future<boost::shared_future<int> > fu = proxy.start_async_work();
             boost::shared_future<int> resfu = fu.get();
             int res = resfu.get();
-            std::cout << "res==85? " << std::boolalpha << (res == 85) << std::endl;// 42+43.
+            std::cout << "res==45? " << std::boolalpha << (res == 45) << std::endl;// 1+2..9.
         }
     }
     std::cout << "end example_post_tcp \n" << std::endl;

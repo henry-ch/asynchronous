@@ -27,7 +27,7 @@ struct dummy_tcp_task : public boost::asynchronous::serializable_task
     int operator()()const
     {
         std::cout << "dummy_tcp_task operator(): " << m_data << std::endl;
-        boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
+        boost::this_thread::sleep(boost::posix_time::milliseconds(2000));
         std::cout << "dummy_tcp_task operator() finished" << std::endl;
         return m_data;
     }

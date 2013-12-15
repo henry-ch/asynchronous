@@ -24,6 +24,7 @@ BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_join), join, 0);
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_set_name), set_name, 1);
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_get_name), get_name, 0);
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_get_diagnostic_item), get_diagnostic_item, 0);
+BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_get_queue_size), get_queue_size, 0);
 
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_push), push,2);
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_pop), pop,0);

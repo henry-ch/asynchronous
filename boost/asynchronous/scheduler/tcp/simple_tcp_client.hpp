@@ -67,8 +67,8 @@ struct client_time_check_policy: boost::asynchronous::trackable_servant<boost::a
         , m_time_in_ms_between_requests(time_in_ms_between_requests){}
 
     // every policy for tcp clients must implement this
-    template <class T>
-    void prepare_check_for_work(T cb)
+    template <class T, class WS>
+    void prepare_check_for_work(T cb,WS /*weak_scheduler*/)
     {
         // start timer to check for work again later
         boost::shared_ptr<boost::asio::deadline_timer> atimer
@@ -82,6 +82,57 @@ struct client_time_check_policy: boost::asynchronous::trackable_servant<boost::a
     }
 
     long m_time_in_ms_between_requests;
+};
+
+// this policy checks for work if the queue size falls under a given length
+// Note: this works only with queues supporting giving their size
+struct queue_size_check_policy: boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,boost::asynchronous::any_serializable>
+{
+    queue_size_check_policy(boost::asynchronous::any_weak_scheduler<boost::asynchronous::any_callable> scheduler,
+                             boost::asynchronous::any_shared_scheduler_proxy<boost::asynchronous::any_serializable> pool,
+                             long time_in_ms_between_requests,
+                             unsigned int min_queue_size)
+        :boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,boost::asynchronous::any_serializable>(scheduler,pool)
+        , m_time_in_ms_between_requests(time_in_ms_between_requests)
+        , m_min_queue_size(min_queue_size){}
+
+    // every policy for tcp clients must implement this
+    template <class T, class WS>
+    void prepare_check_for_work(T cb,WS weak_scheduler)
+    {
+        // start timer to check for work again later
+        boost::shared_ptr<boost::asio::deadline_timer> atimer
+                (boost::make_shared<boost::asio::deadline_timer>(*boost::asynchronous::get_io_service<>(),
+                                                                 boost::posix_time::milliseconds(m_time_in_ms_between_requests)));
+
+        std::function<void(const boost::system::error_code&)> checked =
+                [atimer,cb,this,weak_scheduler](const boost::system::error_code& err)
+        {
+            std::size_t s = 0;
+            {
+                auto sched = weak_scheduler.lock();
+                // if no valid scheduler, stop working
+                if (!sched.is_valid())
+                    return;
+                s = sched.get_queue_size();
+            }
+            // if not enough jobs, try getting more
+            if (!err && (s < this->m_min_queue_size))
+            {
+                cb();
+            }
+            else
+            {
+                // retry later
+                this->prepare_check_for_work(cb,weak_scheduler);
+            }
+        };
+
+        atimer->async_wait(make_safe_callback(checked));
+    }
+
+    long m_time_in_ms_between_requests;
+    unsigned int m_min_queue_size;
 };
 
 template <class CheckPolicy>
@@ -245,7 +296,7 @@ private:
                 }
             }
             // delegate next work checking to policy
-            m_check_policy.template prepare_check_for_work([this](){this->check_for_work();});
+            m_check_policy.template prepare_check_for_work([this](){this->check_for_work();},this->get_worker().get_weak_scheduler());
         };
         request_content(cb);
     }
@@ -431,17 +482,36 @@ public:
     // we offer a single member for posting
     BOOST_ASYNC_FUTURE_MEMBER(run)
 };
+class simple_tcp_client_proxy_queue_size: public boost::asynchronous::servant_proxy<simple_tcp_client_proxy_queue_size,
+                                          boost::asynchronous::tcp::simple_tcp_client<boost::asynchronous::tcp::queue_size_check_policy > >
+{
+public:
+    // ctor arguments are forwarded to AsioCommunicationServant
+    template <class Scheduler,typename... Args>
+    simple_tcp_client_proxy_queue_size(Scheduler s,
+                                       boost::asynchronous::any_shared_scheduler_proxy<boost::asynchronous::any_serializable> pool,
+                                       const std::string& server, const std::string& path,
+                                       std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,
+                                               std::function<void(boost::asynchronous::tcp::client_request const&)>)> const& executor,
+                                       Args... args):
+        boost::asynchronous::servant_proxy<simple_tcp_client_proxy_queue_size,boost::asynchronous::tcp::simple_tcp_client<boost::asynchronous::tcp::queue_size_check_policy > >
+            (s,pool,server,path,executor,args...)
+    {}
+    // we offer a single member for posting
+    BOOST_ASYNC_FUTURE_MEMBER(run)
+};
+
 // choose correct proxy
 template <class Job>
 struct get_correct_simple_tcp_client_proxy
 {
     typedef boost::asynchronous::tcp::simple_tcp_client_proxy type;
 };
-//template <>
-//struct get_correct_simple_tcp_client_proxy<...>
-//{
-//    typedef boost::asynchronous::tcp::simple_tcp_client_proxy type;
-//};
+template <>
+struct get_correct_simple_tcp_client_proxy<boost::asynchronous::tcp::queue_size_check_policy>
+{
+    typedef boost::asynchronous::tcp::simple_tcp_client_proxy_queue_size type;
+};
 
 #else
 // the proxy of AsioCommunicationServant for use in an external thread

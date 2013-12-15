@@ -68,6 +68,11 @@ public:
         , m_immediate(immediate)
     {
     }
+    std::size_t get_queue_size() const
+    {
+        // not supported
+        return 0;
+    }
     void init(size_t number_of_workers,std::vector<boost::asynchronous::any_queue_ptr<job_type> > const& others,boost::weak_ptr<this_type> weak_self)
     {
         m_works.reserve(number_of_workers);

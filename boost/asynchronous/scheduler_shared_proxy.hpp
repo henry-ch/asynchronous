@@ -46,6 +46,10 @@ public:
     {
         return (!!m_scheduler);
     }
+    std::size_t get_queue_size() const
+    {
+        return m_scheduler->get_queue_size();
+    }
 #ifndef BOOST_NO_RVALUE_REFERENCES
     void post(job_type&& job) const
     {
@@ -57,20 +61,6 @@ public:
         BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy::post has empty scheduler");
         move_post(std::forward<job_type>(job),priority);
     }
-//    void post(boost::asynchronous::any_callable&& job,const std::string& name) const
-//    {
-//        BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy::post(_and_log)any_callable,string) has empty scheduler");
-//        typename boost::asynchronous::job_traits<job_type>::wrapper_type w(std::forward<boost::asynchronous::any_callable>(job));
-//        w.set_name(name);
-//        move_post(std::move(w));
-//    }
-//    void post(boost::asynchronous::any_callable&& job,const std::string& name,std::size_t priority) const
-//    {
-//        BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy::post(_and_log)any_callable,string,size_t) has empty scheduler");
-//        typename boost::asynchronous::job_traits<job_type>::wrapper_type w(std::forward<boost::asynchronous::any_callable>(job));
-//        w.set_name(name);
-//        move_post(std::move(w),priority);
-//    }
     void move_post(job_type && job,std::size_t priority=0) const
     {
         m_scheduler->post(std::forward<job_type>(job),priority);
@@ -85,21 +75,6 @@ public:
         BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy::interruptible_post has empty scheduler");
         return move_interruptible_post(std::forward<job_type>(job),priority);
     }
-//    boost::asynchronous::any_interruptible interruptible_post(boost::asynchronous::any_callable&& job,const std::string& name) const
-//    {
-//        BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy::interruptible_post_log has empty scheduler");
-//        typename boost::asynchronous::job_traits<job_type>::wrapper_type w(std::forward<boost::asynchronous::any_callable>(job));
-//        w.set_name(name);
-//        return move_interruptible_post(std::move(w));
-//    }
-//    boost::asynchronous::any_interruptible interruptible_post(boost::asynchronous::any_callable&& job,
-//                                                           const std::string& name,std::size_t priority) const
-//    {
-//        BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy::interruptible_post_log has empty scheduler");
-//        typename boost::asynchronous::job_traits<job_type>::wrapper_type w(std::forward<boost::asynchronous::any_callable>(job));
-//        w.set_name(name);
-//        return move_interruptible_post(std::move(w),priority);
-//    }
     boost::asynchronous::any_interruptible move_interruptible_post(job_type && job,
                                                                 std::size_t priority=0) const
     {
@@ -126,35 +101,6 @@ public:
         BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy::interruptible_post has empty scheduler");
         return m_scheduler->interruptible_post(job,priority);
     }
-//    void post(boost::asynchronous::any_callable job,const std::string& name) const
-//    {
-//        BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy::post(_and_log)any_callable,string) has empty scheduler");
-//        typename boost::asynchronous::job_traits<job_type>::wrapper_type w(job);
-//        w.set_name(name);
-//        m_scheduler->post(w);
-//    }
-//    void post(boost::asynchronous::any_callable job,const std::string& name,std::size_t priority) const
-//    {
-//        BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy::post(_and_log)any_callable,string,size_t) has empty scheduler");
-//        typename boost::asynchronous::job_traits<job_type>::wrapper_type w(job);
-//        w.set_name(name);
-//        m_scheduler->post(w,priority);
-//    }
-//    boost::asynchronous::any_interruptible interruptible_post(boost::asynchronous::any_callable job,const std::string& name) const
-//    {
-//        BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy::interruptible_post_log has empty scheduler");
-//        typename boost::asynchronous::job_traits<job_type>::wrapper_type w(job);
-//        w.set_name(name);
-//        return m_scheduler->interruptible_post(w);
-//    }
-//    boost::asynchronous::any_interruptible interruptible_post(boost::asynchronous::any_callable job,const std::string& name,
-//                                                           std::size_t priority) const
-//    {
-//        BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy::interruptible_post_log has empty scheduler");
-//        typename boost::asynchronous::job_traits<job_type>::wrapper_type w(job);
-//        w.set_name(name);
-//        return m_scheduler->interruptible_post(w,priority);
-//    }
 #endif
 
     std::vector<boost::thread::id> thread_ids()const

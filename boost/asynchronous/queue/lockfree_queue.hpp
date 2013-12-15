@@ -31,6 +31,12 @@ public:
     typedef lockfree_queue<JOB> this_type;
     typedef JOB job_type;
 
+    std::size_t get_queue_size() const
+    {
+        // not supported
+        return 0;
+    }
+
 #ifndef BOOST_NO_CXX11_VARIADIC_TEMPLATES
     template<typename... Args>
     lockfree_queue(Args... args):m_queue(args...){}

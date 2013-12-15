@@ -42,6 +42,10 @@ public:
 
     }
 
+    std::size_t get_queue_size() const
+    {
+        return m_size;
+    }
     bool is_not_empty() const
     {
         return m_size > 0;

@@ -78,7 +78,15 @@ public:
     ~composite_threadpool_scheduler()
     {
     }
-    
+    std::size_t get_queue_size() const
+    {
+        std::size_t res = 0;
+        for (typename std::vector<subpool_type>::const_iterator it = m_subpools.begin(); it != m_subpools.end();++it)
+        {
+            res += (*it).get_queue_size();
+        }
+        return res;
+    }
 #ifndef BOOST_NO_RVALUE_REFERENCES
     void post(job_type&& job) const
     {
@@ -295,6 +303,15 @@ private:
                 }
             }
             return true;
+        }
+        std::size_t get_queue_size() const
+        {
+            std::size_t res = 0;
+            for (typename std::vector<boost::asynchronous::any_shared_scheduler<job_type> >::const_iterator it = m_schedulers.begin(); it != m_schedulers.end();++it)
+            {
+                res += (*it).get_queue_size();
+            }
+            return res;
         }
         std::map<std::string,
                  std::list<typename boost::asynchronous::job_traits<job_type>::diagnostic_item_type > >

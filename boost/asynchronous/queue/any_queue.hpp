@@ -42,6 +42,7 @@ struct any_queue_ptr_concept:
     boost::asynchronous::has_pop<JOB(), boost::type_erasure::_a>,
     boost::asynchronous::has_try_pop<bool(JOB&), boost::type_erasure::_a>,
     boost::asynchronous::has_try_steal<bool(JOB&), boost::type_erasure::_a>,
+    boost::asynchronous::has_get_queue_size<std::size_t(), const boost::type_erasure::_a>,
     boost::type_erasure::relaxed,
     boost::type_erasure::copy_constructible<>,
     boost::type_erasure::typeid_<>
@@ -68,6 +69,7 @@ struct any_queue_concept:
 #endif
     boost::asynchronous::has_pop<JOB()>,
     boost::asynchronous::has_try_pop<bool(JOB&)>,
+    boost::asynchronous::has_get_queue_size<std::size_t()>,
     boost::type_erasure::relaxed,
     boost::type_erasure::copy_constructible<>,
     boost::type_erasure::typeid_<>
@@ -91,6 +93,7 @@ struct any_queue_concept
     virtual JOB pop()=0;
     virtual bool try_pop(JOB&)=0;
     virtual bool try_steal(JOB&)=0;
+    virtual std::size_t get_queue_size()const=0;
 };
 template <class JOB>
 struct any_queue_ptr: boost::shared_ptr<boost::asynchronous::any_queue_concept<JOB> >

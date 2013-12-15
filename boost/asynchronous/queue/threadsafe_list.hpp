@@ -55,6 +55,11 @@ public:
     threadsafe_list(const threadsafe_list&) = delete;
     threadsafe_list& operator=(const threadsafe_list&) = delete;
 
+    std::size_t get_queue_size() const
+    {
+        // not supported
+        return 0;
+    }
     void push(JOB && j, std::size_t)
     {
         std::unique_ptr<node> p (new node);
