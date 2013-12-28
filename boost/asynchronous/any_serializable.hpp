@@ -32,7 +32,15 @@ boost::type_erasure::any<
         boost::asynchronous::has_get_task_name<std::string()>
     >,
     boost::type_erasure::_self
-> any_serializable;
+> any_serializable_helper;
 
+struct any_serializable: public boost::asynchronous::any_serializable_helper
+{
+    any_serializable(){}
+    template <class T>
+    any_serializable(T t):any_serializable_helper(t){}
+    typedef boost::archive::text_oarchive oarchive;
+    typedef boost::archive::text_iarchive iarchive;
+};
 }}
 #endif // BOOST_ASYNCHRONOUS_ANY_SERIALIZABLE_HPP

@@ -12,7 +12,6 @@
 
 #include <string>
 #include <sstream>
-#include <boost/archive/text_iarchive.hpp>
 #include <boost/asynchronous/scheduler/tss_scheduler.hpp>
 #include <boost/asynchronous/detail/continuation_impl.hpp>
 #include <boost/asynchronous/scheduler/detail/any_continuation.hpp>
@@ -74,7 +73,7 @@ public:
         return continuation_result<Return>(m_promise);
     }
     // called in case task is stolen by some client and only the result is returned
-    template <class Archive>
+    template <class Archive,class InternalArchive>
     void as_result(Archive & ar, const unsigned int /*version*/)
     {
         boost::asynchronous::tcp::client_request::message_payload payload;
@@ -82,7 +81,7 @@ public:
         if (!payload.m_has_exception)
         {
             std::istringstream archive_stream(payload.m_data);
-            boost::archive::text_iarchive archive(archive_stream);
+            InternalArchive archive(archive_stream);
 
             long res;
             archive >> res;

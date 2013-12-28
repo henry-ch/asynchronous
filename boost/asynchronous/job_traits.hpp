@@ -10,8 +10,6 @@
 #ifndef BOOST_ASYNC_JOB_TRAITS_HPP
 #define BOOST_ASYNC_JOB_TRAITS_HPP
 
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
 #include <boost/serialization/split_member.hpp>
 
 #include <boost/asynchronous/diagnostics/any_loggable.hpp>

@@ -20,8 +20,6 @@
 #include <boost/thread/thread.hpp>
 #include <boost/thread/tss.hpp>
 #include <boost/bind.hpp>
-//#include <boost/archive/text_oarchive.hpp>
-//#include <boost/archive/text_iarchive.hpp>
 
 #include <boost/asynchronous/scheduler/detail/scheduler_helpers.hpp>
 #include <boost/asynchronous/detail/any_joinable.hpp>
@@ -231,7 +229,7 @@ public:
         auto simplescheduler = boost::asynchronous::create_shared_scheduler_proxy(
                                 new boost::asynchronous::single_thread_scheduler<
                                      boost::asynchronous::lockfree_queue<> >);
-        typename boost::asynchronous::tcp::get_correct_job_server_proxy<pool_job_type>::type
+        typename boost::asynchronous::tcp::get_correct_job_server_proxy<pool_job_type,job_type>::type
                 server(simplescheduler,worker_pool,address,port,IsStealing);
 
         CPULoad cpu_load;

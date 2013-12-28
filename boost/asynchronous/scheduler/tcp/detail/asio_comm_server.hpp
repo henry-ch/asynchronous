@@ -28,7 +28,7 @@ struct asio_comm_server : boost::asynchronous::trackable_servant<>
     asio_comm_server(boost::asynchronous::any_weak_scheduler<> scheduler,
                      std::string const & address,
                      unsigned int port,
-                     std::function<void(boost::shared_ptr<boost::asynchronous::tcp::server_connection>)> connectionHandler)
+                     std::function<void(boost::asio::ip::tcp::socket)> connectionHandler)
     : boost::asynchronous::trackable_servant<>(scheduler)
         , m_connection_handler(connectionHandler)
         , m_acceptor(*boost::asynchronous::get_io_service<>())
@@ -63,8 +63,7 @@ private:
 
                 if (!ec)
                 {
-                    const auto connection = boost::make_shared<boost::asynchronous::tcp::server_connection>(std::move(m_socket));
-                    m_connection_handler(connection);
+                    m_connection_handler(std::move(m_socket));
                 }
 
                 do_accept();
@@ -72,7 +71,7 @@ private:
     }
 
 private:
-    std::function<void(boost::shared_ptr<boost::asynchronous::tcp::server_connection>)> m_connection_handler;
+    std::function<void(boost::asio::ip::tcp::socket)> m_connection_handler;
     boost::asio::ip::tcp::acceptor m_acceptor;
     boost::asio::ip::tcp::socket m_socket;
 };
@@ -84,7 +83,7 @@ public:
     asio_comm_server_proxy( Scheduler scheduler,
                             std::string const & address,
                             unsigned int port,
-                            std::function<void(boost::shared_ptr<boost::asynchronous::tcp::server_connection>)> connectionHandler)
+                            std::function<void(boost::asio::ip::tcp::socket)> connectionHandler)
         : boost::asynchronous::servant_proxy<asio_comm_server_proxy, boost::asynchronous::tcp::asio_comm_server>(scheduler,
                                                                                                                  address,
                                                                                                                  port,

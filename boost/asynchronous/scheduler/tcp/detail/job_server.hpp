@@ -16,8 +16,6 @@
 #include <functional>
 
 #include <boost/shared_ptr.hpp>
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
 
 #include <boost/asynchronous/trackable_servant.hpp>
 #include <boost/asynchronous/scheduler/tcp/detail/server_response.hpp>
@@ -30,7 +28,7 @@
 #include <boost/asynchronous/diagnostics/any_loggable.hpp>
 
 namespace boost { namespace asynchronous { namespace tcp {
-template <class PoolJobType>
+template <class PoolJobType, class SerializableType = boost::asynchronous::any_serializable >
 struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,PoolJobType>
 {
     typedef int simple_ctor;
@@ -48,9 +46,10 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
                 boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::asio_scheduler<>(1));
 
         // created posted function when a client connects
-        std::function<void(boost::shared_ptr<boost::asynchronous::tcp::server_connection>)> f =
-                [this](boost::shared_ptr<boost::asynchronous::tcp::server_connection> c)mutable
+        std::function<void(boost::asio::ip::tcp::socket)> f =
+                [this](boost::asio::ip::tcp::socket s)mutable
                 {
+                    const auto c = boost::make_shared<boost::asynchronous::tcp::server_connection<SerializableType> >(std::move(s));
                     std::function<void(boost::asynchronous::tcp::client_request)> cb=
                             [this,c](boost::asynchronous::tcp::client_request request){this->handleRequest(request, c);};
                     c->start(this->make_safe_callback(cb));
@@ -59,15 +58,15 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
         m_asio_comm.push_back(boost::asynchronous::tcp::asio_comm_server_proxy(asioWorkers, address, port, f));
     }
 
-    void add_task(boost::asynchronous::any_serializable job)
+    void add_task(SerializableType job)
     {
-        boost::shared_ptr<boost::asynchronous::any_serializable> moved_job(boost::make_shared<boost::asynchronous::any_serializable>(std::move(job)));
+        boost::shared_ptr<SerializableType> moved_job(boost::make_shared<SerializableType>(std::move(job)));
         this->post_callback(
                     [moved_job]()mutable
                     {
                         // serialize job
                         std::ostringstream archive_stream;
-                        boost::archive::text_oarchive archive(archive_stream);
+                        typename SerializableType::oarchive archive(archive_stream);
                         moved_job->serialize(archive,0);
                         return archive_stream.str();
                     },
@@ -95,7 +94,8 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
     void no_jobs()
     {
         // inform waiting connections
-        for (std::deque<boost::shared_ptr<boost::asynchronous::tcp::server_connection> >::iterator it = m_waiting_connections.begin();
+        for (typename std::deque<boost::shared_ptr<boost::asynchronous::tcp::server_connection<SerializableType> > >::iterator it
+             = m_waiting_connections.begin();
              it != m_waiting_connections.end(); ++it)
         {
              (*it)->send(boost::asynchronous::tcp::server_reponse(0,"",""));
@@ -104,13 +104,14 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
     }
 
 private:
-    void send_first_job(boost::shared_ptr<boost::asynchronous::tcp::server_connection> connection)
+    void send_first_job(boost::shared_ptr<boost::asynchronous::tcp::server_connection<SerializableType> > connection)
     {
         connection->send(m_unprocessed_jobs.front().m_serialized);
         m_waiting_jobs.insert(m_unprocessed_jobs.front());
         m_unprocessed_jobs.pop_front();
     }
-    void handleRequest(boost::asynchronous::tcp::client_request request, boost::shared_ptr<boost::asynchronous::tcp::server_connection> connection)
+    void handleRequest(boost::asynchronous::tcp::client_request request,
+                       boost::shared_ptr<boost::asynchronous::tcp::server_connection<SerializableType> > connection)
     {
         // is it a request for job?
         if (request.m_cmd_id == BOOST_ASYNCHRONOUS_TCP_CLIENT_GET_JOB)
@@ -134,19 +135,19 @@ private:
         else if (request.m_cmd_id == BOOST_ASYNCHRONOUS_TCP_CLIENT_JOB_RESULT)
         {
             // dummy job just to find with it
-            waiting_job searched_job(boost::asynchronous::any_serializable(),boost::asynchronous::tcp::server_reponse(request.m_task_id,"",""));
+            waiting_job searched_job(SerializableType(),boost::asynchronous::tcp::server_reponse(request.m_task_id,"",""));
             typename std::set<waiting_job,sort_tasks>::iterator it = m_waiting_jobs.find(searched_job);
             if (it != m_waiting_jobs.end())
             {
                 // return result. Serialize data and exception
                 std::ostringstream load_archive_stream;
-                boost::archive::text_oarchive load_archive(load_archive_stream);
+                typename SerializableType::oarchive load_archive(load_archive_stream);
                 load_archive << request.m_load;
                 std::string msg_load=load_archive_stream.str();
 
                 std::istringstream archive_stream(msg_load);
-                boost::archive::text_iarchive archive(archive_stream);
-                const_cast<boost::asynchronous::any_serializable&>((*it).m_job).serialize(archive,0);
+                typename SerializableType::iarchive archive(archive_stream);
+                const_cast<SerializableType&>((*it).m_job).serialize(archive,0);
             }
             // else ignore TODO log?
         }
@@ -159,10 +160,10 @@ private:
     // waiting jobs in serialized and callable forms
     struct waiting_job
     {
-        waiting_job(boost::asynchronous::any_serializable&& job, boost::asynchronous::tcp::server_reponse serialized)
-            : m_job(std::forward<boost::asynchronous::any_serializable>(job)), m_serialized(serialized)
+        waiting_job(SerializableType&& job, boost::asynchronous::tcp::server_reponse serialized)
+            : m_job(std::forward<SerializableType>(job)), m_serialized(serialized)
         {}
-        boost::asynchronous::any_serializable m_job;
+        SerializableType m_job;
         boost::asynchronous::tcp::server_reponse m_serialized;
     };
     struct sort_tasks
@@ -180,7 +181,7 @@ private:
     // job being executed and waiting for a result
     std::set<waiting_job,sort_tasks> m_waiting_jobs;
     std::vector<boost::asynchronous::tcp::asio_comm_server_proxy> m_asio_comm;
-    std::deque<boost::shared_ptr<boost::asynchronous::tcp::server_connection> > m_waiting_connections;
+    std::deque<boost::shared_ptr<boost::asynchronous::tcp::server_connection<SerializableType> > > m_waiting_connections;
 };
 #ifdef BOOST_ASYNCHRONOUS_NO_TEMPLATE_PROXY_CLASSES
 
@@ -217,13 +218,14 @@ public:
     BOOST_ASYNC_FUTURE_MEMBER(no_jobs)
 };
 // choose correct proxy
-template <class Job>
+template <class Job, class SerializableType = boost::asynchronous::any_serializable>
 struct get_correct_job_server_proxy
 {
     typedef boost::asynchronous::tcp::job_server_proxy type;
 };
 template <>
-struct get_correct_job_server_proxy<boost::asynchronous::any_loggable<boost::chrono::high_resolution_clock> >
+struct get_correct_job_server_proxy<boost::asynchronous::any_loggable<boost::chrono::high_resolution_clock>,
+                                    boost::asynchronous::any_serializable >
 {
     typedef boost::asynchronous::tcp::job_server_proxy_log type;
 };

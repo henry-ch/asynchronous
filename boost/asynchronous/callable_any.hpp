@@ -19,7 +19,9 @@
 #include <boost/type_erasure/any_cast.hpp>
 #include <boost/type_erasure/member.hpp>
 #include <boost/type_erasure/callable.hpp>
-
+//TODO find better
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
 namespace boost { namespace asynchronous
 {
 
@@ -31,7 +33,17 @@ typedef ::boost::mpl::vector<
     //boost::type_erasure::destructible<>,
     boost::type_erasure::typeid_<>
 > any_callable_concept;
-typedef boost::type_erasure::any<any_callable_concept> any_callable;
+typedef boost::type_erasure::any<any_callable_concept> any_callable_helper;
+
+struct any_callable: public boost::asynchronous::any_callable_helper
+{
+    any_callable(){}
+    template <class T>
+    any_callable(T t):any_callable_helper(t){}
+    // dummies
+    typedef boost::archive::text_oarchive oarchive;
+    typedef boost::archive::text_iarchive iarchive;
+};
 
 }} // boost::async
 

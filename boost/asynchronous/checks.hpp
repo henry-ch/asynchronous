@@ -14,8 +14,6 @@
 #include <boost/weak_ptr.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/exception/all.hpp>
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
 
 #include <boost/asynchronous/exceptions.hpp>
 #include <boost/asynchronous/detail/metafunctions.hpp>

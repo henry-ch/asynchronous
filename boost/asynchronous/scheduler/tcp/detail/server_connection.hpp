@@ -15,15 +15,13 @@
 #include <string>
 #include <sstream>
 
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
 #include <boost/asio.hpp>
 
 #include <boost/asynchronous/scheduler/tcp/detail/client_request.hpp>
 #include <boost/asynchronous/scheduler/tcp/detail/server_response.hpp>
 
 namespace boost { namespace asynchronous { namespace tcp {
-
+template<class SerializableType>
 class server_connection
 {
 public:
@@ -69,7 +67,7 @@ public:
                                                     {
                                                         std::string archive_data(&(*inbound_buffer)[0], inbound_buffer->size());
                                                         std::istringstream archive_stream(archive_data);
-                                                        boost::archive::text_iarchive archive(archive_stream);
+                                                        typename SerializableType::iarchive archive(archive_stream);
                                                         boost::asynchronous::tcp::client_request msg;
                                                         archive >> msg;
                                                         callback(msg);
@@ -99,7 +97,7 @@ public:
     {
         // Serialize the data first so we know how large it is.
         std::ostringstream archive_stream;
-        boost::archive::text_oarchive archive(archive_stream);
+        typename SerializableType::oarchive archive(archive_stream);
         archive << reply;
         boost::shared_ptr<std::string> outbound_buffer = boost::make_shared<std::string>(archive_stream.str());
 

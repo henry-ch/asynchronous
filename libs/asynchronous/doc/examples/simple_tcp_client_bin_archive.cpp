@@ -10,6 +10,7 @@
 #include <libs/asynchronous/doc/examples/dummy_tcp_task.hpp>
 #include <libs/asynchronous/doc/examples/serializable_fib_task.hpp>
 
+#include "bin_archive_types.hpp"
 using namespace std;
 
 int main(int argc, char* argv[])
@@ -29,24 +30,27 @@ int main(int argc, char* argv[])
         [](std::string const& task_name,boost::asynchronous::tcp::server_reponse resp,
            std::function<void(boost::asynchronous::tcp::client_request const&)> when_done)
         {
-//            std::cout << "got task: " << task_name
+            std::cout << "got task: " << task_name
 //                      << " task: " << resp.m_task
-//                      << " m_task_id: " << resp.m_task_id
-//                      << std::endl;
+                      << " m_task_id: " << resp.m_task_id
+                      << std::endl;
             if (task_name=="dummy_tcp_task")
             {
                 dummy_tcp_task t(0);
-                boost::asynchronous::tcp::deserialize_and_call_task(t,resp,when_done);
+                boost::asynchronous::tcp::deserialize_and_call_task<dummy_tcp_task,boost::asynchronous::any_bin_serializable>
+                        (t,resp,when_done);
             }
             else if (task_name=="serializable_fib_task")
             {
                 tcp_example::serializable_fib_task fib(0,0);
-                boost::asynchronous::tcp::deserialize_and_call_top_level_continuation_task(fib,resp,when_done);
+                boost::asynchronous::tcp::deserialize_and_call_top_level_continuation_task<tcp_example::serializable_fib_task,boost::asynchronous::any_bin_serializable>
+                        (fib,resp,when_done);
             }
             else if (task_name=="serializable_sub_fib_task")
             {
                 tcp_example::fib_task fib(0,0);
-                boost::asynchronous::tcp::deserialize_and_call_continuation_task(fib,resp,when_done);
+                boost::asynchronous::tcp::deserialize_and_call_continuation_task<tcp_example::fib_task,boost::asynchronous::any_bin_serializable>
+                        (fib,resp,when_done);
             }
             // else whatever functor we support
             else
@@ -55,13 +59,12 @@ int main(int argc, char* argv[])
                 throw boost::asynchronous::tcp::transport_exception("unknown task");
             }
         };
-
         if (job_getting_policy == 0)
         {
             auto pool = boost::asynchronous::create_shared_scheduler_proxy(
                         new boost::asynchronous::threadpool_scheduler<
-                            boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable> >(threads));
-            boost::asynchronous::tcp::simple_tcp_client_proxy proxy(scheduler,pool,server_address,server_port,executor,
+                            boost::asynchronous::lockfree_queue<boost::asynchronous::any_bin_serializable> >(threads));
+            boost::asynchronous::tcp::simple_bin_tcp_client_proxy proxy(scheduler,pool,server_address,server_port,executor,
                                                                     0/*ms between calls to server*/);
             boost::future<boost::future<void> > fu = proxy.run();
             boost::future<void> fu_end = fu.get();
@@ -72,13 +75,19 @@ int main(int argc, char* argv[])
             // guarded_deque supports queue size
             auto pool = boost::asynchronous::create_shared_scheduler_proxy(
                         new boost::asynchronous::threadpool_scheduler<
-                            boost::asynchronous::guarded_deque<boost::asynchronous::any_serializable> >(threads));
+                            boost::asynchronous::guarded_deque<boost::asynchronous::any_bin_serializable> >(threads));
             // more advanced policy
-            // or simple_tcp_client_proxy<boost::asynchronous::tcp::queue_size_check_policy<>> if your compiler can (clang)
-            typename boost::asynchronous::tcp::get_correct_simple_tcp_client_proxy<boost::asynchronous::tcp::queue_size_check_policy<>>::type proxy(
+            typename boost::asynchronous::tcp::get_correct_simple_tcp_client_proxy<
+                    boost::asynchronous::tcp::queue_size_check_policy<boost::asynchronous::any_bin_serializable>,
+                    boost::asynchronous::any_bin_serializable>::type proxy(
                         scheduler,pool,server_address,server_port,executor,
                         0/*ms between calls to server*/,
                         job_getting_policy /* number of jobs we try to keep in queue */);
+            // or following:
+//            boost::asynchronous::tcp::simple_bin_tcp_client_proxy_queue_size proxy(
+//                            scheduler,pool,server_address,server_port,executor,
+//                            0/*ms between calls to server*/,
+//                            job_getting_policy /* number of jobs we try to keep in queue */);
             boost::future<boost::future<void> > fu = proxy.run();
             boost::future<void> fu_end = fu.get();
             fu_end.get();

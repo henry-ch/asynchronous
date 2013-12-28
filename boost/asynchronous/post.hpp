@@ -93,7 +93,7 @@ struct move_task_helper
 
 namespace detail
 {
-    template <class R,class F,class JOB, class OP,class Enable=void>
+    template <class R,class F,class JOB, class OP,class Scheduler,class Enable=void>
     struct post_future_helper_base : public boost::asynchronous::job_traits<JOB>::diagnostic_type
     {
         post_future_helper_base():boost::asynchronous::job_traits<JOB>::diagnostic_type(){}
@@ -127,8 +127,8 @@ namespace detail
 
     // version for serializable tasks but not continuations
     // TODO a bit better than checking R...
-    template <class R,class F,class JOB, class OP>
-    struct post_future_helper_base<R,F,JOB,OP,
+    template <class R,class F,class JOB, class OP,class Scheduler>
+    struct post_future_helper_base<R,F,JOB,OP,Scheduler,
             typename ::boost::enable_if<boost::mpl::and_<
                 boost::asynchronous::detail::is_serializable<F>,
                 boost::mpl::not_<boost::is_same<R,void> > > >::type >
@@ -168,7 +168,8 @@ namespace detail
             if (!payload.m_has_exception)
             {
                 std::istringstream archive_stream(payload.m_data);
-                boost::archive::text_iarchive archive(archive_stream);
+                typedef typename Scheduler::job_type jobtype;
+                typename jobtype::iarchive archive(archive_stream);
                 R res;
                 archive >> res;
                 m_promise->set_value(res);
@@ -192,8 +193,8 @@ namespace detail
     };
     // version for tasks which are serializable AND continuations
     // TODO a bit better than checking R...
-    template <class R,class F,class JOB, class OP>
-    struct post_future_helper_base<R,F,JOB,OP,
+    template <class R,class F,class JOB, class OP,class Scheduler>
+    struct post_future_helper_base<R,F,JOB,OP,Scheduler,
             typename ::boost::enable_if<boost::mpl::and_<
                 boost::asynchronous::detail::is_serializable<F>,
                 boost::is_same<R,void> > >::type >
@@ -228,7 +229,7 @@ namespace detail
         template <class Archive>
         void load(Archive & ar, const unsigned int version)
         {
-            m_func.as_result(ar,version);
+            m_func.template as_result<typename Scheduler::job_type::iarchive,Archive>(ar,version);
         }
         std::string get_task_name()const
         {
@@ -267,12 +268,12 @@ auto post_future(S const& scheduler, F const& func,
     };
 
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper> fct (p,std::forward<F>(func));
+    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper,S> fct (p,std::forward<F>(func));
     typename boost::asynchronous::job_traits<typename S::job_type>::wrapper_type w(std::move(fct));
     w.set_name(task_name);
     scheduler.post(std::move(w),prio);
 #else
-    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper> fct (p,func);
+    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper,S> fct (p,func);
     if (task_name.empty())
     {
         scheduler.post(fct);
@@ -307,12 +308,12 @@ auto post_future(S const& scheduler, F const& func,
     };
 
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper> fct (p,std::forward<F>(func));
+    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper,S> fct (p,std::forward<F>(func));
     typename boost::asynchronous::job_traits<typename S::job_type>::wrapper_type w(std::move(fct));
     w.set_name(task_name);
     scheduler.post(std::move(w),prio);
 #else
-    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper> fct (p,func);
+    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper,S> fct (p,func);
     if (task_name.empty())
     {
         scheduler.post(fct);
@@ -353,7 +354,7 @@ auto interruptible_post_future(S const& scheduler, F const& func,
         }
     };
 
-    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper> fct (p,std::forward<F>(func));
+    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper,S> fct (p,std::forward<F>(func));
     typename boost::asynchronous::job_traits<typename S::job_type>::wrapper_type w(std::move(fct));
     w.set_name(task_name);
     return std::make_pair(std::move(fu),scheduler.interruptible_post(std::move(w),prio));
@@ -385,7 +386,7 @@ auto interruptible_post_future(S const& scheduler, F const& func,
         }
     };
 
-    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper> fct (p,std::forward<F>(func));
+    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper,S> fct (p,std::forward<F>(func));
     typename boost::asynchronous::job_traits<typename S::job_type>::wrapper_type w(std::move(fct));
     w.set_name(task_name);
     return std::make_pair(std::move(fu),scheduler.interruptible_post(std::move(w),prio));
@@ -393,7 +394,7 @@ auto interruptible_post_future(S const& scheduler, F const& func,
 
 namespace detail
 {
-    template <class Work,class Sched,class OP,class CB,class Enable=void>
+    template <class Work,class Sched,class PostSched,class OP,class CB,class Enable=void>
     struct post_callback_helper_base : public boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type
     {
 #ifndef BOOST_NO_RVALUE_REFERENCES
@@ -521,8 +522,8 @@ namespace detail
         }
     };
     // version for serializable tasks
-    template <class Work,class Sched,class OP,class CB>
-    struct post_callback_helper_base<Work,Sched,OP,CB,typename ::boost::enable_if<boost::asynchronous::detail::is_serializable<typename Work::task_type> >::type>
+    template <class Work,class Sched,class PostSched,class OP,class CB>
+    struct post_callback_helper_base<Work,Sched,PostSched,OP,CB,typename ::boost::enable_if<boost::asynchronous::detail::is_serializable<typename Work::task_type> >::type>
             : public boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type
     {
 #ifndef BOOST_NO_RVALUE_REFERENCES
@@ -602,7 +603,8 @@ namespace detail
             if (!payload.m_has_exception)
             {
                 std::istringstream archive_stream(payload.m_data);
-                boost::archive::text_iarchive archive(archive_stream);
+                typedef typename PostSched::job_type jobtype;
+                typename jobtype::iarchive archive(archive_stream);
 
                 typename Work::result_type res;
                 archive >> res;
@@ -670,7 +672,7 @@ namespace detail
     };
 
     //TODO no copy/paste
-    template <class Func,class F1, class F2,class Work,class Sched,class CB,class Enable=void>
+    template <class Func,class F1, class F2,class Work,class Sched,class PostSched,class CB,class Enable=void>
     struct post_callback_helper_continuation : public boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type
     {
 #ifndef BOOST_NO_RVALUE_REFERENCES
@@ -795,8 +797,8 @@ namespace detail
     };
 
     //TODO no copy/paste
-    template <class Func,class F1, class F2,class Work,class Sched,class CB>
-    struct post_callback_helper_continuation<Func,F1,F2,Work,Sched,CB,typename ::boost::enable_if<boost::asynchronous::detail::is_serializable<typename Work::task_type> >::type>
+    template <class Func,class F1, class F2,class Work,class Sched,class PostSched,class CB>
+    struct post_callback_helper_continuation<Func,F1,F2,Work,Sched,PostSched,CB,typename ::boost::enable_if<boost::asynchronous::detail::is_serializable<typename Work::task_type> >::type>
             : public boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type
     {
 #ifndef BOOST_NO_RVALUE_REFERENCES
@@ -867,7 +869,8 @@ namespace detail
             if (!payload.m_has_exception)
             {
                 std::istringstream archive_stream(payload.m_data);
-                boost::archive::text_iarchive archive(archive_stream);
+                typedef typename PostSched::job_type jobtype;
+                typename jobtype::iarchive archive(archive_stream);
 
                 typename Work::result_type res;
                 archive >> res;
@@ -992,7 +995,7 @@ auto post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_schedule
     boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(std::forward<F1>(func));
     move_task_helper<void,F1,F2> moved_work(std::move(func_ptr),std::move(cb_ptr));
     // create a task which calls passed task, then post the callback
-    detail::post_callback_helper_base<move_task_helper<void,F1,F2>,S2,post_helper,detail::cb_helper > task_then_cb (
+    detail::post_callback_helper_base<move_task_helper<void,F1,F2>,S2,S1,post_helper,detail::cb_helper > task_then_cb (
                 std::move(moved_work), weak_cb_scheduler,task_name,cb_prio);
     typename boost::asynchronous::job_traits<typename S1::job_type>::wrapper_type w(std::forward<typename S1::job_type>(task_then_cb));
     w.set_name(task_name);
@@ -1002,7 +1005,7 @@ auto post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_schedule
     boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(func);
     move_task_helper<void,F1,F2> moved_work(func_ptr,cb_ptr);
     // create a task which calls passed task, then post the callback
-    detail::post_callback_helper_base<move_task_helper<void,F1,F2>,S2,post_helper,detail::cb_helper > task_then_cb (
+    detail::post_callback_helper_base<move_task_helper<void,F1,F2>,S2,S1,post_helper,detail::cb_helper > task_then_cb (
                 moved_work, weak_cb_scheduler,task_name,cb_prio);
     if (task_name.empty())
     {
@@ -1048,7 +1051,7 @@ auto post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_schedule
     boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(std::forward<F1>(func));
     move_task_helper<decltype(func()),F1,F2> moved_work(std::move(func_ptr),std::move(cb_ptr));
     // create a task which calls passed task, then post the callback
-    detail::post_callback_helper_base<move_task_helper<decltype(func()),F1,F2>,S2,post_helper,detail::cb_helper > task_then_cb (
+    detail::post_callback_helper_base<move_task_helper<decltype(func()),F1,F2>,S2,S1,post_helper,detail::cb_helper > task_then_cb (
                 std::move(moved_work), weak_cb_scheduler,task_name,cb_prio);
     typename boost::asynchronous::job_traits<typename S1::job_type>::wrapper_type w(std::move(task_then_cb));
     w.set_name(task_name);
@@ -1058,7 +1061,7 @@ auto post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_schedule
     boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(func);
     move_task_helper<decltype(func()),F1,F2> moved_work(func_ptr,cb_ptr);
     // create a task which calls passed task, then post the callback
-    detail::post_callback_helper_base<move_task_helper<decltype(func()),F1,F2>,S2,post_helper, detail::cb_helper > task_then_cb (
+    detail::post_callback_helper_base<move_task_helper<decltype(func()),F1,F2>,S2,S1,post_helper, detail::cb_helper > task_then_cb (
                 moved_work, weak_cb_scheduler,task_name,cb_prio);
 
     if (task_name.empty())
@@ -1101,7 +1104,7 @@ auto post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_schedule
     boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(std::forward<F1>(func));
     move_task_helper<typename decltype(func())::return_type,F1,F2> moved_work(std::move(func_ptr),std::move(cb_ptr));
     // create a task which calls passed task, then post the callback
-    detail::post_callback_helper_continuation<decltype(func()),F1,F2,move_task_helper<typename decltype(func())::return_type,F1,F2>,S2,detail::cb_helper > task_then_cb (
+    detail::post_callback_helper_continuation<decltype(func()),F1,F2,move_task_helper<typename decltype(func())::return_type,F1,F2>,S2,S1,detail::cb_helper > task_then_cb (
                 std::move(moved_work), weak_cb_scheduler,task_name,cb_prio);
     typename boost::asynchronous::job_traits<typename S1::job_type>::wrapper_type w(std::move(task_then_cb));
     w.set_name(task_name);
@@ -1111,7 +1114,7 @@ auto post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_schedule
     boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(func);
     move_task_helper<typename decltype(func())::return_type,F1,F2> moved_work(func_ptr,cb_ptr);
     // create a task which calls passed task, then post the callback
-    detail::post_callback_helper_continuation<decltype(func()),F1,F2,move_task_helper<typename decltype(func())::return_type,F1,F2>,S2, detail::cb_helper > task_then_cb (
+    detail::post_callback_helper_continuation<decltype(func()),F1,F2,move_task_helper<typename decltype(func())::return_type,F1,F2>,S2,S1,detail::cb_helper > task_then_cb (
                 moved_work, weak_cb_scheduler,task_name,cb_prio);
 
     if (task_name.empty())
@@ -1151,7 +1154,7 @@ auto interruptible_post_callback(S1 const& scheduler,F1 const& func,S2 const& we
     boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(std::forward<F1>(func));
     move_task_helper<void,F1,F2> moved_work(std::move(func_ptr),std::move(cb_ptr));
     // create a task which calls passed task, then post the callback
-    detail::post_callback_helper_base<move_task_helper<void,F1,F2>,S2,post_helper,detail::cb_helper > task_then_cb (
+    detail::post_callback_helper_base<move_task_helper<void,F1,F2>,S2,S1,post_helper,detail::cb_helper > task_then_cb (
                 std::move(moved_work), weak_cb_scheduler,task_name,cb_prio);
     typename boost::asynchronous::job_traits<typename S1::job_type>::wrapper_type w(std::move(task_then_cb));
     w.set_name(task_name);
@@ -1161,7 +1164,7 @@ auto interruptible_post_callback(S1 const& scheduler,F1 const& func,S2 const& we
     boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(func);
     move_task_helper<void,F1,F2> moved_work(func_ptr,cb_ptr);
     // create a task which calls passed task, then post the callback
-    detail::post_callback_helper_base<move_task_helper<void,F1,F2>,S2,post_helper,detail::cb_helper > task_then_cb (
+    detail::post_callback_helper_base<move_task_helper<void,F1,F2>,S2,S1,post_helper,detail::cb_helper > task_then_cb (
                 moved_work, weak_cb_scheduler,task_name,cb_prio);
     if (task_name.empty())
     {
@@ -1207,7 +1210,7 @@ auto interruptible_post_callback(S1 const& scheduler,F1 const& func,S2 const& we
     boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(std::forward<F1>(func));
     move_task_helper<decltype(func()),F1,F2> moved_work(std::move(func_ptr),std::move(cb_ptr));
     // create a task which calls passed task, then post the callback
-    detail::post_callback_helper_base<move_task_helper<decltype(func()),F1,F2>,S2,post_helper,detail::cb_helper > task_then_cb (
+    detail::post_callback_helper_base<move_task_helper<decltype(func()),F1,F2>,S2,S1,post_helper,detail::cb_helper > task_then_cb (
                 std::move(moved_work), weak_cb_scheduler,task_name,cb_prio);
     typename boost::asynchronous::job_traits<typename S1::job_type>::wrapper_type w(std::move(task_then_cb));
     w.set_name(task_name);
@@ -1217,7 +1220,7 @@ auto interruptible_post_callback(S1 const& scheduler,F1 const& func,S2 const& we
     boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(func);
     move_task_helper<decltype(func()),F1,F2> moved_work(func_ptr,cb_ptr);
     // create a task which calls passed task, then post the callback
-    detail::post_callback_helper_base<move_task_helper<decltype(func()),F1,F2>,S2,post_helper,detail::cb_helper > task_then_cb (
+    detail::post_callback_helper_base<move_task_helper<decltype(func()),F1,F2>,S2,S1,post_helper,detail::cb_helper > task_then_cb (
                 moved_work, weak_cb_scheduler,task_name,cb_prio);
 
     if (task_name.empty())
@@ -1260,7 +1263,7 @@ auto interruptible_post_callback(S1 const& scheduler,F1 const& func,S2 const& we
     boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(std::forward<F1>(func));
     move_task_helper<typename decltype(func())::return_type,F1,F2> moved_work(std::move(func_ptr),std::move(cb_ptr));
     // create a task which calls passed task, then post the callback
-    detail::post_callback_helper_continuation<decltype(func()),F1,F2,move_task_helper<typename decltype(func())::return_type,F1,F2>,S2,detail::cb_helper > task_then_cb (
+    detail::post_callback_helper_continuation<decltype(func()),F1,F2,move_task_helper<typename decltype(func())::return_type,F1,F2>,S2,S1,detail::cb_helper > task_then_cb (
                 std::move(moved_work), weak_cb_scheduler,task_name,cb_prio);
     typename boost::asynchronous::job_traits<typename S1::job_type>::wrapper_type w(std::move(task_then_cb));
     w.set_name(task_name);
@@ -1270,7 +1273,7 @@ auto interruptible_post_callback(S1 const& scheduler,F1 const& func,S2 const& we
     boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(func);
     move_task_helper<typename decltype(func())::return_type,F1,F2> moved_work(func_ptr,cb_ptr);
     // create a task which calls passed task, then post the callback
-    detail::post_callback_helper_continuation<decltype(func()),F1,F2,move_task_helper<typename decltype(func())::return_type,F1,F2>,S2, detail::cb_helper > task_then_cb (
+    detail::post_callback_helper_continuation<decltype(func()),F1,F2,move_task_helper<typename decltype(func())::return_type,F1,F2>,S2,S1,detail::cb_helper > task_then_cb (
                 moved_work, weak_cb_scheduler,task_name,cb_prio);
 
     if (task_name.empty())
