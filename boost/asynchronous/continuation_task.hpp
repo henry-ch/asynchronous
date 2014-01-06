@@ -96,7 +96,56 @@ private:
     boost::shared_ptr<boost::promise<Return> > m_promise;
     std::string m_name;
 };
+template <>
+struct continuation_task<void>
+{
+public:
+    typedef void res_type;
 
+    continuation_task(const std::string& name=""):m_promise(new boost::promise<void>()),m_name(name){}
+
+    void set_value() const
+    {
+        m_promise->set_value();
+    }
+
+    boost::future<void> get_future()const
+    {
+        return m_promise->get_future();
+    }
+
+    boost::shared_ptr<boost::promise<void> > get_promise()const
+    {
+        return m_promise;
+    }
+    std::string get_name()const
+    {
+        return m_name;
+    }
+
+    boost::asynchronous::continuation_result<void> this_task_result()const
+    {
+        return continuation_result<void>(m_promise);
+    }
+    // called in case task is stolen by some client and only the result is returned
+    template <class Archive,class InternalArchive>
+    void as_result(Archive & ar, const unsigned int /*version*/)
+    {
+        boost::asynchronous::tcp::client_request::message_payload payload;
+        ar >> payload;
+        if (!payload.m_has_exception)
+        {
+            get_promise()->set_value();
+        }
+        else
+        {
+            get_promise()->set_exception(boost::copy_exception(payload.m_exception));
+        }
+    }
+private:
+    boost::shared_ptr<boost::promise<void> > m_promise;
+    std::string m_name;
+};
 // inside a task, create a continuation handling any number of subtasks
 template <class OnDone, typename... Args>
 typename boost::disable_if< typename boost::mpl::or_<
