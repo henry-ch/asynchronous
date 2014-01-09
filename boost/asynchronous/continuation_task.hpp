@@ -39,6 +39,23 @@ public:
 private:
     boost::shared_ptr<boost::promise<Return> > m_promise;
 };
+template <>
+struct continuation_result<void>
+{
+public:
+    continuation_result(boost::shared_ptr<boost::promise<void> > p):m_promise(p){}
+    void set_value()const
+    {
+        m_promise->set_value();
+    }
+    void set_exception(boost::exception_ptr p)const
+    {
+        m_promise->set_exception(p);
+    }
+
+private:
+    boost::shared_ptr<boost::promise<void> > m_promise;
+};
 
 // the base class of continuation tasks Provides typedefs and hides promise.
 template <class Return>

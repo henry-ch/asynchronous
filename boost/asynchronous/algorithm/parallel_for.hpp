@@ -18,6 +18,8 @@
 #include <boost/asynchronous/continuation_task.hpp>
 #include <boost/asynchronous/post.hpp>
 
+#include <boost/asynchronous/algorithm/detail/safe_advance.hpp>
+
 namespace boost { namespace asynchronous
 {
 namespace detail
@@ -41,10 +43,10 @@ struct parallel_for_helper: public boost::asynchronous::continuation_task<void>
         for (Iterator it=beg_; it != end_ ; )
         {
             Iterator itp = it;
-            std::advance(it,cutoff_);
+            boost::asynchronous::detail::safe_advance(it,cutoff_,end_);
             auto func = func_;
             boost::future<void> fu = boost::asynchronous::post_future(locked_scheduler,
-                                                                      [it,func]()
+                                                                      [it,itp,func]()
                                                                       {
                                                                         std::for_each(itp,it,func);
                                                                       },
