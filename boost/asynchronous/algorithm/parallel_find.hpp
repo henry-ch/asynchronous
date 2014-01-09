@@ -107,11 +107,11 @@ struct parallel_find_helper: public boost::asynchronous::continuation_task<Itera
 //parallel_for(Range& range,Func func,long cutoff,
 // TODO ranges
 template <class Iterator, class Func, class Job=boost::asynchronous::any_callable, class Value=Iterator::value_type>
-boost::asynchronous::detail::continuation<void,Job>
+boost::asynchronous::detail::continuation<Iterator,Job>
 parallel_for(Iterator beg, Iterator end,Func func, Value v, long cutoff,
              const std::string& task_name="", std::size_t prio=0)
 {
-    return boost::asynchronous::top_level_continuation_log<void,Job>
+    return boost::asynchronous::top_level_continuation_log<Iterator,Job>
             (boost::asynchronous::detail::parallel_for_helper<Iterator,Func,Job, Value>(beg,end,func,v,cutoff,task_name,prio));
 }
 
