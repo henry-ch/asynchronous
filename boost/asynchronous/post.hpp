@@ -34,8 +34,6 @@
 #include <boost/asynchronous/detail/metafunctions.hpp>
 #include <boost/asynchronous/scheduler/tcp/detail/client_request.hpp>
 
-BOOST_MPL_HAS_XXX_TRAIT_DEF(is_continuation_task)
-
 namespace boost { namespace asynchronous
 {
 

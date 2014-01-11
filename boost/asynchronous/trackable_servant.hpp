@@ -105,7 +105,7 @@ public:
                 
 #ifndef BOOST_NO_RVALUE_REFERENCES
     template <class F1, class F2>
-    void post_callback(F1&& func,F2&& cb_func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
+    void post_callback(F1&& func,F2&& cb_func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0) const
     {
         // we want to log if possible
         boost::asynchronous::post_callback(m_worker,

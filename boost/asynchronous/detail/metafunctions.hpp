@@ -13,6 +13,7 @@
 #include <boost/mpl/has_xxx.hpp>
 
 BOOST_MPL_HAS_XXX_TRAIT_DEF(serializable_type)
+BOOST_MPL_HAS_XXX_TRAIT_DEF(is_continuation_task)
 
 namespace boost { namespace asynchronous { namespace detail {
 

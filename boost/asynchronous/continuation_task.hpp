@@ -31,6 +31,10 @@ public:
     {
         m_promise->set_value(val);
     }
+    void emplace_value(Return&& val)const
+    {
+        m_promise->set_value(std::forward<Return>(val));
+    }
     void set_exception(boost::exception_ptr p)const
     {
         m_promise->set_exception(p);
