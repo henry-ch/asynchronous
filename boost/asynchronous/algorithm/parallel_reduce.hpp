@@ -42,7 +42,7 @@ ReturnType reduce(Iterator begin, Iterator end, Func fn) {
     
 }
 
-// version for moved ranges => will return the range as continuation
+// version for moved ranges
 namespace detail
 {
 template <class Range, class Func, class ReturnType, class Job>
@@ -199,7 +199,7 @@ auto parallel_reduce(Range const& range,Func func,long cutoff,
             (boost::asynchronous::detail::parallel_reduce_range_helper<Range,Func,ReturnType,Job>(range,func,cutoff,task_name,prio));
 }
 
-// version for ranges given as continuation => will return the range as continuation
+// version for ranges given as continuation
 namespace detail
 {
 template <class Continuation, class Func, class ReturnType, class Job>
@@ -211,10 +211,6 @@ struct parallel_reduce_continuation_range_helper: public boost::asynchronous::co
     {}
     void operator()()
     {
-        //typedef decltype(std::move(std::get<0>(cont_).get())) ContainerType;
-        /*typedef typename decltype(std::declval<ContainerType>())::value_type ValueType;
-        ValueType v = std::declval<ValueType>();
-        typedef decltype(func(v, v)) RTT;*/
         boost::asynchronous::continuation_result<ReturnType> task_res = this->this_task_result();
         auto func(std::move(func_));
         auto cutoff = cutoff_;
@@ -249,7 +245,6 @@ struct parallel_reduce_continuation_range_helper: public boost::asynchronous::co
 };
 }
 
-//decltype(std::get<0>(range.this_task_result()).get())
 #define _VALUE_TYPE typename Range::return_type::value_type
 #define _VALUE std::declval<_VALUE_TYPE>()
 #define _FUNC_RETURN_TYPE decltype(func(_VALUE, _VALUE))
@@ -259,8 +254,6 @@ auto parallel_reduce(Range range,Func func,long cutoff,
              const std::string& task_name="", std::size_t prio=0)
   -> typename boost::enable_if<has_is_continuation_task<Range>, boost::asynchronous::detail::continuation<_FUNC_RETURN_TYPE, Job>>::type
 {
-    //typedef typename Range::return_type ContainerType; //decltype(std::move(std::get<0>(range.this_task_result()).get()))
-    //typedef typename decltype(std::declval<ContainerType>())::value_type ValueType;
     typedef _FUNC_RETURN_TYPE ReturnType;
     return boost::asynchronous::top_level_continuation_log<ReturnType,Job>
             (boost::asynchronous::detail::parallel_reduce_continuation_range_helper<Range,Func,ReturnType,Job>(range,func,cutoff,task_name,prio));
