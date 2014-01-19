@@ -9,6 +9,7 @@
 // our app-specific functors
 #include <libs/asynchronous/doc/examples/dummy_tcp_task.hpp>
 #include <libs/asynchronous/doc/examples/serializable_fib_task.hpp>
+#include <libs/asynchronous/doc/examples/dummy_parallel_for_task.hpp>
 
 using namespace std;
 
@@ -29,10 +30,10 @@ int main(int argc, char* argv[])
         [](std::string const& task_name,boost::asynchronous::tcp::server_reponse resp,
            std::function<void(boost::asynchronous::tcp::client_request const&)> when_done)
         {
-//            std::cout << "got task: " << task_name
+            std::cout << "got task: " << task_name
 //                      << " task: " << resp.m_task
-//                      << " m_task_id: " << resp.m_task_id
-//                      << std::endl;
+                      << " m_task_id: " << resp.m_task_id
+                      << std::endl;
             if (task_name=="dummy_tcp_task")
             {
                 dummy_tcp_task t(0);
@@ -47,6 +48,16 @@ int main(int argc, char* argv[])
             {
                 tcp_example::fib_task fib(0,0);
                 boost::asynchronous::tcp::deserialize_and_call_continuation_task(fib,resp,when_done);
+            }
+            else if (task_name=="dummy_parallel_for_task")
+            {
+                dummy_parallel_for_task t;
+                boost::asynchronous::tcp::deserialize_and_call_top_level_continuation_task(t,resp,when_done);
+            }
+            else if (task_name=="dummy_parallel_for_subtask")
+            {
+                boost::asynchronous::serializable_for_each<dummy_parallel_for_subtask,vector<int>> t;
+                boost::asynchronous::tcp::deserialize_and_call_task(t,resp,when_done);
             }
             // else whatever functor we support
             else

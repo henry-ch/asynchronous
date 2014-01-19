@@ -13,7 +13,9 @@
 #include <boost/asynchronous/scheduler/serializable_task.hpp>
 #include <boost/asynchronous/continuation_task.hpp>
 #include <boost/asynchronous/any_serializable.hpp>
+#ifdef BOOST_ASYNCHRONOUS_TEST_BIN_ARCHIVE
 #include "bin_archive_types.hpp"
+#endif
 
 namespace tcp_example
 {
@@ -100,6 +102,7 @@ struct serializable_fib_task : public boost::asynchronous::serializable_task
     long cutoff_;
 };
 
+#ifdef BOOST_ASYNCHRONOUS_TEST_BIN_ARCHIVE
 // our recursive fibonacci tasks. Needs to inherit continuation_task<value type returned by this task>
 struct fib_task_bin : public boost::asynchronous::continuation_task<long>
                     , public boost::asynchronous::serializable_task
@@ -173,6 +176,7 @@ struct serializable_fib_task_bin : public boost::asynchronous::serializable_task
     long n_;
     long cutoff_;
 };
+#endif
 }
 
 #endif // SERIALIZABLE_FIB_TASK_HPP

@@ -11,18 +11,26 @@
 #define BOOST_ASYNCHRON_PARALLEL_FOR_HPP
 
 #include <algorithm>
+#include <vector>
+#include <iterator> // for std::iterator_traits
+
 #include <boost/thread/future.hpp>
+#include <boost/utility/enable_if.hpp>
+#include <boost/serialization/vector.hpp>
+
 #include <boost/asynchronous/detail/any_interruptible.hpp>
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/detail/continuation_impl.hpp>
 #include <boost/asynchronous/continuation_task.hpp>
 #include <boost/asynchronous/post.hpp>
-
+#include <boost/asynchronous/scheduler/serializable_task.hpp>
 #include <boost/asynchronous/algorithm/detail/safe_advance.hpp>
 #include <boost/asynchronous/detail/metafunctions.hpp>
 
 #include <boost/range/begin.hpp>
 #include <boost/range/end.hpp>
+#include <boost/range/iterator_range.hpp>
+#include <boost/range/algorithm_ext/push_back.hpp>
 
 namespace boost { namespace asynchronous
 {
@@ -31,7 +39,7 @@ namespace boost { namespace asynchronous
 // version for moved ranges => will return the range as continuation
 namespace detail
 {
-template <class Range, class Func, class Job>
+template <class Range, class Func, class Job,class Enable=void>
 struct parallel_for_range_move_helper: public boost::asynchronous::continuation_task<Range>
 {
     parallel_for_range_move_helper(Range&& range,Func func,long cutoff,
@@ -68,7 +76,7 @@ struct parallel_for_range_move_helper: public boost::asynchronous::continuation_
                     {
                         try
                         {
-                            for (std::vector<boost::future<void>>::iterator itr = res.begin();itr != res.end();++itr)
+                            for (typename std::vector<boost::future<void>>::iterator itr = res.begin();itr != res.end();++itr)
                             {
                                 // get to check that no exception
                                 (*itr).get();
@@ -82,6 +90,104 @@ struct parallel_for_range_move_helper: public boost::asynchronous::continuation_
                     },
                     // future results of recursive tasks
                     std::move(fus));
+    }
+    Range range_;
+    Func func_;
+    long cutoff_;
+    std::string task_name_;
+    std::size_t prio_;
+};
+}
+template <class Func, class Range>
+struct serializable_for_each : public boost::asynchronous::serializable_task
+{
+    serializable_for_each(): boost::asynchronous::serializable_task(""){}
+    serializable_for_each(Func&& f, Range&& r)
+        : boost::asynchronous::serializable_task(f.get_task_name())
+        , func_(std::forward<Func>(f))
+        , range_(std::forward<Range>(r))
+    {}
+    template <class Archive>
+    void serialize(Archive & ar, const unsigned int /*version*/)
+    {
+        ar & func_;
+        ar & range_;
+    }
+    Range operator()()
+    {
+        std::for_each(range_.begin(),range_.end(),func_);
+        return std::move(range_);
+    }
+
+    Func func_;
+    Range range_;
+};
+namespace detail
+{
+template <class Range, class Func, class Job>
+struct parallel_for_range_move_helper<Range,Func,Job,typename ::boost::enable_if<boost::asynchronous::detail::is_serializable<Func> >::type>
+        : public boost::asynchronous::continuation_task<Range>
+        , public boost::asynchronous::serializable_task
+{
+    parallel_for_range_move_helper(Range&& range,Func func,long cutoff,
+                        const std::string& task_name, std::size_t prio)
+        : boost::asynchronous::continuation_task<Range>()
+        , boost::asynchronous::serializable_task(func.get_task_name())
+        , range_(std::forward<Range>(range)),func_(std::move(func)),cutoff_(cutoff),task_name_(std::move(task_name)),prio_(prio)
+    {}
+    void operator()()const
+    {
+        typedef std::vector<typename std::iterator_traits<decltype(boost::begin(range_))>::value_type> sub_range;
+        std::vector<boost::future<sub_range> > fus;
+        boost::asynchronous::any_weak_scheduler<Job> weak_scheduler = boost::asynchronous::get_thread_scheduler<Job>();
+        boost::asynchronous::any_shared_scheduler<Job> locked_scheduler = weak_scheduler.lock();
+        //TODO return what?
+    //    if (!locked_scheduler.is_valid())
+    //        // give up
+    //        return;
+        for (auto it= boost::begin(range_); it != boost::end(range_) ; )
+        {
+            auto itp = it;
+            boost::asynchronous::detail::safe_advance(it,cutoff_,boost::end(range_));
+            auto part_vec = boost::copy_range< sub_range>(boost::make_iterator_range(itp,it));
+            auto func = func_;
+            boost::future<sub_range> fu = boost::asynchronous::post_future(locked_scheduler,
+                                                                      boost::asynchronous::serializable_for_each<Func,sub_range>
+                                                                        (std::move(func),std::move(part_vec)),
+                                                                      task_name_,prio_);
+            fus.emplace_back(std::move(fu));
+        }
+        boost::asynchronous::continuation_result<Range> task_res = this->this_task_result();
+        boost::asynchronous::create_continuation_log<Job>(
+                    // called when subtasks are done, set our result
+                    [task_res](std::vector<boost::future<sub_range> > res)
+                    {
+                        Range range;
+                        try
+                        {
+                            for (typename std::vector<boost::future<sub_range>>::iterator itr = res.begin();itr != res.end();++itr)
+                            {
+                                range = boost::push_back(range,(*itr).get());
+
+                            }
+                            task_res.emplace_value(std::move(range));
+                        }
+                        catch(std::exception& e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
+                    },
+                    // future results of recursive tasks
+                    std::move(fus));
+    }
+    template <class Archive>
+    void serialize(Archive & ar, const unsigned int /*version*/)
+    {
+        ar & range_;
+        ar & func_;
+        ar & cutoff_;
+        ar & task_name_;
+        ar & prio_;
     }
     Range range_;
     Func func_;
@@ -138,7 +244,7 @@ struct parallel_for_range_helper: public boost::asynchronous::continuation_task<
                     {
                         try
                         {
-                            for (std::vector<boost::future<void>>::iterator itr = res.begin();itr != res.end();++itr)
+                            for (typename std::vector<boost::future<void>>::iterator itr = res.begin();itr != res.end();++itr)
                             {
                                 // get to check that no exception
                                 (*itr).get();
@@ -264,7 +370,7 @@ struct parallel_for_helper: public boost::asynchronous::continuation_task<void>
                     {
                         try
                         {
-                            for (std::vector<boost::future<void>>::iterator itr = res.begin();itr != res.end();++itr)
+                            for (typename std::vector<boost::future<void>>::iterator itr = res.begin();itr != res.end();++itr)
                             {
                                 // get to check that no exception
                                 (*itr).get();

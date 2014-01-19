@@ -17,7 +17,6 @@
 // for first tests
 struct dummy_tcp_task : public boost::asynchronous::serializable_task
 {
-    //typedef int serializable_type;
     dummy_tcp_task(int d):boost::asynchronous::serializable_task("dummy_tcp_task"),m_data(d){}
     template <class Archive>
     void serialize(Archive & ar, const unsigned int /*version*/)

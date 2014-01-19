@@ -119,6 +119,20 @@ namespace detail
         {
             OP()(m_promise,m_func);
         }
+//        template <class Archive>
+//        void save(Archive & , const unsigned int /*version*/)const
+//        {
+//        }
+//        template <class Archive>
+//        void load(Archive & , const unsigned int /*version*/)
+//        {
+
+//        }
+//        BOOST_SERIALIZATION_SPLIT_MEMBER()
+//        std::string get_task_name()const
+//        {
+//            return "";
+//        }
         boost::shared_ptr<boost::promise<R> > m_promise;
         F m_func;
     };

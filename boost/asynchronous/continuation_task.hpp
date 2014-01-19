@@ -104,7 +104,7 @@ public:
             std::istringstream archive_stream(payload.m_data);
             InternalArchive archive(archive_stream);
 
-            long res;
+            Return res;
             archive >> res;
             get_promise()->set_value(res);
         }
