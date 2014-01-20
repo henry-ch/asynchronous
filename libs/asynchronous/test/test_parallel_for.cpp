@@ -11,6 +11,7 @@
 
 #include <vector>
 #include <set>
+#include <boost/lexical_cast.hpp>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
@@ -84,13 +85,17 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         auto it = this->m_data.begin();
-                        BOOST_CHECK_MESSAGE(*it == 3,"m_data[0] is wrong");
+                        BOOST_CHECK_MESSAGE(*it == 3,"m_data[0] is wrong: "+ boost::lexical_cast<std::string>(*it));
                         std::advance(it,100);
-                        BOOST_CHECK_MESSAGE(*it == 3,"m_data[100] is wrong");
+                        BOOST_CHECK_MESSAGE(*it == 3,"m_data[100] is wrong: "+ boost::lexical_cast<std::string>(*it));
                         std::advance(it,900);
-                        BOOST_CHECK_MESSAGE(*it == 3,"m_data[1000] is wrong");
+                        BOOST_CHECK_MESSAGE(*it == 3,"m_data[1000] is wrong: "+ boost::lexical_cast<std::string>(*it));
                         std::advance(it,8999);
-                        BOOST_CHECK_MESSAGE(*it == 3,"m_data[9999] is wrong");
+                        BOOST_CHECK_MESSAGE(*it == 3,"m_data[9999] is wrong: "+ boost::lexical_cast<std::string>(*it));
+                        auto r = std::accumulate(this->m_data.begin(),this->m_data.end(),0,[](int a, int b){return a+b;});
+                        BOOST_CHECK_MESSAGE((r == 30000),
+                                            ("result of parallel_for was " + boost::lexical_cast<std::string, int>(r) + ", should have been 30000"));
+
                         // reset
                         m_data = std::vector<int>(10000,1);
                         aPromise->set_value();
@@ -124,13 +129,16 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         auto it = this->m_data.begin();
-                        BOOST_CHECK_MESSAGE(*it == 3,"m_data[0] is wrong");
+                        BOOST_CHECK_MESSAGE(*it == 3,"m_data[0] is wrong: "+ boost::lexical_cast<std::string>(*it));
                         std::advance(it,100);
-                        BOOST_CHECK_MESSAGE(*it == 3,"m_data[100] is wrong");
+                        BOOST_CHECK_MESSAGE(*it == 3,"m_data[100] is wrong: "+ boost::lexical_cast<std::string>(*it));
                         std::advance(it,900);
-                        BOOST_CHECK_MESSAGE(*it == 3,"m_data[1000] is wrong");
+                        BOOST_CHECK_MESSAGE(*it == 3,"m_data[1000] is wrong: "+ boost::lexical_cast<std::string>(*it));
                         std::advance(it,8999);
-                        BOOST_CHECK_MESSAGE(*it == 3,"m_data[9999] is wrong");
+                        BOOST_CHECK_MESSAGE(*it == 3,"m_data[9999] is wrong: "+ boost::lexical_cast<std::string>(*it));
+                        auto r = std::accumulate(this->m_data.begin(),this->m_data.end(),0,[](int a, int b){return a+b;});
+                        BOOST_CHECK_MESSAGE((r == 30000),
+                                            ("result of parallel_for was " + boost::lexical_cast<std::string>(r) + ", should have been 30000"));
                         // reset
                         m_data = std::vector<int>(10000,1);
                         aPromise->set_value();
@@ -165,13 +173,16 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         auto modified_vec = res.get();
                         auto it = modified_vec.begin();
-                        BOOST_CHECK_MESSAGE(*it == 3,"data[0] is wrong");
+                        BOOST_CHECK_MESSAGE(*it == 3,"data[0] is wrong: "+ boost::lexical_cast<std::string>(*it));
                         std::advance(it,100);
-                        BOOST_CHECK_MESSAGE(*it == 3,"data[100] is wrong");
+                        BOOST_CHECK_MESSAGE(*it == 3,"data[100] is wrong: "+ boost::lexical_cast<std::string>(*it));
                         std::advance(it,900);
-                        BOOST_CHECK_MESSAGE(*it == 3,"data[1000] is wrong");
+                        BOOST_CHECK_MESSAGE(*it == 3,"data[1000] is wrong: "+ boost::lexical_cast<std::string>(*it));
                         std::advance(it,8999);
-                        BOOST_CHECK_MESSAGE(*it == 3,"data[9999] is wrong");
+                        BOOST_CHECK_MESSAGE(*it == 3,"data[9999] is wrong: "+ boost::lexical_cast<std::string>(*it));
+                        auto r = std::accumulate(modified_vec.begin(),modified_vec.end(),0,[](int a, int b){return a+b;});
+                        BOOST_CHECK_MESSAGE((r == 30000),
+                                            ("result of parallel_for was " + boost::lexical_cast<std::string, int>(r) + ", should have been 30000"));
                         // reset
                         m_data = std::vector<int>(10000,1);
                         aPromise->set_value();
@@ -215,15 +226,17 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         auto modified_vec = res.get();
                         auto it = modified_vec.begin();
-                        std::cout << "data[0]=" << *it << std::endl;
-                        BOOST_CHECK_MESSAGE(*it == 7,"data[0] is wrong");
+                        BOOST_CHECK_MESSAGE(*it == 7,"data[0] is wrong: "+ boost::lexical_cast<std::string>(*it));
                         std::advance(it,100);
-                        std::cout << "data[100]=" << *it << std::endl;
-                        BOOST_CHECK_MESSAGE(*it == 7,"data[100] is wrong");
+                        BOOST_CHECK_MESSAGE(*it == 7,"data[100] is wrong: "+ boost::lexical_cast<std::string>(*it));
                         std::advance(it,900);
-                        BOOST_CHECK_MESSAGE(*it == 7,"data[1000] is wrong");
+                        BOOST_CHECK_MESSAGE(*it == 7,"data[1000] is wrong: "+ boost::lexical_cast<std::string>(*it));
                         std::advance(it,8999);
-                        BOOST_CHECK_MESSAGE(*it == 7,"data[9999] is wrong");
+                        BOOST_CHECK_MESSAGE(*it == 7,"data[9999] is wrong: "+ boost::lexical_cast<std::string>(*it));
+                        auto r = std::accumulate(modified_vec.begin(),modified_vec.end(),0,[](int a, int b){return a+b;});
+                        BOOST_CHECK_MESSAGE((r == 70000),
+                                            ("result of parallel_for was " + boost::lexical_cast<std::string, int>(r) + ", should have been 70000"));
+
                         // reset
                         m_data = std::vector<int>(10000,1);
                         aPromise->set_value();

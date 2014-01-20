@@ -79,7 +79,7 @@ struct parallel_reduce_range_move_helper: public boost::asynchronous::continuati
         auto func = func_;
         boost::asynchronous::create_continuation_log<Job>(
                     // called when subtasks are done, set our result
-                    [task_res, func](std::vector<boost::future<ReturnType>> res)
+                    [task_res, func,range](std::vector<boost::future<ReturnType>> res)
                     {
                         try
                         {
