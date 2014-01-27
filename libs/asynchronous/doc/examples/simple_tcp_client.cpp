@@ -10,6 +10,7 @@
 #include <libs/asynchronous/doc/examples/dummy_tcp_task.hpp>
 #include <libs/asynchronous/doc/examples/serializable_fib_task.hpp>
 #include <libs/asynchronous/doc/examples/dummy_parallel_for_task.hpp>
+#include <libs/asynchronous/doc/examples/dummy_parallel_reduce_task.hpp>
 
 using namespace std;
 
@@ -57,6 +58,16 @@ int main(int argc, char* argv[])
             else if (task_name=="dummy_parallel_for_subtask")
             {
                 boost::asynchronous::serializable_for_each<dummy_parallel_for_subtask,vector<int>> t;
+                boost::asynchronous::tcp::deserialize_and_call_task(t,resp,when_done);
+            }
+            else if (task_name=="dummy_parallel_reduce_task")
+            {
+                dummy_parallel_reduce_task t;
+                boost::asynchronous::tcp::deserialize_and_call_top_level_continuation_task(t,resp,when_done);
+            }
+            else if (task_name=="dummy_parallel_reduce_subtask")
+            {
+                boost::asynchronous::serializable_reduce<dummy_parallel_reduce_subtask,vector<long>> t;
                 boost::asynchronous::tcp::deserialize_and_call_task(t,resp,when_done);
             }
             // else whatever functor we support

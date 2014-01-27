@@ -14,12 +14,15 @@
 #include <utility>
 
 #include <boost/thread/future.hpp>
+#include <boost/utility/enable_if.hpp>
+#include <boost/serialization/vector.hpp>
+
 #include <boost/asynchronous/detail/any_interruptible.hpp>
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/detail/continuation_impl.hpp>
 #include <boost/asynchronous/continuation_task.hpp>
 #include <boost/asynchronous/post.hpp>
-
+#include <boost/asynchronous/scheduler/serializable_task.hpp>
 #include <boost/asynchronous/algorithm/detail/safe_advance.hpp>
 #include <boost/asynchronous/detail/metafunctions.hpp>
 
@@ -45,7 +48,7 @@ ReturnType reduce(Iterator begin, Iterator end, Func fn) {
 // version for moved ranges
 namespace detail
 {
-template <class Range, class Func, class ReturnType, class Job>
+template <class Range, class Func, class ReturnType, class Job,class Enable=void>
 struct parallel_reduce_range_move_helper: public boost::asynchronous::continuation_task<ReturnType>
 {
     parallel_reduce_range_move_helper(Range&& range,Func func,long cutoff,
@@ -70,7 +73,7 @@ struct parallel_reduce_range_move_helper: public boost::asynchronous::continuati
             boost::future<ReturnType> fu = boost::asynchronous::post_future(locked_scheduler,
                                                                       [it,itp,func]()
                                                                       {
-                                                                        return reduce<decltype(itp), Func, ReturnType>(itp,it,func);
+                                                                        return boost::asynchronous::detail::reduce<decltype(itp), Func, ReturnType>(itp,it,func);
                                                                       },
                                                                       task_name_,prio_);
             fus.emplace_back(std::move(fu));
@@ -112,6 +115,114 @@ struct parallel_reduce_range_move_helper: public boost::asynchronous::continuati
     std::size_t prio_;
 };
 }
+
+template <class Func, class Range>
+struct serializable_reduce : public boost::asynchronous::serializable_task
+{
+    serializable_reduce(): boost::asynchronous::serializable_task(""){}
+    serializable_reduce(Func&& f, Range&& r)
+        : boost::asynchronous::serializable_task(f.get_task_name())
+        , func_(std::forward<Func>(f))
+        , range_(std::forward<Range>(r))
+    {}
+    template <class Archive>
+    void serialize(Archive & ar, const unsigned int /*version*/)
+    {
+        ar & func_;
+        ar & range_;
+    }
+    auto operator()()
+    -> decltype(Func()(*Range().begin(),*Range().begin()))
+    {
+        return boost::asynchronous::detail::reduce<decltype(range_.begin()), Func, decltype(func_(*range_.begin(),*range_.begin()))>(range_.begin(),range_.end(),func_);
+    }
+
+    Func func_;
+    Range range_;
+};
+namespace detail
+{
+template <class Range, class Func, class ReturnType, class Job>
+struct parallel_reduce_range_move_helper<Range,Func,ReturnType,Job,typename ::boost::enable_if<boost::asynchronous::detail::is_serializable<Func> >::type>
+        : public boost::asynchronous::continuation_task<ReturnType>
+        , public boost::asynchronous::serializable_task
+{
+    parallel_reduce_range_move_helper(Range&& range,Func func,long cutoff,
+                        const std::string& task_name, std::size_t prio)
+        : boost::asynchronous::continuation_task<ReturnType>()
+        , boost::asynchronous::serializable_task(func.get_task_name())
+        , range_(std::forward<Range>(range)),func_(std::move(func)),cutoff_(cutoff),task_name_(std::move(task_name)),prio_(prio)
+    {}
+    void operator()()const
+    {
+        typedef std::vector<typename std::iterator_traits<decltype(boost::begin(range_))>::value_type> sub_range;
+        std::vector<boost::future<ReturnType> > fus;
+        boost::asynchronous::any_weak_scheduler<Job> weak_scheduler = boost::asynchronous::get_thread_scheduler<Job>();
+        boost::asynchronous::any_shared_scheduler<Job> locked_scheduler = weak_scheduler.lock();
+        //TODO return what?
+    //    if (!locked_scheduler.is_valid())
+    //        // give up
+    //        return;
+        boost::shared_ptr<Range> range = boost::make_shared<Range>(std::move(range_));
+        for (auto it= boost::begin(*range); it != boost::end(*range) ; )
+        {
+            auto itp = it;
+            boost::asynchronous::detail::safe_advance(it,cutoff_,boost::end(*range));
+            auto part_vec = boost::copy_range< sub_range>(boost::make_iterator_range(itp,it));
+            auto func = func_;
+            boost::future<ReturnType> fu = boost::asynchronous::post_future(locked_scheduler,
+                                                                            boost::asynchronous::serializable_reduce<Func,sub_range>
+                                                                                (std::move(func),std::move(part_vec)),
+                                                                            task_name_,prio_);
+            fus.emplace_back(std::move(fu));
+        }
+        boost::asynchronous::continuation_result<ReturnType> task_res = this->this_task_result();
+        auto func = func_;
+        boost::asynchronous::create_continuation_log<Job>(
+                    // called when subtasks are done, set our result
+                    [task_res, func,range](std::vector<boost::future<ReturnType>> res)
+                    {
+                        try
+                        {
+                            ReturnType rt;
+                            bool set = false;
+                            for (typename std::vector<boost::future<ReturnType>>::iterator itr = res.begin();itr != res.end();++itr)
+                            {
+                                // get values, check that no exception exists
+                                if (set)
+                                    rt = func(rt, (*itr).get());
+                                else {
+                                    rt = (*itr).get();
+                                    set = true;
+                                }
+                            }
+                            task_res.emplace_value(std::move(rt));
+                        }
+                        catch(std::exception& e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
+                    },
+                    // future results of recursive tasks
+                    std::move(fus));
+    }
+    template <class Archive>
+    void serialize(Archive & ar, const unsigned int /*version*/)
+    {
+        ar & range_;
+        ar & func_;
+        ar & cutoff_;
+        ar & task_name_;
+        ar & prio_;
+    }
+    Range range_;
+    Func func_;
+    long cutoff_;
+    std::string task_name_;
+    std::size_t prio_;
+};
+}
+
 template <class Range, class Func, class Job=boost::asynchronous::any_callable>
 auto parallel_reduce(Range&& range,Func func,long cutoff,
              const std::string& task_name="", std::size_t prio=0) -> typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::continuation<decltype(func(*(range.begin()), *(range.end()))),Job> >::type
