@@ -35,6 +35,8 @@ struct continuation
     typedef Return return_type;
     typedef Tuple tuple_type;
 
+    continuation(continuation&&)=default;
+    continuation(continuation const&)=default;
     template <typename... Args>
     continuation(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state,boost::shared_ptr<Tuple> t, Duration d, Args&&... args)
     : m_futures(t)
@@ -67,29 +69,31 @@ struct continuation
     template <typename T,typename Interruptibles,typename Last>
     void continuation_ctor_helper(T& sched, Interruptibles& interruptibles,Last&& l)
     {
+        std::string n(std::move(l.get_name()));
         if (!m_state)
         {
             // no interruptible requested
-            boost::asynchronous::post_future(sched,std::forward<Last>(l),l.get_name());
+            boost::asynchronous::post_future(sched,std::forward<Last>(l),n);
         }
         else if(!m_state->is_interrupted())
         {
             // interruptible requested
-            interruptibles.push_back(boost::asynchronous::interruptible_post_future(sched,std::forward<Last>(l),l.get_name()).second);
+            interruptibles.push_back(boost::asynchronous::interruptible_post_future(sched,std::forward<Last>(l),n).second);
         }
     }
 
     template <typename T,typename Interruptibles,typename... Tail, typename Front>
     void continuation_ctor_helper(T& sched, Interruptibles& interruptibles,Front&& front,Tail&&... tail)
     {
+        std::string n(std::move(front.get_name()));
         if (!m_state)
         {
             // no interruptible requested
-            boost::asynchronous::post_future(sched,std::forward<Front>(front),front.get_name());
+            boost::asynchronous::post_future(sched,std::forward<Front>(front),n);
         }
         else
         {
-            interruptibles.push_back(boost::asynchronous::interruptible_post_future(sched,std::forward<Front>(front),front.get_name()).second);
+            interruptibles.push_back(boost::asynchronous::interruptible_post_future(sched,std::forward<Front>(front),n).second);
         }
         continuation_ctor_helper(sched,interruptibles,std::forward<Tail>(tail)...);
     }

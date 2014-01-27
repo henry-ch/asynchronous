@@ -259,7 +259,7 @@ namespace detail
 
 template <class F, class S>
 #ifndef BOOST_NO_RVALUE_REFERENCES
-auto post_future(S const& scheduler, F&& func,
+auto post_future(S const& scheduler, F func,
 #else
 auto post_future(S const& scheduler, F const& func,
 #endif
@@ -280,7 +280,7 @@ auto post_future(S const& scheduler, F const& func,
     };
 
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper,S> fct (p,std::forward<F>(func));
+    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper,S> fct (p,std::move(func));
     typename boost::asynchronous::job_traits<typename S::job_type>::wrapper_type w(std::move(fct));
     w.set_name(task_name);
     scheduler.post(std::move(w),prio);
@@ -299,7 +299,7 @@ auto post_future(S const& scheduler, F const& func,
 }
 template <class F, class S>
 #ifndef BOOST_NO_RVALUE_REFERENCES
-auto post_future(S const& scheduler, F&& func,
+auto post_future(S const& scheduler, F func,
 #else
 auto post_future(S const& scheduler, F const& func,
 #endif
@@ -320,7 +320,7 @@ auto post_future(S const& scheduler, F const& func,
     };
 
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper,S> fct (p,std::forward<F>(func));
+    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper,S> fct (p,std::move(func));
     typename boost::asynchronous::job_traits<typename S::job_type>::wrapper_type w(std::move(fct));
     w.set_name(task_name);
     scheduler.post(std::move(w),prio);
@@ -341,7 +341,7 @@ auto post_future(S const& scheduler, F const& func,
 
 template <class F, class S>
 #ifndef BOOST_NO_RVALUE_REFERENCES
-auto interruptible_post_future(S const& scheduler, F&& func,
+auto interruptible_post_future(S const& scheduler, F func,
 #else
 auto interruptible_post_future(S const& scheduler, F const& func,
 #endif
@@ -366,14 +366,14 @@ auto interruptible_post_future(S const& scheduler, F const& func,
         }
     };
 
-    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper,S> fct (p,std::forward<F>(func));
+    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper,S> fct (p,std::move(func));
     typename boost::asynchronous::job_traits<typename S::job_type>::wrapper_type w(std::move(fct));
     w.set_name(task_name);
     return std::make_pair(std::move(fu),scheduler.interruptible_post(std::move(w),prio));
 }
 template <class F, class S>
 #ifndef BOOST_NO_RVALUE_REFERENCES
-auto interruptible_post_future(S const& scheduler, F&& func,
+auto interruptible_post_future(S const& scheduler, F func,
 #else
 auto interruptible_post_future(S const& scheduler, F const& func,
 #endif
@@ -398,7 +398,7 @@ auto interruptible_post_future(S const& scheduler, F const& func,
         }
     };
 
-    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper,S> fct (p,std::forward<F>(func));
+    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper,S> fct (p,std::move(func));
     typename boost::asynchronous::job_traits<typename S::job_type>::wrapper_type w(std::move(fct));
     w.set_name(task_name);
     return std::make_pair(std::move(fu),scheduler.interruptible_post(std::move(w),prio));
@@ -983,7 +983,7 @@ namespace detail
 
 template <class F1, class S1,class F2, class S2>
 #ifndef BOOST_NO_RVALUE_REFERENCES
-auto post_callback(S1 const& scheduler,F1&& func,S2 const& weak_cb_scheduler,F2&& cb_func,
+auto post_callback(S1 const& scheduler,F1 func,S2 const& weak_cb_scheduler,F2 cb_func,
 #else
 auto post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_scheduler,F2 const& cb_func,
 #endif
@@ -1003,13 +1003,13 @@ auto post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_schedule
     // we make a copy of the callback in a shared_ptr to be sure it gets destroyed in the
     // originator thread. The shared_ptr is then "moved" to be sure the last copy is not in the worker thread
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    boost::shared_ptr<F2> cb_ptr = boost::make_shared<F2>(std::forward<F2>(cb_func));
-    boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(std::forward<F1>(func));
+    boost::shared_ptr<F2> cb_ptr = boost::make_shared<F2>(std::move(cb_func));
+    boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(std::move(func));
     move_task_helper<void,F1,F2> moved_work(std::move(func_ptr),std::move(cb_ptr));
     // create a task which calls passed task, then post the callback
     detail::post_callback_helper_base<move_task_helper<void,F1,F2>,S2,S1,post_helper,detail::cb_helper > task_then_cb (
                 std::move(moved_work), weak_cb_scheduler,task_name,cb_prio);
-    typename boost::asynchronous::job_traits<typename S1::job_type>::wrapper_type w(std::forward<typename S1::job_type>(task_then_cb));
+    typename boost::asynchronous::job_traits<typename S1::job_type>::wrapper_type w(std::move(task_then_cb));
     w.set_name(task_name);
     scheduler.post(std::move(w),post_prio);
 #else
@@ -1032,7 +1032,7 @@ auto post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_schedule
 
 template <class F1, class S1,class F2, class S2>
 #ifndef BOOST_NO_RVALUE_REFERENCES
-auto post_callback(S1 const& scheduler,F1&& func,S2 const& weak_cb_scheduler,F2&& cb_func,
+auto post_callback(S1 const& scheduler,F1 func,S2 const& weak_cb_scheduler,F2 cb_func,
 #else
 auto post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_scheduler,F2 const& cb_func,
 #endif
@@ -1059,8 +1059,8 @@ auto post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_schedule
     // originator thread. The shared_ptr is then "moved" to be sure the last copy is not in the worker thread
 
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    boost::shared_ptr<F2> cb_ptr = boost::make_shared<F2>(std::forward<F2>(cb_func));
-    boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(std::forward<F1>(func));
+    boost::shared_ptr<F2> cb_ptr = boost::make_shared<F2>(std::move(cb_func));
+    boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(std::move(func));
     move_task_helper<decltype(func()),F1,F2> moved_work(std::move(func_ptr),std::move(cb_ptr));
     // create a task which calls passed task, then post the callback
     detail::post_callback_helper_base<move_task_helper<decltype(func()),F1,F2>,S2,S1,post_helper,detail::cb_helper > task_then_cb (
@@ -1090,7 +1090,7 @@ auto post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_schedule
 // version for continuations
 template <class F1, class S1,class F2, class S2>
 #ifndef BOOST_NO_RVALUE_REFERENCES
-auto post_callback(S1 const& scheduler,F1&& func,S2 const& weak_cb_scheduler,F2&& cb_func,
+auto post_callback(S1 const& scheduler,F1 func,S2 const& weak_cb_scheduler,F2 cb_func,
 #else
 auto post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_scheduler,F2 const& cb_func,
 #endif
@@ -1112,8 +1112,8 @@ auto post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_schedule
     // originator thread. The shared_ptr is then "moved" to be sure the last copy is not in the worker thread
 
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    boost::shared_ptr<F2> cb_ptr = boost::make_shared<F2>(std::forward<F2>(cb_func));
-    boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(std::forward<F1>(func));
+    boost::shared_ptr<F2> cb_ptr = boost::make_shared<F2>(std::move(cb_func));
+    boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(std::move(func));
     move_task_helper<typename decltype(func())::return_type,F1,F2> moved_work(std::move(func_ptr),std::move(cb_ptr));
     // create a task which calls passed task, then post the callback
     detail::post_callback_helper_continuation<decltype(func()),F1,F2,move_task_helper<typename decltype(func())::return_type,F1,F2>,S2,S1,detail::cb_helper > task_then_cb (
@@ -1143,7 +1143,7 @@ auto post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_schedule
 //TODO macro...
 template <class F1, class S1,class F2, class S2>
 #ifndef BOOST_NO_RVALUE_REFERENCES
-auto interruptible_post_callback(S1 const& scheduler,F1&& func,S2 const& weak_cb_scheduler,F2&& cb_func,
+auto interruptible_post_callback(S1 const& scheduler,F1 func,S2 const& weak_cb_scheduler,F2 cb_func,
 #else
 auto interruptible_post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_scheduler,F2 const& cb_func,
 #endif
@@ -1162,8 +1162,8 @@ auto interruptible_post_callback(S1 const& scheduler,F1 const& func,S2 const& we
     // we make a copy of the callback in a shared_ptr to be sure it gets destroyed in the
     // originator thread. The shared_ptr is then "moved" to be sure the last copy is not in the worker thread
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    boost::shared_ptr<F2> cb_ptr = boost::make_shared<F2>(std::forward<F2>(cb_func));
-    boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(std::forward<F1>(func));
+    boost::shared_ptr<F2> cb_ptr = boost::make_shared<F2>(std::move(cb_func));
+    boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(std::move(func));
     move_task_helper<void,F1,F2> moved_work(std::move(func_ptr),std::move(cb_ptr));
     // create a task which calls passed task, then post the callback
     detail::post_callback_helper_base<move_task_helper<void,F1,F2>,S2,S1,post_helper,detail::cb_helper > task_then_cb (
@@ -1191,7 +1191,7 @@ auto interruptible_post_callback(S1 const& scheduler,F1 const& func,S2 const& we
 
 template <class F1, class S1,class F2, class S2>
 #ifndef BOOST_NO_RVALUE_REFERENCES
-auto interruptible_post_callback(S1 const& scheduler,F1&& func,S2 const& weak_cb_scheduler,F2&& cb_func,
+auto interruptible_post_callback(S1 const& scheduler,F1 func,S2 const& weak_cb_scheduler,F2 cb_func,
 #else
 auto interruptible_post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_scheduler,F2 const& cb_func,
 #endif
@@ -1218,8 +1218,8 @@ auto interruptible_post_callback(S1 const& scheduler,F1 const& func,S2 const& we
     // originator thread. The shared_ptr is then "moved" to be sure the last copy is not in the worker thread
 
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    boost::shared_ptr<F2> cb_ptr = boost::make_shared<F2>(std::forward<F2>(cb_func));
-    boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(std::forward<F1>(func));
+    boost::shared_ptr<F2> cb_ptr = boost::make_shared<F2>(std::move(cb_func));
+    boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(std::move(func));
     move_task_helper<decltype(func()),F1,F2> moved_work(std::move(func_ptr),std::move(cb_ptr));
     // create a task which calls passed task, then post the callback
     detail::post_callback_helper_base<move_task_helper<decltype(func()),F1,F2>,S2,S1,post_helper,detail::cb_helper > task_then_cb (
@@ -1249,7 +1249,7 @@ auto interruptible_post_callback(S1 const& scheduler,F1 const& func,S2 const& we
 // version for continuations
 template <class F1, class S1,class F2, class S2>
 #ifndef BOOST_NO_RVALUE_REFERENCES
-auto interruptible_post_callback(S1 const& scheduler,F1&& func,S2 const& weak_cb_scheduler,F2&& cb_func,
+auto interruptible_post_callback(S1 const& scheduler,F1 func,S2 const& weak_cb_scheduler,F2 cb_func,
 #else
 auto interruptible_post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_scheduler,F2 const& cb_func,
 #endif
@@ -1271,8 +1271,8 @@ auto interruptible_post_callback(S1 const& scheduler,F1 const& func,S2 const& we
     // originator thread. The shared_ptr is then "moved" to be sure the last copy is not in the worker thread
 
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    boost::shared_ptr<F2> cb_ptr = boost::make_shared<F2>(std::forward<F2>(cb_func));
-    boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(std::forward<F1>(func));
+    boost::shared_ptr<F2> cb_ptr = boost::make_shared<F2>(std::move(cb_func));
+    boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(std::move(func));
     move_task_helper<typename decltype(func())::return_type,F1,F2> moved_work(std::move(func_ptr),std::move(cb_ptr));
     // create a task which calls passed task, then post the callback
     detail::post_callback_helper_continuation<decltype(func()),F1,F2,move_task_helper<typename decltype(func())::return_type,F1,F2>,S2,S1,detail::cb_helper > task_then_cb (

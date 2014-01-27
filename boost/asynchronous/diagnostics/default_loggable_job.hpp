@@ -21,6 +21,8 @@ template<class Clock = boost::chrono::high_resolution_clock>
 class default_loggable_job
 {
 public:
+    default_loggable_job(default_loggable_job const&)=default;
+    default_loggable_job(default_loggable_job&&)=default;
     // our diagnostic item
     typedef boost::asynchronous::diagnostic_item<Clock> diagnostic_item_type;
     default_loggable_job(std::string const& name="")

@@ -43,6 +43,10 @@ struct sub_task
 struct main_task : public boost::asynchronous::continuation_task<long>
 {
     main_task(): boost::asynchronous::continuation_task<long>("main_task"){}
+    main_task(main_task const&) = default;
+    main_task(main_task&&) = default;
+
+
     void operator()()const
     {
         BOOST_CHECK_MESSAGE(contains_id(tpids.begin(),tpids.end(),boost::this_thread::get_id()),"main_task executed in the wrong thread");

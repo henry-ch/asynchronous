@@ -51,29 +51,29 @@ public:
         return m_scheduler->get_queue_size();
     }
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    void post(job_type&& job) const
+    void post(job_type job) const
     {
         BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy::post has empty scheduler");
-        move_post(std::forward<job_type>(job));
+        move_post(std::move(job));
     }
-    void post(job_type&& job,std::size_t priority) const
+    void post(job_type job,std::size_t priority) const
     {
         BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy::post has empty scheduler");
-        move_post(std::forward<job_type>(job),priority);
+        move_post(std::move(job),priority);
     }
-    void move_post(job_type && job,std::size_t priority=0) const
+    void move_post(job_type&& job,std::size_t priority=0) const
     {
         m_scheduler->post(std::forward<job_type>(job),priority);
     }
-    boost::asynchronous::any_interruptible interruptible_post(job_type&& job) const
+    boost::asynchronous::any_interruptible interruptible_post(job_type job) const
     {
         BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy::interruptible_post has empty scheduler");
-        return move_interruptible_post(std::forward<job_type>(job));
+        return move_interruptible_post(std::move(job));
     }
-    boost::asynchronous::any_interruptible interruptible_post(job_type&& job,std::size_t priority) const
+    boost::asynchronous::any_interruptible interruptible_post(job_type job,std::size_t priority) const
     {
         BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy::interruptible_post has empty scheduler");
-        return move_interruptible_post(std::forward<job_type>(job),priority);
+        return move_interruptible_post(std::move(job),priority);
     }
     boost::asynchronous::any_interruptible move_interruptible_post(job_type && job,
                                                                 std::size_t priority=0) const

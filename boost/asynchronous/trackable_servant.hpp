@@ -93,9 +93,9 @@ public:
        
     // helper to make it easier using a timer service
     template <class Timer, class F>
-    void async_wait(Timer& t, F&& func)
+    void async_wait(Timer& t, F func)
     {
-        std::function<void(const ::boost::system::error_code&)> f = std::forward<F>(func);
+        std::function<void(const ::boost::system::error_code&)> f = std::move(func);
         call_callback(t.get_proxy(),
                       t.unsafe_async_wait(make_safe_callback(f)),
                       // ignore async_wait callback functor., real callback is above
@@ -105,92 +105,91 @@ public:
                 
 #ifndef BOOST_NO_RVALUE_REFERENCES
     template <class F1, class F2>
-    void post_callback(F1&& func,F2&& cb_func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0) const
+    void post_callback(F1 func,F2 cb_func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0) const
     {
         // we want to log if possible
         boost::asynchronous::post_callback(m_worker,
-                                        boost::asynchronous::check_alive_before_exec(std::forward<F1>(func),m_tracking),
-                                        //std::forward<F1>(func),
+                                        boost::asynchronous::check_alive_before_exec(std::move(func),m_tracking),
                                         m_scheduler,
-                                        boost::asynchronous::check_alive(std::forward<F2>(cb_func),m_tracking),
+                                        boost::asynchronous::check_alive(std::move(cb_func),m_tracking),
                                         task_name,
                                         post_prio,
                                         cb_prio);
     }
     template <class F1, class F2>
-    boost::asynchronous::any_interruptible interruptible_post_callback(F1&& func,F2&& cb_func, std::string const& task_name="",
+    boost::asynchronous::any_interruptible interruptible_post_callback(F1 func,F2 cb_func, std::string const& task_name="",
                                                                     std::size_t post_prio=0, std::size_t cb_prio=0)
     {
         return boost::asynchronous::interruptible_post_callback(
                                         m_worker,
-                                        boost::asynchronous::check_alive_before_exec(std::forward<F1>(func),m_tracking),
+                                        boost::asynchronous::check_alive_before_exec(std::move(func),m_tracking),
                                         m_scheduler,
-                                        boost::asynchronous::check_alive(std::forward<F2>(cb_func),m_tracking),
+                                        boost::asynchronous::check_alive(std::move(cb_func),m_tracking),
                                         task_name,
                                         post_prio,
                                         cb_prio);
     }
     template <class F1>
-    void post_self(F1&& func, std::string const& task_name="", std::size_t post_prio=0)
+    void post_self(F1 func, std::string const& task_name="", std::size_t post_prio=0)
     {
         // we want to log if possible
         boost::asynchronous::post_future(m_scheduler.lock(),
-                                        boost::asynchronous::check_alive_before_exec(std::forward<F1>(func),m_tracking),
+                                        boost::asynchronous::check_alive_before_exec(std::move(func),m_tracking),
                                         task_name,
                                         post_prio);
     }
     template <class F1>
-    boost::asynchronous::any_interruptible interruptible_post_self(F1&& func, std::string const& task_name="",
+    boost::asynchronous::any_interruptible interruptible_post_self(F1 func, std::string const& task_name="",
                                                                    std::size_t post_prio=0)
     {
         // we want to log if possible
         return boost::asynchronous::interruptible_post_future(
                                         m_scheduler.lock(),
-                                        boost::asynchronous::check_alive_before_exec(std::forward<F1>(func),m_tracking),
+                                        boost::asynchronous::check_alive_before_exec(std::move(func),m_tracking),
                                         task_name,
                                         post_prio).second;
     }
     template <class F1>
-    void post_future(F1&& func, std::string const& task_name="", std::size_t post_prio=0)
+    void post_future(F1 func, std::string const& task_name="", std::size_t post_prio=0)
     {
         // we want to log if possible
         boost::asynchronous::post_future(m_worker,
-                                        boost::asynchronous::check_alive_before_exec(std::forward<F1>(func),m_tracking),
+                                        boost::asynchronous::check_alive_before_exec(std::move(func),m_tracking),
                                         task_name,
                                         post_prio);
     }
     template <class F1>
-    boost::asynchronous::any_interruptible interruptible_post_future(F1&& func, std::string const& task_name="",
+    boost::asynchronous::any_interruptible interruptible_post_future(F1 func, std::string const& task_name="",
                                                                    std::size_t post_prio=0)
     {
         // we want to log if possible
         return boost::asynchronous::interruptible_post_future(
                                         m_worker,
-                                        boost::asynchronous::check_alive_before_exec(std::forward<F1>(func),m_tracking),
+                                        boost::asynchronous::check_alive_before_exec(std::move(func),m_tracking),
                                         task_name,
                                         post_prio).second;
     }
     template <class CallerSched,class F1, class F2>
-    void call_callback(CallerSched s, F1&& func,F2&& cb_func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
+    void call_callback(CallerSched s, F1 func,F2 cb_func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
     {
         // we want to log if possible
         boost::asynchronous::post_callback(s,
-                                        boost::asynchronous::check_alive_before_exec(std::forward<F1>(func),m_tracking),
+                                        boost::asynchronous::check_alive_before_exec(std::move(func),m_tracking),
                                         m_scheduler,
-                                        boost::asynchronous::check_alive(std::forward<F2>(cb_func),m_tracking),
+                                        boost::asynchronous::check_alive(std::move(cb_func),m_tracking),
                                         task_name,
                                         post_prio,
                                         cb_prio);
     }
     template <class CallerSched,class F1, class F2>
-    boost::asynchronous::any_interruptible interruptible_call_callback(CallerSched s, F1&& func,F2&& cb_func, std::string const& task_name="",
+    boost::asynchronous::any_interruptible interruptible_call_callback(CallerSched s, F1 func,F2 cb_func, std::string const& task_name="",
                                                                     std::size_t post_prio=0, std::size_t cb_prio=0)
     {
         return boost::asynchronous::interruptible_post_callback(
                                         s,
-                                        boost::asynchronous::check_alive_before_exec(std::forward<F1>(func),m_tracking),
+                                        boost::asynchronous::check_alive_before_exec(std::move(func),m_tracking),
                                         m_scheduler,
-                                        boost::asynchronous::check_alive(std::forward<F2>(cb_func),m_tracking),
+                                        boost::asynchronous::check_alive(std::move(cb_func),m_tracking),
                                         task_name,
                                         post_prio,
                                         cb_prio);
