@@ -16,7 +16,10 @@
 #include <cstddef>
 #include <map>
 
+#include <boost/mpl/eval_if.hpp>
+#include <boost/mpl/identity.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/asynchronous/detail/metafunctions.hpp>
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/checks.hpp>
@@ -173,11 +176,22 @@ public:
         m_worker = rhs.m_worker;
         m_next_helper_id = rhs.m_next_helper_id;
     }
-                
+
+    // helper for continuations
+    template <class T>
+    struct get_continuation_return
+    {
+        typedef typename T::return_type type;
+    };
     template <class F1, class F2>
     void post_callback(F1&& func,F2&& cb_func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
     {
-        typedef decltype(func()) f1_result_type;
+        typedef typename ::boost::mpl::eval_if<
+            typename has_is_continuation_task<decltype(func())>::type,
+            get_continuation_return<decltype(func())>,
+            ::boost::mpl::identity<decltype(func())>
+        >::type f1_result_type;
+
         unsigned long connect_id = m_next_helper_id;
         boost::shared_ptr<F2> cbptr(boost::make_shared<F2>(std::forward<F2>(cb_func)));
 
