@@ -123,8 +123,8 @@ struct continuation_task<void>
 public:
     typedef void res_type;
 
-    continuation_task(continuation_task&& rhs) = default;
-    continuation_task(continuation_task const& rhs) = default;
+    continuation_task(continuation_task&& ) = default;
+    continuation_task(continuation_task const& ) = default;
 
     continuation_task(const std::string& name=""):m_promise(new boost::promise<void>()),m_name(name){}
 

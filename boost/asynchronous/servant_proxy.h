@@ -26,6 +26,7 @@
 #include <boost/type_traits/has_trivial_constructor.hpp>
 #include <boost/utility/enable_if.hpp>
 #include <boost/mpl/has_xxx.hpp>
+#include <boost/preprocessor/facilities/overload.hpp>
 
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/post.hpp>
