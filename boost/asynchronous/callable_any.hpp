@@ -39,7 +39,7 @@ struct any_callable: public boost::asynchronous::any_callable_helper
 {
     any_callable(){}
     template <class T>
-    any_callable(T t):any_callable_helper(t){}
+    any_callable(T t):any_callable_helper(std::move(t)){}
     // dummies
     typedef boost::archive::text_oarchive oarchive;
     typedef boost::archive::text_iarchive iarchive;

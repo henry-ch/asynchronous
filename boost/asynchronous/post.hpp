@@ -98,7 +98,7 @@ namespace detail
 #ifndef BOOST_NO_RVALUE_REFERENCES
         post_future_helper_base(boost::shared_ptr<boost::promise<R> > p, F&& f)
             : boost::asynchronous::job_traits<JOB>::diagnostic_type(),
-              m_promise(p),m_func(std::forward<F>(f)) {}
+              m_promise(p),m_func(boost::make_shared<F>(std::forward<F>(f))) {}
         post_future_helper_base(post_future_helper_base&& rhs)
             : boost::asynchronous::job_traits<JOB>::diagnostic_type(),
               m_promise(std::move(rhs.m_promise)),m_func(std::move(rhs.m_func)) {}
@@ -111,30 +111,15 @@ namespace detail
 #endif
     //#else
         post_future_helper_base(post_future_helper_base const& rhs)
-            :boost::asynchronous::job_traits<JOB>::diagnostic_type(),m_promise(rhs.m_promise),m_func(rhs.m_func){}
-        post_future_helper_base(boost::shared_ptr<boost::promise<R> > p, F const& f)
-            :boost::asynchronous::job_traits<JOB>::diagnostic_type(),m_promise(p),m_func(f){}
+            :boost::asynchronous::job_traits<JOB>::diagnostic_type()
+            ,m_promise(rhs.m_promise),m_func(rhs.m_func){}
     //#endif
         void operator()()
         {
-            OP()(m_promise,m_func);
+            OP()(m_promise,*m_func);
         }
-//        template <class Archive>
-//        void save(Archive & , const unsigned int /*version*/)const
-//        {
-//        }
-//        template <class Archive>
-//        void load(Archive & , const unsigned int /*version*/)
-//        {
-
-//        }
-//        BOOST_SERIALIZATION_SPLIT_MEMBER()
-//        std::string get_task_name()const
-//        {
-//            return "";
-//        }
         boost::shared_ptr<boost::promise<R> > m_promise;
-        F m_func;
+        boost::shared_ptr<F> m_func;
     };
 
     // version for serializable tasks but not continuations
@@ -150,7 +135,7 @@ namespace detail
 #ifndef BOOST_NO_RVALUE_REFERENCES
         post_future_helper_base(boost::shared_ptr<boost::promise<R> > p, F&& f)
             : boost::asynchronous::job_traits<JOB>::diagnostic_type(),
-              m_promise(p),m_func(std::forward<F>(f)) {}
+              m_promise(p),m_func(boost::make_shared<F>(std::forward<F>(f))) {}
         post_future_helper_base(post_future_helper_base&& rhs)
             : boost::asynchronous::job_traits<JOB>::diagnostic_type(),
               m_promise(std::move(rhs.m_promise)),m_func(std::move(rhs.m_func)) {}
@@ -163,14 +148,13 @@ namespace detail
 #endif
     //#else
         post_future_helper_base(post_future_helper_base const& rhs)
-            :boost::asynchronous::job_traits<JOB>::diagnostic_type(),m_promise(rhs.m_promise),m_func(rhs.m_func){}
-        post_future_helper_base(boost::shared_ptr<boost::promise<R> > p, F const& f)
-            :boost::asynchronous::job_traits<JOB>::diagnostic_type(),m_promise(p),m_func(f){}
+            :boost::asynchronous::job_traits<JOB>::diagnostic_type(),m_promise(rhs.m_promise)
+            ,m_func(rhs.m_func){}
     //#endif
         template <class Archive>
         void save(Archive & ar, const unsigned int /*version*/)const
         {
-            ar & m_func;
+            ar & *m_func;
         }
         template <class Archive>
         void load(Archive & ar, const unsigned int /*version*/)
@@ -193,15 +177,15 @@ namespace detail
         }
         std::string get_task_name()const
         {
-            return m_func.get_task_name();
+            return m_func->get_task_name();
         }
         BOOST_SERIALIZATION_SPLIT_MEMBER()
         void operator()()
         {
-            OP()(m_promise,m_func);
+            OP()(m_promise,*m_func);
         }
         boost::shared_ptr<boost::promise<R> > m_promise;
-        F m_func;
+        boost::shared_ptr<F> m_func;
     };
     // version for tasks which are serializable AND continuations
     // TODO a bit better than checking R...
@@ -216,7 +200,7 @@ namespace detail
 #ifndef BOOST_NO_RVALUE_REFERENCES
         post_future_helper_base(boost::shared_ptr<boost::promise<R> > p, F&& f)
             : boost::asynchronous::job_traits<JOB>::diagnostic_type(),
-              m_promise(p),m_func(std::forward<F>(f)) {}
+              m_promise(p),m_func(boost::make_shared<F>(std::forward<F>(f))) {}
         post_future_helper_base(post_future_helper_base&& rhs)
             : boost::asynchronous::job_traits<JOB>::diagnostic_type(),
               m_promise(std::move(rhs.m_promise)),m_func(std::move(rhs.m_func)) {}
@@ -230,30 +214,28 @@ namespace detail
     //#else
         post_future_helper_base(post_future_helper_base const& rhs)
             :boost::asynchronous::job_traits<JOB>::diagnostic_type(),m_promise(rhs.m_promise),m_func(rhs.m_func){}
-        post_future_helper_base(boost::shared_ptr<boost::promise<R> > p, F const& f)
-            :boost::asynchronous::job_traits<JOB>::diagnostic_type(),m_promise(p),m_func(f){}
     //#endif
         template <class Archive>
         void save(Archive & ar, const unsigned int /*version*/)const
         {
-            ar & m_func;
+            ar & *m_func;
         }
         template <class Archive>
         void load(Archive & ar, const unsigned int version)
         {
-            m_func.template as_result<typename Scheduler::job_type::iarchive,Archive>(ar,version);
+            m_func->template as_result<typename Scheduler::job_type::iarchive,Archive>(ar,version);
         }
         std::string get_task_name()const
         {
-            return m_func.get_task_name();
+            return m_func->get_task_name();
         }
         BOOST_SERIALIZATION_SPLIT_MEMBER()
         void operator()()
         {
-            OP()(m_promise,m_func);
+            OP()(m_promise,*m_func);
         }
         boost::shared_ptr<boost::promise<R> > m_promise;
-        F m_func;
+        boost::shared_ptr<F> m_func;
     };
 }
 
