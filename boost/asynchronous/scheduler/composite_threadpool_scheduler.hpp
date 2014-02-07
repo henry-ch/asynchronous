@@ -88,48 +88,22 @@ public:
         return res;
     }
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    void post(job_type&& job) const
+    void post(job_type job) const
     {
-        post(std::forward<job_type>(job),0);
+        post(std::move(job),0);
     }
-    void post(job_type&& job,std::size_t priority) const
+    void post(job_type job,std::size_t priority) const
     {
-        (m_subpools[this->find_position(priority,m_subpools.size())]).post(std::forward<job_type>(job),priority);
+        (m_subpools[this->find_position(priority,m_subpools.size())]).post(std::move(job),priority);
     }
-    void post(boost::asynchronous::any_callable&& job,const std::string& name) const
+    boost::asynchronous::any_interruptible interruptible_post(job_type job) const
     {
-        typename boost::asynchronous::job_traits<job_type>::wrapper_type w(std::forward<boost::asynchronous::any_callable>(job));
-        w.set_name(name);
-        post(std::move(w));
+        return (m_subpools[this->find_position(0,m_subpools.size())]).interruptible_post(std::move(job));
     }
-    void post(boost::asynchronous::any_callable&& job,const std::string& name,std::size_t priority) const
+    boost::asynchronous::any_interruptible interruptible_post(job_type job,std::size_t priority) const
     {
-        typename boost::asynchronous::job_traits<job_type>::wrapper_type w(std::forward<boost::asynchronous::any_callable>(job));
-        w.set_name(name);
-        post(std::move(w),priority);
+        return (m_subpools[this->find_position(priority,m_subpools.size())]).interruptible_post(std::move(job));
     }
-    boost::asynchronous::any_interruptible interruptible_post(job_type&& job) const
-    {
-        return (m_subpools[this->find_position(0,m_subpools.size())]).interruptible_post(std::forward<job_type>(job));
-    }
-    boost::asynchronous::any_interruptible interruptible_post(job_type&& job,std::size_t priority) const
-    {
-        return (m_subpools[this->find_position(priority,m_subpools.size())]).interruptible_post(std::forward<job_type>(job));
-    }
-    boost::asynchronous::any_interruptible interruptible_post(boost::asynchronous::any_callable&& job,const std::string& name) const
-    {
-        typename boost::asynchronous::job_traits<job_type>::wrapper_type w(std::forward<boost::asynchronous::any_callable>(job));
-        w.set_name(name);
-        return interruptible_post(std::move(w));
-    }
-    boost::asynchronous::any_interruptible interruptible_post(boost::asynchronous::any_callable&& job,
-                                                           const std::string& name,std::size_t priority) const
-    {
-        typename boost::asynchronous::job_traits<job_type>::wrapper_type w(std::forward<boost::asynchronous::any_callable>(job));
-        w.set_name(name);
-        return interruptible_post(std::move(w),priority);
-    }
-
 #else
 //TODO
 #endif
