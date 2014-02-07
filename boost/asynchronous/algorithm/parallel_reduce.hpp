@@ -54,7 +54,7 @@ struct parallel_reduce_range_move_helper: public boost::asynchronous::continuati
 {
     parallel_reduce_range_move_helper(Range&& range,Func func,long cutoff,
                         const std::string& task_name, std::size_t prio)
-        :range_(std::forward<Range>(range)),func_(std::move(func)),cutoff_(cutoff),task_name_(std::move(task_name)),prio_(prio)
+        :range_(boost::make_shared<Range>(std::forward<Range>(range))),func_(std::move(func)),cutoff_(cutoff),task_name_(std::move(task_name)),prio_(prio)
     {}
     void operator()()const
     {
@@ -65,7 +65,7 @@ struct parallel_reduce_range_move_helper: public boost::asynchronous::continuati
     //    if (!locked_scheduler.is_valid())
     //        // give up
     //        return;
-        boost::shared_ptr<Range> range = boost::make_shared<Range>(std::move(range_));
+        boost::shared_ptr<Range> range = std::move(range_);
         for (auto it= boost::begin(*range); it != boost::end(*range) ; )
         {
             auto itp = it;
@@ -109,7 +109,7 @@ struct parallel_reduce_range_move_helper: public boost::asynchronous::continuati
                     // future results of recursive tasks
                     std::move(fus));
     }
-    Range range_;
+    boost::shared_ptr<Range> range_;
     Func func_;
     long cutoff_;
     std::string task_name_;
