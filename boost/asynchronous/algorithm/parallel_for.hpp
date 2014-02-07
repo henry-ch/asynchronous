@@ -46,6 +46,11 @@ struct parallel_for_range_move_helper: public boost::asynchronous::continuation_
                         const std::string& task_name, std::size_t prio)
         :range_(boost::make_shared<Range>(std::forward<Range>(range))),func_(std::move(func)),cutoff_(cutoff),task_name_(std::move(task_name)),prio_(prio)
     {}
+    parallel_for_range_move_helper(parallel_for_range_move_helper&&)=default;
+    parallel_for_range_move_helper& operator=(parallel_for_range_move_helper&&)=default;
+    parallel_for_range_move_helper(parallel_for_range_move_helper const&)=delete;
+    parallel_for_range_move_helper& operator=(parallel_for_range_move_helper const&)=delete;
+
     void operator()()const
     {
         std::vector<boost::future<void> > fus;
