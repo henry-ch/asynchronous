@@ -21,8 +21,8 @@
         <title>Preface</title>
         <para>
             <emphasis role="underline">Note</emphasis>: Asynchronous is not part of the Boost
-            library. It is planed to be offered for Review at the end of 2013. At the moment it is
-            still in heavy development.</para>
+            library. It is planed to be offered for Review in 2014. At the moment it is still in
+            development.</para>
         <para>Herb Sutter wrote in an article <command
                 xlink:href="http://www.gotw.ca/publications/concurrency-ddj.htm"/> "The Free Lunch
             Is Over", meaning that developpers will be forced to learn to develop multi-threaded
@@ -205,7 +205,12 @@ future&lt;int> f = async([b](){return b->foo()});          </programlisting>
     <part>
         <title>Concepts</title>
         <chapter>
-            <title>Related designs: Active Object, Proactor</title>
+            <title>Related designs: std::async, Active Object, Proactor</title>
+            <sect1>
+                <title>std::async</title>
+                <subtitle>What is wrong with it</subtitle>
+                <para>TODO</para>
+            </sect1>
             <sect1>
                 <title>Active Object</title>
                 <subtitle>Design</subtitle>
@@ -214,15 +219,15 @@ future&lt;int> f = async([b](){return b->foo()});          </programlisting>
                             <imagedata fileref="pics/ActiveObject.jpg"/>
                         </imageobject>
                     </inlinemediaobject></para>
-                <para>This simplified diagram shows one possible design variant of an Active Object
+                <para>This simplified diagram shows a possible design variant of an Active Object
                     pattern.</para>
                 <para>A thread-unsafe Servant is hidden behind a Proxy, which offers the same
-                    methods as the Servant itself. This Proxy is called by clients and delivers a
+                    members as the Servant itself. This Proxy is called by clients and delivers a
                     future object, which will, at some later point, contain the result of the
                     corresponding member called on the servant. The Proxy packs a MethodRequest
                     corresponding to a Servant call into the ActivationQueue. The Scheduler waits
                     permanently for MethodRequests in the queue, dequeues them, and executes them.
-                    As only one scheduler waits for requests, it serializes acces to the Servant,
+                    As only one scheduler waits for requests, it serializes access to the Servant,
                     thus providing thread-safety.</para>
                 <para>However, this pattern presents some liabilities:<itemizedlist>
                         <listitem>
@@ -264,13 +269,13 @@ future&lt;int> f = async([b](){return b->foo()});          </programlisting>
                     this concept by allowing an unlimited number of objects to live within a single
                     thread context, thus amortizing the costs.</para>
                 <para>This brings another difference with ActiveObjects. As many objects are
-                    potentially living in a thread "world", none should be allowed to process
+                    potentially living in a thread context, none should be allowed to process
                     long-lasting tasks as it would reduce reactivity of the whole component. In this
                     aspect, Asynchronous' philosophy is closer to a Proactor.</para>
                 <para>As long-lasting tasks do happen, Boost.Asynchronous provides several
-                    implementations of Threadpools and the infrastructure to make it safe to post
+                    implementations of threadpools and the infrastructure to make it safe to post
                     work to threadpools and get aynchronously a callback. It also provides safe
-                    mechanisms to shutdown Active Components and Threadpools.</para>
+                    mechanisms to shutdown Active Components and threadpools.</para>
             </sect1>
             <sect1>
                 <title>Shutting down</title>
@@ -281,12 +286,12 @@ future&lt;int> f = async([b](){return b->foo()});          </programlisting>
                     of threads. </para>
                 <para>When the last instance of the inner-ActiveComponent scheduler object is
                     destroyed, the scheduler thread is stopped. When the last instance of a
-                    scheduler proxy is destroyed, the scheduler thread is joined. That's as simple
-                    as that.</para>
+                    scheduler proxy is destroyed, the scheduler thread is joined. It's as simple as
+                    that. This makes threads shared objects.</para>
             </sect1>
             <sect1>
                 <title>Object lifetime</title>
-                <para>There are more subtle bugs when living in a multithreaded world. Consider the
+                <para>There are subtle bugs when living in a multithreaded world. Consider the
                     following class:</para>
                 <para>
                     <programlisting>struct Unsafe
@@ -294,29 +299,34 @@ future&lt;int> f = async([b](){return b->foo()});          </programlisting>
 void foo()
 {
   m_mutex.lock();
-  // do something while locked
+  // call private member
   m_mutex.unlock();
 }
 private:
 void foobar()
 {
-  //do something while unlocked
+  //we are already locked when called, do something while locked
 }
 boost::mutex m_mutex;
 };            </programlisting>
                 </para>
-                <para>This is called a thread-safe interface pattern. What is public is locked, what
-                    is private no. Simple enough, right? Well, first you have the risk of deadlock
-                    if a private member calls a public one. Plus, let's face it, for any complex
-                    class, where there's a mutex, there is a race...</para>
-                <para>But even worse, this simply doesn't work. It supposes that a class can protect
-                    itself. Well, no, it can't. Why? You can't protect the destructor. If the object
-                    (and the mutex) gets destroyed when a thread waits for it in foo(), we're toast.
-                    Ok, then we can use a shared_ptr, and all is good, right? Then you have no
-                    destructor if someone keeps the object alive. Then you still have a risk of a
-                    signal, callback, etc. What you need is protect your object with a shared_ptr
-                    and have no other way to access the object. Asynchronous provides just
-                    this.</para>
+                <para>This is called a thread-safe interface pattern. Public members lock, private
+                    do not. Simple enough, right? Unfortunately, it doesn't fly.</para>
+                <para>First you have the risk of deadlock if a private member calls a public one
+                    while being called from another public member. Forget to check one path of
+                    execution within your class implementation and you get a nice deadlock. You'll
+                    have to test every single path of execution to prove your code is correct. And
+                    this at every change. Hmmm, does not sound reassuring.</para>
+                <para>Anyway, let's face it, for any complex class, where there's a mutex, there is
+                    a race or a deadlock...</para>
+                <para>But even worse, the principle itself is not correct in C++. It supposes that a
+                    class can protect itself. Well, no, it can't. Why? You can't protect the
+                    destructor. If the object (and the mutex) gets destroyed when a thread waits for
+                    it in foo(), we're toast. Ok, then we can use a shared_ptr, and all is good,
+                    right? Then you have no destructor called as someone keeps the object alive,
+                    right? Well, you still have a risk of a signal, callback, etc. </para>
+                <para>What you need is protect your object with a shared_ptr and have no other way
+                    to access the object. Asynchronous provides this.</para>
                 <para>There are more lifetime issues, even without mutexes. If you have ever used
                     Boost.Asio, a common mistake and an easy one is when a callback is called in the
                     proactor thread after an asynchronous operation, but the object called is long
@@ -324,7 +334,8 @@ boost::mutex m_mutex;
                         <code>trackable_servant</code> (TODO link) which makes sure that a callback
                     is not called if the object which called the asynchronous operation is gone. It
                     also prevents a task posted in a threadpool to be called if this condition
-                    occurs.</para>
+                    occurs, which improves performance. Some helper members even make sure you get
+                    no crash, even while facing a Boost.Asio callback.</para>
             </sect1>
             <sect1>
                 <title>Interrupting</title>
@@ -337,7 +348,8 @@ boost::mutex m_mutex;
                     task will not start, if running, it will stop at the next interruption point,
                     which are documented in the <link
                         xlink:href="http://www.boost.org/doc/libs/1_54_0/doc/html/thread/thread_management.html#thread.thread_management.tutorial.interruption"
-                        >Boost.Thread documentation</link>.</para>
+                        >Boost.Thread documentation</link>. Diagnostics will show that a task was
+                    interrupted.</para>
             </sect1>
             <sect1>
                 <title>Diagnostics</title>
@@ -354,9 +366,44 @@ boost::mutex m_mutex;
                     out, using a state machine, the earliest point a task can be thrown to a
                     threadpool will give some easy concurrency. Throw enough tasks to the threadpool
                     and manage this with a state machine and you might use your cores with little
-                    effort. In a second step, it is still possible to parallelize algorithms and
-                    profit from smaller tasks divided among more cores. To find out if a task is
-                    small enough to be parallelized, look at the diagnostics.</para>
+                    effort. Parallelization can then be improved by logging which tasks are long
+                    enough to be parallelized.</para>
+            </sect1>
+            <sect1>
+                <title>Continuations</title>
+                <para>Callback are great when you have a complex flow of operations which require a
+                    state machine for management, however there are cases where callbacks are not an
+                    ideal solution. Either because your application requires a constant switching of
+                    context between single-threaded and parallel parts, or because the
+                    single-threaded part might be busy, which would delay completion of the
+                    algorithm. A known example of this is a parallel fibonacci. In this case, one
+                    can register a continuation, which is to be executed upon completion of one or
+                    several tasks.</para>
+            </sect1>
+            <sect1>
+                <title>Want more power? What about extra machines?</title>
+                <para>What to do if your threadpools are using all of your cores but there simply
+                    are not enough cores for the job? Buy more cores? Unfortunately, the number of
+                    cores a single-machine can use is limited, unless you have unlimited money. A
+                    dual 6-core Xeon, 24 threads with hyperthreading will cost much more than 2 x
+                    6-core i7, and will usually have a lesser clock frequency and an older
+                    architecture. </para>
+                <para>The solution could be: start with the i7, then if you need more power, add
+                    some more machines which will steal jobs from your threadpools through TCP. This
+                    can be done quite easily with Asynchronous.</para>
+            </sect1>
+            <sect1>
+                <title>Parallel algorithms</title>
+                <para>The library also comes with non-blocking algorithms which fit well in the
+                    asynchronous system, with more to come. If you want to contribute some more, be
+                    welcome. At the moment, the library offers:<itemizedlist>
+                        <listitem>
+                            <para>parallel_for: with iterators or ranges, support of TCP</para>
+                        </listitem>
+                        <listitem>
+                            <para>parallel_reduce: with iterators or ranges, support of TCP</para>
+                        </listitem>
+                    </itemizedlist></para>
             </sect1>
             <sect1>
                 <title>Design Diagrams</title>
@@ -365,10 +412,10 @@ boost::mutex m_mutex;
                             <imagedata fileref="pics/AsynchronousDesign.jpg"/>
                         </imageobject>
                     </inlinemediaobject></para>
-                <para>This diagram shows an overview of the design behind Asynchronous. A Servant
-                    object lives in a single-theaded world, communicating with the outside world
-                    only with one or several queues, from which the single-threaded scheduler pops
-                    tasks. Tasks are pushed by calling a member on a proxy object.</para>
+                <para>This diagram shows an overview of the design behind Asynchronous. One or more
+                    Servant objects live in a single-theaded world, communicating with the outside
+                    world only with one or several queues, from which the single-threaded scheduler
+                    pops tasks. Tasks are pushed by calling a member on a proxy object.</para>
                 <para>Like an Active Object, a client uses a proxy (a shared object type), which
                     offers the same members as the real servant, with the same parameters, the only
                     difference being the return type, a boost::future&lt;R>, with R being the return
@@ -405,7 +452,12 @@ boost::mutex m_mutex;
                             <para>The last instance of any_shared_scheduler_proxy goes out of scope
                                 with the last servant proxy and joins.</para>
                         </listitem>
-                    </itemizedlist></para>
+                    </itemizedlist>
+                </para>
+                <para>It is usually accepted that threads are orthogonal to an OO design and
+                    therefore are to manage as they don't belong to an object. Asynchronous comes
+                    close to this: threads are not directly used, but instead owned by a scheduler,
+                    in which one creates objects and tasks.</para>
             </sect1>
         </chapter>
     </part>
@@ -419,7 +471,7 @@ boost::mutex m_mutex;
                         xlink:href="examples/example_post_future.cpp">here</link>), this is not really
                     asynchronous yet:</para>
                 <programlisting>#include &lt;boost/asynchronous/scheduler/threadpool_scheduler.hpp>
-#include &lt;boost/asynchronous/queue/threadsafe_list.hpp>
+#include &lt;boost/asynchronous/queue/lockfree_queue.hpp>
 #include &lt;boost/asynchronous/scheduler_shared_proxy.hpp>
 #include &lt;boost/asynchronous/post.hpp>
 struct void_task
@@ -442,7 +494,7 @@ struct int_task
 // we use auto as it is easier than boost::asynchronous::any_shared_scheduler_proxy&lt;>
 auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                             new boost::asynchronous::threadpool_scheduler&lt;
-                                boost::asynchronous::threadsafe_list&lt;> >(3));
+                                boost::asynchronous::lockfree_queue&lt;> >(3));
 // post a simple task and wait for execution to complete
 boost::shared_future&lt;void> fuv = boost::asynchronous::post_future(scheduler, void_task());
 fuv.get();
@@ -453,7 +505,7 @@ int res = fui.get();
                 <para>Of course this works with C++11 lambdas:</para>
                 <programlisting>auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                             new boost::asynchronous::threadpool_scheduler&lt;
-                                boost::asynchronous::threadsafe_list&lt;> >(3));
+                                boost::asynchronous::lockfree_queue&lt;> >(3));
 // post a simple task and wait for execution to complete
 boost::shared_future&lt;void> fuv =
                 boost::asynchronous::post_future(scheduler, [](){std::cout &lt;&lt; "void lambda" &lt;&lt; std::endl;});
@@ -465,8 +517,8 @@ int res = fui.get();   </programlisting>
                 <para>boost::asynchronous::post_future posts a piece of work to a threadpool
                     scheduler with 3 threads and using a simple threadsafe_list. We get a
                     boost::future&lt;the type of the task return type>.</para>
-                <para>This looks like std::async, but we're just getting started. Let's move on to
-                    something more useful.</para>
+                <para>This looks like much std::async, but we're just getting started. Let's move on
+                    to something more asynchronous.</para>
             </sect1>
             <sect1>
                 <title>A servant proxy</title>
@@ -495,20 +547,20 @@ int res = fui.get();   </programlisting>
     int m_data;
 }; </programlisting>
                 <para>We now create a proxy type to be used in other threads:</para>
-                <programlisting>class ServantProxy : public boost::asynchronous::servant_proxy&lt;ServantProxy,Servant>
+                <programlisting>class ServantProxy : public boost::asynchronous::servant_proxy&lt;ServantProxy,<emphasis role="bold">Servant</emphasis>>
 {
 public:
     // forwarding constructor. Scheduler to servant_proxy, followed by arguments to Servant.
     template &lt;class Scheduler>
     ServantProxy(Scheduler s, int data):
-        boost::asynchronous::servant_proxy&lt;ServantProxy,Servant>(s, data)
+        boost::asynchronous::servant_proxy&lt;ServantProxy,<emphasis role="bold">Servant</emphasis>>(s, data)
     {}
     // the following members must be available "outside"
     // foo and foobar, just as a post (no interesting return value)
-    BOOST_ASYNC_POST_MEMBER(foo)
-    BOOST_ASYNC_POST_MEMBER(foobar)
+    BOOST_ASYNC_POST_MEMBER(<emphasis role="bold">foo</emphasis>)
+    BOOST_ASYNC_POST_MEMBER(<emphasis role="bold">foobar</emphasis>)
     // for doIt, we'd like a future
-    BOOST_ASYNC_FUTURE_MEMBER(doIt)
+    BOOST_ASYNC_FUTURE_MEMBER(<emphasis role="bold">doIt</emphasis>)
 };</programlisting>
                 <para>Let's use our newly defined proxy:</para>
                 <programlisting>int something = 3;
@@ -516,7 +568,7 @@ public:
     // with c++11
     auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                     new boost::asynchronous::single_thread_scheduler&lt;
-                          boost::asynchronous::threadsafe_list&lt;> >);
+                          boost::asynchronous::lockfree_queue&lt;> >);
 
     {
         // arguments (here 42) are forwarded to Servant's constructor
@@ -537,8 +589,9 @@ std::cout&lt;&lt; "something:" &lt;&lt; something &lt;&lt; std::endl; // somethi
                     proxy goes out of scope, the servant destructor is posted. When the scheduler
                     goes out of scope, its thread is stopped and joined. The queue is processed
                     completely first. Of course, as many servants as desired can be created in this
-                    scheduler world. Please have a look at <link
-                        xlink:href="examples/example_simple_servant.cpp">the complete example</link>.</para>
+                    scheduler context. Please have a look at <link
+                        xlink:href="examples/example_simple_servant.cpp">the complete
+                    example</link>.</para>
             </sect1>
             <sect1>
                 <title>Using a threadpool</title>
@@ -552,27 +605,28 @@ std::cout&lt;&lt; "something:" &lt;&lt; something &lt;&lt; std::endl; // somethi
                     scheduler. One would argue that it is possible not to block on the future, and
                     instead ask if there is a result. But then, what if not? Is the alternative to
                     poll? Like in the "good" all times?</para>
-                <para>Ok, ok, we buy the story with the future, but what about thread-safety?
-                    Asynchronous takes care of this. A callback is never called from a threadpool,
-                    but instead posted back to the queue of the scheduler which posted the work. All
-                    the servant has to do is to do nothing and wait until the callback is executed.
-                    Clearly, this brings some new challenges as the flow of control gets harder to
+                <para>If we accept the future argument, but what about thread-safety? Asynchronous
+                    takes care of this. A callback is never called from a threadpool, but instead
+                    posted back to the queue of the scheduler which posted the work. All the servant
+                    has to do is to do nothing and wait until the callback is executed. Note that
+                    this is not the same as a blocking wait, the servant can still react to
+                    events.</para>
+                <para>Clearly, this brings some new challenges as the flow of control gets harder to
                     follow. This is why a servant is often written using state machines. The
                     (biased) author suggests to have a look at the <link
                         xlink:href="http://svn.boost.org/svn/boost/trunk/libs/msm/doc/HTML/index.html"
                         > Meta State Machine library </link> , which plays nicely with
                     Asynchronous.</para>
-                <para>But then, as someone at the back of the room shouts, I'll get the usual
-                    proactor-class issues of crashing when the servant has long been destroyed when
-                    the callback is posted. No you won't. Asynchronous provides
+                <para>But what about the usual proactor issues of crashing when the servant has long
+                    been destroyed when the callback is posted. Gone. Asynchronous provides
                         <code>trackable_servant</code> which will ensure that a callback is not
                     called if the servant is gone. Better even, if the servant has been destroyed,
                     an unstarted posted task will not be executed.</para>
-                <para>Again, from the back of the room comes an issue. And what if I post a task,
-                    say a lambda, which captures a shared_ptr to an object per value, and this
-                    object is a boost::signal? Then when the task object has been executed and is
-                    destroyed, I'll get a race on the signal deregistration. Good point, but again
-                    no. Asynchronous ensures that a task created within a scheduler context gets
+                <para>Again comes another issue. And what if I post a task, say a lambda, which
+                    captures a shared_ptr to an object per value, and this object is a
+                    boost::signal? Then when the task object has been executed and is destroyed,
+                    I'll get a race on the signal deregistration. Good point, but again no.
+                    Asynchronous ensures that a task created within a scheduler context gets
                     destroyed in this context.</para>
                 <para>This is about the best protection you can get. What Asynchronous cannot
                     protect you from are self-made races within a task (if you post a task with a
@@ -585,19 +639,20 @@ std::cout&lt;&lt; "something:" &lt;&lt; something &lt;&lt; std::endl; // somethi
 {
     Servant(boost::asynchronous::any_weak_scheduler&lt;> scheduler)
         : boost::asynchronous::trackable_servant&lt;>(scheduler,
-                                               // threadpool with 3 threads and a simple threadsafe_list queue
+                                               // <emphasis role="bold">threadpool with 3 threads</emphasis> and a lockfree_queue
                                                boost::asynchronous::create_shared_scheduler_proxy(
-                                                   new <emphasis role="bold">boost::asynchronous::threadpool_scheduler</emphasis>&lt;
-                                                           boost::asynchronous::threadsafe_list&lt;> >(3))){}
+                                                   new <emphasis role="bold">boost::asynchronous::<emphasis role="bold">threadpool_scheduler</emphasis></emphasis>&lt;
+                                                           boost::asynchronous::lockfree_queue&lt;> >(<emphasis role="bold">3</emphasis>))){}
     // call to this is posted and executes in our (safe) single-thread scheduler
     void start_async_work()
     {
        //ok, let's post some work and wait for an answer
-       <emphasis role="bold">post_callback</emphasis>([](){std::cout &lt;&lt; "Long Work" &lt;&lt; std::endl;}, //work
-                     [this](){...}// callback. Safe to use this as if callback is called, Servant is alive
-                     );
+       <emphasis role="bold">post_callback</emphasis>(
+                    [](){std::cout &lt;&lt; "Long Work" &lt;&lt; std::endl;}, //work, do not use "this" here
+                    [/*this*/](boost::future&lt;void>){...}// callback. Safe to use "this" as callback is only called if Servant is alive
+        );
     }
-    };</programlisting>
+};</programlisting>
                 <para>We now have a servant, ready to be created in its own thread, which posts some
                     long work to a 3 thread-threadpool and gets a callback, but only if still alive.
                     Similarly, the long work will be executed by the threadpool only if Servant is
@@ -641,7 +696,7 @@ struct Servant2 : boost::asynchronous::trackable_servant&lt;>
          call_callback(m_worker.get_proxy(), // Servant's outer proxy, for posting tasks
                        m_worker.foo(), // what we want to call on Servant
                       // callback functor, when done.
-                      [](boost::shared_future&lt;int> result){...} );
+                      [](boost::future&lt;int> result){...} );// future&lt;return type of foo> 
     }
 };</programlisting>
                 </para>
@@ -676,15 +731,14 @@ struct Servant2 : boost::asynchronous::trackable_servant&lt;>
     {
         // start long interruptible tasks
         // we get an interruptible handler representing the task
-        boost::asynchronous::any_interruptible interruptible =
-        interruptible_post_callback(
+        <emphasis role="bold">boost::asynchronous::any_interruptible</emphasis> interruptible =
+        <emphasis role="bold">interruptible_post_callback</emphasis>(
                 // interruptible task
                [](){
                     std::cout &lt;&lt; "Long Work" &lt;&lt; std::endl;
-                    boost::this_thread::sleep(boost::posix_time::milliseconds(1000));}
-               ,
+                    boost::this_thread::sleep(boost::posix_time::milliseconds(1000));}, // sleep is an interrupting point
                // callback functor.
-               [](boost::shared_future&lt;void> ){std::cout &lt;&lt; "Callback will most likely not be called" &lt;&lt; std::endl;}
+               [](boost::future&lt;void> ){std::cout &lt;&lt; "Callback will most likely not be called" &lt;&lt; std::endl;}
         );
         // let the task start (not sure but likely)
         // if it had no time to start, well, then it will never.
@@ -705,8 +759,8 @@ struct Servant2 : boost::asynchronous::trackable_servant&lt;>
                     is also essential to plan what hardware one needs for an application(4 cores? Or
                     100?). We need to know what our program is doing. Asynchronous provides some
                     logging per task to help there. Let's have a look at some code. It's also time
-                    to start using our template parameters, in case you wondered why they are
-                    here.</para>
+                    to start using our template parameters for <code>trackable_servant</code>, in case you
+                    wondered why they are here.</para>
                 <programlisting>// we will be using loggable jobs internally
 typedef boost::asynchronous::any_loggable&lt;boost::chrono::high_resolution_clock> <emphasis role="bold">servant_job</emphasis>;
 // the type of our log
@@ -721,16 +775,15 @@ struct Servant : boost::asynchronous::trackable_servant&lt;<emphasis role="bold"
                                                    // Furthermore, it logs posted tasks
                                                    new boost::asynchronous::threadpool_scheduler&lt;
                                                            //servant_job is our job type
-                                                           boost::asynchronous::threadsafe_list&lt; <emphasis role="bold">servant_job</emphasis> > >(3))){}
+                                                           boost::asynchronous::lockfree_queue&lt; <emphasis role="bold">servant_job</emphasis> > >(3))){}
     void start_async_work()
     {
          post_callback(
                // task posted to threadpool
-               [](){...},
-               // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
-               [this](boost::shared_future&lt;int> res){...},// callback functor.
+               [](){...}, // will return an int
+               [](boost::future&lt;int> res){...},// callback functor.
                // the task / callback name for logging
-               "int_async_work"
+               <emphasis role="bold">"int_async_work"</emphasis>
         );
     }
     // we happily provide a way for the outside world to know what our threadpool did.
@@ -740,7 +793,7 @@ struct Servant : boost::asynchronous::trackable_servant&lt;<emphasis role="bold"
         return (*get_worker()).get_diagnostics();
     }
 };</programlisting>
-                <para>The proxy is also slightly different, as it uses a LOG macro and an argument
+                <para>The proxy is also slightly different, as it uses a _LOG macro and an argument
                     representing the name of the task.</para>
                 <programlisting>class ServantProxy : public boost::asynchronous::servant_proxy&lt;ServantProxy,Servant,servant_job>
 {
@@ -759,7 +812,7 @@ public:
                 <programlisting>// create a scheduler with logging
 auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                                 new boost::asynchronous::single_thread_scheduler&lt;
-                                    boost::asynchronous::threadsafe_list&lt;servant_job> >);
+                                    boost::asynchronous::lockfree_queue&lt;servant_job> >);
 // create a Servant                    
 ServantProxy proxy(scheduler); 
 ...
@@ -770,9 +823,9 @@ for (auto mit = single_thread_sched_diag.begin(); mit != single_thread_sched_dia
      std::cout &lt;&lt; "job type: " &lt;&lt; (*mit).first &lt;&lt; std::endl;
      for (auto jit = (*mit).second.begin(); jit != (*mit).second.end();++jit)
      {
-          std::cout &lt;&lt; "job waited in us: " &lt;&lt; boost::chrono::nanoseconds((*jit).get_started_time() - (*jit).get_posted_time()).count() / 1000 &lt;&lt; std::endl;
-          std::cout &lt;&lt; "job lasted in us: " &lt;&lt; boost::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() / 1000 &lt;&lt; std::endl;
-          std::cout &lt;&lt; "job interrupted? "  &lt;&lt; std::boolalpha &lt;&lt; (*jit).is_interrupted() &lt;&lt; std::endl;
+          std::cout &lt;&lt; "job waited in us: " &lt;&lt; boost::chrono::nanoseconds((*jit).get_started_time() - (*jit).<emphasis role="bold">get_posted_time()</emphasis>).count() / 1000 &lt;&lt; std::endl;
+          std::cout &lt;&lt; "job lasted in us: " &lt;&lt; boost::chrono::nanoseconds((*jit).get_finished_time() - (*jit).<emphasis role="bold">get_started_time()</emphasis>).count() / 1000 &lt;&lt; std::endl;
+          std::cout &lt;&lt; "job interrupted? "  &lt;&lt; std::boolalpha &lt;&lt; (*jit).<emphasis role="bold">is_interrupted()</emphasis> &lt;&lt; std::endl;
      }
      }              </programlisting>
                 <para>It goes similarly with the threapool scheduler, with the slight difference
@@ -786,8 +839,8 @@ for (auto mit = single_thread_sched_diag.begin(); mit != single_thread_sched_dia
                 <para>Sometimes, all jobs posted to a scheduler do not have the same priority. For
                     threadpool schedulers, <code>composite_threadpool_scheduler</code> is an option.
                     For a single-threaded scheduler, Asynchronous does not provide a priority queue
-                    but a queue, which itself contains any number of queues, of different type if
-                    needed. This has several advantages:<itemizedlist>
+                    but a queue container, which itself contains any number of queues, of different
+                    types if needed. This has several advantages:<itemizedlist>
                         <listitem>
                             <para>Priority is defined simply by posting to the queue with the
                                 desired priority, so there is no need for expensive priority
@@ -797,7 +850,7 @@ for (auto mit = single_thread_sched_diag.begin(); mit != single_thread_sched_dia
                             <para>Ones gets also reduced contention if many threads of a threadpool
                                 post something to the queue of a single-threaded scheduler. If no
                                 priority is defined, one queue will be picked, according to a
-                                configurable policy.</para>
+                                configurable policy, reducing contention on a single queue.</para>
                         </listitem>
                         <listitem>
                             <para>It is possible to mix queues to get the best of each.</para>
@@ -806,10 +859,10 @@ for (auto mit = single_thread_sched_diag.begin(); mit != single_thread_sched_dia
                             <para>One can build a queue container of queue containers, etc.</para>
                         </listitem>
                     </itemizedlist></para>
-                <para>Note: This applies of course to any scheduler. We'll start with
-                    single-threaded schedulers used by managing servants for simplicity, but it is
-                    possible to have composite schedulers using queue containers for finest
-                    granularity and least contention.</para>
+                <para>Note: This applies to any scheduler. We'll start with single-threaded
+                    schedulers used by managing servants for simplicity, but it is possible to have
+                    composite schedulers using queue containers for finest granularity and least
+                    contention.</para>
                 <para>First, we need to create a single-threaded scheduler with several queues for
                     our servant to live in, for example, one threadsafe list and and lockfree
                     queues:</para>
@@ -2026,8 +2079,8 @@ class asio_scheduler;
             </sect1>
             <sect1>
                 <title>Supported compilers</title>
-                <para>At the moment, Asynchronous has only be tested with gcc versions 4.5 to
-                    4.7.</para>
+                <para>At the moment, Asynchronous has only be tested with gcc versions 4.7 to 4.8
+                    and clang 3.3.</para>
             </sect1>
         </chapter>
     </part>
