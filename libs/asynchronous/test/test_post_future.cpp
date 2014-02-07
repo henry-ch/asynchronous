@@ -29,6 +29,12 @@ struct void_task
 };
 struct int_task
 {
+    int_task()=default;
+    int_task(int_task&&)=default;
+    int_task& operator=(int_task&&)=default;
+    int_task(int_task const&)=delete;
+    int_task& operator=(int_task const&)=delete;
+
     int operator()()const
     {
         return 42;

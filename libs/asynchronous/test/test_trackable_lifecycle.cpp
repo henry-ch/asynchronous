@@ -28,6 +28,19 @@ namespace
 boost::thread::id main_thread_id;
 bool task_called=false;
 bool dtor_called=false;
+struct void_task
+{
+    void_task()=default;
+    void_task(void_task&&)=default;
+    void_task& operator=(void_task&&)=default;
+    void_task(void_task const&)=delete;
+    void_task& operator=(void_task const&)=delete;
+
+    void operator()()const
+    {
+        BOOST_FAIL( "unexpected call of task" );
+    }
+};
 
 struct Servant : boost::asynchronous::trackable_servant<>
 {
@@ -67,7 +80,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_endless_async_work2 not posted.");
         // start long task, which will never be called
         post_callback(
-                [](){ BOOST_FAIL( "unexpected call of task" );},// work
+                void_task(),// work
                 [](boost::future<void> ){ BOOST_FAIL( "unexpected call of callback" );}// should not be called
         );
     }
