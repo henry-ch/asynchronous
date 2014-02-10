@@ -112,6 +112,11 @@ struct serializable_for_each : public boost::asynchronous::serializable_task
         , func_(std::forward<Func>(f))
         , range_(std::forward<Range>(r))
     {}
+    serializable_for_each(serializable_for_each&&)=default;
+    serializable_for_each& operator=(serializable_for_each&&)=default;
+    serializable_for_each(serializable_for_each const&)=delete;
+    serializable_for_each& operator=(serializable_for_each const&)=delete;
+
     template <class Archive>
     void serialize(Archive & ar, const unsigned int /*version*/)
     {
