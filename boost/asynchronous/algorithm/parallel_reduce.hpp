@@ -152,11 +152,11 @@ struct parallel_reduce_range_move_helper<Range,Func,ReturnType,Job,typename ::bo
                         const std::string& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<ReturnType>()
         , boost::asynchronous::serializable_task(func.get_task_name())
-        , range_(std::forward<Range>(range)),func_(std::move(func)),cutoff_(cutoff),task_name_(std::move(task_name)),prio_(prio)
+        , range_(boost::make_shared<Range>(std::forward<Range>(range))),func_(std::move(func)),cutoff_(cutoff),task_name_(std::move(task_name)),prio_(prio)
     {}
     void operator()()const
     {
-        typedef std::vector<typename std::iterator_traits<decltype(boost::begin(range_))>::value_type> sub_range;
+        typedef std::vector<typename std::iterator_traits<decltype(boost::begin(*range_))>::value_type> sub_range;
         std::vector<boost::future<ReturnType> > fus;
         boost::asynchronous::any_weak_scheduler<Job> weak_scheduler = boost::asynchronous::get_thread_scheduler<Job>();
         boost::asynchronous::any_shared_scheduler<Job> locked_scheduler = weak_scheduler.lock();
@@ -164,7 +164,7 @@ struct parallel_reduce_range_move_helper<Range,Func,ReturnType,Job,typename ::bo
     //    if (!locked_scheduler.is_valid())
     //        // give up
     //        return;
-        boost::shared_ptr<Range> range = boost::make_shared<Range>(std::move(range_));
+        boost::shared_ptr<Range> range = boost::make_shared<Range>(std::move(*range_));
         for (auto it= boost::begin(*range); it != boost::end(*range) ; )
         {
             auto itp = it;
@@ -208,15 +208,26 @@ struct parallel_reduce_range_move_helper<Range,Func,ReturnType,Job,typename ::bo
                     std::move(fus));
     }
     template <class Archive>
-    void serialize(Archive & ar, const unsigned int /*version*/)
+    void save(Archive & ar, const unsigned int /*version*/)const
     {
-        ar & range_;
+        ar & (*range_);
         ar & func_;
         ar & cutoff_;
         ar & task_name_;
         ar & prio_;
     }
-    Range range_;
+    template <class Archive>
+    void load(Archive & ar, const unsigned int /*version*/)
+    {
+        range_ = boost::make_shared<Range>();
+        ar & (*range_);
+        ar & func_;
+        ar & cutoff_;
+        ar & task_name_;
+        ar & prio_;
+    }
+    BOOST_SERIALIZATION_SPLIT_MEMBER()
+    boost::shared_ptr<Range> range_;
     Func func_;
     long cutoff_;
     std::string task_name_;
