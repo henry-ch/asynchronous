@@ -66,18 +66,10 @@ struct Servant : boost::asynchronous::trackable_servant<>
                    {
                         auto mult = [](double a) { return a * 4.0; };
                         auto sum = [](double a, double b) { return a + b; };
-                        return boost::asynchronous::invoke(boost::asynchronous::parallel_reduce(lazy_range<pi>(COUNT, pi()), sum, STEP_SIZE),mult);
-                        // alternative way
-//                        auto sum = [](double a, double b)
-//                        {
-//                            return a + b;
-//                        };
-//                        auto step = [](double const& n)
-//                        {
-//                            const_cast<double&>(n) = ((double) ((((long) n) % 2 == 0) ? 1 : -1)) / ((double) (2 * n + 1));
-//                        };
-//                        auto for_cont = boost::asynchronous::parallel_for(boost::irange(0,COUNT), step, STEP_SIZE);
-//                        return boost::asynchronous::invoke(boost::asynchronous::parallel_reduce(for_cont, sum, STEP_SIZE),mult);
+                        return boost::asynchronous::invoke(
+                                    boost::asynchronous::parallel_reduce(
+                                        lazy_range<pi>(COUNT, pi()), sum, STEP_SIZE),
+                                    mult);
                    },// work
                    [aPromise](boost::future<double> res){
                         aPromise->set_value(res.get());
