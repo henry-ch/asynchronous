@@ -1,5 +1,5 @@
-#ifndef LAZY_RANGE_HPP
-#define LAZY_RANGE_HPP
+#ifndef LAZY_IRANGE_HPP
+#define LAZY_IRANGE_HPP
 
 #include <algorithm>
 #include <cstdint>
@@ -12,11 +12,11 @@ namespace boost { namespace asynchronous {
 
 namespace detail {
 
-// An iterator for lazy_range fulfilling the requirements of
+// An iterator for lazy_irange fulfilling the requirements of
 // RandomAccessIterator
 // The Thing template is necessary to avoid dependency mess
-// (lazy_range would need the iterator, which in turn would need
-// lazy_range, which leads to compile errors)
+// (lazy_irange would need the iterator, which in turn would need
+// lazy_irange, which leads to compile errors)
 template <class Thing, class ValueType, class NumberType>
 class thing_iterator {
 private:
@@ -122,22 +122,22 @@ public:
 // A "lazy" range, evaluating the value at position i when it is asked for,
 // by applying the given transformation to i.
 template <typename Func, typename NumberType>
-class lazy_range {
+class lazy_irange {
 private:
 	Func transform;
 	NumberType start_;
 	NumberType end_;
 public:
 	typedef decltype(std::declval<Func>()(std::declval<NumberType>())) value_type;
-	typedef detail::thing_iterator<lazy_range<Func, NumberType>, value_type, NumberType> iterator_type;
+    typedef detail::thing_iterator<lazy_irange<Func, NumberType>, value_type, NumberType> iterator_type;
     typedef iterator_type const_iterator;
     typedef iterator_type iterator;
 
-	lazy_range(NumberType start, NumberType end, Func const& tf) : transform(tf), start_(start), end_(end) {}
+    lazy_irange(NumberType start, NumberType end, Func const& tf) : transform(tf), start_(start), end_(end) {}
 	
 	value_type at(NumberType index) {
 		if (index < start_ || index >= end_)
-			throw std::logic_error("lazy_range out of bounds");
+            throw std::logic_error("lazy_irange out of bounds");
 		return transform(index);
 	}
 	
@@ -172,8 +172,8 @@ public:
 }
 
 template <typename F, typename N=long>
-detail::lazy_range<F, N> lazy_range(N start, N end, F func) {
-	return detail::lazy_range<F, N>(start, end, std::move(func));
+detail::lazy_irange<F, N> lazy_irange(N start, N end, F func) {
+    return detail::lazy_irange<F, N>(start, end, std::move(func));
 }
 
 }}
