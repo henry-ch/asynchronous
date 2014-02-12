@@ -68,7 +68,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         auto sum = [](double a, double b) { return a + b; };
                         return boost::asynchronous::invoke(
                                     boost::asynchronous::parallel_reduce(
-                                        lazy_range<pi>(COUNT, pi()), sum, STEP_SIZE),
+                                        boost::asynchronous::lazy_range(0, COUNT, pi()), sum, STEP_SIZE),
                                     mult);
                    },// work
                    [aPromise](boost::future<double> res){
