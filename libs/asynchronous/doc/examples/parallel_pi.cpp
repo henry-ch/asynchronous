@@ -25,7 +25,7 @@
 #include <boost/asynchronous/algorithm/invoke.hpp>
 #include <boost/asynchronous/helpers/lazy_irange.hpp>
 
-#define COUNT 100000000
+#define COUNT 100000000L
 #define THREAD_COUNT 6
 #define STEP_SIZE COUNT/THREAD_COUNT/100
 
@@ -68,7 +68,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         auto sum = [](double a, double b) { return a + b; };
                         return boost::asynchronous::invoke(
                                     boost::asynchronous::parallel_reduce(
-                                        boost::asynchronous::lazy_irange(0, COUNT, pi()), sum, STEP_SIZE),
+                                        boost::asynchronous::lazy_irange(0L, COUNT, pi()), sum, STEP_SIZE),
                                     mult);
                    },// work
                    [aPromise](boost::future<double> res){

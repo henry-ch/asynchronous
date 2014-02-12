@@ -171,7 +171,7 @@ public:
 
 }
 
-template <typename F, typename N=long>
+template <typename F, typename N>
 detail::lazy_irange<F, N> lazy_irange(N start, N end, F func) {
     return detail::lazy_irange<F, N>(start, end, std::move(func));
 }
