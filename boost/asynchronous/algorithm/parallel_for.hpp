@@ -144,8 +144,6 @@ struct parallel_for_range_move_helper<Range,Func,Job,typename ::boost::enable_if
         : boost::asynchronous::continuation_task<Range>()
         , boost::asynchronous::serializable_task(func.get_task_name())
         , range_(boost::make_shared<Range>(std::forward<Range>(range))),func_(std::move(func)),cutoff_(cutoff),task_name_(std::move(task_name)),prio_(prio)
-    {}
-    void operator()()const
     {
         typedef std::vector<typename std::iterator_traits<decltype(boost::begin(*range_))>::value_type> sub_range;
         std::vector<boost::future<sub_range> > fus;
@@ -189,6 +187,9 @@ struct parallel_for_range_move_helper<Range,Func,Job,typename ::boost::enable_if
                     },
                     // future results of recursive tasks
                     std::move(fus));
+    }
+    void operator()()const
+    {
     }
     template <class Archive>
     void save(Archive & ar, const unsigned int /*version*/)const

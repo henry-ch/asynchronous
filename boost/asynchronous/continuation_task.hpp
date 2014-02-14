@@ -52,6 +52,10 @@ public:
     {
         m_promise->set_value();
     }
+    void emplace_value()const
+    {
+        m_promise->set_value();
+    }
     void set_exception(boost::exception_ptr p)const
     {
         m_promise->set_exception(p);
