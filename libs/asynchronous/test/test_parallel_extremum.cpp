@@ -21,7 +21,7 @@
 #include <boost/asynchronous/servant_proxy.h>
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/trackable_servant.hpp>
-#include <boost/asynchronous/algorithm/parallel_reduce.hpp>
+#include <boost/asynchronous/algorithm/parallel_extremum.hpp>
 #include <boost/asynchronous/algorithm/parallel_for.hpp>
 
 #include <boost/lexical_cast.hpp>
@@ -47,7 +47,7 @@ struct my_exception : virtual boost::exception, virtual std::exception
     }
 };
 
-std::vector<int> mkdata() {
+std::vector<int> mkdata() { // 1 to 100
     std::vector<int> data;
     for (int i = 1; i <= 100; ++i) data.push_back(i);
     return data;
@@ -83,11 +83,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
                     std::vector<boost::thread::id> ids = tp.thread_ids();
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
-                    return boost::asynchronous::parallel_reduce(this->m_data.begin(),this->m_data.end(),
-                                                           [](int const& a, int const& b)
-                                                           {
-                                                             return a + b;
-                                                           },20);
+                    return boost::asynchronous::parallel_extremum(this->m_data.begin(),this->m_data.end(),[](int a,int b){return a <b;},20);
                     },// work
            [aPromise,tp,this](boost::future<int> res){
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
@@ -96,7 +92,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         int r = res.get();
-                        BOOST_CHECK_MESSAGE((r == 5050), ("result of parallel_reduce was " + boost::lexical_cast<std::string, int>(r) + ", should have been 5050"));
+                        BOOST_CHECK_MESSAGE((r == 1), ("result of parallel_extremum (minimum) was " + boost::lexical_cast<std::string>(r) + ", should have been 1"));
                         // reset
                         m_data = mkdata();
                         aPromise->set_value();
@@ -117,11 +113,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
                     std::vector<boost::thread::id> ids = tp.thread_ids();
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
-                    return boost::asynchronous::parallel_reduce(const_cast<std::vector<int>const&>(this->m_data),
-                                                           [](int const& a, int const& b)
-                                                           {
-                                                             return a + b;
-                                                           },20);
+                    return boost::asynchronous::parallel_extremum(const_cast<std::vector<int>const&>(this->m_data), [](int a,int b){return a>b;},20);
                     },// work
            [aPromise,tp,this](boost::future<int> res){
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
@@ -130,7 +122,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         int r = res.get();
-                        BOOST_CHECK_MESSAGE((r == 5050), ("result of parallel_reduce was " + boost::lexical_cast<std::string, int>(r) + ", should have been 5050"));
+                        BOOST_CHECK_MESSAGE((r == 100), ("result of parallel_extremum (maximum) was " + boost::lexical_cast<std::string>(r) + ", should have been 100"));
                         // reset
                         m_data = mkdata();
                         aPromise->set_value();
@@ -151,11 +143,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
                     std::vector<boost::thread::id> ids = tp.thread_ids();
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
-                    return boost::asynchronous::parallel_reduce(std::move(this->m_data),
-                                                           [](int const& a, int const& b)
-                                                           {
-                                                             return a + b;
-                                                           },20);
+                    return boost::asynchronous::parallel_extremum(std::move(this->m_data), [](int a,int b){return a <b;}, 20);
                     },// work
            [aPromise,tp,this](boost::future<int> res){
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
@@ -164,7 +152,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         int r = res.get();
-                        BOOST_CHECK_MESSAGE((r == 5050), ("result of parallel_reduce was " + boost::lexical_cast<std::string, int>(r) + ", should have been 5050"));
+                        BOOST_CHECK_MESSAGE((r == 1), ("result of parallel_extremum (minimum) was " + boost::lexical_cast<std::string>(r) + ", should have been 1"));
                         // reset
                         m_data = mkdata();
                         aPromise->set_value();
@@ -188,13 +176,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     auto for_cont = boost::asynchronous::parallel_for(std::move(this->m_data),
                                                                       [](int const& i)
                                                                       {
-                                                                        const_cast<int&>(i) += 1;
+                                                                        const_cast<int&>(i) *= 2;
                                                                       }, 20);
-                    auto add = [](int const& a, int const& b)
-                               {
-                                 return a + b;
-                               };
-                    return boost::asynchronous::parallel_reduce(for_cont, add, 20);
+                    return boost::asynchronous::parallel_extremum(std::move(for_cont), [](int a,int b){return a>b;}, 20);
                     },// work
            [aPromise,tp,this](boost::future<int> res){
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
@@ -203,7 +187,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         int r = res.get();
-                        BOOST_CHECK_MESSAGE((r == 5150), ("result of parallel_reduce after parallel_for was " + boost::lexical_cast<std::string, int>(r) + ", should have been 5150"));
+                        BOOST_CHECK_MESSAGE((r == 200), ("result of parallel_extremum (maximum) was " + boost::lexical_cast<std::string>(r) + " entries, should have been 200"));
                         // reset
                         m_data = mkdata();
                         aPromise->set_value();
@@ -230,7 +214,7 @@ public:
 
 }
 
-BOOST_AUTO_TEST_CASE( test_parallel_reduce )
+BOOST_AUTO_TEST_CASE( test_parallel_extremum )
 {
     servant_dtor=false;
     {
@@ -253,7 +237,7 @@ BOOST_AUTO_TEST_CASE( test_parallel_reduce )
     BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
 }
 
-BOOST_AUTO_TEST_CASE( test_parallel_reduce_range )
+BOOST_AUTO_TEST_CASE( test_parallel_extremum_range )
 {
     servant_dtor=false;
     {
@@ -276,7 +260,7 @@ BOOST_AUTO_TEST_CASE( test_parallel_reduce_range )
     BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
 }
 
-BOOST_AUTO_TEST_CASE( test_parallel_reduce_range2 )
+BOOST_AUTO_TEST_CASE( test_parallel_extremum_range2 )
 {
     servant_dtor=false;
     {
@@ -299,7 +283,7 @@ BOOST_AUTO_TEST_CASE( test_parallel_reduce_range2 )
     BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
 }
 
-BOOST_AUTO_TEST_CASE( test_parallel_reduce_range3 )
+BOOST_AUTO_TEST_CASE( test_parallel_extremum_range3 )
 {
     servant_dtor=false;
     {
