@@ -59,21 +59,9 @@ struct not_
 };
 
 template <class Range, class Func>
-void find_all2(Range& rng, Func fn) {
+void find_all(Range& rng, Func fn) {
     boost::remove_erase_if(rng , boost::asynchronous::detail::not_<Func>(std::move(fn)));
 }
-
-/* Just in case...
-template <class Range, class Func, class ReturnRange>
-ReturnRange find_all_basic(Range rng, Func fn) {
-    ReturnRange ret;
-    for (auto it = boost::begin(rng); it != boost::end(rng); ++it) {
-        if (fn(*it))
-            boost::range::push_back(ret, *it);
-    }
-    return ret;
-}
-*/
     
 }
 
@@ -105,7 +93,9 @@ struct parallel_find_all_range_move_helper: public boost::asynchronous::continua
             boost::future<ReturnRange> fu = boost::asynchronous::post_future(locked_scheduler,
                                                                       [it,itp,func]()
                                                                       {
-                                                                        return boost::asynchronous::detail::find_all(boost::make_iterator_range(itp, it), func);
+                                                                        ReturnRange ret(itp,it);
+                                                                        boost::asynchronous::detail::find_all(ret,func);
+                                                                        return ret;
                                                                       },
                                                                       task_name_,prio_);
             fus.emplace_back(std::move(fu));
@@ -436,12 +426,7 @@ struct parallel_find_all_helper: public boost::asynchronous::continuation_task<R
                                                                       [it,itp,func]()
                                                                       {
                                                                         ReturnRange ret(itp,it);
-                                                                        boost::asynchronous::detail::find_all2(ret,func);
-                                                                        //this works but requires that the container supports reserve and push_back, not good
-//                                                                        auto r = boost::make_iterator_range(itp,it);
-//                                                                        ReturnRange ret;
-//                                                                        ret.reserve(r.size());
-//                                                                        boost::asynchronous::detail::find_all(r,func,ret);
+                                                                        boost::asynchronous::detail::find_all(ret,func);
                                                                         return ret;
                                                                       },
                                                                       task_name_,prio_);
@@ -486,7 +471,6 @@ struct parallel_find_all_helper: public boost::asynchronous::continuation_task<R
 };
 }
 template <class Iterator, class Func,
-          //class ReturnRange=std::vector<typename std::remove_reference<decltype(*(std::declval<Iterator>()))>::type>,
           class ReturnRange=std::vector<typename std::iterator_traits<Iterator>::value_type>,
           class Job=boost::asynchronous::any_callable>
 boost::asynchronous::detail::continuation<ReturnRange,Job>

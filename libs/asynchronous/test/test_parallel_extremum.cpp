@@ -173,12 +173,12 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
                     std::vector<boost::thread::id> ids = tp.thread_ids();
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
-                    auto for_cont = boost::asynchronous::parallel_for(std::move(this->m_data),
-                                                                      [](int const& i)
-                                                                      {
-                                                                        const_cast<int&>(i) *= 2;
-                                                                      }, 20);
-                    return boost::asynchronous::parallel_extremum(std::move(for_cont), [](int a,int b){return a>b;}, 20);
+                    return boost::asynchronous::parallel_extremum(boost::asynchronous::parallel_for(std::move(this->m_data),
+                                                                                                    [](int const& i)
+                                                                                                    {
+                                                                                                      const_cast<int&>(i) *= 2;
+                                                                                                    }, 20),
+                                                                  [](int a,int b){return a>b;}, 20);
                     },// work
            [aPromise,tp,this](boost::future<int> res){
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
