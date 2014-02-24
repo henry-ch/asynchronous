@@ -664,6 +664,98 @@ namespace detail
         std::string m_task_name;
         std::size_t m_cb_prio;
     };
+    template <class Ret,class Sched,class Func,class Work,class F1,class F2,class CallbackFct,class CB,class EnablePostHelper=void>
+    struct post_helper_continuation
+    {
+        void operator()(std::string const& task_name,std::size_t cb_prio, Sched scheduler,
+                        move_task_helper<typename Func::return_type,F1,F2>& work,
+                        boost::shared_ptr<boost::promise<typename Func::return_type> > work_result)const
+        {
+            auto cont = (*work.m_task.get())();
+            //cont.on_done(detail::promise_mover<typename Func::return_type>(res));
+            cont.on_done([work,scheduler,work_result,task_name,cb_prio](std::tuple<boost::future<typename Func::return_type> >&& continuation_res)
+                {
+                    try
+                    {
+                        auto shared_scheduler = scheduler.lock();
+                        if (!shared_scheduler.is_valid())
+                            // no need to do any work as there is no way to callback
+                            return;
+                        // call callback
+                        boost::future<typename Work::result_type> work_fu = work_result->get_future();
+                        if(!std::get<0>(continuation_res).has_value())
+                        {
+                            boost::asynchronous::task_aborted_exception ta;
+                            work_result->set_exception(boost::copy_exception(ta));
+                        }
+                        else
+                        {
+                            try
+                            {
+                                work_result->set_value(std::get<0>(continuation_res).get());
+                            }
+                            catch(std::exception& e)
+                            {
+                                work_result->set_exception(boost::copy_exception(e));
+                            }
+                        }
+
+                        CallbackFct cb(std::move(work),std::move(work_fu));
+                        CB()(shared_scheduler,std::move(cb),task_name,cb_prio);
+                    }
+                    catch(std::exception& ){/* TODO */}
+                }
+            );
+            boost::asynchronous::any_continuation ac(cont);
+            boost::asynchronous::get_continuations().push_front(ac);
+        }
+    };
+    template <class Ret,class Sched,class Func,class Work,class F1,class F2,class CallbackFct,class CB>
+    struct post_helper_continuation<Ret,Sched,Func,Work,F1,F2,CallbackFct,CB,typename ::boost::enable_if<boost::is_same<Ret,void> >::type>
+    {
+        void operator()(std::string const& task_name,std::size_t cb_prio, Sched scheduler,
+                        move_task_helper<typename Func::return_type,F1,F2>& work,
+                        boost::shared_ptr<boost::promise<typename Func::return_type> > work_result)const
+        {
+            auto cont = (*work.m_task.get())();
+            //cont.on_done(detail::promise_mover<typename Func::return_type>(res));
+            cont.on_done([work,scheduler,work_result,task_name,cb_prio](std::tuple<boost::future<typename Func::return_type> >&& continuation_res)
+                {
+                    try
+                    {
+                        auto shared_scheduler = scheduler.lock();
+                        if (!shared_scheduler.is_valid())
+                            // no need to do any work as there is no way to callback
+                            return;
+                        // call callback
+                        boost::future<typename Work::result_type> work_fu = work_result->get_future();
+                        if(!std::get<0>(continuation_res).has_value())
+                        {
+                            boost::asynchronous::task_aborted_exception ta;
+                            work_result->set_exception(boost::copy_exception(ta));
+                        }
+                        else
+                        {
+                            try
+                            {
+                                work_result->set_value();
+                            }
+                            catch(std::exception& e)
+                            {
+                                work_result->set_exception(boost::copy_exception(e));
+                            }
+                        }
+
+                        CallbackFct cb(std::move(work),std::move(work_fu));
+                        CB()(shared_scheduler,std::move(cb),task_name,cb_prio);
+                    }
+                    catch(std::exception& ){/* TODO */}
+                }
+            );
+            boost::asynchronous::any_continuation ac(cont);
+            boost::asynchronous::get_continuations().push_front(ac);
+        }
+    };
 
     //TODO no copy/paste
     template <class Func,class F1, class F2,class Work,class Sched,class PostSched,class CB,class Enable=void>
@@ -734,62 +826,16 @@ namespace detail
             try
             {
                 // call task
-                post_helper()(m_task_name,m_cb_prio,m_scheduler,m_work,work_result);
+                post_helper_continuation<typename Work::result_type,Sched,Func,Work,F1,F2,callback_fct,CB>()(m_task_name,m_cb_prio,m_scheduler,m_work,work_result);
             }
             catch(boost::asynchronous::task_aborted_exception& e){work_result->set_exception(boost::copy_exception(e));}
             catch(...){work_result->set_exception(boost::current_exception());}
         }
-        struct post_helper
-        {
-            void operator()(std::string const& task_name,std::size_t cb_prio, Sched scheduler,
-                            move_task_helper<typename Func::return_type,F1,F2>& work,
-                            boost::shared_ptr<boost::promise<typename Func::return_type> > work_result)const
-            {
-                auto cont = (*work.m_task.get())();
-                //cont.on_done(detail::promise_mover<typename Func::return_type>(res));
-                cont.on_done([work,scheduler,work_result,task_name,cb_prio](std::tuple<boost::future<typename Func::return_type> >&& continuation_res)
-                    {
-                        try
-                        {
-                            auto shared_scheduler = scheduler.lock();
-                            if (!shared_scheduler.is_valid())
-                                // no need to do any work as there is no way to callback
-                                return;
-                            // call callback                            
-                            boost::future<typename Work::result_type> work_fu = work_result->get_future();
-                            if(!std::get<0>(continuation_res).has_value())
-                            {
-                                boost::asynchronous::task_aborted_exception ta;
-                                work_result->set_exception(boost::copy_exception(ta));
-                            }
-                            else
-                            {
-                                try
-                                {
-                                    work_result->set_value(std::get<0>(continuation_res).get());
-                                }
-                                catch(std::exception& e)
-                                {
-                                    work_result->set_exception(boost::copy_exception(e));
-                                }
-                            }
-
-                            callback_fct cb(std::move(work),std::move(work_fu));
-                            CB()(shared_scheduler,std::move(cb),task_name,cb_prio);
-                        }
-                        catch(std::exception& ){/* TODO */}
-                    }
-                );
-                boost::asynchronous::any_continuation ac(cont);
-                boost::asynchronous::get_continuations().push_front(ac);
-            }
-        };
         Work m_work;
         Sched m_scheduler;
         std::string m_task_name;
         std::size_t m_cb_prio;
     };
-
     //TODO no copy/paste
     template <class Func,class F1, class F2,class Work,class Sched,class PostSched,class CB>
     struct post_callback_helper_continuation<Func,F1,F2,Work,Sched,PostSched,CB,typename ::boost::enable_if<boost::asynchronous::detail::is_serializable<typename Work::task_type> >::type>
@@ -906,56 +952,11 @@ namespace detail
             try
             {
                 // call task
-                post_helper()(m_task_name,m_cb_prio,m_scheduler,m_work,work_result);
+                post_helper_continuation<typename Work::result_type,Sched,Func,Work,F1,F2,callback_fct,CB>()(m_task_name,m_cb_prio,m_scheduler,m_work,work_result);
             }
             catch(boost::asynchronous::task_aborted_exception& e){work_result->set_exception(boost::copy_exception(e));}
             catch(...){work_result->set_exception(boost::current_exception());}
         }
-        struct post_helper
-        {
-            void operator()(std::string const& task_name,std::size_t cb_prio, Sched scheduler,
-                            move_task_helper<typename Func::return_type,F1,F2>& work,
-                            boost::shared_ptr<boost::promise<typename Func::return_type> > work_result)const
-            {
-                auto cont = (*work.m_task.get())();
-                //cont.on_done(detail::promise_mover<typename Func::return_type>(res));
-                cont.on_done([work,scheduler,work_result,task_name,cb_prio](std::tuple<boost::future<typename Func::return_type> >&& continuation_res)
-                    {
-                        try
-                        {
-                            auto shared_scheduler = scheduler.lock();
-                            if (!shared_scheduler.is_valid())
-                                // no need to do any work as there is no way to callback
-                                return;
-                            // call callback
-                            boost::future<typename Work::result_type> work_fu = work_result->get_future();
-                            if(!std::get<0>(continuation_res).has_value())
-                            {
-                                boost::asynchronous::task_aborted_exception ta;
-                                work_result->set_exception(boost::copy_exception(ta));
-                            }
-                            else
-                            {
-                                try
-                                {
-                                    work_result->set_value(std::get<0>(continuation_res).get());
-                                }
-                                catch(std::exception& e)
-                                {
-                                    work_result->set_exception(boost::copy_exception(e));
-                                }
-                            }
-
-                            callback_fct cb(std::move(work),std::move(work_fu));
-                            CB()(shared_scheduler,std::move(cb),task_name,cb_prio);
-                        }
-                        catch(std::exception& ){/* TODO */}
-                    }
-                );
-                boost::asynchronous::any_continuation ac(cont);
-                boost::asynchronous::get_continuations().push_front(ac);
-            }
-        };
         Work m_work;
         Sched m_scheduler;
         std::string m_task_name;

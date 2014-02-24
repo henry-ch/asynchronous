@@ -72,7 +72,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
                     std::vector<boost::thread::id> ids = tp.thread_ids();
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
-                    boost::asynchronous::parallel_for(this->m_data.begin(),this->m_data.end(),
+                    return boost::asynchronous::parallel_for(this->m_data.begin(),this->m_data.end(),
                                                       [](int const& i)
                                                       {
                                                         const_cast<int&>(i) += 2;
@@ -93,6 +93,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         std::advance(it,8999);
                         BOOST_CHECK_MESSAGE(*it == 3,"m_data[9999] is wrong: "+ boost::lexical_cast<std::string>(*it));
                         auto r = std::accumulate(this->m_data.begin(),this->m_data.end(),0,[](int a, int b){return a+b;});
+                        BOOST_CHECK_MESSAGE((r == 30000),
+                                            ("result of parallel_for was " + boost::lexical_cast<std::string, int>(r) + ", should have been 30000"));
+                        r = std::accumulate(this->m_data.begin(),this->m_data.end(),0,[](int a, int b){return a+b;});
                         BOOST_CHECK_MESSAGE((r == 30000),
                                             ("result of parallel_for was " + boost::lexical_cast<std::string, int>(r) + ", should have been 30000"));
 
@@ -116,11 +119,11 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
                     std::vector<boost::thread::id> ids = tp.thread_ids();
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
-                    boost::asynchronous::parallel_for(const_cast<std::vector<int>const&>(this->m_data),
-                                                      [](int const& i)
-                                                      {
-                                                        const_cast<int&>(i) += 2;
-                                                      },1500);
+                    return boost::asynchronous::parallel_for(const_cast<std::vector<int>const&>(this->m_data),
+                                                             [](int const& i)
+                                                             {
+                                                               const_cast<int&>(i) += 2;
+                                                             },1500);
                     },// work
            [aPromise,tp,this](boost::future<void> res){
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
@@ -139,6 +142,11 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         auto r = std::accumulate(this->m_data.begin(),this->m_data.end(),0,[](int a, int b){return a+b;});
                         BOOST_CHECK_MESSAGE((r == 30000),
                                             ("result of parallel_for was " + boost::lexical_cast<std::string>(r) + ", should have been 30000"));
+                        r = std::accumulate(this->m_data.begin(),this->m_data.end(),0,[](int a, int b){return a+b;});
+
+                        BOOST_CHECK_MESSAGE((r == 30000),
+                                            ("result of parallel_for was " + boost::lexical_cast<std::string>(r) + ", should have been 30000"));
+
                         // reset
                         m_data = std::vector<int>(10000,1);
                         aPromise->set_value();
@@ -286,72 +294,72 @@ BOOST_AUTO_TEST_CASE( test_parallel_for )
     BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
 }
 
-BOOST_AUTO_TEST_CASE( test_parallel_for_range )
-{
-    servant_dtor=false;
-    {
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-                                                                            boost::asynchronous::lockfree_queue<> >);
+//BOOST_AUTO_TEST_CASE( test_parallel_for_range )
+//{
+//    servant_dtor=false;
+//    {
+//        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
+//                                                                            boost::asynchronous::lockfree_queue<> >);
 
-        main_thread_id = boost::this_thread::get_id();
-        ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_async_work_range();
-        try
-        {
-            boost::shared_future<void> resfuv = fuv.get();
-            resfuv.get();
-        }
-        catch(...)
-        {
-            BOOST_FAIL( "unexpected exception" );
-        }
-    }
-    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
-}
+//        main_thread_id = boost::this_thread::get_id();
+//        ServantProxy proxy(scheduler);
+//        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_async_work_range();
+//        try
+//        {
+//            boost::shared_future<void> resfuv = fuv.get();
+//            resfuv.get();
+//        }
+//        catch(...)
+//        {
+//            BOOST_FAIL( "unexpected exception" );
+//        }
+//    }
+//    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
+//}
 
-BOOST_AUTO_TEST_CASE( test_parallel_for_range2 )
-{
-    servant_dtor=false;
-    {
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-                                                                            boost::asynchronous::lockfree_queue<> >);
+//BOOST_AUTO_TEST_CASE( test_parallel_for_range2 )
+//{
+//    servant_dtor=false;
+//    {
+//        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
+//                                                                            boost::asynchronous::lockfree_queue<> >);
 
-        main_thread_id = boost::this_thread::get_id();
-        ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_async_work_range2();
-        try
-        {
-            boost::shared_future<void> resfuv = fuv.get();
-            resfuv.get();
-        }
-        catch(...)
-        {
-            BOOST_FAIL( "unexpected exception" );
-        }
-    }
-    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
-}
+//        main_thread_id = boost::this_thread::get_id();
+//        ServantProxy proxy(scheduler);
+//        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_async_work_range2();
+//        try
+//        {
+//            boost::shared_future<void> resfuv = fuv.get();
+//            resfuv.get();
+//        }
+//        catch(...)
+//        {
+//            BOOST_FAIL( "unexpected exception" );
+//        }
+//    }
+//    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
+//}
 
-BOOST_AUTO_TEST_CASE( test_parallel_for_range3 )
-{
-    servant_dtor=false;
-    {
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-                                                                            boost::asynchronous::lockfree_queue<> >);
+//BOOST_AUTO_TEST_CASE( test_parallel_for_range3 )
+//{
+//    servant_dtor=false;
+//    {
+//        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
+//                                                                            boost::asynchronous::lockfree_queue<> >);
 
-        main_thread_id = boost::this_thread::get_id();
-        ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_async_work_range3();
-        try
-        {
-            boost::shared_future<void> resfuv = fuv.get();
-            resfuv.get();
-        }
-        catch(...)
-        {
-            BOOST_FAIL( "unexpected exception" );
-        }
-    }
-    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
-}
+//        main_thread_id = boost::this_thread::get_id();
+//        ServantProxy proxy(scheduler);
+//        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_async_work_range3();
+//        try
+//        {
+//            boost::shared_future<void> resfuv = fuv.get();
+//            resfuv.get();
+//        }
+//        catch(...)
+//        {
+//            BOOST_FAIL( "unexpected exception" );
+//        }
+//    }
+//    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
+//}
 

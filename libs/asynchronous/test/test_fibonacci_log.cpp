@@ -85,7 +85,6 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
     // called when task done, in our thread
     void on_callback(long res)
     {
-        //std::cout << "Callback in single-thread scheduler with value:" << res << std::endl;
         // inform test caller
         m_promise->set_value(res);
     }
