@@ -42,7 +42,7 @@ namespace boost { namespace asynchronous
 namespace detail {
     
 template <class Range, class Func, class ReturnRange>
-void find_all(Range rng, Func fn,ReturnRange& ret) {
+void find_all(Range rng, Func fn, ReturnRange& ret) {
     boost::copy(rng | boost::adaptors::filtered(fn), std::back_inserter(ret));
 }
 
@@ -155,7 +155,9 @@ struct serializable_find_all : public boost::asynchronous::serializable_task
     }
     ReturnRange operator()()
     {
-        return boost::asynchronous::detail::find_all<decltype(range_.begin()), Func, ReturnRange>(range_.begin(), range_.end(), func_);
+        ReturnRange ret;
+        boost::asynchronous::detail::find_all(range_, func_, ret);
+        return ret;
     }
 
     Func func_;
@@ -292,7 +294,9 @@ struct parallel_find_all_range_helper: public boost::asynchronous::continuation_
             boost::future<ReturnRange> fu = boost::asynchronous::post_future(locked_scheduler,
                                                                       [it,itp,func]()
                                                                       {
-                                                                        return boost::asynchronous::detail::find_all<decltype(itp), Func, ReturnRange>(itp,it,func);
+                                                                        ReturnRange ret;
+                                                                        boost::asynchronous::detail::find_all(boost::make_iterator_range(itp, it), func, ret);
+                                                                        return ret;
                                                                       },
                                                                       task_name_,prio_);
             fus.emplace_back(std::move(fu));
@@ -389,7 +393,7 @@ struct parallel_find_all_continuation_range_helper: public boost::asynchronous::
 };
 }
 
-template <class Range, class Func, class ReturnRange=Range, class Job=boost::asynchronous::any_callable>
+template <class Range, class Func, class ReturnRange=typename Range::return_type, class Job=typename boost::asynchronous::any_callable>
 typename boost::enable_if<has_is_continuation_task<Range>, boost::asynchronous::detail::continuation<ReturnRange, Job>>::type
 parallel_find_all(Range range,Func func,long cutoff,
              const std::string& task_name="", std::size_t prio=0)

@@ -98,7 +98,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         std::vector<int> r = res.get();
                         BOOST_CHECK_MESSAGE((r.size() == 20), ("result of parallel_find_all had " + boost::lexical_cast<std::string, int>(r.size()) + " entries, should have been 20"));
                         for (int i : r) {
-                            BOOST_CHECK_MESSAGE(!(i >= 40 || i < 20), (boost::lexical_cast<std::string, int>(i) + " was returned by parallel_find_all, but is larger than or equal to 40 or smaller than 20"));
+                            BOOST_CHECK_MESSAGE((i < 40 && i >= 20), (boost::lexical_cast<std::string, int>(i) + " was returned by parallel_find_all, but is larger than or equal to 40 or smaller than 20"));
                         }
                         // reset
                         m_data = mkdata();
@@ -107,119 +107,122 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
-//    boost::shared_future<void> start_async_work_range()
-//    {
-//        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work_range not posted.");
-//        // we need a promise to inform caller when we're done
-//        boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-//        boost::shared_future<void> fu = aPromise->get_future();
-//        boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
-//        // start long tasks
-//        post_callback(
-//           [tp,this](){
-//                    BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
-//                    std::vector<boost::thread::id> ids = tp.thread_ids();
-//                    BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
-//                    return boost::asynchronous::parallel_find_all(const_cast<std::vector<int>const&>(this->m_data),
-//                                                           [](int const& a)
-//                                                           {
-//                                                             return a < 40 && a >= 20;
-//                                                           },20);
-//                    },// work
-//           [aPromise,tp,this](boost::future<int> res){
-//                        BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
-//                        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
-//                        std::vector<boost::thread::id> ids = tp.thread_ids();
-//                        BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
-//                        BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
-//                        int r = res.get();
-//                        BOOST_CHECK_MESSAGE((r == 5050), ("result of parallel_find_all was " + boost::lexical_cast<std::string, int>(r) + ", should have been 5050"));
-//                        // reset
-//                        m_data = mkdata();
-//                        aPromise->set_value();
-//           }// callback functor.
-//        );
-//        return fu;
-//    }
-//    boost::shared_future<void> start_async_work_range2()
-//    {
-//        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work_range2 not posted.");
-//        // we need a promise to inform caller when we're done
-//        boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-//        boost::shared_future<void> fu = aPromise->get_future();
-//        boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
-//        // start long tasks
-//        post_callback(
-//           [tp,this](){
-//                    BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
-//                    std::vector<boost::thread::id> ids = tp.thread_ids();
-//                    BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
-//                    return boost::asynchronous::parallel_find_all(std::move(this->m_data),
-//                                                           [](int const& a)
-//                                                           {
-//                                                             return a < 40 && a >= 20;
-//                                                           },20);
-//                    },// work
-//           [aPromise,tp,this](boost::future<std::vector<int>> res){
-//                        BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
-//                        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
-//                        std::vector<boost::thread::id> ids = tp.thread_ids();
-//                        BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
-//                        BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
-//                        std::vector<int> r = res.get();
-//                        BOOST_CHECK_MESSAGE((r.size() == 20), ("result of parallel_find_all had " + boost::lexical_cast<std::string, int>(r.size()) + " entries, should have been 20"));
-//                        for (int i : r) {
-//                            BOOST_CHECK_MESSAGE((i >= 40 || i < 20), (boost::lexical_cast<std::string, int>(i) + " was returned by parallel_find_all, but is larger than or equal to 40 or smaller than 20"));
-//                        }
-//                        // reset
-//                        m_data = mkdata();
-//                        aPromise->set_value();
-//           }// callback functor.
-//        );
-//        return fu;
-//    }
-//    boost::shared_future<void> start_async_work_range3()
-//    {
-//        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work_range3 not posted.");
-//        // we need a promise to inform caller when we're done
-//        boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-//        boost::shared_future<void> fu = aPromise->get_future();
-//        boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
-//        // start long tasks
-//        post_callback(
-//           [tp,this](){
-//                    BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
-//                    std::vector<boost::thread::id> ids = tp.thread_ids();
-//                    BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
-//                    auto for_cont = boost::asynchronous::parallel_for(std::move(this->m_data),
-//                                                                      [](int const& i)
-//                                                                      {
-//                                                                        const_cast<int&>(i) *= 2;
-//                                                                      }, 20);
-//                    auto filter = [](int const& a)
-//                               {
-//                                 return a < 40 && a >= 20;
-//                               };
-//                    return boost::asynchronous::parallel_find_all<decltype(for_cont), decltype(filter), boost::asynchronous::any_callable>(for_cont, filter, 20);
-//                    },// work
-//           [aPromise,tp,this](boost::future<std::vector<int>> res){
-//                        BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
-//                        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
-//                        std::vector<boost::thread::id> ids = tp.thread_ids();
-//                        BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
-//                        BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
-//                        std::vector<int> r = res.get();
-//                        BOOST_CHECK_MESSAGE((r.size() == 10), ("result of parallel_find_all had " + boost::lexical_cast<std::string, int>(r.size()) + " entries, should have been 20"));
-//                        for (int i : r) {
-//                            BOOST_CHECK_MESSAGE((i >= 40 || i < 20), (boost::lexical_cast<std::string, int>(i) + " was returned by parallel_find_all, but is larger than or equal to 40 or smaller than 20"));
-//                        }
-//                        // reset
-//                        m_data = mkdata();
-//                        aPromise->set_value();
-//           }// callback functor.
-//        );
-//        return fu;
-//    }
+    boost::shared_future<void> start_async_work_range()
+    {
+        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work_range not posted.");
+        // we need a promise to inform caller when we're done
+        boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
+        boost::shared_future<void> fu = aPromise->get_future();
+        boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
+        // start long tasks
+        post_callback(
+           [tp,this](){
+                    BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
+                    std::vector<boost::thread::id> ids = tp.thread_ids();
+                    BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
+                    return boost::asynchronous::parallel_find_all(const_cast<std::vector<int>const&>(this->m_data),
+                                                           [](int const& a)
+                                                           {
+                                                             return a < 40 && a >= 20;
+                                                           },20);
+                    },// work
+           [aPromise,tp,this](boost::future<std::vector<int>> res){
+                        BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
+                        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
+                        std::vector<boost::thread::id> ids = tp.thread_ids();
+                        BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
+                        BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
+                        std::vector<int> r = res.get();
+                        BOOST_CHECK_MESSAGE((r.size() == 20), ("result of parallel_find_all had " + boost::lexical_cast<std::string, int>(r.size()) + " entries, should have been 20"));
+                        for (int i : r) {
+                            BOOST_CHECK_MESSAGE((i < 40 && i >= 20), (boost::lexical_cast<std::string, int>(i) + " was returned by parallel_find_all, but is larger than or equal to 40 or smaller than 20"));
+                        }
+                        // reset
+                        m_data = mkdata();
+                        aPromise->set_value();
+           }// callback functor.
+        );
+        return fu;
+    }
+    boost::shared_future<void> start_async_work_range2()
+    {
+        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work_range2 not posted.");
+        // we need a promise to inform caller when we're done
+        boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
+        boost::shared_future<void> fu = aPromise->get_future();
+        boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
+        // start long tasks
+        post_callback(
+           [tp,this](){
+                    BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
+                    std::vector<boost::thread::id> ids = tp.thread_ids();
+                    BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
+                    return boost::asynchronous::parallel_find_all(std::move(this->m_data),
+                                                           [](int const& a)
+                                                           {
+                                                             return a < 40 && a >= 20;
+                                                           },20);
+                    },// work
+           [aPromise,tp,this](boost::future<std::vector<int>> res){
+                        BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
+                        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
+                        std::vector<boost::thread::id> ids = tp.thread_ids();
+                        BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
+                        BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
+                        std::vector<int> r = res.get();
+                        BOOST_CHECK_MESSAGE((r.size() == 20), ("result of parallel_find_all had " + boost::lexical_cast<std::string, int>(r.size()) + " entries, should have been 20"));
+                        for (int i : r) {
+                            BOOST_CHECK_MESSAGE((i < 40 && i >= 20), (boost::lexical_cast<std::string, int>(i) + " was returned by parallel_find_all, but is larger than or equal to 40 or smaller than 20"));
+                        }
+                        // reset
+                        m_data = mkdata();
+                        aPromise->set_value();
+           }// callback functor.
+        );
+        return fu;
+    }
+    boost::shared_future<void> start_async_work_range3()
+    {
+        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work_range3 not posted.");
+        // we need a promise to inform caller when we're done
+        boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
+        boost::shared_future<void> fu = aPromise->get_future();
+        boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
+        // start long tasks
+        post_callback(
+           [tp,this](){
+                    BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
+                    std::vector<boost::thread::id> ids = tp.thread_ids();
+                    BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
+                    auto for_cont = boost::asynchronous::parallel_for(std::move(this->m_data),
+                                                                      [](int const& i)
+                                                                      {
+                                                                        const_cast<int&>(i) *= 2;
+                                                                      }, 20);
+                    auto filter = [](int const& a)
+                               {
+                                 return a < 40 && a >= 20;
+                               };
+                    return boost::asynchronous::parallel_find_all(std::move(for_cont), filter, 20);
+                    },// work
+           [aPromise,tp,this](boost::future<std::vector<int>> res){
+                        BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
+                        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
+                        std::vector<boost::thread::id> ids = tp.thread_ids();
+                        BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
+                        BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
+                        std::vector<int> r = res.get();
+                        BOOST_CHECK_MESSAGE((r.size() == 10), ("result of parallel_find_all had " + boost::lexical_cast<std::string, int>(r.size()) + " entries, should have been 20"));
+                        for (int i : r) {
+                            BOOST_CHECK_MESSAGE((i < 40 && i >= 20), (boost::lexical_cast<std::string, int>(i) + " was returned by parallel_find_all, but is larger than or equal to 40 or smaller than 20"));
+                        }
+                        // reset
+                        m_data = mkdata();
+                        aPromise->set_value();
+           }// callback functor.
+        );
+        return fu;
+    }
 private:
     std::vector<int> m_data;
 };
@@ -232,9 +235,9 @@ public:
         boost::asynchronous::servant_proxy<ServantProxy,Servant>(s)
     {}
     BOOST_ASYNC_FUTURE_MEMBER(start_async_work)
-//    BOOST_ASYNC_FUTURE_MEMBER(start_async_work_range)
-//    BOOST_ASYNC_FUTURE_MEMBER(start_async_work_range2)
-//    BOOST_ASYNC_FUTURE_MEMBER(start_async_work_range3)
+    BOOST_ASYNC_FUTURE_MEMBER(start_async_work_range)
+    BOOST_ASYNC_FUTURE_MEMBER(start_async_work_range2)
+    BOOST_ASYNC_FUTURE_MEMBER(start_async_work_range3)
 };
 
 }
@@ -262,72 +265,72 @@ BOOST_AUTO_TEST_CASE( test_parallel_find_all )
     BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
 }
 
-//BOOST_AUTO_TEST_CASE( test_parallel_find_all_range )
-//{
-//    servant_dtor=false;
-//    {
-//        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-//                                                                            boost::asynchronous::lockfree_queue<> >);
+BOOST_AUTO_TEST_CASE( test_parallel_find_all_range )
+{
+    servant_dtor=false;
+    {
+        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<> >);
 
-//        main_thread_id = boost::this_thread::get_id();
-//        ServantProxy proxy(scheduler);
-//        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_async_work_range();
-//        try
-//        {
-//            boost::shared_future<void> resfuv = fuv.get();
-//            resfuv.get();
-//        }
-//        catch(...)
-//        {
-//            BOOST_FAIL( "unexpected exception" );
-//        }
-//    }
-//    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
-//}
+        main_thread_id = boost::this_thread::get_id();
+        ServantProxy proxy(scheduler);
+        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_async_work_range();
+        try
+        {
+            boost::shared_future<void> resfuv = fuv.get();
+            resfuv.get();
+        }
+        catch(...)
+        {
+            BOOST_FAIL( "unexpected exception" );
+        }
+    }
+    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
+}
 
-//BOOST_AUTO_TEST_CASE( test_parallel_find_all_range2 )
-//{
-//    servant_dtor=false;
-//    {
-//        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-//                                                                            boost::asynchronous::lockfree_queue<> >);
+BOOST_AUTO_TEST_CASE( test_parallel_find_all_range2 )
+{
+    servant_dtor=false;
+    {
+        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<> >);
 
-//        main_thread_id = boost::this_thread::get_id();
-//        ServantProxy proxy(scheduler);
-//        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_async_work_range2();
-//        try
-//        {
-//            boost::shared_future<void> resfuv = fuv.get();
-//            resfuv.get();
-//        }
-//        catch(...)
-//        {
-//            BOOST_FAIL( "unexpected exception" );
-//        }
-//    }
-//    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
-//}
+        main_thread_id = boost::this_thread::get_id();
+        ServantProxy proxy(scheduler);
+        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_async_work_range2();
+        try
+        {
+            boost::shared_future<void> resfuv = fuv.get();
+            resfuv.get();
+        }
+        catch(...)
+        {
+            BOOST_FAIL( "unexpected exception" );
+        }
+    }
+    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
+}
 
-//BOOST_AUTO_TEST_CASE( test_parallel_find_all_range3 )
-//{
-//    servant_dtor=false;
-//    {
-//        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-//                                                                            boost::asynchronous::lockfree_queue<> >);
+BOOST_AUTO_TEST_CASE( test_parallel_find_all_range3 )
+{
+    servant_dtor=false;
+    {
+        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<> >);
 
-//        main_thread_id = boost::this_thread::get_id();
-//        ServantProxy proxy(scheduler);
-//        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_async_work_range3();
-//        try
-//        {
-//            boost::shared_future<void> resfuv = fuv.get();
-//            resfuv.get();
-//        }
-//        catch(...)
-//        {
-//            BOOST_FAIL( "unexpected exception" );
-//        }
-//    }
-//    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
-//}
+        main_thread_id = boost::this_thread::get_id();
+        ServantProxy proxy(scheduler);
+        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_async_work_range3();
+        try
+        {
+            boost::shared_future<void> resfuv = fuv.get();
+            resfuv.get();
+        }
+        catch(...)
+        {
+            BOOST_FAIL( "unexpected exception" );
+        }
+    }
+    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
+}
 
