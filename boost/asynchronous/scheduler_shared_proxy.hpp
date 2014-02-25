@@ -140,6 +140,10 @@ public:
         return a;
 #endif
     }
+    void set_name(std::string const& name)
+    {
+        m_scheduler->set_name(name);
+    }
 
     ~scheduler_shared_proxy()
     {

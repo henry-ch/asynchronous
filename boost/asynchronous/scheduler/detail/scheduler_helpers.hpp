@@ -10,9 +10,14 @@
 #ifndef BOOST_ASYNC_SCHEDULER_SCHEDULER_HELPERS_HPP
 #define BOOST_ASYNC_SCHEDULER_SCHEDULER_HELPERS_HPP
 
+#include<string>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/asynchronous/scheduler/detail/exceptions.hpp>
+
+#ifdef BOOST_ASYNCHRONOUS_PRCTL_SUPPORT
+#include <sys/prctl.h>
+#endif
 
 namespace boost { namespace asynchronous { namespace detail
 {
@@ -57,7 +62,18 @@ struct worker_wrap
     }
     boost::shared_ptr<ThreadType> m_group;
 };
-
+template <class Diag>
+struct set_name_task: public Diag
+{
+    set_name_task( std::string const& n): m_name(n){}
+    void operator()()const
+    {
+#ifdef BOOST_ASYNCHRONOUS_PRCTL_SUPPORT
+        prctl(PR_SET_NAME, m_name.c_str(), 0, 0, 0);
+#endif
+    }
+    std::string m_name;
+};
 
 }}}
 #endif // BOOST_ASYNC_SCHEDULER_SCHEDULER_HELPERS_HPP

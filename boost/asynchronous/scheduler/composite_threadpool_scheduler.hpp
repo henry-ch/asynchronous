@@ -129,7 +129,13 @@ public:
         }
         return ids;
     }
-
+    void set_name(std::string const& name)
+    {
+        for (typename std::vector<subpool_type>::iterator it = m_subpools.begin(); it != m_subpools.end();++it)
+        {
+            (*it).set_name(name);
+        }
+    }
     std::map<std::string,
              std::list<typename boost::asynchronous::job_traits<job_type>::diagnostic_item_type > >
     get_diagnostics(std::size_t pos=0)const

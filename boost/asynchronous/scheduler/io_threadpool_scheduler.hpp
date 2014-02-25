@@ -66,15 +66,25 @@ public:
     io_threadpool_scheduler(size_t min_number_of_workers, size_t max_number_of_workers, Args... args)
         : boost::asynchronous::detail::single_queue_scheduler_policy<Q>(boost::make_shared<queue_type>(args...))
         , m_data (boost::make_shared<internal_data>(min_number_of_workers,max_number_of_workers))
-        , m_private_queue (boost::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >())
     {
+        m_private_queues.reserve(max_number_of_workers);
+        for (size_t i = 0; i< max_number_of_workers;++i)
+        {
+            m_private_queues.push_back(
+                        boost::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >());
+        }
     }
 #endif
     io_threadpool_scheduler(size_t min_number_of_workers, size_t max_number_of_workers)
         : boost::asynchronous::detail::single_queue_scheduler_policy<Q>()
         , m_data (boost::make_shared<internal_data>(min_number_of_workers,max_number_of_workers))
-        , m_private_queue (boost::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >())
     {
+        m_private_queues.reserve(max_number_of_workers);
+        for (size_t i = 0; i< max_number_of_workers;++i)
+        {
+            m_private_queues.push_back(
+                        boost::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >());
+        }
     }
     void constructor_done(boost::weak_ptr<this_type> weak_self)
     {
@@ -87,7 +97,8 @@ public:
             boost::function<void()> d = boost::bind(&io_threadpool_scheduler::internal_data::basic_thread_not_busy,m_data);
             boost::thread* new_thread =
                     m_data->m_group->create_thread(
-                        boost::bind(&io_threadpool_scheduler::run_always,this->m_queue,m_private_queue,m_diagnostics,fu,weak_self,d));
+                        boost::bind(&io_threadpool_scheduler::run_always,this->m_queue,
+                                    m_private_queues[i],m_diagnostics,fu,weak_self,d));
             new_thread_promise.set_value(new_thread);
             m_data->m_thread_ids.insert(new_thread->get_id());
         }
@@ -105,9 +116,9 @@ public:
             // this task has to be executed lat => lowest prio
 #ifndef BOOST_NO_RVALUE_REFERENCES
             boost::asynchronous::any_callable job(ttask);
-            m_private_queue->push(std::move(job),std::numeric_limits<std::size_t>::max());
+            m_private_queues[i]->push(std::move(job),std::numeric_limits<std::size_t>::max());
 #else
-            m_private_queue->push(boost::asynchronous::any_callable(ttask),std::numeric_limits<std::size_t>::max());
+            m_private_queues[i]->push(boost::asynchronous::any_callable(ttask),std::numeric_limits<std::size_t>::max());
 #endif
         }
         // join older threads
@@ -149,8 +160,9 @@ public:
             boost::function<void(boost::thread*)> d = boost::bind(&io_threadpool_scheduler::internal_data::thread_finished,m_data,_1);
             boost::function<bool()> c = boost::bind(&io_threadpool_scheduler::internal_data::test_worker_loop,m_data);
             boost::thread* new_thread =
-                     m_data->m_group->create_thread(boost::bind(&io_threadpool_scheduler::run_once,this->m_queue,m_private_queue,
-                                                        m_diagnostics,fu,m_data->m_weak_self,d,c));
+                     m_data->m_group->create_thread(boost::bind(&io_threadpool_scheduler::run_once,this->m_queue,
+                                                                m_private_queues[m_data->m_current_number_of_workers-1],
+                                                                m_diagnostics,fu,m_data->m_weak_self,d,c));
             lock.lock();
             m_data->m_thread_ids.insert(new_thread->get_id());
             new_thread_promise.set_value(new_thread);
@@ -259,6 +271,19 @@ public:
 #endif
     // end overwrite from base
 
+    void set_name(std::string const& name)
+    {
+        for (size_t i = 0; i< m_data->m_thread_ids.size();++i)
+        {
+            boost::asynchronous::detail::set_name_task<typename Q::diagnostic_type> ntask(name);
+#ifndef BOOST_NO_RVALUE_REFERENCES
+            boost::asynchronous::any_callable job(ntask);
+            m_private_queues[i]->push(std::move(job),std::numeric_limits<std::size_t>::max());
+#else
+            m_private_queues[i]->push(boost::asynchronous::any_callable(ntask),std::numeric_limits<std::size_t>::max());
+#endif
+        }
+    }
 
     static bool run_loop(boost::shared_ptr<queue_type> queue,
                          boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > private_queue,
@@ -500,8 +525,8 @@ private:
     boost::shared_ptr<internal_data> m_data;
 
     boost::shared_ptr<diag_type> m_diagnostics;
-    boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > m_private_queue;
-
+    std::vector<boost::shared_ptr<
+                boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable>>> m_private_queues;
 };
 
 }} // boost::asynchronous::scheduler

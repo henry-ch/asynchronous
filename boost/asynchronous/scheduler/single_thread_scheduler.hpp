@@ -124,6 +124,16 @@ public:
     {
         // this scheduler does not steal
     }
+    void set_name(std::string const& name)
+    {
+        boost::asynchronous::detail::set_name_task<typename Q::diagnostic_type> ntask(name);
+#ifndef BOOST_NO_RVALUE_REFERENCES
+        typename queue_type::job_type job(ntask);
+        this->post(std::move(job),std::numeric_limits<std::size_t>::max());
+#else
+        this->post(typename queue_type::job_type(ntask),std::numeric_limits<std::size_t>::max());
+#endif
+    }
     
     static void run(boost::shared_ptr<queue_type> queue,boost::shared_ptr<diag_type> diagnostics,
                     boost::shared_future<boost::thread*> self,

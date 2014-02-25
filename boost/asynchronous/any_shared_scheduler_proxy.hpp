@@ -82,6 +82,7 @@ struct any_shared_scheduler_proxy_concept:
                                                    std::list<boost::asynchronous::diagnostic_item<Clock> > >(),
                                           const boost::type_erasure::_a>,
     boost::asynchronous::has_get_internal_scheduler_aspect<boost::asynchronous::internal_scheduler_aspect<JOB>(), boost::type_erasure::_a>,
+    boost::asynchronous::has_set_name<void(std::string const&), boost::type_erasure::_a>,
     boost::type_erasure::relaxed,
     boost::type_erasure::copy_constructible<>
 >{} ;
@@ -131,6 +132,7 @@ struct any_shared_scheduler_proxy_concept
     virtual std::size_t get_queue_size()const=0;
     virtual std::map<std::string,std::list<boost::asynchronous::diagnostic_item<Clock> > > get_diagnostics(std::size_t =0)const =0;
     virtual boost::asynchronous::internal_scheduler_aspect<JOB> get_internal_scheduler_aspect() =0;
+    virtual void set_name(std::string const&)=0;
 };
 template <class T = boost::asynchronous::any_callable,class Clock = boost::chrono::high_resolution_clock>
 struct any_shared_scheduler_proxy_ptr: boost::shared_ptr<boost::asynchronous::any_shared_scheduler_proxy_concept<T,Clock> >
@@ -201,6 +203,10 @@ public:
     boost::asynchronous::internal_scheduler_aspect<JOB> get_internal_scheduler_aspect() const
     {
         return (*my_ptr).get_internal_scheduler_aspect();
+    }
+    void set_name(std::string const& name)
+    {
+        (*my_ptr).set_name(name);
     }
 
 private:

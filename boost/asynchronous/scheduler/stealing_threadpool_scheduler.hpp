@@ -67,15 +67,25 @@ public:
     stealing_threadpool_scheduler(size_t number_of_workers, Args... args)
         : boost::asynchronous::detail::single_queue_scheduler_policy<Q>(boost::make_shared<queue_type>(args...))
         , m_number_of_workers(number_of_workers)
-        , m_private_queue (boost::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >())
     {
+        m_private_queues.reserve(number_of_workers);
+        for (size_t i = 0; i< number_of_workers;++i)
+        {
+            m_private_queues.push_back(
+                        boost::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >());
+        }
     }
 #endif
     stealing_threadpool_scheduler(size_t number_of_workers)
         : boost::asynchronous::detail::single_queue_scheduler_policy<Q>()
         , m_number_of_workers(number_of_workers)
-        , m_private_queue (boost::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >())
-    {
+     {
+        m_private_queues.reserve(number_of_workers);
+        for (size_t i = 0; i< number_of_workers;++i)
+        {
+            m_private_queues.push_back(
+                        boost::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >());
+        }
     }
     void set_steal_from_queues(std::vector<boost::asynchronous::any_queue_ptr<job_type> > const& others)
     {
@@ -92,7 +102,8 @@ public:
             boost::promise<boost::thread*> new_thread_promise;
             boost::shared_future<boost::thread*> fu = new_thread_promise.get_future();
             boost::thread* new_thread =
-                    m_group->create_thread(boost::bind(&stealing_threadpool_scheduler::run,this->m_queue,m_private_queue,others,m_diagnostics,fu,weak_self));
+                    m_group->create_thread(boost::bind(&stealing_threadpool_scheduler::run,this->m_queue,
+                                                       m_private_queues[i],others,m_diagnostics,fu,weak_self));
             new_thread_promise.set_value(new_thread);
             m_thread_ids.push_back(new_thread->get_id());
         }
@@ -112,9 +123,9 @@ public:
             // this task has to be executed lat => lowest prio
 #ifndef BOOST_NO_RVALUE_REFERENCES
             boost::asynchronous::any_callable job(ttask);
-            m_private_queue->push(std::move(job),std::numeric_limits<std::size_t>::max());
+            m_private_queues[i]->push(std::move(job),std::numeric_limits<std::size_t>::max());
 #else
-            m_private_queue->push(boost::asynchronous::any_callable(ttask),std::numeric_limits<std::size_t>::max());
+            m_private_queues[i]->push(boost::asynchronous::any_callable(ttask),std::numeric_limits<std::size_t>::max());
 #endif
         }
     }
@@ -136,6 +147,20 @@ public:
     {
         return m_diagnostics->get_map();
     }
+    void set_name(std::string const& name)
+    {
+        for (size_t i = 0; i< m_thread_ids.size();++i)
+        {
+            boost::asynchronous::detail::set_name_task<typename Q::diagnostic_type> ntask(name);
+#ifndef BOOST_NO_RVALUE_REFERENCES
+            boost::asynchronous::any_callable job(ntask);
+            m_private_queues[i]->push(std::move(job),std::numeric_limits<std::size_t>::max());
+#else
+            m_private_queues[i]->push(boost::asynchronous::any_callable(ntask),std::numeric_limits<std::size_t>::max());
+#endif
+        }
+    }
+
     static void run(boost::shared_ptr<queue_type> own_queue,
                     boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > private_queue,
                     std::vector<boost::asynchronous::any_queue_ptr<job_type> > other_queues,
@@ -239,7 +264,8 @@ private:
     std::vector<boost::thread::id> m_thread_ids;
     boost::shared_ptr<diag_type> m_diagnostics;
     boost::weak_ptr<this_type> m_weak_self;
-    boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > m_private_queue;
+    std::vector<boost::shared_ptr<
+                boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable>>> m_private_queues;
 };
 
 }} // boost::async::scheduler

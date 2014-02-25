@@ -134,6 +134,16 @@ public:
         m_private_queue->push(boost::asynchronous::any_callable(ttask),std::numeric_limits<std::size_t>::max());
 #endif
     }
+    void set_name(std::string const& name)
+    {
+        boost::asynchronous::detail::set_name_task<typename Q::diagnostic_type> ntask(name);
+#ifndef BOOST_NO_RVALUE_REFERENCES
+        boost::asynchronous::any_callable job(ntask);
+        m_private_queue->push(std::move(job),std::numeric_limits<std::size_t>::max());
+#else
+        m_private_queue->push(boost::asynchronous::any_callable(ntask),std::numeric_limits<std::size_t>::max());
+#endif
+    }
     void post(typename queue_type::job_type && job, std::size_t prio)
     {
         boost::asynchronous::job_traits<typename queue_type::job_type>::set_posted_time(job);

@@ -127,7 +127,19 @@ public:
         }
         m_works.clear();
     }
-    
+    void set_name(std::string const& name)
+    {
+        for (size_t i = 1; i<= m_ioservices.size();++i)
+        {
+            boost::asynchronous::detail::set_name_task<typename boost::asynchronous::job_traits<job_type>::diagnostic_type> ntask(name);
+#ifndef BOOST_NO_RVALUE_REFERENCES
+            job_type job(ntask);
+            this->post(std::move(job),i);
+#else
+            this->post(job_type(ntask),i);
+#endif
+        }
+    }
     boost::asynchronous::any_joinable get_worker()const
     {
         return boost::asynchronous::any_joinable (boost::asynchronous::detail::worker_wrap<boost::thread_group>(m_group));
