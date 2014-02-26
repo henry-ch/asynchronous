@@ -28,18 +28,18 @@
 namespace boost { namespace asynchronous
 {
 
-// scheduler proxy for use outside the active object world
-// implements any_shared_scheduler_proxy
+namespace detail
+{
 template<class S>
-class scheduler_shared_proxy : 
+class scheduler_shared_proxy_impl :
 #ifdef BOOST_ASYNCHRONOUS_NO_TYPE_ERASURE
         public any_shared_scheduler_proxy_concept<typename S::job_type>, public internal_scheduler_aspect_concept<typename S::job_type>,
 #endif
-        public boost::enable_shared_from_this<scheduler_shared_proxy<S> >
+        public boost::enable_shared_from_this<scheduler_shared_proxy_impl<S> >
 {
 public:
     typedef S scheduler_type;
-    typedef scheduler_shared_proxy<S> this_type;
+    typedef scheduler_shared_proxy_impl<S> this_type;
     typedef typename S::job_type job_type;
 
     bool is_valid() const
@@ -53,12 +53,12 @@ public:
 #ifndef BOOST_NO_RVALUE_REFERENCES
     void post(job_type job) const
     {
-        BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy::post has empty scheduler");
+        BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy_impl::post has empty scheduler");
         move_post(std::move(job));
     }
     void post(job_type job,std::size_t priority) const
     {
-        BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy::post has empty scheduler");
+        BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy_impl::post has empty scheduler");
         move_post(std::move(job),priority);
     }
     void move_post(job_type&& job,std::size_t priority=0) const
@@ -67,12 +67,12 @@ public:
     }
     boost::asynchronous::any_interruptible interruptible_post(job_type job) const
     {
-        BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy::interruptible_post has empty scheduler");
+        BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy_impl::interruptible_post has empty scheduler");
         return move_interruptible_post(std::move(job));
     }
     boost::asynchronous::any_interruptible interruptible_post(job_type job,std::size_t priority) const
     {
-        BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy::interruptible_post has empty scheduler");
+        BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy_impl::interruptible_post has empty scheduler");
         return move_interruptible_post(std::move(job),priority);
     }
     boost::asynchronous::any_interruptible move_interruptible_post(job_type && job,
@@ -83,22 +83,22 @@ public:
 #else
     void post(job_type job) const
     {
-        BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy::post has empty scheduler");
+        BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy_impl::post has empty scheduler");
         m_scheduler->post(job);
     }
     void post(job_type job,std::size_t priority) const
     {
-        BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy::post has empty scheduler");
+        BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy_impl::post has empty scheduler");
         m_scheduler->post(job,priority);
     }
     boost::asynchronous::any_interruptible interruptible_post(job_type job) const
     {
-        BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy::interruptible_post has empty scheduler");
+        BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy_impl::interruptible_post has empty scheduler");
         return m_scheduler->interruptible_post(job);
     }
     boost::asynchronous::any_interruptible interruptible_post(job_type job,std::size_t priority) const
     {
-        BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy::interruptible_post has empty scheduler");
+        BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy_impl::interruptible_post has empty scheduler");
         return m_scheduler->interruptible_post(job,priority);
     }
 #endif
@@ -107,7 +107,7 @@ public:
     {
         return m_scheduler->thread_ids();
     }
-    
+
     std::map<std::string,
              std::list<typename boost::asynchronous::job_traits<job_type>::diagnostic_item_type > >
     get_diagnostics(std::size_t pos=0)const
@@ -120,7 +120,7 @@ public:
         boost::asynchronous::detail::lockable_weak_scheduler<scheduler_type> w(m_scheduler);
         return boost::asynchronous::any_weak_scheduler<job_type>(w);
     }
-    
+
     std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues() const
     {
         return m_scheduler->get_queues();
@@ -135,7 +135,7 @@ public:
         boost::shared_ptr<this_type> t = this->shared_from_this();
         return boost::static_pointer_cast<
                 boost::asynchronous::internal_scheduler_aspect_concept<job_type> > (t);
-#else        
+#else
         boost::asynchronous::internal_scheduler_aspect<job_type> a(this->shared_from_this());
         return a;
 #endif
@@ -145,7 +145,7 @@ public:
         m_scheduler->set_name(name);
     }
 
-    ~scheduler_shared_proxy()
+    ~scheduler_shared_proxy_impl()
     {
         // stop scheduler and block until joined
         //TODO post instead?
@@ -154,15 +154,144 @@ public:
         worker.join();
     }
 
-private:
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    explicit scheduler_shared_proxy(boost::shared_ptr<scheduler_type>&& scheduler): m_scheduler(scheduler){scheduler.reset();}
+    explicit scheduler_shared_proxy_impl(boost::shared_ptr<scheduler_type>&& scheduler): m_scheduler(scheduler){scheduler.reset();}
 #else
-    explicit scheduler_shared_proxy(boost::shared_ptr<scheduler_type> scheduler): m_scheduler(scheduler){}
+    explicit scheduler_shared_proxy_impl(boost::shared_ptr<scheduler_type> scheduler): m_scheduler(scheduler){}
 #endif
 
     // attribute
     boost::shared_ptr<scheduler_type> m_scheduler;
+};
+}
+
+// scheduler proxy for use outside the active object world
+// implements any_shared_scheduler_proxy
+template<class S>
+class scheduler_shared_proxy
+#ifdef BOOST_ASYNCHRONOUS_NO_TYPE_ERASURE
+       : public any_shared_scheduler_proxy_concept<typename S::job_type>, public internal_scheduler_aspect_concept<typename S::job_type>
+#endif
+{
+public:
+    typedef S scheduler_type;
+    typedef scheduler_shared_proxy<S> this_type;
+    typedef typename S::job_type job_type;
+
+    bool is_valid() const
+    {
+        return m_impl->is_valid();
+    }
+    std::size_t get_queue_size() const
+    {
+        return m_impl->get_queue_size();
+    }
+#ifndef BOOST_NO_RVALUE_REFERENCES
+    void post(job_type job) const
+    {
+        move_post(std::move(job));
+    }
+    void post(job_type job,std::size_t priority) const
+    {
+        move_post(std::move(job),priority);
+    }
+    void move_post(job_type&& job,std::size_t priority=0) const
+    {
+        m_impl->post(std::forward<job_type>(job),priority);
+    }
+    boost::asynchronous::any_interruptible interruptible_post(job_type job) const
+    {
+        return move_interruptible_post(std::move(job));
+    }
+    boost::asynchronous::any_interruptible interruptible_post(job_type job,std::size_t priority) const
+    {
+        return move_interruptible_post(std::move(job),priority);
+    }
+    boost::asynchronous::any_interruptible move_interruptible_post(job_type && job,
+                                                                std::size_t priority=0) const
+    {
+       return m_impl->interruptible_post(std::forward<job_type>(job),priority);
+    }
+#else
+    void post(job_type job) const
+    {
+        m_impl->post(job);
+    }
+    void post(job_type job,std::size_t priority) const
+    {
+        m_impl->post(job,priority);
+    }
+    boost::asynchronous::any_interruptible interruptible_post(job_type job) const
+    {
+        return m_impl->interruptible_post(job);
+    }
+    boost::asynchronous::any_interruptible interruptible_post(job_type job,std::size_t priority) const
+    {
+        return m_impl->interruptible_post(job,priority);
+    }
+#endif
+
+    std::vector<boost::thread::id> thread_ids()const
+    {
+        return m_impl->thread_ids();
+    }
+    
+    std::map<std::string,
+             std::list<typename boost::asynchronous::job_traits<job_type>::diagnostic_item_type > >
+    get_diagnostics(std::size_t pos=0)const
+    {
+        return m_impl->get_diagnostics(pos);
+    }
+
+    boost::asynchronous::any_weak_scheduler<job_type> get_weak_scheduler() const
+    {
+        boost::asynchronous::detail::lockable_weak_scheduler<scheduler_type> w(m_impl->m_scheduler);
+        return boost::asynchronous::any_weak_scheduler<job_type>(w);
+    }
+    
+    std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues() const
+    {
+        return m_impl->get_queues();
+    }
+    void set_steal_from_queues(std::vector<boost::asynchronous::any_queue_ptr<job_type> > const& queues)
+    {
+        m_impl->set_steal_from_queues(queues);
+    }
+    boost::asynchronous::internal_scheduler_aspect<job_type> get_internal_scheduler_aspect()
+    {
+#ifdef BOOST_ASYNCHRONOUS_NO_TYPE_ERASURE
+        boost::shared_ptr<boost::asynchronous::detail::scheduler_shared_proxy_impl<S> > t = m_impl->shared_from_this();
+        return boost::static_pointer_cast<
+                boost::asynchronous::internal_scheduler_aspect_concept<job_type> > (t);
+#else        
+        boost::asynchronous::internal_scheduler_aspect<job_type> a(m_impl->shared_from_this());
+        return a;
+#endif
+    }
+    void set_name(std::string const& name)
+    {
+        m_impl->set_name(name);
+    }
+
+    ~scheduler_shared_proxy()
+    {
+    }
+
+private:
+#ifndef BOOST_NO_RVALUE_REFERENCES
+    explicit scheduler_shared_proxy(boost::shared_ptr<scheduler_type>&& scheduler)
+        : m_impl(boost::make_shared<boost::asynchronous::detail::scheduler_shared_proxy_impl<S> >(
+                     std::forward<boost::shared_ptr<scheduler_type>>(scheduler)))
+    {
+        scheduler.reset();
+    }
+#else
+    explicit scheduler_shared_proxy(boost::shared_ptr<scheduler_type> scheduler)
+        : m_impl(boost::make_shared<boost::asynchronous::detail::scheduler_shared_proxy_impl<S> >(scheduler)){}
+#endif
+
+    // attribute
+    boost::shared_ptr<boost::asynchronous::detail::scheduler_shared_proxy_impl<S> > m_impl;
 
     template <class Sched>
     friend boost::asynchronous::any_shared_scheduler_proxy<typename Sched::job_type>
