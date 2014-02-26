@@ -112,8 +112,10 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
                     return boost::asynchronous::parallel_invoke_timeout<boost::asynchronous::any_callable>(
                                 boost::chrono::milliseconds(1000),
-                                boost::asynchronous::to_continuation_task([](){throw my_exception();}),
-                                boost::asynchronous::to_continuation_task([](){return 42.0;}));
+                                boost::asynchronous::to_continuation_task(
+                                    [](){boost::this_thread::sleep(boost::posix_time::milliseconds(500));}),
+                                boost::asynchronous::to_continuation_task(
+                                    [](){boost::this_thread::sleep(boost::posix_time::milliseconds(2000));return 42.0;}));
                     },// work
            [aPromise,tp,this](boost::future<std::tuple<boost::future<void>,boost::future<double>>> res){
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
@@ -124,11 +126,11 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         try
                         {
                             auto t = res.get();
-                            BOOST_CHECK_MESSAGE((std::get<0>(t)).has_exception(),"first lambda did not throw an exception. It should have");
+                            BOOST_CHECK_MESSAGE(!(std::get<0>(t)).has_exception(),"first lambda threw an exception.");
+                            BOOST_CHECK_MESSAGE((std::get<0>(t)).has_value(),"first task should be finished");
                             BOOST_CHECK_MESSAGE(!(std::get<1>(t)).has_exception(),"second lambda threw an exception. It should not have");
-                            BOOST_CHECK_MESSAGE((std::get<1>(t)).get() == 42.0,"second lambda returned wrong result");
                         }
-                        catch(std::exception& e)
+                        catch(std::exception& )
                         {
                             BOOST_FAIL( "unexpected exception in callback" );
                         }
