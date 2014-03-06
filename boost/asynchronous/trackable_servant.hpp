@@ -65,12 +65,12 @@ public:
     // make a callback, which posts if not the correct thread, and call directly otherwise
     // in any case, check if this object is still alive
     template<typename... Args>
-    std::function<void(Args... )> make_safe_callback(std::function<void(Args... )> func)
+    std::function<void(Args... )> make_safe_callback(std::function<void(Args... )> func,const std::string& task_name="", std::size_t prio=0)
     {
         boost::weak_ptr<track> tracking (m_tracking);
         boost::asynchronous::any_weak_scheduler<JOB> wscheduler = get_scheduler();
         //TODO functor with move
-        std::function<void(Args...)> res = [func,tracking,wscheduler](Args... as)mutable
+        std::function<void(Args...)> res = [func,tracking,wscheduler,task_name,prio](Args... as)mutable
         {
             boost::asynchronous::any_shared_scheduler<JOB> sched = wscheduler.lock();
             if (sched.is_valid())
@@ -84,13 +84,13 @@ public:
                 else
                 {
                     // not in our thread, post
-                    sched.post(std::bind( boost::asynchronous::check_alive([func](Args... args){func(args...);},tracking),as...));
+                    boost::asynchronous::post_future(sched,std::bind( boost::asynchronous::check_alive([func](Args... args){func(args...);},tracking),as...),
+                                                     task_name,prio);
                 }
             }
         };
         return res;
     }
-       
     // helper to make it easier using a timer service
     template <class Timer, class F>
     void async_wait(Timer& t, F func)
