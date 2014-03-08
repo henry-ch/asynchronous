@@ -41,7 +41,7 @@ struct internal_scheduler_aspect_concept:
  ::boost::mpl::vector<
     boost::asynchronous::pointer<>,
     boost::type_erasure::same_type<boost::asynchronous::pointer<>::element_type,boost::type_erasure::_a >,        
-    boost::asynchronous::has_get_queues<std::vector<boost::asynchronous::any_queue_ptr<JOB> >(),const boost::type_erasure::_a>,
+    boost::asynchronous::has_get_queues<std::vector<boost::asynchronous::any_queue_ptr<JOB> >(),boost::type_erasure::_a>,
     boost::asynchronous::has_set_steal_from_queues<void(std::vector<boost::asynchronous::any_queue_ptr<JOB> > const&),boost::type_erasure::_a>,
     boost::type_erasure::relaxed,
     boost::type_erasure::copy_constructible<>
@@ -99,55 +99,6 @@ struct any_shared_scheduler_proxy_ptr: boost::type_erasure::any<boost::asynchron
     any_shared_scheduler_proxy_ptr(U const& u):
         boost::type_erasure::any<boost::asynchronous::any_shared_scheduler_proxy_concept<T,Clock> > (u){}
 };
-#else
-template <class JOB>
-struct internal_scheduler_aspect_concept
-{
-    virtual std::vector<boost::asynchronous::any_queue_ptr<JOB> > get_queues() const=0;
-    virtual void set_steal_from_queues(std::vector<boost::asynchronous::any_queue_ptr<JOB> > const&) =0;
-};
-template <class T>
-struct internal_scheduler_aspect
-        : boost::shared_ptr<boost::asynchronous::internal_scheduler_aspect_concept<T> >
-{
-    internal_scheduler_aspect():
-        boost::shared_ptr<boost::asynchronous::internal_scheduler_aspect_concept<T> > (){}
-
-    template <class U>
-    internal_scheduler_aspect(U const& u):
-        boost::shared_ptr<boost::asynchronous::internal_scheduler_aspect_concept<T> > (u){}    
-};
-template <class JOB = boost::asynchronous::any_callable,class Clock = boost::chrono::high_resolution_clock>
-struct any_shared_scheduler_proxy_concept
-{
-    virtual ~any_shared_scheduler_proxy_concept<JOB,Clock>(){}
-
-    virtual void post(JOB) const =0;
-    virtual void post(JOB, std::size_t) const =0;
-    virtual boost::asynchronous::any_interruptible interruptible_post(JOB) const =0;
-    virtual boost::asynchronous::any_interruptible interruptible_post(JOB, std::size_t) const =0;
-    virtual std::vector<boost::thread::id> thread_ids() const =0;
-    virtual boost::asynchronous::any_weak_scheduler<JOB> get_weak_scheduler() const = 0;
-    virtual bool is_valid() const =0;
-    virtual std::size_t get_queue_size()const=0;
-    virtual std::map<std::string,std::list<boost::asynchronous::diagnostic_item<Clock> > > get_diagnostics(std::size_t =0)const =0;
-    virtual boost::asynchronous::internal_scheduler_aspect<JOB> get_internal_scheduler_aspect() =0;
-    virtual void set_name(std::string const&)=0;
-};
-template <class T = boost::asynchronous::any_callable,class Clock = boost::chrono::high_resolution_clock>
-struct any_shared_scheduler_proxy_ptr: boost::shared_ptr<boost::asynchronous::any_shared_scheduler_proxy_concept<T,Clock> >
-{
-    typedef T job_type;
-    typedef Clock clock_type;
-    any_shared_scheduler_proxy_ptr():
-        boost::shared_ptr<boost::asynchronous::any_shared_scheduler_proxy_concept<T,Clock> > (){}
-
-    template <class U>
-    any_shared_scheduler_proxy_ptr(U const& u):
-        boost::shared_ptr<boost::asynchronous::any_shared_scheduler_proxy_concept<T,Clock> > (u){}
-};
-#endif
-
 template <class JOB = boost::asynchronous::any_callable,class Clock = boost::chrono::high_resolution_clock>
 class any_shared_scheduler_proxy
 {
@@ -208,11 +159,111 @@ public:
     {
         (*my_ptr).set_name(name);
     }
-
 private:
     any_shared_scheduler_proxy_ptr<JOB,Clock> my_ptr;
 };
+#else
+template <class JOB>
+struct internal_scheduler_aspect_concept
+{
+    virtual std::vector<boost::asynchronous::any_queue_ptr<JOB> > get_queues()=0;
+    virtual void set_steal_from_queues(std::vector<boost::asynchronous::any_queue_ptr<JOB> > const&) =0;
+};
+template <class T>
+struct internal_scheduler_aspect
+        : boost::shared_ptr<boost::asynchronous::internal_scheduler_aspect_concept<T> >
+{
+    internal_scheduler_aspect():
+        boost::shared_ptr<boost::asynchronous::internal_scheduler_aspect_concept<T> > (){}
 
+    template <class U>
+    internal_scheduler_aspect(U const& u):
+        boost::shared_ptr<boost::asynchronous::internal_scheduler_aspect_concept<T> > (u){}
+};
+template <class JOB = boost::asynchronous::any_callable,class Clock = boost::chrono::high_resolution_clock>
+struct any_shared_scheduler_proxy_concept
+{
+    virtual ~any_shared_scheduler_proxy_concept<JOB,Clock>(){}
+
+    virtual void post(JOB) const =0;
+    virtual void post(JOB, std::size_t) const =0;
+    virtual boost::asynchronous::any_interruptible interruptible_post(JOB) const =0;
+    virtual boost::asynchronous::any_interruptible interruptible_post(JOB, std::size_t) const =0;
+    virtual std::vector<boost::thread::id> thread_ids() const =0;
+    virtual boost::asynchronous::any_weak_scheduler<JOB> get_weak_scheduler() const = 0;
+    virtual bool is_valid() const =0;
+    virtual std::size_t get_queue_size()const=0;
+    virtual std::map<std::string,std::list<boost::asynchronous::diagnostic_item<Clock> > > get_diagnostics(std::size_t =0)const =0;
+    virtual boost::asynchronous::internal_scheduler_aspect<JOB> get_internal_scheduler_aspect() =0;
+    virtual void set_name(std::string const&)=0;
+};
+template <class JOB = boost::asynchronous::any_callable,class Clock = boost::chrono::high_resolution_clock>
+class any_shared_scheduler_proxy
+{
+public:
+    typedef JOB job_type;
+    typedef Clock clock_type;
+
+    any_shared_scheduler_proxy():my_ptr(){}
+    any_shared_scheduler_proxy(any_shared_scheduler_proxy const& other):my_ptr(other.my_ptr){}
+    template <class U>
+    any_shared_scheduler_proxy(U const& u):
+        my_ptr (u){}
+
+    void reset()
+    {
+        my_ptr.reset();
+    }
+    //TODO check is_valid
+    void post(JOB job) const
+    {
+        (*my_ptr).post(std::move(job));
+    }
+    void post(JOB job, std::size_t priority) const
+    {
+        (*my_ptr).post(std::move(job),priority);
+    }
+    boost::asynchronous::any_interruptible interruptible_post(JOB job) const
+    {
+        return (*my_ptr).interruptible_post(std::move(job));
+    }
+    boost::asynchronous::any_interruptible interruptible_post(JOB job, std::size_t priority) const
+    {
+        return (*my_ptr).interruptible_post(std::move(job),priority);
+    }
+    std::vector<boost::thread::id> thread_ids() const
+    {
+        return (*my_ptr).thread_ids();
+    }
+    boost::asynchronous::any_weak_scheduler<JOB> get_weak_scheduler() const
+    {
+        return (*my_ptr).get_weak_scheduler();
+    }
+    bool is_valid() const
+    {
+        return (*my_ptr).is_valid();
+    }
+    std::size_t get_queue_size()const
+    {
+        return (*my_ptr).get_queue_size();
+    }
+    std::map<std::string,std::list<boost::asynchronous::diagnostic_item<Clock> > > get_diagnostics(std::size_t prio=0)const
+    {
+        return (*my_ptr).get_diagnostics(prio);
+    }
+    boost::asynchronous::internal_scheduler_aspect<JOB> get_internal_scheduler_aspect()
+    {
+        return (*my_ptr).get_internal_scheduler_aspect();
+    }
+    void set_name(std::string const& name)
+    {
+        (*my_ptr).set_name(name);
+    }
+
+private:
+    boost::shared_ptr<boost::asynchronous::any_shared_scheduler_proxy_concept<JOB,Clock> > my_ptr;
+};
+#endif
 }} // boost::async
 
 

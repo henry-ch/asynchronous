@@ -313,7 +313,7 @@ public:
         return interruptible_post(w,priority);
     }  
 #endif
-    std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues()const
+    std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues()
     {
         // this scheduler doesn't give any queues for stealing
         return std::vector<boost::asynchronous::any_queue_ptr<job_type> >();
@@ -345,13 +345,20 @@ private:
             try
             {
                 bool popped = (ioservice->poll_one() != 0);
-                for (std::size_t i = 0; i< other_ioservices.size();++i)
+                if (popped)
                 {
-                    popped = (other_ioservices[i]->poll_one() != 0);
-                    if (popped)
+                    cpu_load.popped_job();
+                }
+                else
+                {
+                    for (std::size_t i = 0; i< other_ioservices.size();++i)
                     {
-                        cpu_load.popped_job();
-                        break;
+                        popped = (other_ioservices[i]->poll_one() != 0);
+                        if (popped)
+                        {
+                            cpu_load.popped_job();
+                            break;
+                        }
                     }
                 }
                 bool stolen=false;

@@ -93,7 +93,7 @@ public:
         return boost::asynchronous::any_interruptible(interruptible);
     }
 #endif
-    std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues()const
+    std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues()
     {
         // this scheduler lends its queue for stealing
         std::vector<boost::asynchronous::any_queue_ptr<job_type> > res;

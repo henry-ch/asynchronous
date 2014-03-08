@@ -115,7 +115,7 @@ public:
     {
         return m_diagnostics->get_map();
     }
-    std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues()const
+    std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues()
     {
         // this scheduler doesn't give any queues for stealing
         return std::vector<boost::asynchronous::any_queue_ptr<job_type> >();

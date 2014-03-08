@@ -121,7 +121,7 @@ public:
         return boost::asynchronous::any_weak_scheduler<job_type>(w);
     }
 
-    std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues() const
+    std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues()
     {
         return m_scheduler->get_queues();
     }
@@ -249,7 +249,7 @@ public:
         return boost::asynchronous::any_weak_scheduler<job_type>(w);
     }
     
-    std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues() const
+    std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues()
     {
         return m_impl->get_queues();
     }
@@ -312,8 +312,7 @@ boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type> create_sha
     boost::shared_ptr<S> sps (scheduler);
     sps->constructor_done(sps);
 #ifdef BOOST_ASYNCHRONOUS_NO_TYPE_ERASURE
-    boost::asynchronous::any_shared_scheduler_proxy_ptr<typename S::job_type> p(new boost::asynchronous::scheduler_shared_proxy<S>(std::move(sps)));
-    return boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type>(p);
+    return boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type>(new boost::asynchronous::scheduler_shared_proxy<S>(std::move(sps)));
 #else
     //TODO solve friend problem
     boost::shared_ptr<boost::asynchronous::scheduler_shared_proxy<S> > p(new boost::asynchronous::scheduler_shared_proxy<S>(std::move(sps)));
@@ -328,8 +327,7 @@ boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type> create_sha
 {
     scheduler->constructor_done(boost::weak_ptr<S>(scheduler));
 #ifdef BOOST_ASYNCHRONOUS_NO_TYPE_ERASURE
-    boost::asynchronous::any_shared_scheduler_proxy_ptr<typename S::job_type> p(new boost::asynchronous::scheduler_shared_proxy<S>(std::forward<boost::shared_ptr<S> >(scheduler)));
-    return boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type>(p);
+    return boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type>(new boost::asynchronous::scheduler_shared_proxy<S>(std::forward<boost::shared_ptr<S> >(scheduler)));
 #else
     //TODO solve friend problem
     //TODO Clock

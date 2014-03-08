@@ -148,10 +148,10 @@ public:
         composite_lockable_weak_scheduler w(m_subpools);
         return boost::asynchronous::any_weak_scheduler<job_type>(w);
     }
-    std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues() const
+    std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues()
     {
         std::vector<boost::asynchronous::any_queue_ptr<job_type> > res;
-        for (typename std::vector<subpool_type>::const_iterator it = m_subpools.begin(); it != m_subpools.end();++it)
+        for (typename std::vector<subpool_type>::iterator it = m_subpools.begin(); it != m_subpools.end();++it)
         {
             std::vector<boost::asynchronous::any_queue_ptr<job_type> > queues = (*(*it).get_internal_scheduler_aspect()).get_queues();
             res.insert(res.end(),queues.begin(),queues.end());
