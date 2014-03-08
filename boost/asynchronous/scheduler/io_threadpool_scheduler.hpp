@@ -103,14 +103,14 @@ public:
             m_data->m_thread_ids.insert(new_thread->get_id());
         }
     }
-    std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues()const
+    std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues()
     {
         // this scheduler doesn't give any queues for stealing
         return std::vector<boost::asynchronous::any_queue_ptr<job_type> >();
     }
     ~io_threadpool_scheduler()
-    {
-        for (size_t i = 0; i< m_data->m_thread_ids.size();++i)
+    {        
+        for (size_t i = 0; i< m_data->m_min_number_of_workers;++i)
         {
             boost::asynchronous::detail::default_termination_task<typename Q::diagnostic_type,boost::thread_group> ttask(m_data->m_group);
             // this task has to be executed lat => lowest prio
@@ -154,7 +154,7 @@ public:
             (m_data->m_current_number_of_workers+1 > m_data->m_min_number_of_workers))
         {
             ++m_data->m_current_number_of_workers;
-            lock.unlock();
+            //lock.unlock();
             boost::promise<boost::thread*> new_thread_promise;
             boost::shared_future<boost::thread*> fu = new_thread_promise.get_future();
             boost::function<void(boost::thread*)> d = boost::bind(&io_threadpool_scheduler::internal_data::thread_finished,m_data,_1);
@@ -163,7 +163,7 @@ public:
                      m_data->m_group->create_thread(boost::bind(&io_threadpool_scheduler::run_once,this->m_queue,
                                                                 m_private_queues[m_data->m_current_number_of_workers-1],
                                                                 m_diagnostics,fu,m_data->m_weak_self,d,c));
-            lock.lock();
+            //lock.lock();
             m_data->m_thread_ids.insert(new_thread->get_id());
             new_thread_promise.set_value(new_thread);
         }
@@ -273,6 +273,7 @@ public:
 
     void set_name(std::string const& name)
     {
+        boost::mutex::scoped_lock lock(m_data->m_current_number_of_workers_mutex);
         for (size_t i = 0; i< m_data->m_thread_ids.size();++i)
         {
             boost::asynchronous::detail::set_name_task<typename Q::diagnostic_type> ntask(name);
@@ -333,7 +334,8 @@ public:
                 }
                 // check for shutdown
                 boost::asynchronous::any_callable djob;
-                popped = private_queue->try_pop(djob);
+                if (!!private_queue)
+                    popped = private_queue->try_pop(djob);
                 if (popped)
                 {
                     djob();
@@ -370,9 +372,7 @@ public:
         {
             try
             {
-                bool executed_job = run_loop(queue,private_queue,waiting,diagnostics,&cpu_load);
-                if (executed_job)
-                    on_done();
+                run_loop(queue,private_queue,waiting,diagnostics,&cpu_load);
             }
             catch(boost::asynchronous::detail::shutdown_exception&)
             {
@@ -398,7 +398,7 @@ public:
         }
     }
     static void run_once(boost::shared_ptr<queue_type> queue,
-                         boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > private_queue,
+                         boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > /*private_queue*/,
                          boost::shared_ptr<diag_type> diagnostics,
                          boost::shared_future<boost::thread*> self,
                          boost::weak_ptr<this_type> this_,
@@ -418,10 +418,11 @@ public:
         {
             try
             {
-                run_loop(queue,private_queue,waiting,diagnostics,0);
+                run_loop(queue,boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >(),waiting,diagnostics,0);
             }
             catch(boost::asynchronous::detail::shutdown_exception&)
             {
+                on_done(t);
                 // we are done
                 break;
             }
@@ -460,7 +461,9 @@ private:
            boost::mutex::scoped_lock lock(m_current_number_of_workers_mutex);
            bool res = (m_current_number_of_workers > m_min_number_of_workers);
            if (res)
+           {
                --m_current_number_of_workers;
+           }
            return res;
         }
         void basic_thread_not_busy()
