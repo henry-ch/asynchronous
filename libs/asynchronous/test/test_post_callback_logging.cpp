@@ -202,6 +202,23 @@ BOOST_AUTO_TEST_CASE( test_void_post_callback_logging )
         scheduler.clear_diagnostics();
         single_thread_sched_diag = scheduler.get_diagnostics();
         BOOST_CHECK_MESSAGE(single_thread_sched_diag.empty(),"Diags should have been cleared.");
+        {
+            ServantProxy proxy(scheduler);
+            boost::shared_future<boost::shared_future<void> > fuv = proxy.start_void_async_work();
+            try
+            {
+                boost::shared_future<void> resfuv = fuv.get();
+                resfuv.get();
+            }
+            catch(...)
+            {
+                BOOST_FAIL( "unexpected exception" );
+            }
+            boost::shared_future<diag_type> fu_diag = proxy.get_diagnostics();
+            diag_type diag = fu_diag.get();
+            BOOST_CHECK_MESSAGE(diag.size()==1,"servant tp worker after clear_diagnostics didn't log the number of works we expected.");// start_void_async_work's task
+        }
+
     }
     BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
 }
