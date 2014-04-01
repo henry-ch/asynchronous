@@ -147,6 +147,10 @@ public:
     {
         return m_diagnostics->get_map();
     }
+    void clear_diagnostics()
+    {
+        m_diagnostics->clear();
+    }
     void set_name(std::string const& name)
     {
         for (size_t i = 0; i< m_thread_ids.size();++i)

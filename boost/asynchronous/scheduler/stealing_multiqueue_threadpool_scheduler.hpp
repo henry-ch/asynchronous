@@ -146,7 +146,10 @@ public:
     {
         return m_diagnostics->get_map();
     }
-
+    void clear_diagnostics()
+    {
+        m_diagnostics->clear();
+    }
     void set_steal_from_queues(std::vector<boost::asynchronous::any_queue_ptr<job_type> > const& others)
     {
         init(m_number_of_workers,others,m_weak_self);

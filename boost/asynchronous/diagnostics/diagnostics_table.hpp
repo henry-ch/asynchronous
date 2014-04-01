@@ -95,6 +95,19 @@ public:
         }
         return res;
     }
+    void clear()
+    {
+        std::vector<boost::unique_lock<boost::shared_mutex> > locks;
+        for(unsigned i=0;i<m_buckets.size();++i)
+        {
+            locks.push_back(
+                        boost::unique_lock<boost::shared_mutex>((*m_buckets[i]).mutex));
+        }
+        for(unsigned i=0;i<m_buckets.size();++i)
+        {
+            (*m_buckets[i]).data.clear();
+        }
+    }
 
 };
 }} // boost::asynchronous

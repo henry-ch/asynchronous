@@ -198,6 +198,10 @@ BOOST_AUTO_TEST_CASE( test_void_post_callback_logging )
                 BOOST_CHECK_MESSAGE(!(*jit).is_interrupted(),"no task should have been interrupted.");
             }
         }
+        // clear diags
+        scheduler.clear_diagnostics();
+        single_thread_sched_diag = scheduler.get_diagnostics();
+        BOOST_CHECK_MESSAGE(single_thread_sched_diag.empty(),"Diags should have been cleared.");
     }
     BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
 }

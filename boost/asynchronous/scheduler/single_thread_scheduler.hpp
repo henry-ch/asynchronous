@@ -115,6 +115,10 @@ public:
     {
         return m_diagnostics->get_map();
     }
+    void clear_diagnostics()
+    {
+        m_diagnostics->clear();
+    }
     std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues()
     {
         // this scheduler doesn't give any queues for stealing

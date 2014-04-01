@@ -158,6 +158,11 @@ public:
         return std::map<std::string,
                 std::list<typename boost::asynchronous::job_traits<job_type>::diagnostic_item_type > >();
     }
+    void clear_diagnostics()
+    {
+        // TODO if possible
+    }
+
     void set_steal_from_queues(std::vector<boost::asynchronous::any_queue_ptr<job_type> > const& others)
     {
         // this scheduler steals if offered

@@ -114,7 +114,10 @@ public:
     {
         return m_scheduler->get_diagnostics(pos);
     }
-
+    void clear_diagnostics()
+    {
+        m_scheduler->clear_diagnostics();
+    }
     boost::asynchronous::any_weak_scheduler<job_type> get_weak_scheduler() const
     {
         boost::asynchronous::detail::lockable_weak_scheduler<scheduler_type> w(m_scheduler);
@@ -242,7 +245,10 @@ public:
     {
         return m_impl->get_diagnostics(pos);
     }
-
+    void clear_diagnostics()
+    {
+        m_impl->clear_diagnostics();
+    }
     boost::asynchronous::any_weak_scheduler<job_type> get_weak_scheduler() const
     {
         boost::asynchronous::detail::lockable_weak_scheduler<scheduler_type> w(m_impl->m_scheduler);

@@ -73,6 +73,7 @@ struct any_shared_scheduler_proxy_concept:
     boost::asynchronous::has_is_valid<bool(), const boost::type_erasure::_a>,
     boost::asynchronous::has_get_queue_size<std::size_t(), const boost::type_erasure::_a>,
     boost::asynchronous::has_reset<void()>,
+    boost::asynchronous::has_clear_diagnostics<void(), boost::type_erasure::_a>,
 #ifndef BOOST_NO_RVALUE_REFERENCES
     boost::asynchronous::has_get_diagnostics<std::map<std::string,
                                                    std::list<boost::asynchronous::diagnostic_item<Clock> > >(std::size_t),
@@ -151,6 +152,10 @@ public:
     {
         return (*my_ptr).get_diagnostics(prio);
     }
+    void clear_diagnostics()
+    {
+        (*my_ptr).clear_diagnostics();
+    }
     boost::asynchronous::internal_scheduler_aspect<JOB> get_internal_scheduler_aspect() const
     {
         return (*my_ptr).get_internal_scheduler_aspect();
@@ -194,6 +199,7 @@ struct any_shared_scheduler_proxy_concept
     virtual bool is_valid() const =0;
     virtual std::size_t get_queue_size()const=0;
     virtual std::map<std::string,std::list<boost::asynchronous::diagnostic_item<Clock> > > get_diagnostics(std::size_t =0)const =0;
+    virtual void clear_diagnostics() =0;
     virtual boost::asynchronous::internal_scheduler_aspect<JOB> get_internal_scheduler_aspect() =0;
     virtual void set_name(std::string const&)=0;
 };
@@ -250,6 +256,10 @@ public:
     std::map<std::string,std::list<boost::asynchronous::diagnostic_item<Clock> > > get_diagnostics(std::size_t prio=0)const
     {
         return (*my_ptr).get_diagnostics(prio);
+    }
+    void clear_diagnostics()
+    {
+        (*my_ptr).clear_diagnostics();
     }
     boost::asynchronous::internal_scheduler_aspect<JOB> get_internal_scheduler_aspect()
     {

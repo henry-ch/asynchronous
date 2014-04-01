@@ -142,6 +142,13 @@ public:
     {
         return (m_subpools[this->find_position(pos,m_subpools.size())]).get_diagnostics(pos);
     }
+    void clear_diagnostics()
+    {
+        for (typename std::vector<subpool_type>::iterator it = m_subpools.begin(); it != m_subpools.end();++it)
+        {
+            (*it).clear_diagnostics();
+        }
+    }
     
     boost::asynchronous::any_weak_scheduler<job_type> get_weak_scheduler() const
     {
@@ -298,6 +305,13 @@ private:
         get_diagnostics(std::size_t pos=0)const
         {
             return (m_schedulers[this->find_position(pos,m_schedulers.size())]).get_diagnostics(pos);
+        }
+        void clear_diagnostics()
+        {
+            for (typename std::vector<boost::asynchronous::any_shared_scheduler<job_type> >::iterator it = m_schedulers.begin(); it != m_schedulers.end();++it)
+            {
+                (*it).clear_diagnostics();
+            }
         }
     private:
         std::vector<boost::asynchronous::any_shared_scheduler<job_type> > m_schedulers;

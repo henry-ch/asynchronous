@@ -64,6 +64,7 @@ struct any_shared_scheduler_concept :
                                                std::list<boost::asynchronous::diagnostic_item<Clock> > >(std::size_t),
                                       const boost::type_erasure::_a>,
 #endif
+    boost::asynchronous::has_clear_diagnostics<void(), boost::type_erasure::_a>,
     boost::asynchronous::has_get_queue_size<std::size_t(), const boost::type_erasure::_a>,
     boost::asynchronous::has_get_diagnostics<std::map<std::string,
                                                    std::list<boost::asynchronous::diagnostic_item<Clock> > >(),
@@ -93,6 +94,7 @@ struct any_shared_scheduler_concept
     virtual std::vector<boost::thread::id> thread_ids() const =0;
     virtual std::size_t get_queue_size()const=0;
     virtual std::map<std::string,std::list<boost::asynchronous::diagnostic_item<Clock> > > get_diagnostics(std::size_t =0)const =0;
+    virtual void clear_diagnostics() =0;
 };
 template <class T = boost::asynchronous::any_callable,class Clock = boost::chrono::high_resolution_clock>
 struct any_shared_scheduler_ptr: boost::shared_ptr<boost::asynchronous::any_shared_scheduler_concept<T,Clock> >
@@ -158,6 +160,10 @@ public:
     std::map<std::string,std::list<boost::asynchronous::diagnostic_item<Clock> > > get_diagnostics(std::size_t prio=0)const
     {
         return (*my_ptr).get_diagnostics(prio);
+    }
+    void clear_diagnostics()
+    {
+        (*my_ptr).clear_diagnostics();
     }
 
 private:
