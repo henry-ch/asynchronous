@@ -286,22 +286,21 @@ public:
         }
     }
 
-    static bool run_loop(boost::shared_ptr<queue_type> queue,
-                         boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > private_queue,
-                         std::deque<boost::asynchronous::any_continuation>& waiting,
-                         boost::shared_ptr<diag_type> diagnostics,CPULoad* cpu_load)
+    // try to execute a job, return true
+    static bool execute_one_job(boost::shared_ptr<queue_type> queue,CPULoad* cpu_load,boost::shared_ptr<diag_type> diagnostics,
+                                std::deque<boost::asynchronous::any_continuation>& waiting)
     {
-        bool executed_job=false;
+        bool popped = false;
+        try
         {
             // get a job
             //TODO rval ref?
             typename Q::job_type job;
             // try from queue
-            bool popped = queue->try_pop(job);
+            popped = queue->try_pop(job);
             // did we manage to pop or steal?
             if (popped)
             {
-                executed_job = true;
                 if (cpu_load)
                     cpu_load->popped_job();
                 // automatic closing of log
@@ -314,7 +313,6 @@ public:
             }
             else
             {
-                // TODO thread count for continuations?
                 // look for waiting tasks
                 if (!waiting.empty())
                 {
@@ -332,22 +330,46 @@ public:
                         }
                     }
                 }
+            }
+        }
+        catch(boost::thread_interrupted&)
+        {
+            // task interrupted, no problem, just continue
+        }
+        catch(std::exception&)
+        {
+            // TODO, user-defined error
+        }
+        return popped;
+    }
+    static bool run_loop(boost::shared_ptr<queue_type> queue,
+                         boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > private_queue,
+                         std::deque<boost::asynchronous::any_continuation>& waiting,
+                         boost::shared_ptr<diag_type> diagnostics,CPULoad* cpu_load)
+    {
+        bool executed_job=false;
+        {
+            {
+                executed_job = execute_one_job(queue,cpu_load,diagnostics,waiting);
+                if (!executed_job)
+                {
+                    if (cpu_load)
+                        cpu_load->loop_done_no_job();
+                    // nothing for us to do, give up our time slice
+                    boost::this_thread::yield();
+                }
                 // check for shutdown
                 boost::asynchronous::any_callable djob;
                 if (!!private_queue)
-                    popped = private_queue->try_pop(djob);
-                if (popped)
+                    executed_job = private_queue->try_pop(djob);
+                if (executed_job)
                 {
                     djob();
                 }
-                if (cpu_load)
-                    cpu_load->loop_done_no_job();
-                // nothing for us to do, give up our time slice
-                boost::this_thread::yield();
-            }
+            } // job destroyed (for destruction useful)
+            // check if we got an interruption job
+            boost::this_thread::interruption_point();
         } // job destroyed (for destruction useful)
-        // check if we got an interruption job
-        boost::this_thread::interruption_point();
         return executed_job;
     }
 
@@ -376,7 +398,8 @@ public:
             }
             catch(boost::asynchronous::detail::shutdown_exception&)
             {
-                // we are done
+                // we are done, execute jobs posted short before to the end, then shutdown
+                while(execute_one_job(queue,&cpu_load,diagnostics,waiting));
                 on_done();
                 return;
             }

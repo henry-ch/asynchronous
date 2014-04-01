@@ -160,6 +160,71 @@ public:
 #endif
         }
     }
+    // try to execute a job, return true
+    static bool execute_one_job(boost::shared_ptr<queue_type> own_queue,std::vector<boost::asynchronous::any_queue_ptr<job_type> > other_queues,
+                                CPULoad& cpu_load,boost::shared_ptr<diag_type> diagnostics,
+                                std::deque<boost::asynchronous::any_continuation>& waiting)
+    {
+        bool popped = false;
+        try
+        {
+            // get a job
+            //TODO rval ref?
+            typename Q::job_type job;
+            popped = own_queue->try_pop(job);
+            if (!popped)
+            {
+                // ok we have nothing to do, maybe we can steal some work?
+                for (std::size_t i=0; i< other_queues.size(); ++i)
+                {
+                    popped = (*other_queues[i]).try_steal(job);
+                    if (popped)
+                        break;
+                }
+            }
+            // did we manage to pop or steal?
+            if (popped)
+            {
+                cpu_load.popped_job();
+                // automatic closing of log
+                boost::asynchronous::detail::job_diagnostic_closer<typename Q::job_type,diag_type> closer
+                        (&job,diagnostics.get());
+                // log time
+                boost::asynchronous::job_traits<typename Q::job_type>::set_started_time(job);
+                // execute job
+                job();
+            }
+            else
+            {
+                // look for waiting tasks
+                if (!waiting.empty())
+                {
+                    for (std::deque<boost::asynchronous::any_continuation>::iterator it = waiting.begin(); it != waiting.end();)
+                    {
+                        if ((*it).is_ready())
+                        {
+                            boost::asynchronous::any_continuation c = *it;
+                            it = waiting.erase(it);
+                            c();
+                        }
+                        else
+                        {
+                            ++it;
+                        }
+                    }
+                }
+            }
+        }
+        catch(boost::thread_interrupted&)
+        {
+            // task interrupted, no problem, just continue
+        }
+        catch(std::exception&)
+        {
+            // TODO, user-defined error
+        }
+        return popped;
+    }
 
     static void run(boost::shared_ptr<queue_type> own_queue,
                     boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > private_queue,
@@ -183,51 +248,9 @@ public:
             try
             {
                 {
-                    // get a job
-                    //TODO rval ref?
-                    typename Q::job_type job;
-                    bool popped = own_queue->try_pop(job);
+                    bool popped = execute_one_job(own_queue,other_queues,cpu_load,diagnostics,waiting);
                     if (!popped)
                     {
-                        // ok we have nothing to do, maybe we can steal some work?
-                        for (std::size_t i=0; i< other_queues.size(); ++i)
-                        {
-                            popped = (*other_queues[i]).try_steal(job);
-                            if (popped)
-                                break;
-                        }
-                    }
-                    // did we manage to pop or steal?
-                    if (popped)
-                    {
-                        cpu_load.popped_job();
-                        // automatic closing of log
-                        boost::asynchronous::detail::job_diagnostic_closer<typename Q::job_type,diag_type> closer
-                                (&job,diagnostics.get());
-                        // log time
-                        boost::asynchronous::job_traits<typename Q::job_type>::set_started_time(job);
-                        // execute job
-                        job();
-                    }
-                    else
-                    {
-                        // look for waiting tasks
-                        if (!waiting.empty())
-                        {
-                            for (std::deque<boost::asynchronous::any_continuation>::iterator it = waiting.begin(); it != waiting.end();)
-                            {
-                                if ((*it).is_ready())
-                                {
-                                    boost::asynchronous::any_continuation c = *it;
-                                    it = waiting.erase(it);
-                                    c();
-                                }
-                                else
-                                {
-                                    ++it;
-                                }
-                            }
-                        }
                         cpu_load.loop_done_no_job();
                         // nothing for us to do, give up our time slice
                         boost::this_thread::yield();
@@ -245,7 +268,8 @@ public:
             }
             catch(boost::asynchronous::detail::shutdown_exception&)
             {
-                // we are done
+                // we are done, execute jobs posted short before to the end, then shutdown
+                while(execute_one_job(own_queue,other_queues,cpu_load,diagnostics,waiting));
                 return;
             }
             catch(boost::thread_interrupted&)
