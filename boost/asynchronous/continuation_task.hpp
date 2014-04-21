@@ -204,6 +204,20 @@ create_continuation(OnDone&& on_done, boost::future<Args>&&... args)
     boost::asynchronous::any_continuation a(c);
     boost::asynchronous::get_continuations().push_front(a);
 }
+template <class OnDone, typename... Args>
+typename boost::enable_if< typename boost::asynchronous::detail::has_future_args<boost::shared_future<Args>...>::type ,void >::type
+create_continuation(OnDone&& on_done, boost::shared_future<Args>&&... args)
+{
+    boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
+
+    typedef decltype(std::make_tuple(std::forward<boost::shared_future<Args> >(args)...)) future_type;
+    boost::shared_ptr<future_type> sp = boost::make_shared<future_type> (std::make_tuple( std::forward<boost::shared_future<Args> >(args)...));
+
+    boost::asynchronous::detail::continuation<void,boost::asynchronous::any_callable,future_type> c (state,sp, boost::chrono::milliseconds(0));
+    c.on_done(on_done);
+    boost::asynchronous::any_continuation a(c);
+    boost::asynchronous::get_continuations().push_front(a);
+}
 // version with containers of futures
 template <class OnDone, typename Seq>
 typename boost::enable_if< typename has_iterator<Seq>::type ,void >::type
