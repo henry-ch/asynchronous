@@ -338,6 +338,13 @@ boost::mutex m_mutex;
                     no crash, even while facing a Boost.Asio callback.</para>
             </sect1>
             <sect1>
+                <title>Servant Proxies</title>
+                <para>Asynchronous offers <code>servant_proxy</code>, which make the outside world
+                    call members of a servant as if it was not living in an ActiveObject. It looks
+                    like a thread-safe interface, but safe from deadlock and race conditions unles
+                    you really try hard. </para>
+            </sect1>
+            <sect1>
                 <title>Interrupting</title>
                 <subtitle>Or how to catch back if you're drowning. </subtitle>
                 <para>Let's say you posted so many tasks to your threadpool that all your cores are
@@ -378,7 +385,11 @@ boost::mutex m_mutex;
                     single-threaded part might be busy, which would delay completion of the
                     algorithm. A known example of this is a parallel fibonacci. In this case, one
                     can register a continuation, which is to be executed upon completion of one or
-                    several tasks.</para>
+                    several tasks. </para>
+                <para>This mechanism is flexible so that you can use it with futures coming from
+                    another library, thus removing any need for a
+                        <code>wait_for_all(futures...)</code> or a
+                        <code>wait_for_any(futures...)</code>.</para>
             </sect1>
             <sect1>
                 <title>Want more power? What about extra machines?</title>
@@ -391,6 +402,8 @@ boost::mutex m_mutex;
                 <para>The solution could be: start with the i7, then if you need more power, add
                     some more machines which will steal jobs from your threadpools through TCP. This
                     can be done quite easily with Asynchronous.</para>
+                <para>Want to build your own hierarchical network of servers? It's hard to make it
+                    easier.</para>
             </sect1>
             <sect1>
                 <title>Parallel algorithms</title>
@@ -402,6 +415,53 @@ boost::mutex m_mutex;
                         </listitem>
                         <listitem>
                             <para>parallel_reduce: with iterators or ranges, support of TCP</para>
+                        </listitem>
+                    </itemizedlist></para>
+            </sect1>
+            <sect1>
+                <title>Task Priority</title>
+                <para>Asynchronous offers this possibility for all schedulers at low performance
+                    cost. This means you not only have the possibility to influence task execution
+                    order in a threadpool but also in Active Objects.</para>
+                <para>This is achieved by posting a task to the queue with the corresponding
+                    priority. It is also possible to get it even more fine-grained by using a queue
+                    of queues of queues, etc.</para>
+            </sect1>
+            <sect1>
+                <title>Integrating with Boost.Asio</title>
+                <para>Asynchronous offers a Boost.Asio based scheduler allowing you to easily write
+                    a Servant using Asio, or an Asio based threadpool. An advantage is that you get
+                    safe callbacks and easily get your Asio application to scale. Writing a server
+                    has never been easier.</para>
+                <para>Asynchronous also uses Boost.Asio to provide a timer with callbacks.</para>
+            </sect1>
+            <sect1>
+                <title>Integrating with Qt</title>
+                <para>What about getting the power of Asynchronous within a Qt application? Use
+                    Asynchronous' threadpools, algorithms and other cool features easily.</para>
+            </sect1>
+            <sect1>
+                <title>Work Stealing</title>
+                <para>Work stealing is supported both within the threads of a threadpool but also
+                    between different threadpools. Please have a look at Asynchronous' composite
+                    scheduler.</para>
+            </sect1>
+            <sect1>
+                <title>Extending the library</title>
+                <para>Asynchronous has been written with the design goal of allowing anybody to
+                    extend the library. In particular, the author is hoping to be offered the
+                    following extensions:<itemizedlist>
+                        <listitem>
+                            <para>Schedulers, Threadpools</para>
+                        </listitem>
+                        <listitem>
+                            <para>Queues</para>
+                        </listitem>
+                        <listitem>
+                            <para>Parallel algorithms</para>
+                        </listitem>
+                        <listitem>
+                            <para>Integration with other libraries</para>
                         </listitem>
                     </itemizedlist></para>
             </sect1>
@@ -468,8 +528,8 @@ boost::mutex m_mutex;
             <sect1>
                 <title>Hello, asynchronous world</title>
                 <para>The following code shows a very basic usage (a complete example <link
-                        xlink:href="examples/example_post_future.cpp">here</link>), this is not really
-                    asynchronous yet:</para>
+                        xlink:href="examples/example_post_future.cpp">here</link>), this is not
+                    really asynchronous yet:</para>
                 <programlisting>#include &lt;boost/asynchronous/scheduler/threadpool_scheduler.hpp>
 #include &lt;boost/asynchronous/queue/lockfree_queue.hpp>
 #include &lt;boost/asynchronous/scheduler_shared_proxy.hpp>
@@ -759,8 +819,8 @@ struct Servant2 : boost::asynchronous::trackable_servant&lt;>
                     is also essential to plan what hardware one needs for an application(4 cores? Or
                     100?). We need to know what our program is doing. Asynchronous provides some
                     logging per task to help there. Let's have a look at some code. It's also time
-                    to start using our template parameters for <code>trackable_servant</code>, in case you
-                    wondered why they are here.</para>
+                    to start using our template parameters for <code>trackable_servant</code>, in
+                    case you wondered why they are here.</para>
                 <programlisting>// we will be using loggable jobs internally
 typedef boost::asynchronous::any_loggable&lt;boost::chrono::high_resolution_clock> <emphasis role="bold">servant_job</emphasis>;
 // the type of our log
@@ -1527,6 +1587,18 @@ struct fib_task : public boost::asynchronous::continuation_task&lt;long>
                         display of all tasks</link> (beware, with higher fibonacci numbers, this can
                     become a long list).. </para>
             </sect1>
+            <sect1>
+                <title>Distributing work among machines</title>
+                <para>todo</para>
+                <sect2>
+                    <title>Example: a hierarchical network</title>
+                    <para>todo</para>
+                </sect2>
+            </sect1>
+            <sect1>
+                <title>Parallel Algorithms</title>
+                <para/>
+            </sect1>
         </chapter>
         <chapter>
             <title> In-depth usage. </title>
@@ -1537,6 +1609,10 @@ struct fib_task : public boost::asynchronous::continuation_task&lt;long>
             <sect1>
                 <title>Tips</title>
                 <para>todo</para>
+                <sect2>
+                    <title>No cycle, never!</title>
+                    <para>TODO</para>
+                </sect2>
             </sect1>
         </chapter>
     </part>
@@ -2079,8 +2155,8 @@ class asio_scheduler;
             </sect1>
             <sect1>
                 <title>Supported compilers</title>
-                <para>At the moment, Asynchronous has only be tested with gcc versions 4.7 to 4.8
-                    and clang 3.3.</para>
+                <para>At the moment, Asynchronous has only be tested with gcc versions from 4.7 to
+                    4.8 and clang 3.3-3.4.</para>
             </sect1>
         </chapter>
     </part>
