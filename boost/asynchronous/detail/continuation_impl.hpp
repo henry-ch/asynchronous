@@ -40,6 +40,7 @@ struct continuation
     template <typename... Args>
     continuation(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state,boost::shared_ptr<Tuple> t, Duration d, Args&&... args)
     : m_futures(t)
+    , m_ready_futures(std::tuple_size<Tuple>::value,false)
     , m_state(state)
     , m_timeout(d)
     {
@@ -59,6 +60,7 @@ struct continuation
     // version where we already get futures
     continuation(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state,boost::shared_ptr<Tuple> t, Duration d)
     : m_futures(t)
+    , m_ready_futures(std::tuple_size<Tuple>::value,false)
     , m_state(state)
     , m_timeout(d)
     {
@@ -123,12 +125,14 @@ struct continuation
         }
 
         bool ready=true;
-        check_ready(ready,*m_futures);
+        std::size_t index = 0;
+        check_ready(ready,index,*m_futures,m_ready_futures);
         return ready;
     }
 //TODO temporary
 //private:
     boost::shared_ptr<Tuple> m_futures;
+    std::vector<bool> m_ready_futures;
     std::function<void(Tuple&&)> m_done;
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> m_state;
     Duration m_timeout;
@@ -136,19 +140,29 @@ struct continuation
 
     template<std::size_t I = 0, typename... Tp>
     inline typename std::enable_if<I == sizeof...(Tp), void>::type
-    check_ready(bool& ,std::tuple<Tp...> const& )const
+    check_ready(bool& ,std::size_t&, std::tuple<Tp...> const& , std::vector<bool>& )const
     { }
 
     template<std::size_t I = 0, typename... Tp>
     inline typename std::enable_if<I < sizeof...(Tp), void>::type
-    check_ready(bool& ready,std::tuple<Tp...> const& t)const
+    check_ready(bool& ready,std::size_t& index,std::tuple<Tp...> const& t,std::vector<bool>& ready_futures)const
     {
-        if ( !((std::get<I>(t)).has_value() || (std::get<I>(t)).has_exception()) )
+        if (ready_futures[index])
+        {
+            ++index;
+            check_ready<I + 1, Tp...>(ready,index,t,ready_futures);
+        }
+        else if (((std::get<I>(t)).has_value() || (std::get<I>(t)).has_exception()) )
+        {
+            ready_futures[index]=true;
+            ++index;
+            check_ready<I + 1, Tp...>(ready,index,t,ready_futures);
+        }
+        else
         {
             ready=false;
             return;
         }
-        check_ready<I + 1, Tp...>(ready,t);
     }
 
 };
@@ -162,6 +176,7 @@ struct continuation_as_seq
 
     continuation_as_seq(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state, Duration d,Seq&& seq)
     : m_futures(new Seq(std::forward<Seq>(seq)))
+    , m_ready_futures(m_futures->size(),false)
     , m_state(state)
     , m_timeout(d)
     {
@@ -193,16 +208,21 @@ struct continuation_as_seq
         {
             return true;
         }
-        for (typename Seq::const_iterator it = m_futures->begin(); it != m_futures->end() ;++it)
+        std::size_t index = 0;
+        for (typename Seq::const_iterator it = m_futures->begin(); it != m_futures->end() ;++it,++index)
         {
-            if (!((*it).is_ready() || (*it).has_exception() ) )
-                return false;
+            if (m_ready_futures[index])
+                continue;
+            else if (((*it).is_ready() || (*it).has_exception() ) )
+                m_ready_futures[index]=true;
+            else return false;
         }
         return true;
     }
 //TODO temporary
 //private:
     boost::shared_ptr<Seq> m_futures;
+    std::vector<bool> m_ready_futures;
     std::function<void(Seq&&)> m_done;
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> m_state;
     Duration m_timeout;
