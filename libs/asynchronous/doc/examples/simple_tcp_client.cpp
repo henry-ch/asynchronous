@@ -85,6 +85,7 @@ int main(int argc, char* argv[])
                             boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable> >(threads));
             boost::asynchronous::tcp::simple_tcp_client_proxy proxy(scheduler,pool,server_address,server_port,executor,
                                                                     0/*ms between calls to server*/);
+            // run forever
             boost::future<boost::future<void> > fu = proxy.run();
             boost::future<void> fu_end = fu.get();
             fu_end.get();
@@ -101,6 +102,7 @@ int main(int argc, char* argv[])
                         scheduler,pool,server_address,server_port,executor,
                         0/*ms between calls to server*/,
                         job_getting_policy /* number of jobs we try to keep in queue */);
+            // run forever
             boost::future<boost::future<void> > fu = proxy.run();
             boost::future<void> fu_end = fu.get();
             fu_end.get();

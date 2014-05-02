@@ -16,6 +16,7 @@ using namespace std;
 
 namespace
 {
+// notice how the worker pool has a different job type
 struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,boost::asynchronous::any_serializable>
 {
     // optional, ctor is simple enough not to be posted
@@ -32,6 +33,7 @@ struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any
         boost::asynchronous::any_shared_scheduler_proxy<> workers = boost::asynchronous::create_shared_scheduler_proxy(
             new boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<> >(3));
         // we use a tcp pool using the 3 worker threads we just built
+        // our server will listen on "localhost" port 12345
         auto pool= boost::asynchronous::create_shared_scheduler_proxy(
                     new boost::asynchronous::tcp_server_scheduler<
                             boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable> >
@@ -58,16 +60,12 @@ struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any
         std::cout << "start_async_work()" << std::endl;
         // for testing purpose
         boost::shared_future<int> fu = m_promise->get_future();
-        //boost::asynchronous::dummy_tcp_task d(5);
-        //boost::asynchronous::any_serializable s(d);
         // start long tasks in threadpool (first lambda) and callback in our thread
         for (int i =0 ;i < 10 ; ++i)
         {
             std::cout << "call post_callback with i: " << i << std::endl;
             post_callback(
-                        dummy_tcp_task(i)
-                        //std::move(s)
-                    ,
+                   dummy_tcp_task(i),
                    // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
                    [this](boost::future<int> res){
                                 try{
