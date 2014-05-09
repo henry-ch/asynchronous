@@ -59,12 +59,19 @@ struct main_task : public boost::asynchronous::continuation_task<long>
         fus.emplace_back(std::move(fu3));
 
         // our algo is now done, wrap all and return
-        boost::asynchronous::create_continuation<long>(
+        boost::asynchronous::create_continuation(
                     // called when subtasks are done, set our result
-                    [task_res](std::vector<boost::future<int>>&& res)
+                    [task_res](std::vector<boost::future<int>> res)
                     {
-                        long r = res[0].get() + res[1].get() + res[2].get();
-                        task_res.set_value(r);
+                        try
+                        {
+                            long r = res[0].get() + res[1].get() + res[2].get();
+                            task_res.set_value(r);
+                        }
+                        catch(std::exception& e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
                     },
                     // future results of recursive tasks
                     std::move(fus));
@@ -107,7 +114,15 @@ struct Servant : boost::asynchronous::trackable_servant<>
                ,
                // callback with result.
                [this](boost::future<long> res){
-                            this->on_callback(res.get());
+                    try
+                    {
+                        this->on_callback(res.get());
+                    }
+                    catch(std::exception& e)
+                    {
+                        // do something useful
+                        this->on_callback(-1);
+                    }
                }// callback functor.
         );
         return fu;

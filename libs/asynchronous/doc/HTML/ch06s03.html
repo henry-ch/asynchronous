@@ -1,11 +1,29 @@
 <html><head>
       <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-   <title>lockfree_spsc_queue</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch06.html" title="Chapter&nbsp;6.&nbsp;Queues"><link rel="prev" href="ch06s02.html" title="lockfree_queue"><link rel="next" href="ch06s04.html" title="lockfree_stack"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">lockfree_spsc_queue</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch06s02.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;6.&nbsp;Queues</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch06s04.html">Next</a></td></tr></table><hr></div><div class="sect1" title="lockfree_spsc_queue"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e1035"></a>lockfree_spsc_queue</h2></div></div></div><p>This queue is a light wrapper around a
-                        <code class="code">boost::lockfree::spsc_queue</code>, which gives lockfree behavior at
-                    the cost of an extra dynamic memory allocation. </p><p>Its constructor requires a default size forwarded from the scheduler.</p><p>Stealing: None. Stealing is not supported by
-                        <code class="code">boost::lockfree::spsc_queue</code>. It can only be used
-                    Single-Producer / Single-Consumer, which reduces its typical usage to a queue of
-                    a <code class="code">multiqueue_threadpool_scheduler</code> as consumer, with a
-                        <code class="code">single_thread_scheduler</code> as producer.</p><p>Declaration:</p><pre class="programlisting">template&lt;class JOB = boost::asynchronous::any_callable&gt;
-class lockfree_spsc_queue;                 
-                </pre></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch06s02.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="ch06.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ch06s04.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">lockfree_queue&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;lockfree_stack</td></tr></table></div></body></html>
+   <title>multiqueue_threadpool_scheduler</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch06.html" title="Chapter&nbsp;6.&nbsp;Schedulers"><link rel="prev" href="ch06s02.html" title="threadpool_scheduler"><link rel="next" href="ch06s04.html" title="stealing_threadpool_scheduler"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">multiqueue_threadpool_scheduler</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch06s02.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;6.&nbsp;Schedulers</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch06s04.html">Next</a></td></tr></table><hr></div><div class="sect1" title="multiqueue_threadpool_scheduler"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e2251"></a>multiqueue_threadpool_scheduler</h2></div></div></div><p>This is a <code class="code">threadpool_scheduler</code> with multiple queues to reduce
+                    contention. On the other hand, this pool requires at least one thread.</p><p>This pool does not steal from other pool's queues though pool threads do steal
+                    from each other's queues.</p><p>Declaration:</p><pre class="programlisting">template&lt;class Queue,class FindPosition=boost::asynchronous::default_find_position&lt; &gt; &gt;
+class multiqueue_threadpool_scheduler;                 
+                </pre><p>Creation:</p><pre class="programlisting">boost::asynchronous::any_shared_scheduler_proxy&lt;&gt; scheduler = 
+    boost::asynchronous::create_shared_scheduler_proxy(
+                    new boost::asynchronous::multiqueue_threadpool_scheduler&lt;
+                          boost::asynchronous::threadsafe_list&lt;&gt; &gt;(4)); // 4 threads in pool  
+
+boost::asynchronous::any_shared_scheduler_proxy&lt;&gt; scheduler = 
+    boost::asynchronous::create_shared_scheduler_proxy(
+                    new boost::asynchronous::multiqueue_threadpool_scheduler&lt;
+                          boost::asynchronous::lockfree_queue&lt;&gt; &gt;(4,10)); // size of queue=10, 4 threads in pool
+                </pre><p>Or, using logging:</p><pre class="programlisting">typedef boost::asynchronous::any_loggable&lt;boost::chrono::high_resolution_clock&gt; <span class="bold"><strong>servant_job</strong></span>;
+
+boost::asynchronous::any_shared_scheduler_proxy&lt;<span class="bold"><strong>servant_job</strong></span>&gt; scheduler = 
+    boost::asynchronous::create_shared_scheduler_proxy(
+                    new boost::asynchronous::multiqueue_threadpool_scheduler&lt;
+                          boost::asynchronous::threadsafe_list&lt;<span class="bold"><strong>servant_job</strong></span>&gt; &gt;(4)); // 4 threads in pool                                      
+                
+boost::asynchronous::any_shared_scheduler_proxy&lt;<span class="bold"><strong>servant_job</strong></span>&gt; scheduler = 
+    boost::asynchronous::create_shared_scheduler_proxy(
+                    new boost::asynchronous::multiqueue_threadpool_scheduler&lt;
+                          boost::asynchronous::lockfree_queue&lt;<span class="bold"><strong>servant_job</strong></span>&gt; &gt;(4,10)); // size of queue=10, 4 threads in pool  </pre><p>
+                    </p><div class="table"><a name="d0e2290"></a><p class="title"><b>Table&nbsp;6.3.&nbsp;#include
+                            &lt;boost/asynchronous/scheduler/multiqueue_threadpool_scheduler.hpp&gt;</b></p><div class="table-contents"><table summary="#include&#xA;                            <boost/asynchronous/scheduler/multiqueue_threadpool_scheduler.hpp&gt;" border="1"><colgroup><col><col></colgroup><thead><tr><th>Characteristics</th><th>&nbsp;</th></tr></thead><tbody><tr><td>Number of threads</td><td><span class="bold"><strong>1</strong></span>-n</td></tr><tr><td>Can be stolen from?</td><td>Yes</td></tr><tr><td>Can steal from other threads in this pool?</td><td>Yes</td></tr><tr><td>Can steal from other threads in other pools?</td><td>No</td></tr></tbody></table></div></div><p><br class="table-break">
+                </p></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch06s02.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="ch06.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ch06s04.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">threadpool_scheduler&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;stealing_threadpool_scheduler</td></tr></table></div></body></html>

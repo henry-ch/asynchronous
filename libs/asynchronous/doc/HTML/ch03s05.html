@@ -1,6 +1,6 @@
 <html><head>
       <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-   <title>Interrupting tasks</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s04.html" title="A servant using another servant proxy"><link rel="next" href="ch03s06.html" title="Logging tasks"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Interrupting tasks</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s04.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch03s06.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Interrupting tasks"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e401"></a>Interrupting tasks</h2></div></div></div><p>Imagine a manager object (a state machine for example) posted some
+   <title>Interrupting tasks</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s04.html" title="A servant using another servant proxy"><link rel="next" href="ch03s06.html" title="Logging tasks"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Interrupting tasks</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s04.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch03s06.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Interrupting tasks"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e598"></a><span class="command"><strong><a name="interrupting_tasks"></a></strong></span>Interrupting tasks</h2></div></div></div><p>Imagine a manager object (a state machine for example) posted some
                     long-lasting work to a threadpool, but this long-lasting work really takes too
                     long. As we are in an asynchronous world and non-blocking, the manager object
                     realizes there is a problem and decides the task must be stopped otherwise the
@@ -18,15 +18,14 @@
     {
         // start long interruptible tasks
         // we get an interruptible handler representing the task
-        boost::asynchronous::any_interruptible interruptible =
-        interruptible_post_callback(
+        <span class="bold"><strong>boost::asynchronous::any_interruptible</strong></span> interruptible =
+        <span class="bold"><strong>interruptible_post_callback</strong></span>(
                 // interruptible task
                [](){
                     std::cout &lt;&lt; "Long Work" &lt;&lt; std::endl;
-                    boost::this_thread::sleep(boost::posix_time::milliseconds(1000));}
-               ,
+                    boost::this_thread::sleep(boost::posix_time::milliseconds(1000));}, // sleep is an interrupting point
                // callback functor.
-               [](boost::shared_future&lt;void&gt; ){std::cout &lt;&lt; "Callback will most likely not be called" &lt;&lt; std::endl;}
+               [](boost::future&lt;void&gt; ){std::cout &lt;&lt; "Callback will most likely not be called" &lt;&lt; std::endl;}
         );
         // let the task start (not sure but likely)
         // if it had no time to start, well, then it will never.

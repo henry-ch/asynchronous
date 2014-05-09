@@ -61,7 +61,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     {
         // as worker we use a simple threadpool scheduler with 4 threads (0 would also do as the asio pool steals)
         auto worker_tp = boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<> > (4,10));
+                    new boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<> > (4));
 
         // for tcp communication we use an asio-based scheduler with 3 threads
         auto asio_workers = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::asio_scheduler<>(3));
@@ -81,7 +81,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     // 2. at each callback, check if we got all callbacks
     // 3. if yes, post some work to threadpool, compare the returned strings (should be all the same)
     // 4. if all strings equal as they should be, cout the page
-    void get_data()
+    boost::shared_future<void> get_data()
     {
         // provide this callback (executing in our thread) to all asio servants as task result. A string will contain the page
         std::function<void(std::string)> f =
@@ -109,6 +109,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
                               // we started 2 comparisons, so it was the last one, data confirmed
                               std::cout << "data has been confirmed, here it is:" << std::endl;
                               std::cout << s1;
+                              // we are done, main will terminate us
+                              this->m_done_promise.set_value();
                           }
                        };
                        auto cb2=cb1;
@@ -123,6 +125,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
         m_asio_comm[0].test(make_safe_callback(f));
         m_asio_comm[1].test(make_safe_callback(f));
         m_asio_comm[2].test(make_safe_callback(f));
+        boost::shared_future<void> fu = m_done_promise.get_future();
+        return fu;
     }
 private:
     // a composite pool composed of asio workers and threadpool workers from which asio-serving threads can steal
@@ -130,6 +134,7 @@ private:
     std::vector<AsioCommunicationServantProxy> m_asio_comm;
     std::vector<std::string> m_requested_data;// pages returned from tcp communication
     unsigned m_check_string_count;//has to be 2 when done (2 string compares)
+    boost::promise<void> m_done_promise;
 };
 // manager (Servant) proxy, for use in main thread
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>
@@ -140,7 +145,7 @@ public:
         boost::asynchronous::servant_proxy<ServantProxy,Servant>(s,server,path)
     {}
     // get_data is posted, no future, no callback
-    BOOST_ASYNC_POST_MEMBER(get_data)
+    BOOST_ASYNC_FUTURE_MEMBER(get_data)
 };
 }
 
@@ -153,12 +158,12 @@ void example_asio_http_client()
                                 new boost::asynchronous::single_thread_scheduler<
                                      boost::asynchronous::threadsafe_list<> >);
         {
-            ServantProxy proxy(scheduler,"www.boost.org","/LICENSE_1_0.txt");
+            ServantProxy proxy(scheduler,"gwhaus.rt.schenk","/mitarbeiter/uebersicht.html");
             // call member, as if it was from Servant
-            proxy.get_data();
-            // if too short, no problem, we will simply give up the tcp requests
-            // this is simply to simulate a main() doing nothing but waiting for a termination request
-            boost::this_thread::sleep(boost::posix_time::milliseconds(2000));
+            boost::shared_future<boost::shared_future<void> > called_fu = proxy.get_data();
+            boost::shared_future<void> fu_done = called_fu.get();
+            // when the next line returns, we got the response from the server, we are done
+            fu_done.get();
         }
     }
 }

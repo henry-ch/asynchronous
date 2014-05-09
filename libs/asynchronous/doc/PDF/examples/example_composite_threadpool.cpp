@@ -27,19 +27,19 @@ struct Servant : boost::asynchronous::trackable_servant<>
         , m_promise(new boost::promise<int>)
     {
         // create a composite threadpool made of:
-        // a multiqueue_threadpool_scheduler, 1 thread, with a lockfree_queue of capacity 100.
+        // a multiqueue_threadpool_scheduler, 1 thread, with a lockfree_queue.
         // This scheduler does not steal from other schedulers, but will lend its queues for stealing
         auto tp = boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::multiqueue_threadpool_scheduler<boost::asynchronous::lockfree_queue<> > (1,100));
+                    new boost::asynchronous::multiqueue_threadpool_scheduler<boost::asynchronous::lockfree_queue<> > (1));
         // a stealing_multiqueue_threadpool_scheduler, 3 threads, each with a threadsafe_list
         // this scheduler will steal from other schedulers if it can. In this case it will manage only with tp, not tp3
         auto tp2 = boost::asynchronous::create_shared_scheduler_proxy(
                     new boost::asynchronous::stealing_multiqueue_threadpool_scheduler<boost::asynchronous::threadsafe_list<> > (3));
-        // a multiqueue_threadpool_scheduler, 4 threads, each with a lockfree_spsc_queue of capacity 100
+        // a multiqueue_threadpool_scheduler, 4 threads, each with a lockfree_spsc_queue
         // this works because there will be no stealing as the queue can't, and only this single-thread scheduler will
         // be the producer
         auto tp3 = boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::multiqueue_threadpool_scheduler<boost::asynchronous::lockfree_spsc_queue<> > (4,100));
+                    new boost::asynchronous::multiqueue_threadpool_scheduler<boost::asynchronous::lockfree_spsc_queue<> > (4));
         auto tp_worker =
                 boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::composite_threadpool_scheduler<> (tp,tp2,tp3));
 

@@ -75,7 +75,7 @@ struct parallel_for_range_move_helper: public boost::asynchronous::continuation_
             fus.emplace_back(std::move(fu));
         }
         boost::asynchronous::continuation_result<Range> task_res = this->this_task_result();
-        boost::asynchronous::create_continuation_log<Job>(
+        boost::asynchronous::create_continuation_job<Job>(
                     // called when subtasks are done, set our result
                     [task_res,range](std::vector<boost::future<void>> res)
                     {
@@ -166,7 +166,7 @@ struct parallel_for_range_move_helper<Range,Func,Job,typename ::boost::enable_if
             fus.emplace_back(std::move(fu));
         }
         boost::asynchronous::continuation_result<Range> task_res = this->this_task_result();
-        boost::asynchronous::create_continuation_log<Job>(
+        boost::asynchronous::create_continuation_job<Job>(
                     // called when subtasks are done, set our result
                     [task_res](std::vector<boost::future<sub_range> > res)
                     {
@@ -261,7 +261,7 @@ struct parallel_for_range_helper: public boost::asynchronous::continuation_task<
             fus.emplace_back(std::move(fu));
         }
         boost::asynchronous::continuation_result<void> task_res = this->this_task_result();
-        boost::asynchronous::create_continuation_log<Job>(
+        boost::asynchronous::create_continuation_job<Job>(
                     // called when subtasks are done, set our result
                     [task_res](std::vector<boost::future<void>> res)
                     {
@@ -387,7 +387,7 @@ struct parallel_for_helper: public boost::asynchronous::continuation_task<void>
             fus.emplace_back(std::move(fu));
         }
         boost::asynchronous::continuation_result<void> task_res = this_task_result();
-        boost::asynchronous::create_continuation_log<Job>(
+        boost::asynchronous::create_continuation_job<Job>(
                     // called when subtasks are done, set our result
                     [task_res](std::vector<boost::future<void>> res)
                     {

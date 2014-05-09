@@ -1,6 +1,6 @@
 <html><head>
       <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-   <title>Logging tasks</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s05.html" title="Interrupting tasks"><link rel="next" href="ch03s07.html" title="Queue container with priority"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Logging tasks</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s05.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch03s07.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Logging tasks"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e411"></a>Logging tasks</h2></div></div></div><p>Developers are notoriously famous for being bad at guessing which part of
+   <title>Logging tasks</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s05.html" title="Interrupting tasks"><link rel="next" href="ch03s07.html" title="Queue container with priority"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Logging tasks</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s05.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch03s07.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Logging tasks"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e615"></a><span class="command"><strong><a name="logging_tasks"></a></strong></span>Logging tasks</h2></div></div></div><p>Developers are notoriously famous for being bad at guessing which part of
                     their code is inefficient or has potential for long execution time. This is bad
                     in itself, but even worse for a control class like our post-callback servant as
                     it reduces responsiveness. Knowing how long a posted call or a callback lasts is
@@ -8,8 +8,8 @@
                     is also essential to plan what hardware one needs for an application(4 cores? Or
                     100?). We need to know what our program is doing. Asynchronous provides some
                     logging per task to help there. Let's have a look at some code. It's also time
-                    to start using our template parameters, in case you wondered why they are
-                    here.</p><pre class="programlisting">// we will be using loggable jobs internally
+                    to start using our template parameters for <code class="code">trackable_servant</code>, in
+                    case you wondered why they are here.</p><pre class="programlisting">// we will be using loggable jobs internally
 typedef boost::asynchronous::any_loggable&lt;boost::chrono::high_resolution_clock&gt; <span class="bold"><strong>servant_job</strong></span>;
 // the type of our log
 typedef std::map&lt;std::string,std::list&lt;boost::asynchronous::diagnostic_item&lt;boost::chrono::high_resolution_clock&gt; &gt; &gt; <span class="bold"><strong>diag_type</strong></span>;
@@ -23,16 +23,15 @@ struct Servant : boost::asynchronous::trackable_servant&lt;<span class="bold"><s
                                                    // Furthermore, it logs posted tasks
                                                    new boost::asynchronous::threadpool_scheduler&lt;
                                                            //servant_job is our job type
-                                                           boost::asynchronous::threadsafe_list&lt; <span class="bold"><strong>servant_job</strong></span> &gt; &gt;(3))){}
+                                                           boost::asynchronous::lockfree_queue&lt; <span class="bold"><strong>servant_job</strong></span> &gt; &gt;(3))){}
     void start_async_work()
     {
          post_callback(
                // task posted to threadpool
-               [](){...},
-               // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
-               [this](boost::shared_future&lt;int&gt; res){...},// callback functor.
+               [](){...}, // will return an int
+               [](boost::future&lt;int&gt; res){...},// callback functor.
                // the task / callback name for logging
-               "int_async_work"
+               <span class="bold"><strong>"int_async_work"</strong></span>
         );
     }
     // we happily provide a way for the outside world to know what our threadpool did.
@@ -41,7 +40,7 @@ struct Servant : boost::asynchronous::trackable_servant&lt;<span class="bold"><s
     {
         return (*get_worker()).get_diagnostics();
     }
-};</pre><p>The proxy is also slightly different, as it uses a LOG macro and an argument
+};</pre><p>The proxy is also slightly different, as it uses a _LOG macro and an argument
                     representing the name of the task.</p><pre class="programlisting">class ServantProxy : public boost::asynchronous::servant_proxy&lt;ServantProxy,Servant,servant_job&gt;
 {
 public:
@@ -57,7 +56,7 @@ public:
                     there through a get_diagnostics() member).</p><pre class="programlisting">// create a scheduler with logging
 auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                                 new boost::asynchronous::single_thread_scheduler&lt;
-                                    boost::asynchronous::threadsafe_list&lt;servant_job&gt; &gt;);
+                                    boost::asynchronous::lockfree_queue&lt;servant_job&gt; &gt;);
 // create a Servant                    
 ServantProxy proxy(scheduler); 
 ...
@@ -68,9 +67,9 @@ for (auto mit = single_thread_sched_diag.begin(); mit != single_thread_sched_dia
      std::cout &lt;&lt; "job type: " &lt;&lt; (*mit).first &lt;&lt; std::endl;
      for (auto jit = (*mit).second.begin(); jit != (*mit).second.end();++jit)
      {
-          std::cout &lt;&lt; "job waited in us: " &lt;&lt; boost::chrono::nanoseconds((*jit).get_started_time() - (*jit).get_posted_time()).count() / 1000 &lt;&lt; std::endl;
-          std::cout &lt;&lt; "job lasted in us: " &lt;&lt; boost::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() / 1000 &lt;&lt; std::endl;
-          std::cout &lt;&lt; "job interrupted? "  &lt;&lt; std::boolalpha &lt;&lt; (*jit).is_interrupted() &lt;&lt; std::endl;
+          std::cout &lt;&lt; "job waited in us: " &lt;&lt; boost::chrono::nanoseconds((*jit).get_started_time() - (*jit).<span class="bold"><strong>get_posted_time()</strong></span>).count() / 1000 &lt;&lt; std::endl;
+          std::cout &lt;&lt; "job lasted in us: " &lt;&lt; boost::chrono::nanoseconds((*jit).get_finished_time() - (*jit).<span class="bold"><strong>get_started_time()</strong></span>).count() / 1000 &lt;&lt; std::endl;
+          std::cout &lt;&lt; "job interrupted? "  &lt;&lt; std::boolalpha &lt;&lt; (*jit).<span class="bold"><strong>is_interrupted()</strong></span> &lt;&lt; std::endl;
      }
      }              </pre><p>It goes similarly with the threapool scheduler, with the slight difference
                     that we ask the Servant to deliver diagnostic information through a proxy

@@ -81,7 +81,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
         boost::future<int> fu3 = boost::asynchronous::post_future(get_worker(),sub_task(2000),"sub_task_3");
         fus.emplace_back(std::move(fu3));
 
-        boost::asynchronous::create_continuation_log_timeout<servant_job>(
+        boost::asynchronous::create_continuation_job_timeout<servant_job>(
                     // called when subtasks are done, set our result
                     [this](std::vector<boost::future<int>> res)
                     {

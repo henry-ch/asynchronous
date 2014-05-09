@@ -74,7 +74,7 @@ void example_queue_container()
                                 new boost::asynchronous::single_thread_scheduler<
                                         boost::asynchronous::any_queue_container<> >
                         (boost::asynchronous::any_queue_container_config<boost::asynchronous::threadsafe_list<> >(1),
-                         boost::asynchronous::any_queue_container_config<boost::asynchronous::lockfree_queue<> >(3,100)
+                         boost::asynchronous::any_queue_container_config<boost::asynchronous::lockfree_queue<> >(3)
                          ));
         {
             ServantProxy proxy(scheduler);

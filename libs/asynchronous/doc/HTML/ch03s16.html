@@ -1,0 +1,290 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>Parallel Algorithms (Christophe Henry / Tobias Holl)</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s15.html" title="Picking your archive"><link rel="next" href="ch04.html" title="Chapter&nbsp;4.&nbsp;Tips."></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Parallel Algorithms (Christophe Henry / Tobias Holl)</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s15.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch04.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Parallel Algorithms (Christophe Henry / Tobias Holl)"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e1575"></a><span class="command"><strong><a name="parallel_algos"></a></strong></span>Parallel Algorithms (Christophe Henry / Tobias Holl)</h2></div></div></div><p>Asynchronous supports out of the box some asynchronous parallel algorithms,
+                    with more to come, as well as interesting combination usages. These algorithms
+                    are continuation-based for simpler usage, often faster callback-based ones will
+                    be added later. All these algorithms also support distributed calculations as
+                    long as the user-provided functors are (meaning they must be
+                    serializable).</p><p>What is the point of adding yet another set of parallel algorithms which can
+                    be found elsewhere? Because truly asynchronous algorithms are hard to find. By
+                    this we mean non-blocking. If one needs parallel algorithms, it's because they
+                    could need long to complete. And if they take long, we really do not want to
+                    block until it happens.</p><p>All of the algorithms are made for use in a worker threadpool. They are the
+                    work part of a <code class="code">post_callback</code>;</p><p>In the philosophy of Asynchronous, the programmer knows better the task size
+                    where he wants to start parallelizing, so all these algorithms take a cutoff.
+                    Work is cut into packets of this size.</p><p>All range algorithms also have a version taking a continuation as range
+                    argument. This allows to combine algorithms functional way. allowing this (more
+                    to come):</p><pre class="programlisting">return boost::asynchronous::parallel_for(boost::asynchronous::parallel_for(boost::asynchronous::parallel_for(...)));</pre><div class="sect2" title="parallel_for"><div class="titlepage"><div><div><h3 class="title"><a name="d0e1594"></a>parallel_for</h3></div></div></div><p>There are four versions of this algorithm:</p><pre class="programlisting">template &lt;class Iterator, class Func, class Job=boost::asynchronous::any_callable&gt;
+boost::asynchronous::detail::continuation&lt;<span class="bold"><strong>void</strong></span>,Job&gt;
+parallel_for(Iterator beg, Iterator end,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</pre><p>The parallel_for version taking iterators requires that the iterators stay
+                        valid until completion. It is the programmer's job to ensure this.</p><p>The third argument is the predicate applied on each element of the
+                        algorithm.</p><p>The fourth argument is the cutoff, meaning in this case the max. number of
+                        elements of the input range in a task.</p><p>The optional fifth argument is the name of the tasks used for
+                        logging.</p><p>The optional sixth argument is the priority of the tasks in the
+                        pool.</p><p>The return value is a void continuation containing either nothing or an
+                        exception if one was thrown from one of the tasks.</p><p>Example:</p><pre class="programlisting">struct Servant : boost::asynchronous::trackable_servant&lt;&gt;
+{
+...
+    void start_async_work()
+    {
+        // start long tasks in threadpool (first lambda) and callback in our thread
+        post_callback(
+               [this](){
+                        <span class="bold"><strong>return</strong></span> boost::asynchronous::<span class="bold"><strong>parallel_for</strong></span>(<span class="bold"><strong>this-&gt;m_data.begin(),this-&gt;m_data.end()</strong></span>,
+                                                                 [](int const&amp; i)
+                                                                 {
+                                                                    const_cast&lt;int&amp;&gt;(i) += 2;
+                                                                 },1500);
+                      },// work
+               // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
+               [](boost::future&lt;<span class="bold"><strong>void</strong></span>&gt; /*res*/){
+                            ...
+               }// callback functor.
+        );
+    }
+    std::vector&lt;int&gt; m_data;
+};</pre><p>The most important parts are highlighted. Do not forget the return as we are
+                        returning a continuation and we do not want the lambda to be interpreted as
+                        a void lambda. The caller has responsibility of the input data, given in the
+                        form of iterators. We use a non-legal modifying functor for the sake of the
+                        example.</p><p>The call will do following:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>start tasks in the current worker pool of max 1500 elements of
+                                    the input data</p></li><li class="listitem"><p>add 2 to each element in parallel</p></li><li class="listitem"><p>return a continuation</p></li><li class="listitem"><p>Execute the callback lambda when all tasks complete. The
+                                    future will be either set or contain an exception</p></li></ul></div><p>Please have a look at <a class="link" href="examples/example_parallel_for.cpp" target="_top">the complete example</a>.</p><p>The second version is very similar and takes a range per reference. Again,
+                        the range has to stay valid during the call. As previously, the return value
+                        is a void continuation.</p><pre class="programlisting">template &lt;class Range, class Func, class Job=boost::asynchronous::any_callable&gt;
+boost::asynchronous::detail::continuation&lt;<span class="bold"><strong>void</strong></span>,Job&gt;
+parallel_for(Range const&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</pre><p>The third version takes a range per rvalue reference. This is signal given to
+                        Asynchronous that it must take ownership of the range. The return value is
+                        then a continuation of the given range type:</p><pre class="programlisting">template &lt;class Range, class Func, class Job=boost::asynchronous::any_callable&gt;
+boost::asynchronous::detail::continuation&lt;<span class="bold"><strong>Range</strong></span>,Job&gt;
+parallel_for(Range&amp;&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</pre><p>A <code class="code">post_callback</code> will therefore get a future&lt;new range&gt;, for
+                example:</p><pre class="programlisting">post_callback(
+    []()
+    {
+       std::vector&lt;int&gt; data;
+       return boost::asynchronous::parallel_for(std::move(data),
+                                                      [](int const&amp; i)
+                                                      {
+                                                        const_cast&lt;int&amp;&gt;(i) += 2;
+                                                      },1500);
+    },
+    ](<span class="bold"><strong>boost::future&lt;std::vector&lt;int&gt;&gt;</strong></span> ){}
+);</pre><p>In this case, the programmer does not need to ensure the container stays
+                        valid, Asynchronous takes care of it.</p><p>The fourth version of this algorithm takes a range continuation instead of
+                        a range as argument and will be invoked after the continuation is
+                        ready.</p><pre class="programlisting">// version taking a continuation of a range as first argument
+template &lt;class Range, class Func, class Job=boost::asynchronous::any_callable&gt;
+boost::asynchronous::detail::continuation&lt;<span class="bold"><strong>typename Range::return_type</strong></span>,Job&gt;
+parallel_for(Range range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</pre><p>This version allows chaining parallel calls. For example, it is now possible
+                to write:</p><pre class="programlisting">post_callback(
+    []()
+    {
+       std::vector&lt;int&gt; data;
+       return boost::asynchronous::<span class="bold"><strong>parallel_for</strong></span>(boost::asynchronous::<span class="bold"><strong>parallel_for</strong></span>(boost::asynchronous::<span class="bold"><strong>parallel_for</strong></span>(
+                                                                 // executed first
+                                                                 std::move(data),
+                                                                 [](int const&amp; i)
+                                                                 {
+                                                                    const_cast&lt;int&amp;&gt;(i) += 2;
+                                                                 },1500),
+                                                              // executed second
+                                                              [](int const&amp; i)
+                                                              {
+                                                                const_cast&lt;int&amp;&gt;(i) += 2;
+                                                              },1500),
+                                                             // executed third
+                                                             [](int const&amp; i)
+                                                             {
+                                                               const_cast&lt;int&amp;&gt;(i) += 2;
+                                                             },1500);
+    },
+    ](<span class="bold"><strong>boost::future&lt;std::vector&lt;int&gt;&gt;</strong></span> ){} // callback
+);</pre><p>This code will be executed as follows:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>the most inner parallel_for (parallel execution)</p></li><li class="listitem"><p>A kind of synchronization point will be done at this point
+                                    untl the parallel_for completes</p></li><li class="listitem"><p>the middle parallel_for will be executed (parallel
+                                    execution)</p></li><li class="listitem"><p>A kind of synchronization point will be done at this point
+                                    untl the parallel_for completes</p></li><li class="listitem"><p>the outer parallel_for will be executed (parallel
+                                    execution)</p></li><li class="listitem"><p>A kind of synchronization point will be done at this point
+                                    untl the parallel_for completes</p></li><li class="listitem"><p>The callback will be called</p></li></ul></div><p>With "kind of synchronization point", we mean there will be no blocking
+                        synchronization, it will just be waited until completion.</p><p>Finally, we also promised some distributed support, so here it is. We
+                        need, as with our Fibonacci example, a serializable sub-task which will be
+                        created as often as required by our cutoff and which will handle a part of
+                        our range:</p><pre class="programlisting">struct dummy_parallel_for_subtask : public boost::asynchronous::serializable_task
+{
+    dummy_parallel_for_subtask(int d=0):boost::asynchronous::serializable_task("dummy_parallel_for_subtask"),m_data(d){}
+    template &lt;class Archive&gt;
+    void <span class="bold"><strong>serialize</strong></span>(Archive &amp; ar, const unsigned int /*version*/)
+    {
+        ar &amp; m_data;
+    }
+    void operator()(int const&amp; i)const
+    {
+        const_cast&lt;int&amp;&gt;(i) += m_data;
+    }
+    // some data, so we have something to serialize
+    int m_data;
+};</pre><p>As always we need a serializable top-level task, creating sub-tasks:</p><pre class="programlisting">struct dummy_parallel_for_task : public boost::asynchronous::serializable_task
+{
+    dummy_parallel_for_task():boost::asynchronous::serializable_task("dummy_parallel_for_task"),m_data(1000000,1){}
+    template &lt;class Archive&gt;
+    void <span class="bold"><strong>serialize</strong></span>(Archive &amp; ar, const unsigned int /*version*/)
+    {
+        ar &amp; m_data;
+    }
+    auto operator()() -&gt; decltype(boost::asynchronous::parallel_for&lt;std::vector&lt;int&gt;,dummy_parallel_for_subtask,boost::asynchronous::any_serializable&gt;(
+                                      std::move(std::vector&lt;int&gt;()),
+                                      dummy_parallel_for_subtask(2),
+                                      10))
+    {
+        <span class="bold"><strong>return boost::asynchronous::parallel_for</strong></span>
+                &lt;std::vector&lt;int&gt;,<span class="bold"><strong>dummy_parallel_for_subtask</strong></span>,boost::asynchronous::any_serializable&gt;(
+            std::move(m_data),
+            dummy_parallel_for_subtask(2),
+            10);
+    }
+    std::vector&lt;int&gt; m_data;
+};</pre><p>We now need to post our top-level task inside a servant:</p><pre class="programlisting">post_callback(
+               dummy_parallel_for_task(),
+               // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
+               [this](boost::future&lt;std::vector&lt;int&gt;&gt; res){
+                 try
+                 {
+                    // do something
+                 }
+                 catch(std::exception&amp; e)
+                 {
+                    std::cout &lt;&lt; "got exception: " &lt;&lt; e.what() &lt;&lt; std::endl;
+                 }
+              }// end of callback functor.
+              );</pre><p>Please have a look at the <a class="link" href="examples/example_parallel_for_tcp.cpp" target="_top">complete server example</a>.</p></div><div class="sect2" title="parallel_reduce"><div class="titlepage"><div><div><h3 class="title"><a name="d0e1758"></a>parallel_reduce</h3></div></div></div><p>Like parallel_for, there are four versions of this algorithm, with the
+                        same lifetime behaviour. parallel_reduce applies a predicate to all elements
+                        of a range, accumulating the result.</p><pre class="programlisting">template &lt;class Iterator, class Func, class Job=boost::asynchronous::any_callable&gt;
+boost::asynchronous::detail::continuation&lt;<span class="bold"><strong>decltype(func(std::declval&lt;typename Iterator::value_type&gt;(), std::declval&lt;typename Iterator::value_type&gt;()))</strong></span>,Job&gt;
+<span class="bold"><strong>parallel_reduce</strong></span>(Iterator beg, Iterator end,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+
+template &lt;class Range, class Func, class Job=boost::asynchronous::any_callable&gt;
+boost::asynchronous::detail::continuation&lt;<span class="bold"><strong>decltype(func(*(range.begin()), *(range.end())))</strong></span>,Job&gt;
+<span class="bold"><strong>parallel_reduce</strong></span>(Range const&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+
+template &lt;class Range, class Func, class Job=boost::asynchronous::any_callable&gt;
+boost::asynchronous::detail::continuation&lt;<span class="bold"><strong>decltype(func(*(range.begin()), *(range.end())))</strong></span>,Job&gt;
+<span class="bold"><strong>parallel_reduce</strong></span>(Range&amp;&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+
+// version taking a continuation of a range as first argument
+template &lt;class Range, class Func, class Job=boost::asynchronous::any_callable&gt;
+boost::asynchronous::detail::continuation&lt;<span class="bold"><strong>decltype(func(std::declval&lt;typename Range::return_type::value_type&gt;(), std::declval&lt;typename Range::return_type::value_type&gt;()))</strong></span>,Job&gt;
+<span class="bold"><strong>parallel_reduce</strong></span>(Range range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</pre><p>Don't be worried about the return type. To keep it short, what we get is a
+                        continuation of the type returned by the given predicate, for example, using
+                        the iterator version:</p><p>
+                        </p><pre class="programlisting">std::vector&lt;int&gt; data;
+post_callback(
+    [this]()
+    {
+       return boost::asynchronous::<span class="bold"><strong>parallel_reduce</strong></span>(this-&gt;data.begin(),this-&gt;data.end(),
+                                                     [](int const&amp; a, int const&amp; b)
+                                                     {
+                                                         return a + b; // returns an int
+                                                     },
+                                                     1500);
+    },
+    ](<span class="bold"><strong>boost::future&lt;int&gt;</strong></span> ){} // callback gets an int
+);</pre><p>
+                    </p><p>We also have a <a class="link" href="examples/example_parallel_reduce_tcp.cpp" target="_top">distributed version</a> as an example, which strictly looks like the parallel_for version.</p></div><div class="sect2" title="parallel_invoke"><div class="titlepage"><div><div><h3 class="title"><a name="d0e1807"></a>parallel_invoke</h3></div></div></div><p>parallel_invoke invokes a variadic list of predicates in parallel and
+                        returns a (continuation of) tuple of futures containing the result of all of
+                        them.</p><pre class="programlisting">template &lt;class Job, typename... Args&gt;
+boost::asynchronous::detail::<span class="bold"><strong>continuation</strong></span>&lt;typename decltype(boost::asynchronous::detail::make_future_tuple(args...))::element_type,Job&gt;
+<span class="bold"><strong>parallel_invoke</strong></span>(Args&amp;&amp;... args);</pre><p>Of course, the futures can have exceptions if exceptions are thrown, as in
+                        the following example:</p><pre class="programlisting">post_callback(
+               []()
+               {
+                   return boost::asynchronous::parallel_invoke&lt;boost::asynchronous::any_callable&gt;(
+                                     boost::asynchronous::<span class="bold"><strong>to_continuation_task</strong></span>([](){throw my_exception();}), // void lambda
+                                     boost::asynchronous::<span class="bold"><strong>to_continuation_task</strong></span>([](){return 42.0;}));         // double lambda
+                },// work
+                // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
+                [this](boost::<span class="bold"><strong>future</strong></span>&lt;std::<span class="bold"><strong>tuple</strong></span>&lt;<span class="bold"><strong>boost::future&lt;void&gt;,boost::future&lt;double&gt;</strong></span>&gt;&gt; res)
+                {
+                   try
+                   {
+                        auto t = res.get();
+                        std::cout &lt;&lt; "got result: " &lt;&lt; (<span class="bold"><strong>std::get&lt;1&gt;</strong></span>(t)).get() &lt;&lt; std::endl;                // 42.0
+                        std::cout &lt;&lt; "got exception?: " &lt;&lt; (<span class="bold"><strong>std::get&lt;0&gt;</strong></span>(t)).has_exception() &lt;&lt; std::endl;  // true, has exception
+                    }
+                    catch(std::exception&amp; e)
+                    {
+                        std::cout &lt;&lt; "got exception: " &lt;&lt; e.what() &lt;&lt; std::endl;
+                     }
+                }// callback functor.
+);</pre><p>Notice the use of <span class="bold"><strong>to_continuation_task</strong></span> to
+                        convert the lambdas in continuations.</p><p>As always, the callback lambda will be called when all tasks complete and
+                        the futures are non-blocking.</p><p>Please have a look at the <a class="link" href="examples/example_parallel_invoke.cpp" target="_top">complete
+                            example</a>.</p></div><div class="sect2" title="parallel_find_all"><div class="titlepage"><div><div><h3 class="title"><a name="d0e1857"></a>parallel_find_all</h3></div></div></div><p>This algorithms finds and copies into a returned container all elements of
+                        a range for which a predicate returns true. Like parallel_for, we have four
+                        versions of the algorithm.</p><pre class="programlisting">template &lt;class Iterator, class Func,
+          class ReturnRange=std::vector&lt;typename std::iterator_traits&lt;Iterator&gt;::value_type&gt;,
+          class Job=boost::asynchronous::any_callable&gt;
+boost::asynchronous::detail::continuation&lt;ReturnRange,Job&gt;
+<span class="bold"><strong>parallel_find_all</strong></span>(Iterator beg, Iterator end,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+
+template &lt;class Range, class Func, class ReturnRange=Range, class Job=boost::asynchronous::any_callable&gt;
+boost::asynchronous::detail::continuation&lt;ReturnRange,Job&gt;
+<span class="bold"><strong>parallel_find_all</strong></span>(Range const&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+
+template &lt;class Range, class Func, class ReturnRange=Range, class Job=boost::asynchronous::any_callable&gt;
+boost::asynchronous::detail::continuation&lt;ReturnRange,Job&gt;
+<span class="bold"><strong>parallel_find_all</strong></span>(Range&amp;&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+
+// version taking a continuation of a range as first argument
+template &lt;class Range, class Func, class ReturnRange=typename Range::return_type, class Job=boost::asynchronous::any_callable&gt;
+boost::asynchronous::detail::continuation&lt;ReturnRange,Job&gt;
+<span class="bold"><strong>parallel_find_all</strong></span>(Range range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</pre><p>The algorithm will find elements matching the search criteria in parallel
+                        and copy all into a new container, by default of the type given as
+                        argument:</p><p>
+                        </p><pre class="programlisting"><span class="bold"><strong>std::vector&lt;int&gt;</strong></span> data;
+post_callback(
+    [this]()
+    {
+       return boost::asynchronous::<span class="bold"><strong>parallel_find_all</strong></span>(this-&gt;data.begin(),this-&gt;data.end(),
+                                                     [](int i)
+                                                     {
+                                                         return (400 &lt;= i) &amp;&amp; (i &lt; 600);
+                                                     },
+                                                     1500);
+    },
+    ](<span class="bold"><strong>boost::future&lt;std::vector&lt;int&gt;&gt;</strong></span> ){} // callback gets an int
+);</pre><p>
+                    </p><p>Please have a look at the <a class="link" href="examples/example_parallel_find_all.cpp" target="_top">complete example</a>.</p></div><div class="sect2" title="parallel_extremum"><div class="titlepage"><div><div><h3 class="title"><a name="d0e1896"></a>parallel_extremum</h3></div></div></div><p>parallel_extremum finds an extremum (min/max) of a range given by a
+                        predicate. It is a good example of using a prallel_reduce for writing new
+                        algorithms. We have, as usual, four versions of the algorithm:.</p><p>
+                        </p><pre class="programlisting">template &lt;class Iterator, class Func,class Job=boost::asynchronous::any_callable&gt;
+boost::asynchronous::detail::continuation&lt;typename std::iterator_traits&lt;Iterator&gt;::value_type,Job&gt;
+<span class="bold"><strong>parallel_extremum</strong></span>(Iterator beg, Iterator end,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+
+template &lt;class Iterator, class Func,class Job=boost::asynchronous::any_callable&gt;
+decltype(boost::asynchronous::parallel_reduce(...))
+<span class="bold"><strong>parallel_extremum</strong></span>(Range const&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+
+template &lt;class Iterator, class Func,class Job=boost::asynchronous::any_callable&gt;
+decltype(boost::asynchronous::parallel_reduce(...))
+<span class="bold"><strong>parallel_extremum</strong></span>(Range&amp;&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+
+// version taking a continuation of a range as first argument
+template &lt;class Iterator, class Func,class Job=boost::asynchronous::any_callable&gt;
+decltype(boost::asynchronous::parallel_reduce(...))
+<span class="bold"><strong>parallel_extremum</strong></span>(Range range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</pre><p>
+                    </p><p>Please have a look at the <a class="link" href="examples/example_parallel_extremum.cpp" target="_top">complete example</a>.</p></div><div class="sect2" title="parallel_count"><div class="titlepage"><div><div><h3 class="title"><a name="d0e1923"></a>parallel_count</h3></div></div></div><p>parallel_count counts the elements of a range satisfying a predicate. As
+                        usual, we have four versions of the algorithm.</p><pre class="programlisting">template &lt;class Iterator, class Func,class Job=boost::asynchronous::any_callable&gt;
+boost::asynchronous::detail::continuation&lt;long,Job&gt;
+<span class="bold"><strong>parallel_count</strong></span>(Iterator beg, Iterator end,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+
+template &lt;class Iterator, class Func,class Job=boost::asynchronous::any_callable&gt;
+boost::asynchronous::detail::continuation&lt;long,Job&gt;
+<span class="bold"><strong>parallel_count</strong></span>(Range const&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+
+template &lt;class Iterator, class Func,class Job=boost::asynchronous::any_callable&gt;
+boost::asynchronous::detail::continuation&lt;long,Job&gt;
+<span class="bold"><strong>parallel_count</strong></span>(Range&amp;&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+
+// version taking a continuation of a range as first argument
+template &lt;class Iterator, class Func,class Job=boost::asynchronous::any_callable&gt;
+boost::asynchronous::detail::continuation&lt;long,Job&gt;
+<span class="bold"><strong>parallel_count</strong></span>(Range range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</pre><p>Please have a look at the <a class="link" href="examples/example_parallel_count.cpp" target="_top">complete example</a>.</p></div></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch03s15.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="ch03.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ch04.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Picking your archive&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Chapter&nbsp;4.&nbsp;Tips.</td></tr></table></div></body></html>

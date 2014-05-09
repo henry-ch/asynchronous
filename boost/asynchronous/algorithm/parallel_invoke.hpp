@@ -40,7 +40,7 @@ struct parallel_invoke_helper: public boost::asynchronous::continuation_task<Ret
         typedef decltype(boost::asynchronous::detail::make_future_tuple(args...)) sp_future_type;
         typedef typename sp_future_type::element_type future_type;
         boost::asynchronous::continuation_result<ReturnType> task_res = this->this_task_result();
-        boost::asynchronous::create_continuation_log<Job>(
+        boost::asynchronous::create_continuation_job<Job>(
                     // called when subtasks are done, set our result
                     [task_res](future_type res)
                     {
@@ -66,7 +66,7 @@ struct parallel_invoke_helper_timeout: public boost::asynchronous::continuation_
         typedef decltype(boost::asynchronous::detail::make_future_tuple(args...)) sp_future_type;
         typedef typename sp_future_type::element_type future_type;
         boost::asynchronous::continuation_result<ReturnType> task_res = this->this_task_result();
-        boost::asynchronous::create_continuation_log_timeout<Job>(
+        boost::asynchronous::create_continuation_job_timeout<Job>(
                     // called when subtasks are done, set our result
                     [task_res](future_type res)
                     {

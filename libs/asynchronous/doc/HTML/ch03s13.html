@@ -1,6 +1,6 @@
 <html><head>
       <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-   <title>Continuation tasks</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s12.html" title="Timers"><link rel="next" href="ch04.html" title="Chapter&nbsp;4.&nbsp; In-depth usage."></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Continuation tasks</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s12.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch04.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Continuation tasks"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e858"></a>Continuation tasks</h2></div></div></div><p>A common limitation of threadpools is support for recursive tasks: tasks start
+   <title>Continuation tasks</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s12.html" title="Timers"><link rel="next" href="ch03s14.html" title="Distributing work among machines"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Continuation tasks</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s12.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch03s14.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Continuation tasks"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e1090"></a><span class="command"><strong><a name="continuations"></a></strong></span>Continuation tasks</h2></div></div></div><p>A common limitation of threadpools is support for recursive tasks: tasks start
                     other tasks, which start other tasks, until all threads in the threadpool are
                     busy waiting. At this point, one could add more threads, but threads are
                     expensive. Similarly, you might post a task which posts more tasks and wait for
@@ -41,9 +41,9 @@ struct fib_task : public boost::asynchronous::continuation_task&lt;long&gt;
         else
         {
             // n&gt;= cutoff, create 2 new tasks and when both are done, set our result (res(task1) + res(task2))
-            boost::asynchronous::create_continuation&lt;long&gt;(
+            boost::asynchronous::create_continuation(
                         // called when subtasks are done, set our result
-                        [task_res](std::tuple&lt;boost::future&lt;long&gt;,boost::future&lt;long&gt; &gt;&amp;&amp; res)
+                        [task_res](std::tuple&lt;boost::future&lt;long&gt;,boost::future&lt;long&gt; &gt; res)
                         {
                             long r = std::get&lt;0&gt;(res).get() + std::get&lt;1&gt;(res).get();
                             task_res.set_value(r);
@@ -90,7 +90,7 @@ struct fib_task : public boost::asynchronous::continuation_task&lt;long&gt;
             [](boost::future&lt;long&gt; res){...}// callback functor.
         );                                 
    }  
-   };          </pre><p> We call <code class="code">post_callback</code>, which, as usual, ensure that the callback
+};          </pre><p> We call <code class="code">post_callback</code>, which, as usual, ensure that the callback
                     is posted to the right thread and the servant lifetime is tracked. The posted
                     task calls
                         <code class="code">boost::asynchronous::top_level_continuation&lt;task-return-type&gt;</code>
@@ -107,8 +107,8 @@ struct fib_task : public boost::asynchronous::continuation_task&lt;long&gt;
         : boost::asynchronous::continuation_task&lt;long&gt;("fib_task_" + boost::lexical_cast&lt;std::string&gt;(n))
         ,n_(n),cutoff_(cutoff){}                                
                 </pre><p>And call <code class="code">boost::asynchronous::create_continuation_log</code> instead of
-                        <code class="code">boost::asynchronous::create_continuation</code>:</p><pre class="programlisting">boost::asynchronous::<span class="bold"><strong>create_continuation_log</strong></span>&lt;long,servant_job&gt;(
-                        [task_res](std::tuple&lt;boost::future&lt;long&gt;,boost::future&lt;long&gt; &gt;&amp;&amp; res)
+                        <code class="code">boost::asynchronous::create_continuation</code>:</p><pre class="programlisting">boost::asynchronous::<span class="bold"><strong>create_continuation_log</strong></span>&lt;servant_job&gt;(
+                        [task_res](std::tuple&lt;boost::future&lt;long&gt;,boost::future&lt;long&gt; &gt; res)
                         {
                             long r = std::get&lt;0&gt;(res).get() + std::get&lt;1&gt;(res).get();
                             task_res.set_value(r);
@@ -130,4 +130,4 @@ struct fib_task : public boost::asynchronous::continuation_task&lt;long&gt;
         );                             
                 </pre><p> The previous example has been <a class="link" href="examples/example_fibonacci_log.cpp" target="_top">rewritten with logs and a
                         display of all tasks</a> (beware, with higher fibonacci numbers, this can
-                    become a long list).. </p></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch03s12.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="ch03.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ch04.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Timers&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Chapter&nbsp;4.&nbsp; In-depth usage. </td></tr></table></div></body></html>
+                    become a long list).. </p></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch03s12.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="ch03.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ch03s14.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Timers&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Distributing work among machines</td></tr></table></div></body></html>

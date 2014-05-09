@@ -1,6 +1,6 @@
 <html><head>
       <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-   <title>Using a threadpool</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s02.html" title="A servant proxy"><link rel="next" href="ch03s04.html" title="A servant using another servant proxy"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Using a threadpool</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s02.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch03s04.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Using a threadpool"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e325"></a>Using a threadpool</h2></div></div></div><p>If you remember the principles of Asynchronous, blocking a single-thread
+   <title>Using a threadpool</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s02.html" title="A servant proxy"><link rel="next" href="ch03s04.html" title="A servant using another servant proxy"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Using a threadpool</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s02.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch03s04.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Using a threadpool"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e511"></a>Using a threadpool</h2></div></div></div><p>If you remember the principles of Asynchronous, blocking a single-thread
                     scheduler is taboo as it blocks the thread doing all the management of a system.
                     But what to do when one needs to execute long tasks? Asynchronous provides a
                     whole set of threadpools. A servant posts something to a threadpool, provides a
@@ -9,23 +9,23 @@
                     perfectly asynchronous world, waiting for a future means blocking a servant
                     scheduler. One would argue that it is possible not to block on the future, and
                     instead ask if there is a result. But then, what if not? Is the alternative to
-                    poll? Like in the "good" all times?</p><p>Ok, ok, we buy the story with the future, but what about thread-safety?
-                    Asynchronous takes care of this. A callback is never called from a threadpool,
-                    but instead posted back to the queue of the scheduler which posted the work. All
-                    the servant has to do is to do nothing and wait until the callback is executed.
-                    Clearly, this brings some new challenges as the flow of control gets harder to
+                    poll? Like in the "good" all times?</p><p>If we accept the future argument, but what about thread-safety? Asynchronous
+                    takes care of this. A callback is never called from a threadpool, but instead
+                    posted back to the queue of the scheduler which posted the work. All the servant
+                    has to do is to do nothing and wait until the callback is executed. Note that
+                    this is not the same as a blocking wait, the servant can still react to
+                    events.</p><p>Clearly, this brings some new challenges as the flow of control gets harder to
                     follow. This is why a servant is often written using state machines. The
                     (biased) author suggests to have a look at the <a class="link" href="http://svn.boost.org/svn/boost/trunk/libs/msm/doc/HTML/index.html" target="_top"> Meta State Machine library </a> , which plays nicely with
-                    Asynchronous.</p><p>But then, as someone at the back of the room shouts, I'll get the usual
-                    proactor-class issues of crashing when the servant has long been destroyed when
-                    the callback is posted. No you won't. Asynchronous provides
-                        <code class="code">trackable_servant</code> which will ensure that a callback is not
+                    Asynchronous.</p><p>But what about the usual proactor issues of crashing when the servant has long
+                    been destroyed when the callback is posted. Gone. Asynchronous provides
+                    <span class="command"><strong><a name="trackable_servant"></a></strong></span><code class="code">trackable_servant</code> which will ensure that a callback is not
                     called if the servant is gone. Better even, if the servant has been destroyed,
-                    an unstarted posted task will not be executed.</p><p>Again, from the back of the room comes an issue. And what if I post a task,
-                    say a lambda, which captures a shared_ptr to an object per value, and this
-                    object is a boost::signal? Then when the task object has been executed and is
-                    destroyed, I'll get a race on the signal deregistration. Good point, but again
-                    no. Asynchronous ensures that a task created within a scheduler context gets
+                    an unstarted posted task will not be executed.</p><p>Again comes another issue. And what if I post a task, say a lambda, which
+                    captures a shared_ptr to an object per value, and this object is a
+                    boost::signal? Then when the task object has been executed and is destroyed,
+                    I'll get a race on the signal deregistration. Good point, but again no.
+                    Asynchronous ensures that a task created within a scheduler context gets
                     destroyed in this context.</p><p>This is about the best protection you can get. What Asynchronous cannot
                     protect you from are self-made races within a task (if you post a task with a
                     pointer to the servant, you're on your own and have to protect your servant). A
@@ -35,19 +35,20 @@
 {
     Servant(boost::asynchronous::any_weak_scheduler&lt;&gt; scheduler)
         : boost::asynchronous::trackable_servant&lt;&gt;(scheduler,
-                                               // threadpool with 3 threads and a simple threadsafe_list queue
+                                               // <span class="bold"><strong>threadpool with 3 threads</strong></span> and a lockfree_queue
                                                boost::asynchronous::create_shared_scheduler_proxy(
-                                                   new <span class="bold"><strong>boost::asynchronous::threadpool_scheduler</strong></span>&lt;
-                                                           boost::asynchronous::threadsafe_list&lt;&gt; &gt;(3))){}
+                                                   new <span class="bold"><strong>boost::asynchronous::<span class="bold"><strong>threadpool_scheduler</strong></span></strong></span>&lt;
+                                                           boost::asynchronous::lockfree_queue&lt;&gt; &gt;(<span class="bold"><strong>3</strong></span>))){}
     // call to this is posted and executes in our (safe) single-thread scheduler
     void start_async_work()
     {
        //ok, let's post some work and wait for an answer
-       <span class="bold"><strong>post_callback</strong></span>([](){std::cout &lt;&lt; "Long Work" &lt;&lt; std::endl;}, //work
-                     [this](){...}// callback. Safe to use this as if callback is called, Servant is alive
-                     );
+       <span class="bold"><strong>post_callback</strong></span>(
+                    [](){std::cout &lt;&lt; "Long Work" &lt;&lt; std::endl;}, //work, do not use "this" here
+                    [/*this*/](boost::future&lt;void&gt;){...}// callback. Safe to use "this" as callback is only called if Servant is alive
+        );
     }
-    };</pre><p>We now have a servant, ready to be created in its own thread, which posts some
+};</pre><p>We now have a servant, ready to be created in its own thread, which posts some
                     long work to a 3 thread-threadpool and gets a callback, but only if still alive.
                     Similarly, the long work will be executed by the threadpool only if Servant is
                     alive. Everything else stays the same, one creates a proxy for the servant and

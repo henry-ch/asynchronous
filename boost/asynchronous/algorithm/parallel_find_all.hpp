@@ -102,7 +102,7 @@ struct parallel_find_all_range_move_helper: public boost::asynchronous::continua
         }
         boost::asynchronous::continuation_result<ReturnRange> task_res = this->this_task_result();
         auto func = func_;
-        boost::asynchronous::create_continuation_log<Job>(
+        boost::asynchronous::create_continuation_job<Job>(
                     // called when subtasks are done, set our result
                     [task_res, func,range](std::vector<boost::future<ReturnRange>> res)
                     {
@@ -202,7 +202,7 @@ struct parallel_find_all_range_move_helper<Range,Func,ReturnRange,Job,typename :
         }
         boost::asynchronous::continuation_result<ReturnRange> task_res = this->this_task_result();
         auto func = func_;
-        boost::asynchronous::create_continuation_log<Job>(
+        boost::asynchronous::create_continuation_job<Job>(
                     // called when subtasks are done, set our result
                     [task_res, func,range](std::vector<boost::future<ReturnRange>> res)
                     {
@@ -303,7 +303,7 @@ struct parallel_find_all_range_helper: public boost::asynchronous::continuation_
         }
         boost::asynchronous::continuation_result<ReturnRange> task_res = this->this_task_result();
         auto func = func_;
-        boost::asynchronous::create_continuation_log<Job>(
+        boost::asynchronous::create_continuation_job<Job>(
                     // called when subtasks are done, set our result
                     [task_res, func](std::vector<boost::future<ReturnRange>> res)
                     {
@@ -438,7 +438,7 @@ struct parallel_find_all_helper: public boost::asynchronous::continuation_task<R
         }
         boost::asynchronous::continuation_result<ReturnRange> task_res = this->this_task_result();
         auto func = func_;
-        boost::asynchronous::create_continuation_log<Job>(
+        boost::asynchronous::create_continuation_job<Job>(
                     // called when subtasks are done, set our result
                     [task_res, func](std::vector<boost::future<ReturnRange>> res)
                     {

@@ -25,7 +25,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     {
         // same thread id as the callback, safe.
         std::cout << "start_timer called in thread: " << boost::this_thread::get_id() << std::endl;
-        // err will be either operation_canceled if cancel_timer(9 is called, or success otherwise
+        // err will be either operation_canceled if cancel_timer is called, or success otherwise
         async_wait(m_timer,
                    [](const ::boost::system::error_code& err){ 
                       std::cout << "timer expired? "<< std::boolalpha << (bool)err << ", called in thread: " << boost::this_thread::get_id() << std::endl; }

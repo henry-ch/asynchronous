@@ -276,7 +276,7 @@ create_continuation_timeout(OnDone&& on_done, Duration const& d, Seq&& seq)
 // versions with logging
 template <typename Job, class OnDone, typename... Args>
 typename boost::enable_if< typename boost::asynchronous::detail::has_future_args<boost::future<Args>...>::type ,void >::type
-create_continuation_log(OnDone&& on_done, boost::future<Args>&&... args)
+create_continuation_job(OnDone&& on_done, boost::future<Args>&&... args)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
 
@@ -295,7 +295,7 @@ typename boost::disable_if< typename boost::mpl::or_<
                             typename boost::asynchronous::detail::has_future_args<Args...>::type ,
                             typename boost::asynchronous::detail::has_iterator_args<Args...>::type >
                           ,void >::type
-create_continuation_log(OnDone&& on_done, Args&&... args)
+create_continuation_job(OnDone&& on_done, Args&&... args)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
 
@@ -310,7 +310,7 @@ create_continuation_log(OnDone&& on_done, Args&&... args)
 // version with containers of futures
 template <typename Job, class OnDone, typename Seq>
 typename boost::enable_if< typename has_iterator<Seq>::type ,void >::type
-create_continuation_log(OnDone&& on_done, Seq&& seq)
+create_continuation_job(OnDone&& on_done, Seq&& seq)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
 
@@ -323,7 +323,7 @@ create_continuation_log(OnDone&& on_done, Seq&& seq)
 // versions with logging and timeout
 template <typename Job, class OnDone, class Duration, typename... Args>
 typename boost::enable_if< typename boost::asynchronous::detail::has_future_args<boost::future<Args>...>::type ,void >::type
-create_continuation_log_timeout(OnDone&& on_done, Duration const& d, boost::future<Args>&&... args)
+create_continuation_job_timeout(OnDone&& on_done, Duration const& d, boost::future<Args>&&... args)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
 
@@ -342,7 +342,7 @@ typename boost::disable_if< typename boost::mpl::or_<
                             typename boost::asynchronous::detail::has_future_args<Args...>::type ,
                             typename boost::asynchronous::detail::has_iterator_args<Args...>::type >
                           ,void >::type
-create_continuation_log_timeout(OnDone&& on_done, Duration const& d, Args&&... args)
+create_continuation_job_timeout(OnDone&& on_done, Duration const& d, Args&&... args)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
 
@@ -357,7 +357,7 @@ create_continuation_log_timeout(OnDone&& on_done, Duration const& d, Args&&... a
 // version with containers of futures and timeout
 template <typename Job, class OnDone, class Duration, typename Seq>
 typename boost::enable_if< typename has_iterator<Seq>::type ,void >::type
-create_continuation_log_timeout(OnDone&& on_done, Duration const& d, Seq&& seq)
+create_continuation_job_timeout(OnDone&& on_done, Duration const& d, Seq&& seq)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
 

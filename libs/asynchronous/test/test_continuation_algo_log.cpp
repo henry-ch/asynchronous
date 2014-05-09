@@ -73,7 +73,7 @@ struct main_task : public boost::asynchronous::continuation_task<long>
         boost::future<int> fu3 = boost::asynchronous::post_future(locked_scheduler,sub_task(),"sub_task_3");
 
         // our algo is now done, wrap all and return
-        boost::asynchronous::create_continuation_log<servant_job>(
+        boost::asynchronous::create_continuation_job<servant_job>(
                     // called when subtasks are done, set our result
                     [task_res](std::tuple<boost::future<int>,boost::future<int>,boost::future<int> > res)
                     {

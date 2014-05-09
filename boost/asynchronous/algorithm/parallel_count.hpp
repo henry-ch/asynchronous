@@ -93,7 +93,7 @@ struct parallel_count_range_move_helper: public boost::asynchronous::continuatio
         }
         boost::asynchronous::continuation_result<long> task_res = this->this_task_result();
         auto func = func_;
-        boost::asynchronous::create_continuation_log<Job>(
+        boost::asynchronous::create_continuation_job<Job>(
                     // called when subtasks are done, set our result
                     [task_res, func,range](std::vector<boost::future<long>> res)
                     {
@@ -185,7 +185,7 @@ struct parallel_count_range_move_helper<Range,Func,Job,typename ::boost::enable_
         }
         boost::asynchronous::continuation_result<long> task_res = this->this_task_result();
         auto func = func_;
-        boost::asynchronous::create_continuation_log<Job>(
+        boost::asynchronous::create_continuation_job<Job>(
                     // called when subtasks are done, set our result
                     [task_res, func,range](std::vector<boost::future<long>> res)
                     {
@@ -278,7 +278,7 @@ struct parallel_count_range_helper: public boost::asynchronous::continuation_tas
         }
         boost::asynchronous::continuation_result<long> task_res = this->this_task_result();
         auto func = func_;
-        boost::asynchronous::create_continuation_log<Job>(
+        boost::asynchronous::create_continuation_job<Job>(
                     // called when subtasks are done, set our result
                     [task_res, func](std::vector<boost::future<long>> res)
                     {
@@ -405,7 +405,7 @@ struct parallel_count_helper: public boost::asynchronous::continuation_task<long
         }
         boost::asynchronous::continuation_result<long> task_res = this->this_task_result();
         auto func = func_;
-        boost::asynchronous::create_continuation_log<Job>(
+        boost::asynchronous::create_continuation_job<Job>(
                     // called when subtasks are done, set our result
                     [task_res, func](std::vector<boost::future<long>> res)
                     {

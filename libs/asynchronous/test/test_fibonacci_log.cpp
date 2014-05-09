@@ -54,7 +54,7 @@ struct fib_task : public boost::asynchronous::continuation_task<long>
         }
         else
         {
-            boost::asynchronous::create_continuation_log<servant_job>(
+            boost::asynchronous::create_continuation_job<servant_job>(
                         [task_res](std::tuple<boost::future<long>,boost::future<long> > res)
                         {
                             long r = std::get<0>(res).get() + std::get<1>(res).get();
