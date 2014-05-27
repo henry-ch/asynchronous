@@ -354,7 +354,20 @@ public:
             throw servant_proxy_timeout();
         }
     }
-
+    servant_proxy(scheduler_proxy_type p, boost::future<servant_type> s)
+        : m_proxy(p)
+        , m_servant()
+    {
+        bool ok = s.timed_wait(boost::posix_time::milliseconds(max_create_wait_ms));
+        if(ok)
+        {
+            m_servant = boost::make_shared<servant_type>(std::move(s.get()));
+        }
+        else
+        {
+            throw servant_proxy_timeout();
+        }
+    }
     ~servant_proxy()
     {
 #ifndef BOOST_NO_RVALUE_REFERENCES
