@@ -31,7 +31,7 @@ public:
     }
 };
 
-template <unsigned Loops=10, unsigned MinDurationUs=80000, unsigned SleepTimeUs=1000>
+template <unsigned Loops=10, unsigned MinDurationUs=80000, unsigned SleepTimeUs=5000>
 struct default_save_cpu_load
 {
 public:
