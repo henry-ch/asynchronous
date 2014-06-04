@@ -46,6 +46,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
     void start_posting(boost::shared_ptr<boost::promise<void> > done)
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_posting not posted.");
+        auto fct_alive = make_check_alive_functor();
+        BOOST_CHECK_MESSAGE(fct_alive(),"servant should still be alive.");
         // post task to self
         post_self(
            [done]()mutable

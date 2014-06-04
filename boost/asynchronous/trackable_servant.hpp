@@ -91,6 +91,13 @@ public:
         };
         return res;
     }
+    // returns a functor checking if servant is still alive
+    std::function<bool()> make_check_alive_functor()const
+    {
+        boost::weak_ptr<track> tracking (m_tracking);
+        return [tracking](){return !tracking.expired();};
+    }
+
     // helper to make it easier using a timer service
     template <class Timer, class F>
     void async_wait(Timer& t, F func)
@@ -150,10 +157,12 @@ public:
                                         post_prio).second;
     }
     template <class F1>
-    void post_future(F1 func, std::string const& task_name="", std::size_t post_prio=0)
+    auto post_future(F1 func, std::string const& task_name="", std::size_t post_prio=0)
+        -> boost::future<decltype(func())>
     {
         // we want to log if possible
-        boost::asynchronous::post_future(m_worker,
+        return boost::asynchronous::post_future(
+                                        m_worker,
                                         boost::asynchronous::check_alive_before_exec(std::move(func),m_tracking),
                                         task_name,
                                         post_prio);
