@@ -1,21 +1,21 @@
 <html><head>
       <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-   <title>Object lifetime</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch02.html" title="Chapter&nbsp;2.&nbsp;Features"><link rel="prev" href="ch02s02.html" title="Shutting down"><link rel="next" href="ch02s04.html" title="Servant Proxies"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Object lifetime</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch02s02.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;2.&nbsp;Features</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch02s04.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Object lifetime"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e260"></a>Object lifetime</h2></div></div></div><p>There are subtle bugs when living in a multithreaded world. Consider the
+   <title>Object lifetime</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch02.html" title="Chapter&nbsp;2.&nbsp;Features"><link rel="prev" href="ch02s02.html" title="Shutting down"><link rel="next" href="ch02s04.html" title="Servant Proxies"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Object lifetime</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch02s02.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;2.&nbsp;Features</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch02s04.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Object lifetime"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e262"></a>Object lifetime</h2></div></div></div><p>There are subtle bugs when living in a multithreaded world. Consider the
                     following class:</p><p>
                     </p><pre class="programlisting">struct Unsafe
 {
-void foo()
-{
-  m_mutex.lock();
-  // call private member
-  m_mutex.unlock();
-}
+  void foo()
+  {
+    m_mutex.lock();
+    // call private member
+    m_mutex.unlock();
+  }
 private:
-void foobar()
-{
-  //we are already locked when called, do something while locked
-}
-boost::mutex m_mutex;
+  void foobar()
+  {
+    //we are already locked when called, do something while locked
+  }
+  boost::mutex m_mutex;
 };            </pre><p>
                 </p><p>This is called a thread-safe interface pattern. Public members lock, private
                     do not. Simple enough, right? Unfortunately, it doesn't fly.</p><p>First you have the risk of deadlock if a private member calls a public one

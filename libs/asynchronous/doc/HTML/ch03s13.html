@@ -1,14 +1,15 @@
 <html><head>
       <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-   <title>Continuation tasks</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s12.html" title="Timers"><link rel="next" href="ch03s14.html" title="Distributing work among machines"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Continuation tasks</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s12.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch03s14.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Continuation tasks"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e1090"></a><span class="command"><strong><a name="continuations"></a></strong></span>Continuation tasks</h2></div></div></div><p>A common limitation of threadpools is support for recursive tasks: tasks start
+   <title>Continuation tasks</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s12.html" title="Timers"><link rel="next" href="ch03s14.html" title="Distributing work among machines"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Continuation tasks</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s12.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch03s14.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Continuation tasks"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e1104"></a><span class="command"><strong><a name="continuations"></a></strong></span>Continuation tasks</h2></div></div></div><p>A common limitation of threadpools is support for recursive tasks: tasks start
                     other tasks, which start other tasks, until all threads in the threadpool are
                     busy waiting. At this point, one could add more threads, but threads are
                     expensive. Similarly, you might post a task which posts more tasks and wait for
-                    them to complete to do a merge of the result. Of course you can achieve this
-                    with a controller object or state machine in a single-threaded scheduler waiting
-                    for callbacks, but for very small tasks, using callbacks might just be too
-                    expensive. In such cases, Asynchronous provides continuations: a task executes,
-                    does something then creates a continuation which will wake up when ready.</p><p>A common example of recursive tasks is a parallel fibonacci. Usually, this
+                    them to complete to do a merge of the part-results. Of course you can achieve
+                    this with a controller object or state machine in a single-threaded scheduler
+                    waiting for callbacks, but for very small tasks, using callbacks might just be
+                    too expensive. In such cases, Asynchronous provides continuations: a task
+                    executes, does something then creates a continuation which will wake up when
+                    ready.</p><p>A common example of recursive tasks is a parallel fibonacci. Usually, this
                     means a task calculating fib(n) will start a fib(n-1) and fib(n-2) and blocks
                     until both are done. These tasks will start more tasks, etc. until a cutoff
                     number, at which point recursion stops and fibonacci is calculated serially.
@@ -23,8 +24,7 @@
         return n;
     else
         return serial_fib(n-1)+serial_fib(n-2);
-}                                   
-                </pre><p> We now need a recursive fibonacci task: </p><pre class="programlisting">// our recursive fibonacci tasks. Needs to inherit continuation_task&lt;value type returned by this task&gt;
+}</pre><p> We now need a recursive fibonacci task: </p><pre class="programlisting">// our recursive fibonacci tasks. Needs to inherit continuation_task&lt;value type returned by this task&gt;
 struct fib_task : public boost::asynchronous::continuation_task&lt;long&gt;
 {
     fib_task(long n,long cutoff):n_(n),cutoff_(cutoff){}
@@ -55,8 +55,7 @@ struct fib_task : public boost::asynchronous::continuation_task&lt;long&gt;
     }
     long n_;
     long cutoff_;
-};                               
-                </pre><p> This deserves a bit of explanation. Our task need to inherit
+};             </pre><p> Our task need to inherit
                         <code class="code">boost::asynchronous::continuation_task&lt;R&gt;</code> where R is the
                     type later returned. This class provides us with <code class="code">this_task_result()</code>
                     where we set the task result. This is done either immediately if n &lt; cutoff
@@ -90,24 +89,22 @@ struct fib_task : public boost::asynchronous::continuation_task&lt;long&gt;
             [](boost::future&lt;long&gt; res){...}// callback functor.
         );                                 
    }  
-};          </pre><p> We call <code class="code">post_callback</code>, which, as usual, ensure that the callback
-                    is posted to the right thread and the servant lifetime is tracked. The posted
-                    task calls
+};          </pre><p> We call <code class="code">post_callback</code>, which, as usual, ensures that the
+                    callback is posted to the right thread and the servant lifetime is tracked. The
+                    posted task calls
                         <code class="code">boost::asynchronous::top_level_continuation&lt;task-return-type&gt;</code>
                     to create the first, top-level continuation, passing it a first fib_task. This
                     is non-blocking, a special version of <code class="code">post_callback</code> recognizes a
                     continuation and will call its callback (with a
                         <code class="code">future&lt;task-return-type&gt;</code>) only when the calculation is
-                    finished.</p><p>As usual, calling get on the future is non-blocking, one gets eaither the
+                    finished.</p><p>As usual, calling get() on the future is non-blocking, one gets either the
                     result or an exception if thrown by a task.</p><p>Please have a look at the <a class="link" href="examples/example_fibonacci.cpp" target="_top">complete example</a>.</p><p>And what about logging? We don't want to give up this feature of course and
                     would like to know how long all these fib_task took to complete. This is done
-                    through minor changes. As always we need a job, the same as usual:</p><pre class="programlisting">typedef boost::asynchronous::any_loggable&lt;boost::chrono::high_resolution_clock&gt; servant_job;                                 
-                </pre><p> We give the logged name of the task in the constructor of fib_task, for
+                    through minor changes. As always we need a job:</p><pre class="programlisting">typedef boost::asynchronous::any_loggable&lt;boost::chrono::high_resolution_clock&gt; servant_job;                                                 </pre><p> We give the logged name of the task in the constructor of fib_task, for
                     example fib_task_xxx:</p><pre class="programlisting">fib_task(long n,long cutoff)
         : boost::asynchronous::continuation_task&lt;long&gt;("fib_task_" + boost::lexical_cast&lt;std::string&gt;(n))
-        ,n_(n),cutoff_(cutoff){}                                
-                </pre><p>And call <code class="code">boost::asynchronous::create_continuation_log</code> instead of
-                        <code class="code">boost::asynchronous::create_continuation</code>:</p><pre class="programlisting">boost::asynchronous::<span class="bold"><strong>create_continuation_log</strong></span>&lt;servant_job&gt;(
+        ,n_(n),cutoff_(cutoff){}                                                </pre><p>And call <code class="code">boost::asynchronous::create_continuation_job</code> instead of
+                        <code class="code">boost::asynchronous::create_continuation</code>:</p><pre class="programlisting">boost::asynchronous::<span class="bold"><strong>create_continuation_job</strong></span>&lt;servant_job&gt;(
                         [task_res](std::tuple&lt;boost::future&lt;long&gt;,boost::future&lt;long&gt; &gt; res)
                         {
                             long r = std::get&lt;0&gt;(res).get() + std::get&lt;1&gt;(res).get();
@@ -115,13 +112,12 @@ struct fib_task : public boost::asynchronous::continuation_task&lt;long&gt;
                         },
                         fib_task(n_-1,cutoff_),
                         fib_task(n_-2,cutoff_)
-);                               
-                </pre><p> Inside the servant we might optionally want the version of post_callback with
-                    name, and we need to use <code class="code">top_level_continuation_log</code> instead of
+);                                              </pre><p> Inside the servant we might optionally want the version of post_callback with
+                    name, and we need to use <code class="code">top_level_continuation_job</code> instead of
                         <code class="code">top_level_continuation</code>:</p><pre class="programlisting">post_callback(
               [n,cutoff]()
               {
-                   return boost::asynchronous::<span class="bold"><strong>top_level_continuation_log</strong></span>&lt;long,servant_job&gt;(fib_task(n,cutoff));
+                   return boost::asynchronous::<span class="bold"><strong>top_level_continuation_job</strong></span>&lt;long,servant_job&gt;(fib_task(n,cutoff));
               }// work
               ,
               // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
@@ -130,4 +126,6 @@ struct fib_task : public boost::asynchronous::continuation_task&lt;long&gt;
         );                             
                 </pre><p> The previous example has been <a class="link" href="examples/example_fibonacci_log.cpp" target="_top">rewritten with logs and a
                         display of all tasks</a> (beware, with higher fibonacci numbers, this can
-                    become a long list).. </p></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch03s12.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="ch03.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ch03s14.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Timers&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Distributing work among machines</td></tr></table></div></body></html>
+                    become a long list).</p><p>Limitation: in the current implementation, tasks are logged, but the
+                    continuation callback is not. If it might take long, post a (loggable)
+                    task.</p></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch03s12.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="ch03.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ch03s14.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Timers&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Distributing work among machines</td></tr></table></div></body></html>

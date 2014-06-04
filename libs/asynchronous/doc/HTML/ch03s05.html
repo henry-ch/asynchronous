@@ -1,16 +1,16 @@
 <html><head>
       <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-   <title>Interrupting tasks</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s04.html" title="A servant using another servant proxy"><link rel="next" href="ch03s06.html" title="Logging tasks"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Interrupting tasks</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s04.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch03s06.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Interrupting tasks"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e598"></a><span class="command"><strong><a name="interrupting_tasks"></a></strong></span>Interrupting tasks</h2></div></div></div><p>Imagine a manager object (a state machine for example) posted some
+   <title>Interrupting tasks</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s04.html" title="A servant using another servant proxy"><link rel="next" href="ch03s06.html" title="Logging tasks"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Interrupting tasks</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s04.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch03s06.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Interrupting tasks"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e600"></a><span class="command"><strong><a name="interrupting_tasks"></a></strong></span>Interrupting tasks</h2></div></div></div><p>Imagine a manager object (a state machine for example) posted some
                     long-lasting work to a threadpool, but this long-lasting work really takes too
                     long. As we are in an asynchronous world and non-blocking, the manager object
                     realizes there is a problem and decides the task must be stopped otherwise the
-                    whole application starts failing some real-time constraints. This is also
-                    possible, one uses another version of posting, gets some handle, on which one
-                    can require interruption. As Asynchronous does not kill threads, it means that
-                    we'll have to use one of Boost.Thread predefined interruption points. Supposing
-                    we have well-behaved tasks, they will be interrupted at the next interruption
-                    point if they started, or if they did not start yet because they are waiting in
-                    a queue, then they will never start. In this <a class="link" href="examples/example_interrupt.cpp" target="_top">example</a>, we have very
+                    whole application starts failing some real-time constraints. This is made
+                    possible by using another version of posting, getting a handle, on which one can
+                    require interruption. As Asynchronous does not kill threads, it means that we'll
+                    have to use one of Boost.Thread predefined interruption points. Supposing we
+                    have well-behaved tasks, they will be interrupted at the next interruption point
+                    if they started, or if they did not start yet because they are waiting in a
+                    queue, then they will never start. In this <a class="link" href="examples/example_interrupt.cpp" target="_top">example</a>, we have very
                     little to change but the post call:</p><pre class="programlisting">struct Servant : boost::asynchronous::trackable_servant&lt;&gt;
 {
      ... // as usual

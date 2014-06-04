@@ -1,6 +1,6 @@
 <html><head>
       <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-   <title>Distributing work among machines</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s13.html" title="Continuation tasks"><link rel="next" href="ch03s15.html" title="Picking your archive"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Distributing work among machines</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s13.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch03s15.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Distributing work among machines"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e1195"></a><span class="command"><strong><a name="distributing"></a></strong></span>Distributing work among machines</h2></div></div></div><p>At the time of this writing, a core i7-3930K with 6 cores and 3.2 GHz will
+   <title>Distributing work among machines</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s13.html" title="Continuation tasks"><link rel="next" href="ch03s15.html" title="Picking your archive"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Distributing work among machines</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s13.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch03s15.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Distributing work among machines"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e1211"></a><span class="command"><strong><a name="distributing"></a></strong></span>Distributing work among machines</h2></div></div></div><p>At the time of this writing, a core i7-3930K with 6 cores and 3.2 GHz will
                     cost $560, so say $100 per core. Not a bad deal, so you buy it. Unfortunately,
                     some time later you realize you need more power. Ok, there is no i7 with more
                     cores and an Extreme Edition will be quite expensive for only a little more
@@ -8,7 +8,7 @@
                     almost $3000 which means $250 per core, and for this you have a lesser
                     frequency. And if you need later even more power, well, it will become really
                     expensive. Can Asynchronous help us use more power for cheap, and at best, with
-                    little work? It does, as you guess;-)</p><p>Asynchronous provides a special pool, <code class="code">tcp_server_scheduler</code>, which
+                    little work? It does, as you guess ;-)</p><p>Asynchronous provides a special pool, <code class="code">tcp_server_scheduler</code>, which
                     will behave like any other scheduler but will not execute work itself, waiting
                     instead for clients to connect and get some work. The client execute the work on
                     behalf of the <code class="code">tcp_server_scheduler</code> and send it back the results. </p><p>For this to work, there is however a condition: jobs must be (boost)
@@ -35,14 +35,14 @@ struct Servant : boost::asynchronous::trackable_servant&lt;boost::asynchronous::
   }
 };</pre><p>We start by creating a worker pool. The <code class="code">tcp_server_scheduler</code> will
                     delegate to this pool all its serialization / deserialization work. For maximum
-                    scalability we want this work to happen in more than one thread.</p><p>Note that our job type is no more a simple callable, it must be deserializable
-                    too (<span class="bold"><strong>boost::asynchronous::any_serializable</strong></span>).</p><p>Then we need a <code class="code">tcp_server_scheduler</code> listening on, in this case,
+                    scalability we want this work to happen in more than one thread.</p><p>Note that our job type is no more a simple callable, it must be
+                    (de)serializable too (<span class="bold"><strong>boost::asynchronous::any_serializable</strong></span>).</p><p>Then we need a <code class="code">tcp_server_scheduler</code> listening on, in this case,
                     localhost, port 12345. We now have a functioning worker pool and choose to use
                     it as our worker pool so that we do not execute jobs ourselves (other
                     configurations will be shown soon). Let's exercise our new pool. We first need a
                     task to be executed remotely:</p><pre class="programlisting">struct dummy_tcp_task : public boost::asynchronous::<span class="bold"><strong>serializable_task</strong></span>
 {
-    dummy_tcp_task(int d):boost::asynchronous::<span class="bold"><strong>serializable_task</strong></span>("dummy_tcp_task"),m_data(d){}
+    dummy_tcp_task(int d):boost::asynchronous::<span class="bold"><strong>serializable_task</strong></span>(<span class="bold"><strong>"dummy_tcp_task"</strong></span>),m_data(d){}
     template &lt;class Archive&gt;
     void <span class="bold"><strong>serialize</strong></span>(Archive &amp; ar, const unsigned int /*version*/)
     {
@@ -58,7 +58,8 @@ struct Servant : boost::asynchronous::trackable_servant&lt;boost::asynchronous::
     int m_data;
 };</pre><p>This is a minimum task, only sleeping. All it needs is a
                         <code class="code">serialize</code> member to play nice with Boost.Serialization and it
-                    must inherit <code class="code">serializable_task</code>. Let's post to our TCP worker pool
+                    must inherit <code class="code">serializable_task</code>. Giving the task a name is essential
+                    as it will allow the client to deserialize it. Let's post to our TCP worker pool
                     some of the tasks, wait for a client to pick them and use the results:</p><pre class="programlisting">// start long tasks in threadpool (first lambda) and callback in our thread
 for (int i =0 ;i &lt; 10 ; ++i)
 {
@@ -119,7 +120,7 @@ for (int i =0 ;i &lt; 10 ; ++i)
     }
     return 0;
 }</pre><p>We start by taking as command-line arguments the server address and port and
-                    the number of threads the client will use to process stolen jobs from the
+                    the number of threads the client will use to process stolen work from the
                     server. </p><p>We create a single-threaded <code class="code">asio_scheduler</code> for the communication
                     (in our case, this is sufficient, your case might vary) to the server.</p><p>The client then defines an executor function. This function will be called
                     when a job is stolen by the client. As Asynchronous does not know what the job
@@ -127,13 +128,13 @@ for (int i =0 ;i &lt; 10 ; ++i)
                     Calling <code class="code">deserialize_and_call_task</code> will, well, deserialize the task
                     data into our dummy task, then call it. We also choose to return an exception is
                     the task is not known to us.</p><p>Next, we need a pool of threads to execute the work. Usually, you will want
-                    more than one thread. Remember, we want to use our several 6-core-i7,
+                    more than one thread. Remember, we want to use our several 6-core-i7s,
                     right?</p><p>The simplest client that Asynchronous offers is a
                         <code class="code">simple_tcp_client_proxy</code> proxy. We say simple, because it is
                     only a client. Later on, we will see a more powerful tool.
                         <code class="code">simple_tcp_client_proxy</code> will require the asio pool for
                     communication, the server address and port, our executor and a parameter telling
-                    it how often it should try to steal a job from a server.</p><p>We are now done, the client will run until killed.</p><p>Let's sum up what we got in these few lines of code:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>a pool behaving like any other pool, which can be stolen
+                    it how often it should try to steal work from a server.</p><p>We are now done, the client will run until killed.</p><p>Let's sum up what we got in these few lines of code:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>a pool behaving like any other pool, which can be stolen
                                 from</p></li><li class="listitem"><p>a server which does no work itself, but still scales well as
                                 serialization is using whatever threads it is given</p></li><li class="listitem"><p>a trackable servant working with <code class="code">post_callback</code>, like
                                 always</p></li><li class="listitem"><p>a multithreaded client, which can be tuned precisely to use a
@@ -143,10 +144,10 @@ for (int i =0 ;i &lt; 10 ; ++i)
                     a different <code class="code">simple_tcp_client_proxy</code> which would be connecting to another
                     server.</p><p>The server is also quite flexible. It scales well and can handle as many
                     clients as you wish.</p><p>This is only the beginning of our distributed chapter. Let's now revisit our
-                    Fibonacci example to make it distributed too.</p><div class="sect2" title="A distributed, parallel Fibonacci"><div class="titlepage"><div><div><h3 class="title"><a name="d0e1334"></a>A distributed, parallel Fibonacci</h3></div></div></div><p>Lets's revisit our parallel Fibonacci example. We realize that with higher
+                    Fibonacci example to make it distributed too.</p><div class="sect2" title="A distributed, parallel Fibonacci"><div class="titlepage"><div><div><h3 class="title"><a name="d0e1353"></a>A distributed, parallel Fibonacci</h3></div></div></div><p>Lets's revisit our parallel Fibonacci example. We realize that with higher
                         Fibonacci numbers, our CPU power doesn't suffice any more. We want to
-                        distribute it among several machines while our machine still does some
-                        calculazion work. To do this, we'll start with our previous example, and
+                        distribute it among several machines while our main machine still does some
+                        calculation work. To do this, we'll start with our previous example, and
                         rewrite our Fibonacci task to make it distributable.</p><p>We remember that we first had to call
                             <code class="code">boost::asynchronous::top_level_continuation</code> in our
                         post_callback to make Asynchronous aware of the later return value. The
@@ -209,7 +210,7 @@ struct fib_task : public boost::asynchronous::continuation_task&lt;long&gt;
         }
         else
         {
-            // n&gt; cutoff, create 2 new tasks and when both are done, set our result (res(task1) + res(task2))
+            // n&gt;= cutoff, create 2 new tasks and when both are done, set our result (res(task1) + res(task2))
             boost::asynchronous::create_continuation_log&lt;boost::asynchronous::any_serializable&gt;(
                         // called when subtasks are done, set our result
                         [task_res](std::tuple&lt;boost::future&lt;long&gt;,boost::future&lt;long&gt; &gt; res)
@@ -228,7 +229,7 @@ struct fib_task : public boost::asynchronous::continuation_task&lt;long&gt;
                         own name in the constructor, and it needs serialization members. That's it,
                         we're ready to distribute!</p><p>As we previously said, we will reuse our previous TCP example, using
                             <code class="code">serializable_fib_task</code> as the main posted task. This gives
-                        us <a class="link" href="examples/example_tcp_server_fib.cpp" target="_top">this example</a>.</p><p>But wait, we promised that out server would itself do some calculation
+                        us <a class="link" href="examples/example_tcp_server_fib.cpp" target="_top">this example</a>.</p><p>But wait, we promised that our server would itself do some calculation
                         work, and we use as worker pool only a <code class="code">tcp_server_scheduler</code>.
                         Right, let's do it now, throwing in a few more goodies. We need a worker
                         pool, with as many threads as we are willing to offer:</p><pre class="programlisting">// we need a pool where the tasks execute
@@ -270,7 +271,7 @@ boost::asynchronous::tcp::simple_tcp_client_proxy client_proxy(cscheduler,pool,s
                         have boost::asynchronous::tcp::<span class="bold"><strong>deserialize_and_call_top_level_continuation_task</strong></span> for our
                         top-level continuation task, and boost::asynchronous::tcp::<span class="bold"><strong>deserialize_and_call_continuation_task</strong></span> for the
                         continuation-sub-task.</p><p>We now need to build our TCP server, which we decide will get only one
-                        thread for job serialization. This ought to be enough, Fibonacci tasks have
+                        thread for task serialization. This ought to be enough, Fibonacci tasks have
                         little data (2 long).</p><pre class="programlisting">// we need a server
 // we use a tcp pool using 1 worker
 auto server_pool = boost::asynchronous::create_shared_scheduler_proxy(
@@ -281,7 +282,7 @@ auto tcp_server= boost::asynchronous::create_shared_scheduler_proxy(
                     new boost::asynchronous::<span class="bold"><strong>tcp_server_scheduler</strong></span>&lt;
                             boost::asynchronous::lockfree_queue&lt;boost::asynchronous::any_serializable&gt;,
                             boost::asynchronous::any_callable,true&gt;
-                                (server_pool,own_server_address,(unsigned int)own_server_port));</pre><p>We have a TCP server pool, as before, even a client to steal jobs ourselves,
+                                (server_pool,own_server_address,(unsigned int)own_server_port));</pre><p>We have a TCP server pool, as before, even a client to steal work ourselves,
                         but how do we get ourselves this combined pool, which executes some work or
                         gives some away? </p><p>Wait a minute, combined pool? Yes, a
                             <code class="code">composite_threadpool_scheduler</code> will do the trick. As we're
@@ -303,10 +304,10 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
       boost::shared_future&lt;long&gt; resfu = fu.get();
       long res = resfu.get();
 }</pre><p>Notice how we give only the worker "pool" to the servant. This means, the
-                        servant will post the top-level task to it, which means it will immediately
-                        be called and create 2 Fibonacci tasks, which will create each one 2 more,
-                        etc. until at some point a client connects and steals one, which will create
-                        2 more, etc.</p><p>The client will not steal directly from this pool, it will steal from the
+                        servant will post the top-level task to it, it will immediately be called
+                        and create 2 Fibonacci tasks, which will create each one 2 more, etc. until
+                        at some point a client connects and steals one, which will create 2 more,
+                        etc.</p><p>The client will not steal directly from this pool, it will steal from the
                             <code class="code">tcp_server</code> pool, which, as long as a client request comes,
                         will steal from the worker pool, as they belong to the same composite. This
                         will continue until the composite is destroyed, or the work is done. For the
@@ -314,10 +315,10 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                         pool but keep it alive until the end of calculation. Please have a look at
                         the <a class="link" href="examples/example_tcp_server_fib2.cpp" target="_top">complete example</a>.</p><p>In this example, we start taking care of homogenous work distribution by
                         packing a client and a server in the same application. But we need a bit
-                        more: our last client would steal jobs so fast, every 10ms that it would
+                        more: our last client would steal work so fast, every 10ms that it would
                         starve the server or other potential client applications, so we're going to
                         tell it to only steal if its work queues goes under a certain amount, which
-                        we weill empirically determine, according to our hardware, network speed,
+                        we will empirically determine, according to our hardware, network speed,
                         etc.</p><pre class="programlisting">int main(int argc, char* argv[])
 {
     std::string server_address = (argc&gt;1) ? argv[1]:"localhost";
@@ -374,7 +375,8 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                         client will try, every 10ms, to steal a job. Normally, that would be all,
                         but g++ (up to 4.7 at least) is uncooperative and requires an extra level of
                         indirection to get the desired client proxy. Otherwise, there is no
-                        change.</p><p>You will find in the <a class="link" href="examples/simple_tcp_client.cpp" target="_top">complete example</a> a few other tasks which we will explain
+                        change.</p><p>Notice that our standard lockfree queue offers no size() so we use a less
+                        efficient guarded_deque.</p><p>You will find in the <a class="link" href="examples/simple_tcp_client.cpp" target="_top">complete example</a> a few other tasks which we will explain
                         shortly.</p><p>Let's stop a minute to think about what we just did. We built, with little
                         code, a complete framework for distributing tasks homogenously among
                         machines, by reusing standard component offered by the library: threadpools,
@@ -383,7 +385,7 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                         number will last a little longer.</p><p>We also separate the task (Fibonacci) from the threadpool configuration,
                         from the network configuration, and from the control of the task (Servant),
                         leading us to highly reusable, extendable code.</p><p>In the next chapter, we will add a way to further distribute work among
-                        not only machines, but whole networks. </p></div><div class="sect2" title="Example: a hierarchical network"><div class="titlepage"><div><div><h3 class="title"><a name="d0e1501"></a>Example: a hierarchical network</h3></div></div></div><p>We already distribute and parallelize work, so we can scale a great deal,
+                        not only machines, but whole networks. </p></div><div class="sect2" title="Example: a hierarchical network"><div class="titlepage"><div><div><h3 class="title"><a name="d0e1522"></a>Example: a hierarchical network</h3></div></div></div><p>We already distribute and parallelize work, so we can scale a great deal,
                         but our current model is one server, many clients, which means a potentially
                         high network load and a lesser scalability as more and more clients connect
                         to a server. What we want is a client/server combo application  where the
@@ -391,7 +393,7 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                         application which steals jobs from the client on behalf of other clients.
                         What we want is to achieve something like this:</p><p><span class="inlinemediaobject"><img src="../pics/TCPHierarchical.jpg"></span></p><p>We have our server application, as seen until now, called interestingly
                         ServerApplication on a machine called MainJobServer. This machine executes
-                        works and offers at the same time a steal-from capability. We also have a
+                        work and offers at the same time a steal-from capability. We also have a
                         simple client called ClientApplication running on ClientMachine1, which
                         steals jobs and executes them itself without further delegating. We have
                         another client machine called ClientMachine2 on which
@@ -443,7 +445,7 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
         auto pool = boost::asynchronous::create_shared_scheduler_proxy(
                     new boost::asynchronous::<span class="bold"><strong>threadpool_scheduler</strong></span>&lt;
                             boost::asynchronous::lockfree_queue&lt;boost::asynchronous::any_serializable&gt; &gt;(<span class="bold"><strong>threads</strong></span>));
-        boost::asynchronous::tcp::<span class="bold"><strong>simple_tcp_client_proxy client_proxy</strong></span>(scheduler,pool,server_address,server_port,executor,
+        boost::asynchronous::tcp::<span class="bold"><strong>simple_tcp_client_proxy client_proxy</strong></span>(scheduler,<span class="bold"><strong>pool</strong></span>,server_address,server_port,executor,
                                                                        10/*ms between calls to server*/);
 // to be continued</pre><p>We now need a server to which more clients will connect, and a composite
                 binding it to our worker pool:</p><pre class="programlisting">   // we need a server

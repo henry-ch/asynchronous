@@ -1,6 +1,6 @@
 <html><head>
       <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-   <title>Composite Threadpool Scheduler</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s09.html" title="Threadpool Schedulers with several queues"><link rel="next" href="ch03s11.html" title="asio_scheduler"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Composite Threadpool Scheduler</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s09.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch03s11.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Composite Threadpool Scheduler"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e833"></a>Composite Threadpool Scheduler</h2></div></div></div><p>When a project becomes more complex, having a single threadpool for the whole
+   <title>Composite Threadpool Scheduler</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s09.html" title="Threadpool Schedulers with several queues"><link rel="next" href="ch03s11.html" title="asio_scheduler"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Composite Threadpool Scheduler</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s09.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch03s11.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Composite Threadpool Scheduler"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e847"></a>Composite Threadpool Scheduler</h2></div></div></div><p>When a project becomes more complex, having a single threadpool for the whole
                     application does not offer enough flexibility in load planning. It is pretty
                     hard to avoid either oversubscription (more busy threads than available hardware
                     threads) or undersubscription. One would need one big threadpool with exactly
@@ -44,8 +44,8 @@ boost::asynchronous::any_shared_scheduler_proxy&lt;&gt; tp_worker =
                     </pre><p>
                 </p><p>We can use this pool:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>As a big worker pool. In this case, the priority argument we use
                                 for posting refers to the (1-based) index of the subpool
-                                (post_callback(func1,func2,"task name",<span class="bold"><strong>1</strong></span>,0);). "1" means post to the first pool. But the
-                                second pool could steal the work.</p></li><li class="listitem"><p>As a pool container, but different parts of the code will get to
+                                (post_callback(func1,func2,"task name",<span class="bold"><strong>1</strong></span>,0);). "1" means post to the first pool. But
+                                another pool could steal the work.</p></li><li class="listitem"><p>As a pool container, but different parts of the code will get to
                                 see only the subpools. For example, the pools tp, tp2 and tp3 can
                                 still be used independently as a worker pool. Calling
                                 composite_threadpool_scheduler&lt;&gt;::get_scheduler(std::size_t
@@ -63,7 +63,8 @@ boost::asynchronous::any_shared_scheduler_proxy&lt;&gt; tp_worker =
                                 pools.</p></li><li class="listitem"><p><code class="code">stealing_multiqueue_threadpool_scheduler</code> is a
                                     <code class="code">multiqueue_threadpool scheduler</code> which steals from
                                 other pools.</p></li><li class="listitem"><p><code class="code">asio_scheduler steals</code>.</p></li></ul></div><p>The only difference with their not stealing equivalent is that they need a
-                    composite_scheduler to tell them from which queues they can steal.</p><p>Not all schedulers offer a queue to steal from. A
+                    composite_scheduler to tell them from which queues from other pools they can
+                    steal.</p><p>Not all schedulers offer a queue to steal from. A
                         <code class="code">single_thread_scheduler</code> does not as it would likely bring race
                     conditions in active objects. If you do want to allow stealing, use a threadpool
                     with 1 thread. An <code class="code">asio_scheduler</code> also offers no queue to steal from
