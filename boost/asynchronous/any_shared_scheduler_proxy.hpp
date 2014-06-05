@@ -185,6 +185,7 @@ struct internal_scheduler_aspect
     internal_scheduler_aspect(U const& u):
         boost::shared_ptr<boost::asynchronous::internal_scheduler_aspect_concept<T> > (u){}
 };
+
 template <class JOB = boost::asynchronous::any_callable,class Clock = boost::chrono::high_resolution_clock>
 struct any_shared_scheduler_proxy_concept
 {
@@ -247,7 +248,7 @@ public:
     }
     bool is_valid() const
     {
-        return (*my_ptr).is_valid();
+        return !!my_ptr && (*my_ptr).is_valid();
     }
     std::size_t get_queue_size()const
     {
@@ -271,10 +272,35 @@ public:
     }
 
 private:
+    template <class J,class C>
+    friend class scheduler_weak_proxy;
+
     boost::shared_ptr<boost::asynchronous::any_shared_scheduler_proxy_concept<JOB,Clock> > my_ptr;
 };
+
+// weak pointer to any_shared_scheduler_proxy concept
+template <class JOB,class Clock>
+struct any_weak_scheduler_proxy_concept :
+ ::boost::mpl::vector<
+    boost::type_erasure::relaxed,
+    boost::type_erasure::copy_constructible<>,
+    boost::type_erasure::typeid_<>,
+    boost::asynchronous::has_lock<any_shared_scheduler_proxy<JOB,Clock>(), const boost::type_erasure::_self>
+> {};
+template <class T = boost::asynchronous::any_callable, class Clock = boost::chrono::high_resolution_clock>
+struct any_weak_scheduler_proxy: boost::type_erasure::any<boost::asynchronous::any_weak_scheduler_proxy_concept<T,Clock> >
+{
+    typedef T job_type;
+    typedef Clock clock_type;
+    template <class U>
+    any_weak_scheduler_proxy(U const& u)
+        : boost::type_erasure::any<boost::asynchronous::any_weak_scheduler_proxy_concept<T,Clock> > (u){}
+    any_weak_scheduler_proxy()
+        : boost::type_erasure::any<boost::asynchronous::any_weak_scheduler_proxy_concept<T,Clock> > (){}
+};
+
 #endif
-}} // boost::async
+}} // boost::asynchronous
 
 
 #endif // BOOST_ASYNC_ANY_SHARED_SCHEDULER_PROXY_HPP

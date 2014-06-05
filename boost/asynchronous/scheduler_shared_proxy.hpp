@@ -283,6 +283,24 @@ public:
     {
     }
 
+    scheduler_shared_proxy(scheduler_shared_proxy const& rhs)
+        : m_impl(rhs.m_impl)
+    {
+    }
+    scheduler_shared_proxy(scheduler_shared_proxy&& rhs) noexcept
+        : m_impl(std::move(rhs.m_impl))
+    {
+    }
+    scheduler_shared_proxy& operator= (scheduler_shared_proxy const& rhs)
+    {
+        m_impl = rhs.m_impl;
+        return *this;
+    }
+    scheduler_shared_proxy& operator= (scheduler_shared_proxy&& rhs) noexcept
+    {
+        std::swap(m_impl,rhs.m_impl);
+        return *this;
+    }
 private:
 #ifndef BOOST_NO_RVALUE_REFERENCES
     explicit scheduler_shared_proxy(boost::shared_ptr<scheduler_type>&& scheduler)
@@ -295,7 +313,6 @@ private:
     explicit scheduler_shared_proxy(boost::shared_ptr<scheduler_type> scheduler)
         : m_impl(boost::make_shared<boost::asynchronous::detail::scheduler_shared_proxy_impl<S> >(scheduler)){}
 #endif
-
     // attribute
     boost::shared_ptr<boost::asynchronous::detail::scheduler_shared_proxy_impl<S> > m_impl;
 
@@ -354,7 +371,43 @@ boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type> create_sha
 }
 #endif
 
-}} // boost::async
+#ifdef BOOST_ASYNCHRONOUS_NO_TYPE_ERASURE
+template<class JOB = boost::asynchronous::any_callable,class Clock = boost::chrono::high_resolution_clock>
+class scheduler_weak_proxy
+{
+public:
+    typedef JOB job_type;
+
+    scheduler_weak_proxy(boost::asynchronous::any_shared_scheduler_proxy<job_type,Clock>& impl)
+        : m_impl(impl.my_ptr)
+        {}
+
+    scheduler_weak_proxy():m_impl(){}
+    any_shared_scheduler_proxy<job_type,Clock> lock() const
+    {
+        if (m_impl.expired())
+        {
+            return any_shared_scheduler_proxy<job_type,Clock>();
+        }
+        boost::shared_ptr<boost::asynchronous::any_shared_scheduler_proxy_concept<job_type,Clock>> shared_impl = m_impl.lock();
+        return boost::asynchronous::any_shared_scheduler_proxy<job_type,Clock>(shared_impl);
+    }
+    scheduler_weak_proxy<job_type,Clock>& operator= (scheduler_weak_proxy<job_type,Clock> const& rhs)
+    {
+        m_impl = rhs.m_impl;
+        return *this;
+    }
+    scheduler_weak_proxy<job_type,Clock>& operator= (boost::asynchronous::any_shared_scheduler_proxy<job_type,Clock> const& rhs)
+    {
+        m_impl = rhs.my_ptr;
+        return *this;
+    }
+private:
+    boost::weak_ptr<boost::asynchronous::any_shared_scheduler_proxy_concept<job_type,Clock>> m_impl;
+
+};
+#endif
+}} // boost::asynchronous
 
 
-#endif /* BOOST_ASYNC_SCHEDULER_WEAK_PROXY_HPP */
+#endif /* BOOST_ASYNC_SCHEDULER_SHARED_PROXY_HPP */
