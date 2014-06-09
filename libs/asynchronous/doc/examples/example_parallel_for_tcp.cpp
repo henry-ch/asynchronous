@@ -6,7 +6,7 @@
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/scheduler/tcp/tcp_server_scheduler.hpp>
-#include <boost/asynchronous/servant_proxy.h>
+#include <boost/asynchronous/servant_proxy.hpp>
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/checks.hpp>
 #include <boost/asynchronous/trackable_servant.hpp>

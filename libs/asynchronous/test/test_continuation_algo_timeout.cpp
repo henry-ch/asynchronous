@@ -10,7 +10,7 @@
 #include <boost/asynchronous/scheduler/multiqueue_threadpool_scheduler.hpp>
 #include <boost/asynchronous/scheduler/detail/any_continuation.hpp>
 
-#include <boost/asynchronous/servant_proxy.h>
+#include <boost/asynchronous/servant_proxy.hpp>
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/trackable_servant.hpp>
 #include <boost/asynchronous/continuation_task.hpp>

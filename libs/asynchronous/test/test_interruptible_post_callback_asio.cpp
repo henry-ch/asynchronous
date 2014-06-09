@@ -11,7 +11,7 @@
 #include <boost/asynchronous/queue/threadsafe_list.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/extensions/asio/asio_scheduler.hpp>
-#include <boost/asynchronous/servant_proxy.h>
+#include <boost/asynchronous/servant_proxy.hpp>
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/checks.hpp>
 #include <boost/asynchronous/trackable_servant.hpp>

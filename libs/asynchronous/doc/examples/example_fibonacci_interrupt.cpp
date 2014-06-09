@@ -6,7 +6,7 @@
 #include <boost/asynchronous/scheduler/multiqueue_threadpool_scheduler.hpp>
 #include <boost/asynchronous/continuation_task.hpp>
 
-#include <boost/asynchronous/servant_proxy.h>
+#include <boost/asynchronous/servant_proxy.hpp>
 #include <boost/asynchronous/trackable_servant.hpp>
 
 using namespace std;

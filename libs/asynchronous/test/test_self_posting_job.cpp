@@ -18,7 +18,7 @@
 #include <boost/asynchronous/scheduler/composite_threadpool_scheduler.hpp>
 #include <boost/asynchronous/scheduler/multiqueue_threadpool_scheduler.hpp>
 #include <boost/asynchronous/extensions/asio/asio_scheduler.hpp>
-#include <boost/asynchronous/servant_proxy.h>
+#include <boost/asynchronous/servant_proxy.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/scheduler/tss_scheduler.hpp>

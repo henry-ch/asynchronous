@@ -18,7 +18,7 @@
 #include <boost/asynchronous/scheduler/stealing_multiqueue_threadpool_scheduler.hpp>
 #include <boost/asynchronous/scheduler/composite_threadpool_scheduler.hpp>
 #include <boost/asynchronous/scheduler/multiqueue_threadpool_scheduler.hpp>
-#include <boost/asynchronous/servant_proxy.h>
+#include <boost/asynchronous/servant_proxy.hpp>
 #include <boost/asynchronous/post.hpp>
 
 //#define BOOST_TEST_MODULE MyTest

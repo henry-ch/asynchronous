@@ -19,7 +19,7 @@
 
 #include <boost/asynchronous/trackable_servant.hpp>
 #include <boost/asynchronous/scheduler/tcp/detail/server_response.hpp>
-#include <boost/asynchronous/servant_proxy.h>
+#include <boost/asynchronous/servant_proxy.hpp>
 #include <boost/asynchronous/extensions/asio/asio_scheduler.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/scheduler/tcp/detail/server_connection.hpp>

@@ -18,7 +18,7 @@
 #include <boost/asynchronous/queue/any_queue_container.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 
-#include <boost/asynchronous/servant_proxy.h>
+#include <boost/asynchronous/servant_proxy.hpp>
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/trackable_servant.hpp>
 #include <boost/test/unit_test.hpp>

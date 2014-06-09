@@ -17,7 +17,7 @@
 
 #include <boost/asio.hpp>
 
-#include <boost/asynchronous/servant_proxy.h>
+#include <boost/asynchronous/servant_proxy.hpp>
 #include <boost/asynchronous/trackable_servant.hpp>
 #include <boost/asynchronous/extensions/asio/tss_asio.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>

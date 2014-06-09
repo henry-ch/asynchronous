@@ -3,7 +3,7 @@
 #include <boost/asynchronous/extensions/asio/asio_scheduler.hpp>
 #include <boost/asynchronous/queue/threadsafe_list.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
-#include <boost/asynchronous/servant_proxy.h>
+#include <boost/asynchronous/servant_proxy.hpp>
 #include <boost/asynchronous/trackable_servant.hpp>
 #include <boost/asynchronous/extensions/asio/asio_tcp_resolver.hpp>
 #include <boost/asynchronous/extensions/asio/asio_tcp_servant.hpp>
