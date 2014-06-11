@@ -108,7 +108,7 @@ BOOST_AUTO_TEST_CASE( test_asio_timer_expired )
     ServantProxy proxy(scheduler);
     boost::shared_ptr<boost::promise<void> > p(new boost::promise<void>);
     boost::shared_future<void> fu = p->get_future();
-    boost::shared_future<void> fuv = proxy.timer_expired(p);
+    proxy.timer_expired(p);
     fu.get();
     BOOST_CHECK_MESSAGE(timer_expired_count==1,"timer callback not called.");
 }

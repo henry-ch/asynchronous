@@ -115,12 +115,13 @@ private:
 // for testing
 boost::shared_ptr<boost::promise<long> > m_promise;
 };
-class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant,servant_job>
+// we give 4s for destruction timeout as we're going to wait 2s for tasks to complete
+class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant,servant_job,4000>
 {
 public:
     template <class Scheduler>
     ServantProxy(Scheduler s):
-        boost::asynchronous::servant_proxy<ServantProxy,Servant,servant_job>(s)
+        boost::asynchronous::servant_proxy<ServantProxy,Servant,servant_job,4000>(s)
     {}
     // caller will get a future
     BOOST_ASYNC_FUTURE_MEMBER_LOG(calc_algo,"proxy::calc_algo")

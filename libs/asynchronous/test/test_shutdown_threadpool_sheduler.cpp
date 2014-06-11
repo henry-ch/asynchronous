@@ -28,7 +28,7 @@ BOOST_AUTO_TEST_CASE( test_shutdown_threadpool_scheduler )
     size_t num_executed = 0;
     size_t num_failures = 0;
 
-    for (int i = 0 ; i < 100000 ; ++i)
+    for (int i = 0 ; i < 100 ; ++i)
     {
         called = false;
         num_executed++;
@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE( test_shutdown_threadpool_scheduler_2 )
     size_t num_executed = 0;
     size_t num_failures = 0;
 
-    for (int i = 0 ; i < 10000 ; ++i)
+    for (int i = 0 ; i < 100 ; ++i)
     {
         called = false;
         num_executed++;
@@ -72,7 +72,7 @@ BOOST_AUTO_TEST_CASE( test_shutdown_multiqueue_threadpool_scheduler )
     size_t num_executed = 0;
     size_t num_failures = 0;
 
-    for (int i = 0 ; i < 100000 ; ++i)
+    for (int i = 0 ; i < 100 ; ++i)
     {
         called = false;
         num_executed++;
@@ -94,7 +94,7 @@ BOOST_AUTO_TEST_CASE( test_shutdown_single_thread_scheduler )
     size_t num_executed = 0;
     size_t num_failures = 0;
 
-    for (int i = 0 ; i < 100000 ; ++i)
+    for (int i = 0 ; i < 100 ; ++i)
     {
         called = false;
         num_executed++;
@@ -116,7 +116,7 @@ BOOST_AUTO_TEST_CASE( test_shutdown_stealing_threadpool_scheduler )
     size_t num_executed = 0;
     size_t num_failures = 0;
 
-    for (int i = 0 ; i < 100000 ; ++i)
+    for (int i = 0 ; i < 100 ; ++i)
     {
         called = false;
         num_executed++;
@@ -139,7 +139,7 @@ BOOST_AUTO_TEST_CASE( test_shutdown_stealing_multiqueue_threadpool_scheduler )
     size_t num_executed = 0;
     size_t num_failures = 0;
 
-    for (int i = 0 ; i < 100000 ; ++i)
+    for (int i = 0 ; i < 100 ; ++i)
     {
         called = false;
         num_executed++;
@@ -164,7 +164,7 @@ BOOST_AUTO_TEST_CASE( test_shutdown_asio_scheduler )
     size_t num_executed = 0;
     size_t num_failures = 0;
 
-    for (int i = 0 ; i < 10000 ; ++i)
+    for (int i = 0 ; i < 100 ; ++i)
     {
         called = false;
         num_executed++;
@@ -186,7 +186,7 @@ BOOST_AUTO_TEST_CASE( test_shutdown_io_scheduler )
     size_t num_executed = 0;
     size_t num_failures = 0;
 
-    for (int i = 0 ; i < 10000 ; ++i)
+    for (int i = 0 ; i < 100 ; ++i)
     {
         called = false;
         num_executed++;

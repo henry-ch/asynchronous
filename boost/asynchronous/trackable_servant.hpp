@@ -70,7 +70,9 @@ public:
         boost::weak_ptr<track> tracking (m_tracking);
         boost::asynchronous::any_weak_scheduler<JOB> wscheduler = get_scheduler();
         //TODO functor with move
-        std::function<void(Args...)> res = [func,tracking,wscheduler,task_name,prio](Args... as)mutable
+        boost::shared_ptr<std::function<void(Args... )>> func_ptr =
+                boost::make_shared<std::function<void(Args... )>>(std::move(func));
+        std::function<void(Args...)> res = [func_ptr,tracking,wscheduler,task_name,prio](Args... as)mutable
         {
             boost::asynchronous::any_shared_scheduler<JOB> sched = wscheduler.lock();
             if (sched.is_valid())
@@ -79,12 +81,12 @@ public:
                 if ((std::find(ids.begin(),ids.end(),boost::this_thread::get_id()) != ids.end()))
                 {
                     // our thread, call if servant alive
-                   std::bind( boost::asynchronous::check_alive([func](Args... args){func(args...);},tracking),as...)();
+                   std::bind( boost::asynchronous::check_alive([func_ptr](Args... args){(*func_ptr)(args...);},tracking),as...)();
                 }
                 else
                 {
                     // not in our thread, post
-                    boost::asynchronous::post_future(sched,std::bind( boost::asynchronous::check_alive([func](Args... args){func(args...);},tracking),as...),
+                    boost::asynchronous::post_future(sched,std::bind( boost::asynchronous::check_alive([func_ptr](Args... args){(*func_ptr)(args...);},tracking),as...),
                                                      task_name,prio);
                 }
             }
@@ -104,7 +106,7 @@ public:
     {
         std::function<void(const ::boost::system::error_code&)> f = std::move(func);
         call_callback(t.get_proxy(),
-                      t.unsafe_async_wait(make_safe_callback(f)),
+                      t.unsafe_async_wait(make_safe_callback(std::move(f))),
                       // ignore async_wait callback functor., real callback is above
                       [](boost::future<void> ){}
                       );

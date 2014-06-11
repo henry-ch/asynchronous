@@ -34,6 +34,7 @@
 
 //BOOST_MPL_HAS_XXX_TRAIT_DEF(post_servant_ctor)
 BOOST_MPL_HAS_XXX_TRAIT_DEF(simple_ctor)
+BOOST_MPL_HAS_XXX_TRAIT_DEF(simple_dtor)
 BOOST_MPL_HAS_XXX_TRAIT_DEF(requires_weak_scheduler)
 
 namespace boost { namespace asynchronous
@@ -312,7 +313,7 @@ struct servant_proxy_timeout : public std::exception
 {
 };
 
-template <class ServantProxy,class Servant, class Callable = boost::asynchronous::any_callable,int max_create_wait_ms = 1000>
+template <class ServantProxy,class Servant, class Callable = boost::asynchronous::any_callable,int max_create_wait_ms = 5000>
 class servant_proxy
 {
 public:
@@ -370,17 +371,14 @@ public:
     }
     ~servant_proxy()
     {
-#ifndef BOOST_NO_RVALUE_REFERENCES
         servant_deleter n(std::move(m_servant));
+        boost::future<void> fu = n.done_promise->get_future();
         typename boost::asynchronous::job_traits<callable_type>::wrapper_type  a(std::move(n));
         a.set_name(ServantProxy::get_dtor_name());
         m_proxy.post(std::move(a),ServantProxy::get_dtor_prio());
-#else
-        servant_deleter n(m_servant);
-        typename boost::asynchronous::job_traits<callable_type>::wrapper_type  a(n);
-        a.set_name(ServantProxy::get_dtor_name());
-        m_proxy.post(a,ServantProxy::get_dtor_prio());
-#endif
+        // block until done if necessary (TODO better later)
+        dtor_wait_helper<servant_type>(std::move(fu));
+
         m_servant.reset();
         m_proxy.reset();
     }
@@ -413,6 +411,21 @@ protected:
     boost::shared_ptr<servant_type> m_servant;
 
 private:
+    template <class S>
+    typename boost::enable_if<typename has_simple_dtor<S>::type,void>::type
+    dtor_wait_helper(boost::future<void> )
+    {
+        // no waiting required
+    }
+    template <class S>
+    typename boost::disable_if<typename has_simple_dtor<S>::type,void>::type
+    dtor_wait_helper(boost::future<void> fu)
+    {
+        fu.timed_wait(boost::posix_time::milliseconds(max_create_wait_ms));
+        // we are in dtor so we don't want to throw, ignore and hope for the best...
+        // if we have no complicated inter-servant proxy interactions as in test_interconnected_servants.cpp it will be true.
+    }
+
     // safe creation of servant in our thread ctor is trivial or told us so
     template <typename S,typename... Args>
     typename boost::enable_if<
@@ -516,38 +529,52 @@ private:
 
     struct servant_deleter : public boost::asynchronous::job_traits<callable_type>::diagnostic_type
     {
-        //servant_deleter(boost::shared_ptr<servant_type> && t):data(t){t.reset();}
-        //servant_deleter(servant_deleter&& r): data(r.data){r.data.reset();}
-        //servant_deleter& operator()(servant_deleter&& r){data = r.data; r.data.reset();}
 #ifndef BOOST_NO_RVALUE_REFERENCES
-        servant_deleter(boost::shared_ptr<servant_type> && t):boost::asynchronous::job_traits<callable_type>::diagnostic_type(), data(t)
+        servant_deleter(boost::shared_ptr<servant_type> t)
+            : boost::asynchronous::job_traits<callable_type>::diagnostic_type()
+            , data(std::move(t))
+            , done_promise(boost::make_shared<boost::promise<void>>())
         {
             t.reset();
+        }
+        servant_deleter(servant_deleter&& rhs) noexcept
+            : boost::asynchronous::job_traits<callable_type>::diagnostic_type()
+            , data(std::move(rhs.data))
+            , done_promise(std::move(rhs.done_promise))
+        {
+
         }
 #endif
         servant_deleter(boost::shared_ptr<servant_type> & t):boost::asynchronous::job_traits<callable_type>::diagnostic_type(), data(t)
         {
             t.reset();
         }
-        //TODO move copy-ctor / operator()
         servant_deleter(servant_deleter const& r): boost::asynchronous::job_traits<callable_type>::diagnostic_type(), data(r.data)
         {
             const_cast<servant_deleter&>(r).data.reset();
+            done_promise = std::move(const_cast<servant_deleter&>(r).done_promise);
         }
         servant_deleter& operator= (servant_deleter const& r)
         {
             data = r.data; const_cast<servant_deleter&>(r).data.reset();
+            done_promise = std::move(const_cast<servant_deleter&>(r).done_promise);
+            return *this;
         }
 #ifndef BOOST_NO_RVALUE_REFERENCES
-        servant_deleter& operator= (servant_deleter&& r)
+        servant_deleter& operator= (servant_deleter&& r) noexcept
         {
             data = r.data; r.data.reset();
+            done_promise = std::move(r.done_promise);
+            return *this;
         }
 #endif
-        void operator()()const
+        void operator()()
         {
+            data.reset();
+            done_promise->set_value();
         }
         boost::shared_ptr<servant_type> data;
+        boost::shared_ptr<boost::promise<void>> done_promise;
     };
 };
 }} // boost::async

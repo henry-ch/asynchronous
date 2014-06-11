@@ -16,7 +16,7 @@
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/scheduler/threadpool_scheduler.hpp>
 
-#include <boost/asynchronous/servant_proxy.h>
+#include <boost/asynchronous/servant_proxy.hpp>
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/trackable_servant.hpp>
 
@@ -32,6 +32,8 @@ bool dtor_called=false;
 struct Servant : boost::asynchronous::trackable_servant<>
 {
     typedef int simple_ctor;
+    // optional, dtor is simple enough not to be waited for (no complicated dependency to other servants' schedulers)
+    typedef int simple_dtor;
     Servant(boost::asynchronous::any_weak_scheduler<> scheduler)
         : boost::asynchronous::trackable_servant<>(scheduler,
                                                boost::asynchronous::create_shared_scheduler_proxy(

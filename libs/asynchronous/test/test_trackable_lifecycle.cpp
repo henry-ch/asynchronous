@@ -45,6 +45,9 @@ struct void_task
 struct Servant : boost::asynchronous::trackable_servant<>
 {
     typedef int simple_ctor;
+    // optional, dtor is simple enough not to be waited for (no complicated dependency to other servants' schedulers)
+    typedef int simple_dtor;
+
     Servant(boost::asynchronous::any_weak_scheduler<> scheduler)
         : boost::asynchronous::trackable_servant<>(scheduler,
                                                boost::asynchronous::create_shared_scheduler_proxy(

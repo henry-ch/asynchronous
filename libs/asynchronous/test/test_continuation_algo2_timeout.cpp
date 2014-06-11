@@ -46,6 +46,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
 {
     // optional, ctor is simple enough not to be posted
     typedef int simple_ctor;
+    // optional, dtor is simple enough not to be waited for (no complicated dependency to other servants' schedulers)
+    typedef int simple_dtor;
+
     Servant(boost::asynchronous::any_weak_scheduler<> scheduler)
         : boost::asynchronous::trackable_servant<>(scheduler,
                                                // threadpool and a simple threadsafe_list queue
@@ -107,6 +110,7 @@ private:
 // for testing
 boost::shared_ptr<boost::promise<long> > m_promise;
 };
+
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>
 {
 public:
