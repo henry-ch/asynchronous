@@ -53,9 +53,9 @@ public:
             auto elapsed = boost::chrono::high_resolution_clock::now() - m_start;
             if(boost::chrono::duration_cast<boost::chrono::microseconds>(elapsed).count() <= MinDurationUs)
             {
-                boost::this_thread::sleep_for( boost::chrono::microseconds(SleepTimeUs) );
-                m_start = boost::chrono::high_resolution_clock::now();
+                boost::this_thread::sleep_for( boost::chrono::microseconds(SleepTimeUs) );                
             }
+            m_start = boost::chrono::high_resolution_clock::now();
         }
     }
 private:
