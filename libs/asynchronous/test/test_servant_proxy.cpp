@@ -162,14 +162,14 @@ BOOST_AUTO_TEST_CASE( test_servant_proxy_members )
                                                                     boost::asynchronous::threadsafe_list<> >);
     
     ServantProxy proxy(scheduler,42);
-    
+
     proxy.foobar(1,'a');
     
     int something = 3;
-    boost::shared_future<void> res = proxy.foo(something);
+    boost::shared_future<void> res = proxy.foo(boost::ref(something));
     res.get();
     // references ought to be ignored
-    BOOST_CHECK_MESSAGE(something==3,"servant managed to modify immutable data. something=" << something);
+    BOOST_CHECK_MESSAGE(something==100,"servant did not manage to modify data. something=" << something);
     
     boost::shared_future<int> fu = proxy.doIt();
     BOOST_CHECK_MESSAGE(fu.get()==5,"servant returned incorrect data. Expected 5."); 

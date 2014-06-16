@@ -20,10 +20,9 @@ struct Servant
         std::cout << "Servant::doIt with m_data:" << m_data << std::endl;
         return 5;
     }
-    void foo(int& i)const
+    void foo(int i)const
     {
         std::cout << "Servant::foo with int:" << i << std::endl;
-        i = 100;
     }
     void foobar(int i, char c)const
     {
@@ -64,14 +63,13 @@ void exercise_simple_servant()
             ServantProxy proxy(scheduler,42);
             // post a call to foobar, arguments are forwarded.
             proxy.foobar(1,'a');
-            // post a call to foo. To avoid races, the reference is ignored.
-            proxy.foo(something);
+            // post a call to foo. To avoid races, "something" is moved.
+            proxy.foo(std::move(something));
             // post and get a future because we're interested in the result.
             boost::shared_future<int> fu = proxy.doIt();
             std::cout<< "future:" << fu.get() << std::endl;
         }// here, Servant's destructor is posted
     }// scheduler is gone, its thread has been joined
-    std::cout<< "something:" << something << std::endl; // something was not changed
 }
 
 
