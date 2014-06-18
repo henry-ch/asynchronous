@@ -80,7 +80,7 @@ struct continuation
         else if(!m_state->is_interrupted())
         {
             // interruptible requested
-            interruptibles.push_back(boost::asynchronous::interruptible_post_future(sched,std::forward<Last>(l),n).second);
+            interruptibles.push_back(std::get<1>(boost::asynchronous::interruptible_post_future(sched,std::forward<Last>(l),n)));
         }
     }
 
@@ -95,7 +95,7 @@ struct continuation
         }
         else
         {
-            interruptibles.push_back(boost::asynchronous::interruptible_post_future(sched,std::forward<Front>(front),n).second);
+            interruptibles.push_back(std::get<1>(boost::asynchronous::interruptible_post_future(sched,std::forward<Front>(front),n)));
         }
         continuation_ctor_helper(sched,interruptibles,std::forward<Tail>(tail)...);
     }

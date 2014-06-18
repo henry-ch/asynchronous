@@ -139,24 +139,25 @@ public:
                                         cb_prio);
     }
     template <class F1>
-    void post_self(F1 func, std::string const& task_name="", std::size_t post_prio=0)
+    auto post_self(F1 func, std::string const& task_name="", std::size_t post_prio=0)
+        -> boost::future<decltype(func())>
     {
         // we want to log if possible
-        boost::asynchronous::post_future(m_scheduler.lock(),
-                                        boost::asynchronous::check_alive_before_exec(std::move(func),m_tracking),
-                                        task_name,
-                                        post_prio);
+        return boost::asynchronous::post_future(m_scheduler.lock(),
+                                                boost::asynchronous::check_alive_before_exec(std::move(func),m_tracking),
+                                                task_name,
+                                                post_prio);
     }
     template <class F1>
-    boost::asynchronous::any_interruptible interruptible_post_self(F1 func, std::string const& task_name="",
-                                                                   std::size_t post_prio=0)
+    auto interruptible_post_self(F1 func, std::string const& task_name="",std::size_t post_prio=0)
+    -> std::tuple<boost::future<decltype(func())>,boost::asynchronous::any_interruptible >
     {
         // we want to log if possible
-        return boost::asynchronous::interruptible_post_future(
+        return std::move(boost::asynchronous::interruptible_post_future(
                                         m_scheduler.lock(),
                                         boost::asynchronous::check_alive_before_exec(std::move(func),m_tracking),
                                         task_name,
-                                        post_prio).second;
+                                        post_prio));
     }
     template <class F1>
     auto post_future(F1 func, std::string const& task_name="", std::size_t post_prio=0)
@@ -170,15 +171,15 @@ public:
                                         post_prio);
     }
     template <class F1>
-    boost::asynchronous::any_interruptible interruptible_post_future(F1 func, std::string const& task_name="",
-                                                                   std::size_t post_prio=0)
+    auto interruptible_post_future(F1 func, std::string const& task_name="",std::size_t post_prio=0)
+     -> std::tuple<boost::future<decltype(func())>,boost::asynchronous::any_interruptible >
     {
         // we want to log if possible
-        return boost::asynchronous::interruptible_post_future(
+        return std::move(boost::asynchronous::interruptible_post_future(
                                         m_worker,
                                         boost::asynchronous::check_alive_before_exec(std::move(func),m_tracking),
                                         task_name,
-                                        post_prio).second;
+                                        post_prio));
     }
     template <class CallerSched,class F1, class F2>
     void call_callback(CallerSched s, F1 func,F2 cb_func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)

@@ -57,6 +57,20 @@ struct Servant : boost::asynchronous::trackable_servant<>
             }// work
         );
     }
+    boost::future<int> start_posting2()
+    {
+        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_posting not posted.");
+        auto fct_alive = make_check_alive_functor();
+        BOOST_CHECK_MESSAGE(fct_alive(),"servant should still be alive.");
+        // post task to self
+        return post_self(
+           []()
+            {
+                BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant task not posted.");
+                return 42;
+            }// work
+        );
+    }
 };
 
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>
@@ -67,6 +81,7 @@ public:
         boost::asynchronous::servant_proxy<ServantProxy,Servant>(s)
     {}
     BOOST_ASYNC_FUTURE_MEMBER(start_posting)
+    BOOST_ASYNC_FUTURE_MEMBER(start_posting2)
 };
 
 }
@@ -91,3 +106,21 @@ BOOST_AUTO_TEST_CASE( test_post_self )
     BOOST_CHECK_MESSAGE(dtor_called,"servant dtor not called.");
 }
 
+BOOST_AUTO_TEST_CASE( test_post_self_int )
+{
+    main_thread_id = boost::this_thread::get_id();
+    {
+        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
+                                                                            boost::asynchronous::threadsafe_list<> >);
+
+        {
+            ServantProxy proxy(scheduler);
+            boost::future<boost::future<int>> fu = proxy.start_posting2();
+            // wait for task to complete
+            int res = fu.get().get();
+            BOOST_CHECK_MESSAGE(res==42,"post_self returned wrong result.");
+        }
+    }
+    // at this point, the dtor has been called
+    BOOST_CHECK_MESSAGE(dtor_called,"servant dtor not called.");
+}

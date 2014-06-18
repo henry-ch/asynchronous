@@ -87,13 +87,13 @@ BOOST_AUTO_TEST_CASE( test_interruptible_void_post_future )
                                 boost::asynchronous::threadsafe_list<> >(1));
 
 
-    std::pair<boost::shared_future<void>,boost::asynchronous::any_interruptible> res = boost::asynchronous::interruptible_post_future(scheduler, blocking_void_task());
+    std::tuple<boost::shared_future<void>,boost::asynchronous::any_interruptible> res = boost::asynchronous::interruptible_post_future(scheduler, blocking_void_task());
     // we let the task start
     boost::this_thread::sleep(boost::posix_time::milliseconds(200));
-    res.second.interrupt();
+    std::get<1>(res).interrupt();
     try
     {
-        res.first.get();
+        std::get<0>(res).get();
     }
     catch (boost::asynchronous::task_aborted_exception&)
     {
@@ -113,14 +113,14 @@ BOOST_AUTO_TEST_CASE( test_interruptible_int_post_future )
                                 boost::asynchronous::threadsafe_list<> >(1));
 
 
-    std::pair<boost::shared_future<int>,boost::asynchronous::any_interruptible> res = boost::asynchronous::interruptible_post_future(scheduler, blocking_int_task());
+    std::tuple<boost::shared_future<int>,boost::asynchronous::any_interruptible> res = boost::asynchronous::interruptible_post_future(scheduler, blocking_int_task());
     int task_res=0;
     // we let the task start
     boost::this_thread::sleep(boost::posix_time::milliseconds(200));
-    res.second.interrupt();
+    std::get<1>(res).interrupt();
     try
     {
-        task_res = res.first.get();
+        task_res = std::get<0>(res).get();
     }
     catch (boost::asynchronous::task_aborted_exception&)
     {

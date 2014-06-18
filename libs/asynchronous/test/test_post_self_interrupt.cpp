@@ -44,7 +44,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
         dtor_called=true;
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant dtor not posted.");
     }
-    boost::asynchronous::any_interruptible start_posting(boost::shared_ptr<boost::promise<void> > done, boost::shared_ptr<boost::promise<void> > ready)
+    std::tuple<boost::future<void>,boost::asynchronous::any_interruptible>
+    start_posting(boost::shared_ptr<boost::promise<void> > done, boost::shared_ptr<boost::promise<void> > ready)
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_posting not posted.");
         // post task to self
@@ -86,9 +87,9 @@ BOOST_AUTO_TEST_CASE( test_post_self_interrupt )
         boost::shared_future<void> end=ready->get_future();
         {
             ServantProxy proxy(scheduler);
-            boost::shared_future<boost::asynchronous::any_interruptible> res = proxy.start_posting(done,ready);
+            boost::future<std::tuple<boost::future<void>,boost::asynchronous::any_interruptible> > res = proxy.start_posting(done,ready);
             // wait for task to start
-            boost::asynchronous::any_interruptible i = res.get();
+            boost::asynchronous::any_interruptible i = std::get<1>(res.get());
             // interrupt
             i.interrupt();
             boost::this_thread::sleep(boost::posix_time::milliseconds(1000));

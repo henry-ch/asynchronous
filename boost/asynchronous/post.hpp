@@ -329,7 +329,7 @@ auto interruptible_post_future(S const& scheduler, F const& func,
 #endif
                  const std::string& task_name="", std::size_t prio=0)
     -> typename boost::disable_if< boost::is_same<void,decltype(func())>,
-                                   std::pair<boost::future<decltype(func())>,boost::asynchronous::any_interruptible > >::type
+                                   std::tuple<boost::future<decltype(func())>,boost::asynchronous::any_interruptible > >::type
 {
     boost::shared_ptr<boost::promise<decltype(func())> > p = boost::make_shared<boost::promise<decltype(func())> >();
     boost::future<decltype(func())> fu(p->get_future());
@@ -351,7 +351,7 @@ auto interruptible_post_future(S const& scheduler, F const& func,
     detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper,S> fct (p,std::move(func));
     typename boost::asynchronous::job_traits<typename S::job_type>::wrapper_type w(std::move(fct));
     w.set_name(task_name);
-    return std::make_pair(std::move(fu),scheduler.interruptible_post(std::move(w),prio));
+    return std::make_tuple(std::move(fu),scheduler.interruptible_post(std::move(w),prio));
 }
 template <class F, class S>
 #ifndef BOOST_NO_RVALUE_REFERENCES
@@ -361,7 +361,7 @@ auto interruptible_post_future(S const& scheduler, F const& func,
 #endif
                  const std::string& task_name="", std::size_t prio=0)
     -> typename boost::enable_if< boost::is_same<void,decltype(func())>,
-                                  std::pair<boost::future<void>,boost::asynchronous::any_interruptible > >::type
+                                  std::tuple<boost::future<void>,boost::asynchronous::any_interruptible > >::type
 {
     boost::shared_ptr<boost::promise<void> > p= boost::make_shared<boost::promise<void> >();
     boost::future<void> fu(p->get_future());
@@ -383,7 +383,7 @@ auto interruptible_post_future(S const& scheduler, F const& func,
     detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper,S> fct (p,std::move(func));
     typename boost::asynchronous::job_traits<typename S::job_type>::wrapper_type w(std::move(fct));
     w.set_name(task_name);
-    return std::make_pair(std::move(fu),scheduler.interruptible_post(std::move(w),prio));
+    return std::make_tuple(std::move(fu),scheduler.interruptible_post(std::move(w),prio));
 }
 
 namespace detail
