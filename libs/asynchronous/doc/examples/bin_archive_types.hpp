@@ -43,8 +43,6 @@ struct job_traits< boost::asynchronous::any_bin_serializable >
 {
     typedef typename boost::asynchronous::default_loggable_job<
                                   boost::chrono::high_resolution_clock >            diagnostic_type;
-//    typedef boost::asynchronous::detail::base_job<
-//            diagnostic_type,boost::asynchronous::any_callable >                     wrapper_type;
     typedef boost::asynchronous::detail::serializable_base_job<
             diagnostic_type,boost::asynchronous::any_bin_serializable >                     wrapper_type;
 

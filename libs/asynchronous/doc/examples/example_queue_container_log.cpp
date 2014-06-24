@@ -82,6 +82,7 @@ public:
 
 void example_queue_container_log()
 {
+    std::cout << "example_queue_container_log" << std::endl;
     {
         // a scheduler with 1 threadsafe list, and 3 lockfree queues as work input queue
         // the queue indicates the job name (loggable job)
@@ -133,6 +134,7 @@ void example_queue_container_log()
         }
 
     }
+    std::cout << "example_queue_container_log end" << std::endl;
 }
 
 

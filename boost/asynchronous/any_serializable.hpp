@@ -23,14 +23,16 @@ BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_get_task_name), get_task_nam
 
 namespace boost { namespace asynchronous
 {
+typedef boost::mpl::vector<
+    boost::asynchronous::any_callable_concept,
+    boost::asynchronous::has_save<void(boost::archive::text_oarchive&,const unsigned int)/*,const boost::type_erasure::_self*/>,
+    boost::asynchronous::has_load<void(boost::archive::text_iarchive&,const unsigned int)>,
+    boost::asynchronous::has_get_task_name<std::string()>
+> any_serializable_concept;
+
 typedef
 boost::type_erasure::any<
-    boost::mpl::vector<
-        boost::asynchronous::any_callable_concept,
-        boost::asynchronous::has_save<void(boost::archive::text_oarchive&,const unsigned int)/*,const boost::type_erasure::_self*/>,
-        boost::asynchronous::has_load<void(boost::archive::text_iarchive&,const unsigned int)>,
-        boost::asynchronous::has_get_task_name<std::string()>
-    >,
+    boost::asynchronous::any_serializable_concept,
     boost::type_erasure::_self
 > any_serializable_helper;
 

@@ -260,13 +260,8 @@ public:
                     if (popped)
                     {
                         cpu_load.popped_job();
-                        // automatic closing of log
-                        boost::asynchronous::detail::job_diagnostic_closer<typename Q::job_type,diag_type> closer
-                                (&job,diagnostics.get());
-                        // log time
-                        boost::asynchronous::job_traits<typename Q::job_type>::set_started_time(job);
                         // forward to server
-                        server.add_task(job);
+                        server.add_task(job,diagnostics);
 
                     }
                     if (!popped && server.requests_stealing().get())
@@ -278,7 +273,7 @@ public:
                             if (popped)
                             {
                                 // forward to server
-                                server.add_task(job);
+                                server.add_task(job,diagnostics);
                                 break;
                             }
                         }

@@ -185,15 +185,13 @@ template< class Clock >
 struct job_traits< boost::asynchronous::any_loggable<Clock> >
 {
     typedef typename boost::asynchronous::default_loggable_job<
-            typename boost::asynchronous::any_loggable<Clock>::clock_type >            diagnostic_type;
-//    typedef boost::asynchronous::detail::base_job<
-//            diagnostic_type,boost::asynchronous::any_loggable<Clock> >                 wrapper_type;
+            typename boost::asynchronous::any_loggable<Clock>::clock_type >             diagnostic_type;
     typedef boost::asynchronous::detail::base_job<
-            diagnostic_type,boost::asynchronous::any_callable >                 wrapper_type;
+            diagnostic_type,boost::asynchronous::any_callable >                         wrapper_type;
 
-    typedef typename diagnostic_type::diagnostic_item_type                          diagnostic_item_type;
+    typedef typename diagnostic_type::diagnostic_item_type                              diagnostic_item_type;
     typedef boost::asynchronous::diagnostics_table<
-            std::string,diagnostic_item_type>                                       diagnostic_table_type;
+            std::string,diagnostic_item_type>                                           diagnostic_table_type;
 
     static void set_posted_time(boost::asynchronous::any_loggable<Clock>& job)
     {
@@ -234,15 +232,13 @@ template< >
 struct job_traits< boost::asynchronous::any_serializable >
 {
     typedef typename boost::asynchronous::default_loggable_job<
-                                  boost::chrono::high_resolution_clock >            diagnostic_type;
-//    typedef boost::asynchronous::detail::base_job<
-//            diagnostic_type,boost::asynchronous::any_callable >                     wrapper_type;
+                                  boost::chrono::high_resolution_clock >                diagnostic_type;
     typedef boost::asynchronous::detail::serializable_base_job<
             diagnostic_type,boost::asynchronous::any_serializable >                     wrapper_type;
 
-    typedef typename diagnostic_type::diagnostic_item_type                          diagnostic_item_type;
+    typedef typename diagnostic_type::diagnostic_item_type                              diagnostic_item_type;
     typedef boost::asynchronous::diagnostics_table<
-            std::string,diagnostic_item_type>                                       diagnostic_table_type;
+            std::string,diagnostic_item_type>                                           diagnostic_table_type;
 
     static void set_posted_time(boost::asynchronous::any_serializable& )
     {
