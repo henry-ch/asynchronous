@@ -59,7 +59,7 @@ struct Servant2 : boost::asynchronous::trackable_servant<>
     {
         // create a servant3 in the same thread as servant1
         ServantProxy3 servant(m_servant1_scheduler,std::move(s));
-        servant.foo();
+        servant.foo().get();
     }
     void foo2(int& i)
     {
@@ -86,7 +86,7 @@ struct Servant1 : boost::asynchronous::trackable_servant<>
     {
 
     }
-    void foo()
+    boost::future<void> foo()
     {
         int i=5;
         m_sink.foo2(boost::ref(i)).get();
@@ -95,7 +95,7 @@ struct Servant1 : boost::asynchronous::trackable_servant<>
         boost::promise<boost::shared_ptr<Servant3>> p;
         boost::future<boost::shared_ptr<Servant3>> fu = p.get_future();
         p.set_value(s3);
-        m_sink.foo(std::move(fu)).get();
+        return m_sink.foo(std::move(fu));
     }
 
     ServantProxy2 m_sink;
@@ -125,7 +125,7 @@ struct outer_owner
     }
     void test()
     {
-        m_servant1.foo().get();
+        m_servant1.foo().get().get();
     }
 
     boost::asynchronous::any_shared_scheduler_proxy<> m_servant1_scheduler;
