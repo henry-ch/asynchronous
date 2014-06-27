@@ -293,6 +293,7 @@ public:
     typedef Servant servant_type;
     typedef Callable callable_type;
     typedef boost::asynchronous::any_shared_scheduler_proxy<callable_type> scheduler_proxy_type;
+    typedef boost::asynchronous::any_weak_scheduler<callable_type> weak_scheduler_proxy_type;
 
     template <typename... Args>
     servant_proxy(scheduler_proxy_type p, Args... args)
@@ -306,12 +307,12 @@ public:
             // TODO forward
             // if a servant has a simple_ctor, then he MUST get a weak scheduler as he might get it too late with tss
             //m_servant = boost::make_shared<servant_type>(m_proxy.get_weak_scheduler(),args...);
-            m_servant = servant_create_helper::template create<servant_type>(m_proxy,args...);
+            m_servant = servant_create_helper::template create<servant_type>(m_proxy.get_weak_scheduler(),std::move(args)...);
         }
         else
         {
             // outside thread, create in scheduler thread if no other choice
-            init<servant_type>(args...);
+            init<servant_type>(std::move(args)...);
         }
     }
     servant_proxy(scheduler_proxy_type p, boost::future<boost::shared_ptr<servant_type> > s)
@@ -411,8 +412,7 @@ private:
     {
         // TODO forward
         // if a servant has a simple_ctor, then he MUST get a weak scheduler as he might get it too late with tss
-        m_servant = boost::make_shared<servant_type>(m_proxy.get_weak_scheduler(),args...);
-        //m_servant = servant_create_helper::template create<servant_type>(m_proxy,args...);
+        m_servant = boost::make_shared<servant_type>(m_proxy.get_weak_scheduler(),std::move(args)...);
     }
     // ctor has to be posted
     template <typename S,typename... Args>
@@ -428,7 +428,8 @@ private:
         boost::shared_ptr<boost::promise<boost::shared_ptr<servant_type> > > p =
                 boost::make_shared<boost::promise<boost::shared_ptr<servant_type> > >();
         boost::future<boost::shared_ptr<servant_type> > fu (p->get_future());
-        typename boost::asynchronous::job_traits<callable_type>::wrapper_type  a(boost::asynchronous::move_bind(init_helper(p),m_proxy,std::move(args)...));
+        typename boost::asynchronous::job_traits<callable_type>::wrapper_type  a(
+                    boost::asynchronous::move_bind(init_helper(p),m_proxy.get_weak_scheduler(),std::move(args)...));
         a.set_name(ServantProxy::get_ctor_name());
 #ifndef BOOST_NO_RVALUE_REFERENCES
         post(std::move(a),ServantProxy::get_ctor_prio());
@@ -456,7 +457,7 @@ private:
         init_helper& operator= (init_helper const&& rhs){m_promise = std::move(rhs.m_promise);}
 #endif
         template <typename... Args>
-        void operator()(scheduler_proxy_type proxy,Args... as)const
+        void operator()(weak_scheduler_proxy_type proxy,Args... as)const
         {
             try
             {
@@ -478,9 +479,9 @@ private:
                                             >::type
                                           >::type,
         boost::shared_ptr<servant_type> >::type
-        create(scheduler_proxy_type proxy,Args... args)
+        create(weak_scheduler_proxy_type proxy,Args... args)
         {
-            boost::shared_ptr<servant_type> res = boost::make_shared<servant_type>(proxy.get_weak_scheduler(),args...);
+            boost::shared_ptr<servant_type> res = boost::make_shared<servant_type>(proxy,std::move(args)...);
             return res;
         }
         template <typename S,typename... Args>
@@ -493,9 +494,9 @@ private:
                                             >::type
                                           >::type,
         boost::shared_ptr<servant_type> >::type
-        create(scheduler_proxy_type ,Args... args)
+        create(weak_scheduler_proxy_type ,Args... args)
         {
-            boost::shared_ptr<servant_type> res = boost::make_shared<servant_type>(args...);
+            boost::shared_ptr<servant_type> res = boost::make_shared<servant_type>(std::move(args)...);
             return res;
         }
     };
