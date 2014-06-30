@@ -2,6 +2,10 @@
 #include <boost/enable_shared_from_this.hpp>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
+#include <boost/asynchronous/scheduler/threadpool_scheduler.hpp>
+#include <boost/asynchronous/scheduler/stealing_threadpool_scheduler.hpp>
+#include <boost/asynchronous/scheduler/composite_threadpool_scheduler.hpp>
+
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/scheduler/tcp/tcp_server_scheduler.hpp>
@@ -20,31 +24,55 @@ typedef boost::asynchronous::any_loggable<boost::chrono::high_resolution_clock> 
 typedef std::map<std::string,std::list<boost::asynchronous::diagnostic_item<boost::chrono::high_resolution_clock> > > diag_type;
 
 // notice how the worker pool has a different job type
-struct Servant : boost::asynchronous::trackable_servant<log_servant_job,boost::asynchronous::any_loggable_serializable<>>
+struct Servant : boost::asynchronous::trackable_servant<log_servant_job,log_servant_job>
 {
     // optional, ctor is simple enough not to be posted
     //typedef int simple_ctor;
     Servant(boost::asynchronous::any_weak_scheduler<log_servant_job> scheduler)
-        : boost::asynchronous::trackable_servant<log_servant_job,boost::asynchronous::any_loggable_serializable<>>(scheduler)
+        : boost::asynchronous::trackable_servant<log_servant_job,log_servant_job>(scheduler)
         // for testing purpose
         , m_promise(new boost::promise<int>)
         , m_total(0)
         , m_tasks_done(0)
     {
-        // let's build our pool step by step. First we need a worker pool
-        // possibly for us, and we want to share it with the tcp pool for its serialization work
-        boost::asynchronous::any_shared_scheduler_proxy<log_servant_job> workers = boost::asynchronous::create_shared_scheduler_proxy(
-            new boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<log_servant_job> >(3));
+        try{
+        // let's build our pool step by step. First we need a worker pool for serialization work
+        boost::asynchronous::any_shared_scheduler_proxy<log_servant_job> tcp_workers = boost::asynchronous::create_shared_scheduler_proxy(
+            new boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<log_servant_job> >(1));
         // we use a tcp pool using the 3 worker threads we just built
         // our server will listen on "localhost" port 12345
-        boost::asynchronous::any_shared_scheduler_proxy<boost::asynchronous::any_loggable_serializable<>> pool=
+        boost::asynchronous::any_shared_scheduler_proxy<boost::asynchronous::any_loggable_serializable<>> tcp_pool=
                 boost::asynchronous::create_shared_scheduler_proxy(
                     new boost::asynchronous::tcp_server_scheduler<
-                            boost::asynchronous::lockfree_queue<boost::asynchronous::any_loggable_serializable<>>,log_servant_job >
-                                (workers,"localhost",12345));
-        // and this will be the worker pool for post_callback
-        set_worker(pool);
+                            boost::asynchronous::lockfree_queue<boost::asynchronous::any_loggable_serializable<>>,
+                            log_servant_job,
+                            true>
+                                (tcp_workers,"localhost",12345));
+        // an empty pool from which will be stolen, be it locally (workerpool) or remote
+        m_serializable_pool = boost::asynchronous::create_shared_scheduler_proxy(
+                                new boost::asynchronous::threadpool_scheduler<
+                                    boost::asynchronous::lockfree_queue<boost::asynchronous::any_loggable_serializable<>> >(0));
+        // create a composite to allow remote stealing
+        m_remote_composite = boost::asynchronous::create_shared_scheduler_proxy
+                (new boost::asynchronous::composite_threadpool_scheduler<boost::asynchronous::any_loggable_serializable<>>
+                 (m_serializable_pool,tcp_pool));
 
+        // a pool where we ourselves do calculation
+        auto workerpool = boost::asynchronous::create_shared_scheduler_proxy(
+                            new boost::asynchronous::stealing_threadpool_scheduler<boost::asynchronous::lockfree_queue<log_servant_job> >(4));
+        std::cout << "create composite" << std::endl;
+        // create a composite to allow stealing
+        m_local_composite = boost::asynchronous::create_shared_scheduler_proxy
+                (new boost::asynchronous::composite_threadpool_scheduler<log_servant_job>(workerpool,m_serializable_pool));
+        // and this will be the worker pool for post_callback
+        std::cout << "set_worker" << std::endl;
+        set_worker(m_local_composite);
+        }
+        catch (std::exception& e)
+        {
+            std::cout << "exception: " << e.what() << std::endl;
+        }
+        std::cout << "ctor done" << std::endl;
     }
     // called when task done, in our thread
     void on_callback(int res)
@@ -69,6 +97,7 @@ struct Servant : boost::asynchronous::trackable_servant<log_servant_job,boost::a
         {
             std::cout << "call post_callback with i: " << i << std::endl;
             post_callback(
+                   m_serializable_pool,
                    dummy_tcp_task(i),
                    // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
                    [this](boost::future<int> res){
@@ -81,8 +110,8 @@ struct Servant : boost::asynchronous::trackable_servant<log_servant_job,boost::a
                                     this->on_callback(0);
                                 }
                    },// callback functor.
-                    // task name for logging
-                    "int_async_work"
+                   // task name for logging
+                   "int_async_work"
             );
         }
         return fu;
@@ -97,6 +126,10 @@ private:
 boost::shared_ptr<boost::promise<int> > m_promise;
 int m_total;
 unsigned int m_tasks_done;//will count until 10, then we are done (we start 10 tasks)
+// keep the remore pool composite connection alive
+boost::asynchronous::any_shared_scheduler_proxy<boost::asynchronous::any_loggable_serializable<>> m_remote_composite;
+boost::asynchronous::any_shared_scheduler_proxy<log_servant_job> m_local_composite;
+boost::asynchronous::any_shared_scheduler_proxy<boost::asynchronous::any_loggable_serializable<>> m_serializable_pool;
 };
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant,log_servant_job>
 {

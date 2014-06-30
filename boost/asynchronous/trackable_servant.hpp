@@ -138,6 +138,31 @@ public:
                                         post_prio,
                                         cb_prio);
     }
+    template <class Worker,class F1, class F2>
+    void post_callback(Worker& wscheduler,F1 func,F2 cb_func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0) const
+    {
+        // we want to log if possible
+        boost::asynchronous::post_callback(wscheduler,
+                                        boost::asynchronous::check_alive_before_exec(std::move(func),m_tracking),
+                                        m_scheduler,
+                                        boost::asynchronous::check_alive(std::move(cb_func),m_tracking),
+                                        task_name,
+                                        post_prio,
+                                        cb_prio);
+    }
+    template <class Worker,class F1, class F2>
+    boost::asynchronous::any_interruptible interruptible_post_callback(Worker& wscheduler,F1 func,F2 cb_func, std::string const& task_name="",
+                                                                    std::size_t post_prio=0, std::size_t cb_prio=0)
+    {
+        return boost::asynchronous::interruptible_post_callback(
+                                        wscheduler,
+                                        boost::asynchronous::check_alive_before_exec(std::move(func),m_tracking),
+                                        m_scheduler,
+                                        boost::asynchronous::check_alive(std::move(cb_func),m_tracking),
+                                        task_name,
+                                        post_prio,
+                                        cb_prio);
+    }
     template <class F1>
     auto post_self(F1 func, std::string const& task_name="", std::size_t post_prio=0)
         -> boost::future<decltype(func())>
@@ -177,6 +202,28 @@ public:
         // we want to log if possible
         return std::move(boost::asynchronous::interruptible_post_future(
                                         m_worker,
+                                        boost::asynchronous::check_alive_before_exec(std::move(func),m_tracking),
+                                        task_name,
+                                        post_prio));
+    }
+    template <class Worker,class F1>
+    auto post_future(Worker& wscheduler,F1 func, std::string const& task_name="", std::size_t post_prio=0)
+        -> boost::future<decltype(func())>
+    {
+        // we want to log if possible
+        return boost::asynchronous::post_future(
+                                        wscheduler,
+                                        boost::asynchronous::check_alive_before_exec(std::move(func),m_tracking),
+                                        task_name,
+                                        post_prio);
+    }
+    template <class Worker,class F1>
+    auto interruptible_post_future(Worker& wscheduler,F1 func, std::string const& task_name="",std::size_t post_prio=0)
+     -> std::tuple<boost::future<decltype(func())>,boost::asynchronous::any_interruptible >
+    {
+        // we want to log if possible
+        return std::move(boost::asynchronous::interruptible_post_future(
+                                        wscheduler,
                                         boost::asynchronous::check_alive_before_exec(std::move(func),m_tracking),
                                         task_name,
                                         post_prio));

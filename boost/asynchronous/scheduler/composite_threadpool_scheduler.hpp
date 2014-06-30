@@ -39,6 +39,7 @@
 #include <boost/asynchronous/any_shared_scheduler_proxy.hpp>
 #include <boost/asynchronous/queue/find_queue_position.hpp>
 #include <boost/asynchronous/queue/any_queue.hpp>
+#include <boost/asynchronous/queue/queue_converter.hpp>
 #include <boost/asynchronous/any_scheduler.hpp>
 
 namespace boost { namespace asynchronous
@@ -182,20 +183,49 @@ private:
     typedef boost::asynchronous::any_shared_scheduler_proxy<Job,Clock> subpool_type;
     std::vector<subpool_type> m_subpools;
     
+    template <class T,class S>
+    typename ::boost::enable_if< boost::is_same<job_type, typename S::job_type>,void >::type
+    add_scheduler_helper(T& t,S& s)
+    {
+        t.push_back(s);
+    }
+    template <class T,class S>
+    typename ::boost::disable_if< boost::is_same<job_type, typename S::job_type>,void >::type
+    add_scheduler_helper(T&,S&)
+    {
+    }
+    template <class T,class S>
+    typename ::boost::enable_if< boost::is_same<job_type, typename S::job_type>,void >::type
+    add_queue_helper(T& t,S& s)
+    {
+        std::vector<boost::asynchronous::any_queue_ptr<job_type> > q = (*(s).get_internal_scheduler_aspect()).get_queues();
+        t.push_back(q);
+    }
+    template <class T,class S>
+    typename ::boost::disable_if< boost::is_same<job_type, typename S::job_type>,void >::type
+    add_queue_helper(T& t,S& s)
+    {
+        std::vector<boost::asynchronous::any_queue_ptr<typename S::job_type> > q = (*(s).get_internal_scheduler_aspect()).get_queues();
+        std::vector<boost::asynchronous::any_queue_ptr<job_type> > converted;
+        for (auto aqueue : q)
+        {
+            converted.push_back(boost::make_shared<boost::asynchronous::queue_converter<job_type,typename S::job_type>>(aqueue));
+        }
+        t.push_back(converted);
+    }
+
     template <typename T,typename Last>
     void ctor_queue_helper(T& t, std::vector<std::vector<boost::asynchronous::any_queue_ptr<job_type> > >& queues, Last& l)
     {
-        t.push_back(l);
-        std::vector<boost::asynchronous::any_queue_ptr<job_type> > q = (*(l).get_internal_scheduler_aspect()).get_queues();
-        queues.push_back(q);
+        add_scheduler_helper(t,l);
+        add_queue_helper(queues,l);
     }
 
     template <typename T,typename... Tail, typename Front>
     void ctor_queue_helper(T& t,std::vector<std::vector<boost::asynchronous::any_queue_ptr<job_type> > >& queues, Front& front,Tail&... tail)
     {
-        t.push_back(front);
-        std::vector<boost::asynchronous::any_queue_ptr<job_type> > q = (*(front).get_internal_scheduler_aspect()).get_queues();
-        queues.push_back(q);
+        add_scheduler_helper(t,front);
+        add_queue_helper(queues,front);
         ctor_queue_helper(t,queues,tail...);
     }
     void ctor_pool_helper(std::vector<std::vector<boost::asynchronous::any_queue_ptr<job_type> > > const& queues,std::vector<subpool_type>& subs)
