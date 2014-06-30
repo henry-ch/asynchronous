@@ -80,7 +80,7 @@ namespace boost { namespace asynchronous
         typename boost::asynchronous::job_traits<callable_type>::wrapper_type  a                                                            \
                         (boost::asynchronous::move_bind([servant](Args... as){servant->funcname(std::move(as)...);},std::move(args)...));   \
         a.set_name(taskname);                                                                                                               \
-        this->post(std::move(a));                                                                                                           \
+        this->post(std::move(a),prio);                                                                                                      \
     }
 
 #define BOOST_ASYNC_POST_MEMBER_LOG(...)                                                                        \
