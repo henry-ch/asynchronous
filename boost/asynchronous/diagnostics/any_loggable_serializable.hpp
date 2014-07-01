@@ -2,8 +2,6 @@
 #define BOOST_ASYNCHRONOUS_ANY_LOGGABLE_SERIALIZABLE_HPP
 
 #include <string>
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/serialization/tracking.hpp>
 #include <boost/serialization/split_member.hpp>
@@ -28,8 +26,13 @@ struct any_loggable_serializable: public boost::type_erasure::any<any_loggable_s
     any_loggable_serializable(){}
     template <class T>
     any_loggable_serializable(T t): boost::type_erasure::any<any_loggable_serializable_concept<Clock>>(std::move(t)){}
+#ifdef BOOST_ASYNCHRONOUS_USE_PORTABLE_BINARY_ARCHIVE
+    typedef portable_binary_oarchive oarchive;
+    typedef portable_binary_iarchive iarchive;
+#else
     typedef boost::archive::text_oarchive oarchive;
     typedef boost::archive::text_iarchive iarchive;
+#endif
 };
 
 template< class Clock >
