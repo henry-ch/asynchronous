@@ -262,7 +262,8 @@ private:
         }
         void post(job_type&& job,std::size_t priority)
         {
-            ((m_schedulers[this->find_position(priority,m_schedulers.size())])).post(std::forward<job_type>(job));
+            if (!m_schedulers.empty())
+                ((m_schedulers[this->find_position(priority,m_schedulers.size())])).post(std::forward<job_type>(job));
         }
         void post(boost::asynchronous::any_callable&& job,const std::string& name)
         {
@@ -282,6 +283,8 @@ private:
         }
         boost::asynchronous::any_interruptible interruptible_post(job_type&& job,std::size_t priority)
         {
+            if (m_schedulers.empty())
+                return boost::asynchronous::any_interruptible();
             return (m_schedulers[this->find_position(priority,m_schedulers.size())]).interruptible_post(std::forward<job_type>(job));
         }
         boost::asynchronous::any_interruptible interruptible_post(boost::asynchronous::any_callable&& job,const std::string& name)
@@ -312,6 +315,8 @@ private:
         }
         bool is_valid()const
         {
+            if (m_schedulers.empty())
+                return false;
             for (typename std::vector<boost::asynchronous::any_shared_scheduler<job_type> >::const_iterator it = m_schedulers.begin(); it != m_schedulers.end();++it)
             {
                 if( !(*(*it)).is_valid())
@@ -334,6 +339,9 @@ private:
                  std::list<typename boost::asynchronous::job_traits<job_type>::diagnostic_item_type > >
         get_diagnostics(std::size_t pos=0)const
         {
+            if (m_schedulers.empty())
+                return std::map<std::string,
+                        std::list<typename boost::asynchronous::job_traits<job_type>::diagnostic_item_type > >();
             return (m_schedulers[this->find_position(pos,m_schedulers.size())]).get_diagnostics(pos);
         }
         void clear_diagnostics()
@@ -365,7 +373,12 @@ private:
             for (typename std::vector<boost::asynchronous::any_weak_scheduler<job_type> >::const_iterator it = m_schedulers.begin(); 
                  it != m_schedulers.end(); ++it)
             {
-                locked_schedulers.push_back((*it).lock());
+                // only add if valid
+                boost::asynchronous::any_shared_scheduler<job_type> s = (*it).lock();
+                if (s.is_valid())
+                {
+                    locked_schedulers.push_back(s);
+                }
             }
             boost::shared_ptr<lockable_shared_scheduler> s = boost::make_shared<lockable_shared_scheduler>(std::move(locked_schedulers));
             any_shared_scheduler_ptr<job_type> pscheduler(s);
