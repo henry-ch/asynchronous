@@ -31,6 +31,7 @@ public:
         , m_started(Clock::time_point::min())
         , m_finished(Clock::time_point::min())
         , m_interrupted(false)
+        , m_failed(false)
     {}
     void set_name(std::string const& name)
     {
@@ -54,6 +55,14 @@ public:
     {
         m_started = Clock::now();
     }
+    void set_failed()
+    {
+        m_failed = true;
+    }
+    bool get_failed()const
+    {
+        return m_failed;
+    }
     void set_finished_time()
     {
         m_finished = Clock::now();
@@ -65,7 +74,7 @@ public:
 
     boost::asynchronous::diagnostic_item<Clock> get_diagnostic_item()const
     {
-        return boost::asynchronous::diagnostic_item<Clock>(m_posted,m_started,m_finished,m_interrupted);
+        return boost::asynchronous::diagnostic_item<Clock>(m_posted,m_started,m_finished,m_interrupted,m_failed);
     }
 private:
     std::string m_name;
@@ -73,6 +82,78 @@ private:
     typename Clock::time_point m_started;
     typename Clock::time_point m_finished;
     bool                       m_interrupted;
+    bool                       m_failed;
+};
+
+//same as default_loggable_job but with a vtable for get_failed support
+template<class Clock = boost::chrono::high_resolution_clock>
+class default_loggable_job_extended
+{
+public:
+    default_loggable_job_extended(default_loggable_job_extended const&)=default;
+    default_loggable_job_extended(default_loggable_job_extended&&)=default;
+    // our diagnostic item
+    typedef boost::asynchronous::diagnostic_item<Clock> diagnostic_item_type;
+    default_loggable_job_extended(std::string const& name="")
+        : m_name(name)
+        , m_posted(Clock::time_point::min())
+        , m_started(Clock::time_point::min())
+        , m_finished(Clock::time_point::min())
+        , m_interrupted(false)
+        , m_failed(false)
+    {}
+    void set_name(std::string const& name)
+    {
+        m_name = name;
+    }
+    #ifndef BOOST_NO_RVALUE_REFERENCES
+    void set_name(std::string&& name)
+    {
+        m_name = std::forward<std::string>(name);
+    }
+    #endif
+    std::string get_name() const
+    {
+       return m_name;
+    }
+    void set_posted_time()
+    {
+        m_posted = Clock::now();
+    }
+    void set_started_time()
+    {
+        m_started = Clock::now();
+    }
+    void set_failed()
+    {
+        m_failed = true;
+    }
+    // TODO better
+    virtual ~default_loggable_job_extended(){}
+    virtual bool get_failed()const
+    {
+        return m_failed;
+    }
+    void set_finished_time()
+    {
+        m_finished = Clock::now();
+    }
+    void set_interrupted(bool is_interrupted)
+    {
+        m_interrupted = is_interrupted;
+    }
+
+    boost::asynchronous::diagnostic_item<Clock> get_diagnostic_item()const
+    {
+        return boost::asynchronous::diagnostic_item<Clock>(m_posted,m_started,m_finished,m_interrupted,get_failed());
+    }
+private:
+    std::string m_name;
+    typename Clock::time_point m_posted;
+    typename Clock::time_point m_started;
+    typename Clock::time_point m_finished;
+    bool                       m_interrupted;
+    bool                       m_failed;
 };
 
 }} // boost::asynchron

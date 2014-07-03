@@ -19,6 +19,8 @@
 #include <boost/chrono/chrono.hpp>
 #include <boost/asynchronous/any_serializable.hpp>
 
+BOOST_MPL_HAS_XXX_TRAIT_DEF(task_failed_handling)
+
 namespace boost { namespace asynchronous
 {
 
@@ -39,6 +41,9 @@ struct no_diagnostics
     void set_started_time()
     {
     }
+    void set_failed()
+    {
+    }
     void set_finished_time()
     {
     }
@@ -53,7 +58,7 @@ struct no_diagnostics
 
 namespace detail
 {
-    template <class Base, class Fct>
+    template <class Base, class Fct,class Enable=void>
     struct base_job : public Base
     {
         #ifndef BOOST_NO_RVALUE_REFERENCES
@@ -70,6 +75,26 @@ namespace detail
         Fct m_callable;
     };
     template <class Base, class Fct>
+    struct base_job<Base,Fct,typename ::boost::enable_if<typename has_task_failed_handling<Fct>::type >::type> : public Base
+    {
+        #ifndef BOOST_NO_RVALUE_REFERENCES
+        base_job(Fct&& c) : m_callable(std::forward<Fct>(c))
+        #else
+        base_job(Fct const& c) : m_callable(c)
+        #endif
+        {
+        }
+        void operator()()/*const*/ //TODO
+        {
+            m_callable();
+        }
+        virtual bool get_failed()const
+        {
+            return m_callable.get_failed();
+        }
+        Fct m_callable;
+    };
+    template <class Base, class Fct,class Enable=void>
     struct serializable_base_job : public Base
     {
         #ifndef BOOST_NO_RVALUE_REFERENCES
@@ -82,6 +107,42 @@ namespace detail
         void operator()()/*const*/ //TODO
         {
             m_callable();
+        }
+
+        template <class Archive>
+        void save(Archive & ar, const unsigned int version)const
+        {
+            const_cast<Fct&>(m_callable).serialize(ar,version);
+        }
+        template <class Archive>
+        void load(Archive & ar, const unsigned int version)
+        {
+            m_callable.serialize(ar,version);
+        }
+        BOOST_SERIALIZATION_SPLIT_MEMBER()
+        std::string get_task_name()const
+        {
+            return const_cast<Fct&>(m_callable).get_task_name();
+        }
+        Fct m_callable;
+    };
+    template <class Base, class Fct>
+    struct serializable_base_job<Base,Fct,typename ::boost::enable_if<typename has_task_failed_handling<Fct>::type >::type> : public Base
+    {
+        #ifndef BOOST_NO_RVALUE_REFERENCES
+        serializable_base_job(Fct&& c) : m_callable(std::forward<Fct>(c))
+        #else
+        serializable_base_job(Fct const& c) : m_callable(c)
+        #endif
+        {
+        }
+        void operator()()/*const*/ //TODO
+        {
+            m_callable();
+        }
+        virtual bool get_failed()const
+        {
+            return m_callable.get_failed();
         }
         template <class Archive>
         void save(Archive & ar, const unsigned int version)const
@@ -111,10 +172,17 @@ struct job_traits
     typedef no_diagnostics                                                          diagnostic_item_type;
     typedef no_diagnostics                                                          diagnostic_table_type;
 
+    static bool get_failed(T const& )
+    {
+        return false;
+    }
     static void set_posted_time(T&)
     {
     }
     static void set_started_time(T&)
+    {
+    }
+    static void set_failed(T&)
     {
     }
     static void set_finished_time(T&)
@@ -152,10 +220,17 @@ struct job_traits< boost::asynchronous::any_callable >
     typedef boost::asynchronous::diagnostics_table<
             std::string,diagnostic_item_type>                                       diagnostic_table_type;
 
+    static bool get_failed(boost::asynchronous::any_callable const& )
+    {
+        return false;
+    }
     static void set_posted_time(boost::asynchronous::any_callable& )
     {
     }
     static void set_started_time(boost::asynchronous::any_callable& )
+    {
+    }
+    static void set_failed(boost::asynchronous::any_callable& )
     {
     }
     static void set_finished_time(boost::asynchronous::any_callable& )
@@ -184,15 +259,19 @@ struct job_traits< boost::asynchronous::any_callable >
 template< class Clock >
 struct job_traits< boost::asynchronous::any_loggable<Clock> >
 {
-    typedef typename boost::asynchronous::default_loggable_job<
+    typedef typename boost::asynchronous::default_loggable_job_extended<
             typename boost::asynchronous::any_loggable<Clock>::clock_type >             diagnostic_type;
     typedef boost::asynchronous::detail::base_job<
-            diagnostic_type,boost::asynchronous::any_callable >                         wrapper_type;
+            diagnostic_type,boost::asynchronous::any_loggable<Clock> >                  wrapper_type;
 
     typedef typename diagnostic_type::diagnostic_item_type                              diagnostic_item_type;
     typedef boost::asynchronous::diagnostics_table<
             std::string,diagnostic_item_type>                                           diagnostic_table_type;
 
+    static bool get_failed(boost::asynchronous::any_loggable<Clock> const& job)
+    {
+        return job.get_failed();
+    }
     static void set_posted_time(boost::asynchronous::any_loggable<Clock>& job)
     {
         job.set_posted_time();
@@ -200,6 +279,10 @@ struct job_traits< boost::asynchronous::any_loggable<Clock> >
     static void set_started_time(boost::asynchronous::any_loggable<Clock>& job)
     {
         job.set_started_time();
+    }
+    static void set_failed(boost::asynchronous::any_loggable<Clock>& job)
+    {
+        job.set_failed();
     }
     static void set_finished_time(boost::asynchronous::any_loggable<Clock>& job)
     {
@@ -240,10 +323,17 @@ struct job_traits< boost::asynchronous::any_serializable >
     typedef boost::asynchronous::diagnostics_table<
             std::string,diagnostic_item_type>                                           diagnostic_table_type;
 
+    static bool get_failed(boost::asynchronous::any_serializable const& )
+    {
+        return false;
+    }
     static void set_posted_time(boost::asynchronous::any_serializable& )
     {
     }
     static void set_started_time(boost::asynchronous::any_serializable& )
+    {
+    }
+    static void set_failed(boost::asynchronous::any_serializable& )
     {
     }
     static void set_finished_time(boost::asynchronous::any_serializable& )
@@ -268,6 +358,5 @@ struct job_traits< boost::asynchronous::any_serializable >
     {
     }
 };
-
-}} // boost::asynchron
+}} // boost::asynchronous
 #endif // BOOST_ASYNC_JOB_TRAITS_HPP

@@ -163,6 +163,7 @@ BOOST_AUTO_TEST_CASE( test_two_servants_log )
                 {
                     BOOST_CHECK_MESSAGE(boost::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() >= 0,"task finished before it started.");
                     BOOST_CHECK_MESSAGE(!(*jit).is_interrupted(),"no task should have been interrupted.");
+                    BOOST_CHECK_MESSAGE(!(*jit).is_failed(),"no task should have failed.");
                 }
             }
             BOOST_CHECK_MESSAGE(has_foo,"foo not found in diagnostics.");
@@ -182,6 +183,7 @@ BOOST_AUTO_TEST_CASE( test_two_servants_log )
                 {
                     BOOST_CHECK_MESSAGE(boost::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() >= 0,"task finished before it started.");
                     BOOST_CHECK_MESSAGE(!(*jit).is_interrupted(),"no task should have been interrupted.");
+                    BOOST_CHECK_MESSAGE(!(*jit).is_failed(),"no task should have failed.");
                 }
             }
             BOOST_CHECK_MESSAGE(has_foo,"foo not found in diagnostics.");

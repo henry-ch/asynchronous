@@ -347,6 +347,7 @@ private:
         CPULoad cpu_load;
         while(true)
         {
+            job_type job;
             try
             {
                 bool popped = (ioservice->poll_one() != 0);
@@ -368,8 +369,7 @@ private:
                 }
                 bool stolen=false;
                 if (!popped)
-                {
-                    job_type job;
+                {                    
                     // ok we have nothing to do, maybe we can steal some work from other pools?
                     for (std::size_t i=0; i< other_queues.size(); ++i)
                     {
@@ -419,7 +419,7 @@ private:
             }
             catch(std::exception&)
             {
-                // TODO, user-defined error
+                boost::asynchronous::job_traits<job_type>::set_failed(job);
             }
         }
     }

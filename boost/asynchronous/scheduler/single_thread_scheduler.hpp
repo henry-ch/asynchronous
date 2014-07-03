@@ -155,12 +155,12 @@ public:
         CPULoad cpu_load;
         while(true)
         {
+            // get a job
+            typename Q::job_type job;
             try
             {
                 {
-                    // get a job
-                    //TODO rval ref?
-                    typename Q::job_type job;
+
                     // try from queue
                     bool popped = queue->try_pop(job);
                     if (popped)
@@ -213,7 +213,7 @@ public:
             }
             catch(std::exception&)
             {
-                // TODO, user-defined error
+                boost::asynchronous::job_traits<typename Q::job_type>::set_failed(job);
             }
         }
     }

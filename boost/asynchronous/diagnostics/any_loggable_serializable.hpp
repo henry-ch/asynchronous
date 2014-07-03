@@ -23,6 +23,8 @@ template <class Clock = boost::chrono::high_resolution_clock>
 struct any_loggable_serializable: public boost::type_erasure::any<any_loggable_serializable_concept<Clock>>
 {
     typedef Clock clock_type;
+    typedef int task_failed_handling;
+
     any_loggable_serializable(){}
     template <class T>
     any_loggable_serializable(T t): boost::type_erasure::any<any_loggable_serializable_concept<Clock>>(std::move(t)){}
@@ -38,8 +40,8 @@ struct any_loggable_serializable: public boost::type_erasure::any<any_loggable_s
 template< class Clock >
 struct job_traits< boost::asynchronous::any_loggable_serializable<Clock> >
 {
-    typedef typename boost::asynchronous::default_loggable_job<
-                                  boost::chrono::high_resolution_clock >            diagnostic_type;
+    typedef typename boost::asynchronous::default_loggable_job_extended<
+                                             boost::chrono::high_resolution_clock >        diagnostic_type;
     typedef boost::asynchronous::detail::serializable_base_job<
             diagnostic_type,boost::asynchronous::any_loggable_serializable<Clock> >        wrapper_type;
 
@@ -47,6 +49,10 @@ struct job_traits< boost::asynchronous::any_loggable_serializable<Clock> >
     typedef boost::asynchronous::diagnostics_table<
             std::string,diagnostic_item_type>                                       diagnostic_table_type;
 
+    static bool get_failed(boost::asynchronous::any_loggable_serializable<Clock> const& job)
+    {
+        return job.get_failed();
+    }
     static void set_posted_time(boost::asynchronous::any_loggable_serializable<Clock>& job)
     {
         job.set_posted_time();
@@ -54,6 +60,10 @@ struct job_traits< boost::asynchronous::any_loggable_serializable<Clock> >
     static void set_started_time(boost::asynchronous::any_loggable_serializable<Clock>& job)
     {
         job.set_started_time();
+    }
+    static void set_failed(boost::asynchronous::any_loggable_serializable<Clock>& job)
+    {
+        job.set_failed();
     }
     static void set_finished_time(boost::asynchronous::any_loggable_serializable<Clock>& job)
     {

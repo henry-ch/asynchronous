@@ -25,6 +25,8 @@
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_set_posted_time), set_posted_time, 0);
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_set_started_time), set_started_time, 0);
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_set_finished_time), set_finished_time, 0);
+BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_set_failed), set_failed, 0);
+BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_get_failed), get_failed, 0);
 
 namespace boost { namespace asynchronous
 {
@@ -37,6 +39,8 @@ struct any_loggable_concept :
     boost::asynchronous::has_set_posted_time<void()>,
     boost::asynchronous::has_set_started_time<void()>,
     boost::asynchronous::has_set_finished_time<void()>,
+    boost::asynchronous::has_set_failed<void()>,
+    boost::asynchronous::has_get_failed<bool(), const boost::type_erasure::_self>,
     boost::asynchronous::has_get_diagnostic_item<boost::asynchronous::diagnostic_item<Clock>(), const boost::type_erasure::_self>
 > {};
 
@@ -44,6 +48,7 @@ template <class Clock = boost::chrono::high_resolution_clock>
 struct any_loggable: boost::type_erasure::any<any_loggable_concept<Clock> >
 {
     typedef Clock clock_type;
+    typedef int task_failed_handling;
     template <class U>
     any_loggable(U const& u): boost::type_erasure::any< boost::asynchronous::any_loggable_concept<Clock> > (u){}
     any_loggable(): boost::type_erasure::any< boost::asynchronous::any_loggable_concept<Clock> > (){}

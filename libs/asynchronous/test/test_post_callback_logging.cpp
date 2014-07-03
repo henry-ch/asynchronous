@@ -182,6 +182,7 @@ BOOST_AUTO_TEST_CASE( test_void_post_callback_logging )
                 {
                     BOOST_CHECK_MESSAGE(boost::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() >= 0,"task finished before it started.");
                     BOOST_CHECK_MESSAGE(!(*jit).is_interrupted(),"no task should have been interrupted.");
+                    BOOST_CHECK_MESSAGE(!(*jit).is_failed(),"no task should have failed.");
                 }
             }
         }
@@ -196,6 +197,7 @@ BOOST_AUTO_TEST_CASE( test_void_post_callback_logging )
             {
                 BOOST_CHECK_MESSAGE(boost::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() >= 0,"task finished before it started.");
                 BOOST_CHECK_MESSAGE(!(*jit).is_interrupted(),"no task should have been interrupted.");
+                BOOST_CHECK_MESSAGE(!(*jit).is_failed(),"no task should have failed.");
             }
         }
         // clear diags
@@ -274,6 +276,18 @@ BOOST_AUTO_TEST_CASE( test_post_callback_logging_exception )
             BOOST_FAIL( "unexpected exception" );
         }
         BOOST_CHECK_MESSAGE(got_exception,"servant didn't send an expected exception.");
+
+        boost::shared_future<diag_type> fu_diag = proxy.get_diagnostics();
+        diag_type diag = fu_diag.get();
+        BOOST_CHECK_MESSAGE(diag.size()==1,"servant tp worker didn't log the number of works we expected.");// start_exception_async_work's task
+        for (auto mit = diag.begin(); mit != diag.end() ; ++mit)
+        {
+            for (auto jit = (*mit).second.begin(); jit != (*mit).second.end();++jit)
+            {
+                BOOST_CHECK_MESSAGE((*jit).is_failed(),"Task should have failed.");
+            }
+        }
+
     }
     BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
 }

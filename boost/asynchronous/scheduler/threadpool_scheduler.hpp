@@ -156,11 +156,11 @@ public:
                                 std::deque<boost::asynchronous::any_continuation>& waiting)
     {
         bool popped = false;
+        // get a job
+        typename Q::job_type job;
         try
         {
-            // get a job
-            //TODO rval ref?
-            typename Q::job_type job;
+
             // try from queue
             popped = queue->try_pop(job);
             // did we manage to pop or steal?
@@ -202,7 +202,7 @@ public:
         }
         catch(std::exception&)
         {
-            // TODO, user-defined error
+            boost::asynchronous::job_traits<typename Q::job_type>::set_failed(job);
         }
         return popped;
     }

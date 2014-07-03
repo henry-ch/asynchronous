@@ -50,6 +50,10 @@ struct job_traits< boost::asynchronous::any_bin_serializable >
     typedef boost::asynchronous::diagnostics_table<
             std::string,diagnostic_item_type>                                       diagnostic_table_type;
 
+    static bool get_failed(boost::asynchronous::any_bin_serializable const& )
+    {
+        return false;
+    }
     static void set_posted_time(boost::asynchronous::any_bin_serializable& )
     {
     }

@@ -38,7 +38,7 @@ namespace boost { namespace asynchronous
 {
 
 //TODO move to own file in detail
-template <class R, class Task,class Callback/*,class Enable=void*/>
+template <class R, class Task,class Callback>
 struct move_task_helper
 {
     typedef R result_type;
@@ -420,7 +420,7 @@ namespace detail
     //#endif
 
         struct callback_fct : public boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type
-        {
+        {            
             callback_fct(Work const& w,boost::future<typename Work::result_type> fu)
                 :boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type()
                 ,m_work(w)
@@ -475,7 +475,7 @@ namespace detail
                 OP()(m_work,work_result);
             }
             catch(boost::asynchronous::task_aborted_exception& e){work_result.set_exception(boost::copy_exception(e));}
-            catch(...){work_result.set_exception(boost::current_exception());}
+            catch(...){work_result.set_exception(boost::current_exception());this->set_failed();}
             try
             {
                 auto shared_scheduler = m_scheduler.lock();
@@ -548,7 +548,7 @@ namespace detail
         }
 
         struct callback_fct : public boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type
-        {
+        {            
             callback_fct(Work const& w,boost::future<typename Work::result_type> fu)
                 :boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type()
                 ,m_work(w)
@@ -630,7 +630,7 @@ namespace detail
                 OP()(m_work,work_result);
             }
             catch(boost::asynchronous::task_aborted_exception& e){work_result.set_exception(boost::copy_exception(e));}
-            catch(...){work_result.set_exception(boost::current_exception());}
+            catch(...){work_result.set_exception(boost::current_exception());this->set_failed();}
             try
             {
                 auto shared_scheduler = m_scheduler.lock();
@@ -955,7 +955,7 @@ namespace detail
                 post_helper_continuation<typename Work::result_type,Sched,Func,Work,F1,F2,callback_fct,CB>()(m_task_name,m_cb_prio,m_scheduler,m_work,work_result);
             }
             catch(boost::asynchronous::task_aborted_exception& e){work_result->set_exception(boost::copy_exception(e));}
-            catch(...){work_result->set_exception(boost::current_exception());}
+            catch(...){work_result->set_exception(boost::current_exception());this->set_failed();}
         }
         Work m_work;
         Sched m_scheduler;

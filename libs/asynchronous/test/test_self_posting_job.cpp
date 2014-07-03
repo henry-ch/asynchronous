@@ -61,9 +61,14 @@ struct DummyJob
     void set_started_time()
     {
     }
+    void set_failed()
+    {
+    }
     void set_finished_time()
     {
     }
+    bool get_failed()const{return false;}
+
     boost::asynchronous::diagnostic_item<boost::chrono::high_resolution_clock> get_diagnostic_item() const
     {
         return boost::asynchronous::diagnostic_item<boost::chrono::high_resolution_clock>();
@@ -101,9 +106,13 @@ struct PostJob
     void set_started_time()
     {
     }
+    void set_failed()
+    {
+    }
     void set_finished_time()
     {
     }
+    bool get_failed()const{return false;}
     boost::asynchronous::diagnostic_item<boost::chrono::high_resolution_clock> get_diagnostic_item() const
     {
         return boost::asynchronous::diagnostic_item<boost::chrono::high_resolution_clock>();

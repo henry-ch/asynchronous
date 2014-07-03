@@ -24,11 +24,13 @@ public:
     diagnostic_item(typename Clock::time_point const& posted,
                     typename Clock::time_point const& started,
                     typename Clock::time_point const& finished,
-                    bool interrupted)
+                    bool interrupted,
+                    bool failed)
         : m_posted(posted)
         , m_started(started)
         , m_finished(finished)
         , m_interrupted(interrupted)
+        , m_failed(failed)
     {}
     typename Clock::time_point get_posted_time() const
     {
@@ -46,11 +48,16 @@ public:
     {
         return m_interrupted;
     }
+    bool is_failed() const
+    {
+        return m_failed;
+    }
 private:
     typename Clock::time_point m_posted;
     typename Clock::time_point m_started;
     typename Clock::time_point m_finished;
     bool                       m_interrupted;
+    bool                       m_failed;
 };
 
 }} // boost::async

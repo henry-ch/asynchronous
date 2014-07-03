@@ -176,6 +176,7 @@ BOOST_AUTO_TEST_CASE( test_fibonacci_log_30_18 )
                 for (auto jit = (*mit).second.begin(); jit != (*mit).second.end();++jit)
                 {
                     BOOST_CHECK_MESSAGE(!(*jit).is_interrupted(),"no task should have been interrupted.");
+                    BOOST_CHECK_MESSAGE(!(*jit).is_failed(),"no task should have failed.");
                 }
             }
             for (std::map<int,bool>::const_iterator it=tasks.begin(); it != tasks.end();++it)
