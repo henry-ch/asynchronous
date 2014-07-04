@@ -66,8 +66,8 @@ namespace boost { namespace asynchronous
     void funcname(Args... args)const                                                                                                        \
     {                                                                                                                                       \
         boost::shared_ptr<servant_type> servant = this->m_servant;                                                                          \
-        typename boost::asynchronous::job_traits<callable_type>::wrapper_type  a                                                            \
-                        (boost::asynchronous::move_bind([servant](Args... as){servant->funcname(std::move(as)...);},std::move(args)...));   \
+        typename boost::asynchronous::job_traits<callable_type>::wrapper_type  a(boost::asynchronous::any_callable                          \
+                        (boost::asynchronous::move_bind([servant](Args... as){servant->funcname(std::move(as)...);},std::move(args)...)));  \
         a.set_name(taskname);                                                                                                               \
         this->post(std::move(a));                                                                                                           \
     }
@@ -77,7 +77,7 @@ namespace boost { namespace asynchronous
     void funcname(Args... args)const                                                                                                        \
     {                                                                                                                                       \
         boost::shared_ptr<servant_type> servant = this->m_servant;                                                                          \
-        typename boost::asynchronous::job_traits<callable_type>::wrapper_type  a                                                            \
+        typename boost::asynchronous::job_traits<callable_type>::wrapper_type  a(boost::asynchronous::any_callable                          \
                         (boost::asynchronous::move_bind([servant](Args... as){servant->funcname(std::move(as)...);},std::move(args)...));   \
         a.set_name(taskname);                                                                                                               \
         this->post(std::move(a),prio);                                                                                                      \
@@ -428,8 +428,9 @@ private:
         boost::shared_ptr<boost::promise<boost::shared_ptr<servant_type> > > p =
                 boost::make_shared<boost::promise<boost::shared_ptr<servant_type> > >();
         boost::future<boost::shared_ptr<servant_type> > fu (p->get_future());
-        typename boost::asynchronous::job_traits<boost::asynchronous::any_callable>::wrapper_type  a(
-                    boost::asynchronous::move_bind(init_helper(p),m_proxy.get_weak_scheduler(),std::move(args)...));
+        typename boost::asynchronous::job_traits<callable_type>::wrapper_type  a(
+                    boost::asynchronous::any_callable(
+                    boost::asynchronous::move_bind(init_helper(p),m_proxy.get_weak_scheduler(),std::move(args)...)));
         a.set_name(ServantProxy::get_ctor_name());
 #ifndef BOOST_NO_RVALUE_REFERENCES
         post(std::move(a),ServantProxy::get_ctor_prio());

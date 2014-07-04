@@ -77,11 +77,23 @@ namespace detail
     template <class Base, class Fct>
     struct base_job<Base,Fct,typename ::boost::enable_if<typename has_task_failed_handling<Fct>::type >::type> : public Base
     {
-        #ifndef BOOST_NO_RVALUE_REFERENCES
-        base_job(Fct&& c) : m_callable(std::forward<Fct>(c))
-        #else
-        base_job(Fct const& c) : m_callable(c)
-        #endif
+        struct non_loggable_helper : public Base
+        {
+            non_loggable_helper(boost::asynchronous::any_callable c)
+                :m_callable(std::move(c))
+            {}
+            void operator()()/*const*/ //TODO
+            {
+                m_callable();
+            }
+            boost::asynchronous::any_callable m_callable;
+        };
+
+        template <class T>
+        base_job(T c) : m_callable(std::move(c))
+        {
+        }
+        base_job(boost::asynchronous::any_callable c) : m_callable(non_loggable_helper(std::move(c)))
         {
         }
         void operator()()/*const*/ //TODO
