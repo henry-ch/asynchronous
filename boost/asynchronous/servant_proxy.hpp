@@ -45,8 +45,8 @@ namespace boost { namespace asynchronous
     void funcname(Args... args)const                                                                                        \
     {                                                                                                                       \
         boost::shared_ptr<servant_type> servant = this->m_servant;                                                          \
-        this->post(typename boost::asynchronous::job_traits<callable_type>::wrapper_type                                    \
-        (boost::asynchronous::move_bind([servant](Args... as){servant->funcname(std::move(as)...);},std::move(args)...)));  \
+        this->post(typename boost::asynchronous::job_traits<callable_type>::wrapper_type(boost::asynchronous::any_callable  \
+        (boost::asynchronous::move_bind([servant](Args... as){servant->funcname(std::move(as)...);},std::move(args)...))));  \
     }
 
 #define BOOST_ASYNC_POST_MEMBER_2(funcname,prio)                                                                                \
@@ -54,8 +54,8 @@ namespace boost { namespace asynchronous
     void funcname(Args... args)const                                                                                            \
     {                                                                                                                           \
         boost::shared_ptr<servant_type> servant = this->m_servant;                                                              \
-        this->post(typename boost::asynchronous::job_traits<callable_type>::wrapper_type                                        \
-        (boost::asynchronous::move_bind([servant](Args... as){servant->funcname(std::move(as)...);},std::move(args)...)),prio); \
+        this->post(typename boost::asynchronous::job_traits<callable_type>::wrapper_type(boost::asynchronous::any_callable      \
+        (boost::asynchronous::move_bind([servant](Args... as){servant->funcname(std::move(as)...);},std::move(args)...))),prio);\
     }
 
 #define BOOST_ASYNC_POST_MEMBER(...)                                                                            \
