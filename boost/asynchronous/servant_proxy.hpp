@@ -78,7 +78,7 @@ namespace boost { namespace asynchronous
     {                                                                                                                                       \
         boost::shared_ptr<servant_type> servant = this->m_servant;                                                                          \
         typename boost::asynchronous::job_traits<callable_type>::wrapper_type  a(boost::asynchronous::any_callable                          \
-                        (boost::asynchronous::move_bind([servant](Args... as){servant->funcname(std::move(as)...);},std::move(args)...));   \
+                        (boost::asynchronous::move_bind([servant](Args... as){servant->funcname(std::move(as)...);},std::move(args)...)));  \
         a.set_name(taskname);                                                                                                               \
         this->post(std::move(a),prio);                                                                                                      \
     }
