@@ -81,6 +81,9 @@ struct job_traits< boost::asynchronous::any_bin_serializable >
     static void add_diagnostic(boost::asynchronous::any_bin_serializable& ,Diag* )
     {
     }
+    static void set_failed(boost::asynchronous::any_bin_serializable& )
+    {
+    }
 };
 namespace tcp
 {
