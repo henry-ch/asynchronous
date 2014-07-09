@@ -154,7 +154,7 @@ public:
     boost::asynchronous::any_weak_scheduler<job_type> get_weak_scheduler() const
     {
         composite_lockable_weak_scheduler w(m_subpools);
-        return boost::asynchronous::any_weak_scheduler<job_type>(w);
+        return boost::asynchronous::any_weak_scheduler<job_type>(std::move(w));
     }
     std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues()
     {
@@ -377,12 +377,12 @@ private:
                 boost::asynchronous::any_shared_scheduler<job_type> s = (*it).lock();
                 if (s.is_valid())
                 {
-                    locked_schedulers.push_back(s);
+                    locked_schedulers.emplace_back(std::move(s));
                 }
             }
             boost::shared_ptr<lockable_shared_scheduler> s = boost::make_shared<lockable_shared_scheduler>(std::move(locked_schedulers));
-            any_shared_scheduler_ptr<job_type> pscheduler(s);
-            return any_shared_scheduler<job_type>(pscheduler);
+            any_shared_scheduler_ptr<job_type> pscheduler(std::move(s));
+            return any_shared_scheduler<job_type>(std::move(pscheduler));
         }
     private:
         std::vector<boost::asynchronous::any_weak_scheduler<job_type> > m_schedulers;

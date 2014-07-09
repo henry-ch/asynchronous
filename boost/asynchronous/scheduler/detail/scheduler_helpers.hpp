@@ -25,7 +25,23 @@ namespace boost { namespace asynchronous { namespace detail
 template <class Diag, class ThreadType>
 struct default_termination_task: public Diag
 {
-    default_termination_task( boost::shared_ptr<ThreadType> w): m_workers(w){}
+    default_termination_task( boost::shared_ptr<ThreadType> w): m_workers(std::move(w)){}
+    default_termination_task(default_termination_task&& rhs)noexcept
+        : m_workers(std::move(rhs.m_workers))
+    {}
+    default_termination_task(default_termination_task const& rhs)noexcept
+        : Diag(),m_workers(rhs.m_workers)
+    {}
+    default_termination_task& operator= (default_termination_task&& rhs)noexcept
+    {
+        std::swap(m_workers,rhs.m_workers);
+        return *this;
+    }
+    default_termination_task& operator= (default_termination_task const& rhs)noexcept
+    {
+        m_workers = rhs.m_workers;
+        return *this;
+    }
     void operator()()const
     {
         throw boost::asynchronous::detail::shutdown_exception();
@@ -66,6 +82,22 @@ template <class Diag>
 struct set_name_task: public Diag
 {
     set_name_task( std::string const& n): m_name(n){}
+    set_name_task(set_name_task&& rhs)noexcept
+        : m_name(std::move(rhs.m_name))
+    {}
+    set_name_task(set_name_task const& rhs)noexcept
+        : Diag(),m_name(rhs.m_name)
+    {}
+    set_name_task& operator= (set_name_task&& rhs)noexcept
+    {
+        std::swap(m_name,rhs.m_name);
+        return *this;
+    }
+    set_name_task& operator= (set_name_task const& rhs)noexcept
+    {
+        m_name = rhs.m_name;
+        return *this;
+    }
     void operator()()const
     {
 #ifdef BOOST_ASYNCHRONOUS_PRCTL_SUPPORT

@@ -48,14 +48,14 @@ public:
     void push(JOB && j, std::size_t)
     {
         lock_type lock(m_mutex);
-        m_jobs.push_front(std::forward<JOB>(j));
+        m_jobs.emplace_front(std::forward<JOB>(j));
         lock.unlock();
         m_not_empty.notify_one();
     }
     void push(JOB && j)
     {
         lock_type lock(m_mutex);
-        m_jobs.push_front(std::forward<JOB>(j));
+        m_jobs.emplace_front(std::forward<JOB>(j));
         lock.unlock();
         m_not_empty.notify_one();
     }

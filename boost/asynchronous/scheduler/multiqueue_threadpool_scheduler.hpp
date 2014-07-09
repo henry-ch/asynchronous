@@ -70,7 +70,7 @@ public:
 #ifndef BOOST_NO_CXX11_VARIADIC_TEMPLATES
     template<typename... Args>
     multiqueue_threadpool_scheduler(size_t number_of_workers, Args... args)
-        : boost::asynchronous::detail::multi_queue_scheduler_policy<Q,FindPosition>(number_of_workers,args...)
+        : boost::asynchronous::detail::multi_queue_scheduler_policy<Q,FindPosition>(number_of_workers,std::move(args)...)
         , m_number_of_workers(number_of_workers)
     {
         m_private_queues.reserve(number_of_workers);
@@ -116,7 +116,7 @@ public:
             boost::asynchronous::detail::default_termination_task<typename Q::diagnostic_type,boost::thread_group> ttask(m_group);
             // this task has to be executed last => lowest prio
 #ifndef BOOST_NO_RVALUE_REFERENCES
-            boost::asynchronous::any_callable job(ttask);
+            boost::asynchronous::any_callable job(std::move(ttask));
             m_private_queues[i]->push(std::move(job),std::numeric_limits<std::size_t>::max());
 #else
             m_private_queues[i]->push(boost::asynchronous::any_callable(ttask),std::numeric_limits<std::size_t>::max());
@@ -155,7 +155,7 @@ public:
         {
             boost::asynchronous::detail::set_name_task<typename Q::diagnostic_type> ntask(name);
 #ifndef BOOST_NO_RVALUE_REFERENCES
-            boost::asynchronous::any_callable job(ntask);
+            boost::asynchronous::any_callable job(std::move(ntask));
             m_private_queues[i]->push(std::move(job),std::numeric_limits<std::size_t>::max());
 #else
             m_private_queues[i]->push(boost::asynchronous::any_callable(ntask),std::numeric_limits<std::size_t>::max());

@@ -39,7 +39,7 @@ public:
 
 #ifndef BOOST_NO_CXX11_VARIADIC_TEMPLATES
     template<typename... Args>
-    lockfree_queue(Args... args):m_queue(args...){}
+    lockfree_queue(Args... args):m_queue(std::move(args)...){}
     lockfree_queue():m_queue(16){}
 #else
     lockfree_queue(std::size_t size=16):m_queue(size){}

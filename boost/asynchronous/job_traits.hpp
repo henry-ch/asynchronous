@@ -62,7 +62,7 @@ namespace detail
     struct base_job : public Base
     {
         #ifndef BOOST_NO_RVALUE_REFERENCES
-        base_job(Fct&& c) : m_callable(std::forward<Fct>(c))
+        base_job(Fct&& c)noexcept : m_callable(std::forward<Fct>(c))
         #else
         base_job(Fct const& c) : m_callable(c)
         #endif

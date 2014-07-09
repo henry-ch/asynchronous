@@ -81,13 +81,14 @@ public:
                 if ((std::find(ids.begin(),ids.end(),boost::this_thread::get_id()) != ids.end()))
                 {
                     // our thread, call if servant alive
-                   std::bind( boost::asynchronous::check_alive([func_ptr](Args... args){(*func_ptr)(args...);},tracking),as...)();
+                    //TODO move_bind
+                   std::bind( boost::asynchronous::check_alive([func_ptr](Args... args){(*func_ptr)(std::move(args)...);},tracking),std::move(as)...)();
                 }
                 else
                 {
                     // not in our thread, post
-                    boost::asynchronous::post_future(sched,std::bind( boost::asynchronous::check_alive([func_ptr](Args... args){(*func_ptr)(args...);},tracking),as...),
-                                                     task_name,prio);
+                    boost::asynchronous::post_future(sched,std::bind( boost::asynchronous::check_alive([func_ptr](Args... args){(*func_ptr)(std::move(args)...);},tracking),std::move(as)...),
+                                                     std::move(task_name),prio);
                 }
             }
         };

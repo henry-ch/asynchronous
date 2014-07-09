@@ -22,7 +22,7 @@ public:
     typedef S scheduler_type;
     typedef typename S::job_type job_type;
 
-    explicit scheduler_weak_proxy(boost::shared_ptr<scheduler_type> scheduler): m_scheduler(scheduler){}
+    explicit scheduler_weak_proxy(boost::shared_ptr<scheduler_type> scheduler): m_scheduler(std::move(scheduler)){}
     any_shared_scheduler<job_type> lock()
     {
 

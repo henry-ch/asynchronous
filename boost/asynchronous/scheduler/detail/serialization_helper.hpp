@@ -18,7 +18,7 @@ namespace boost { namespace asynchronous
 template <class Job= boost::asynchronous::any_serializable >
 struct serialization_helper
 {
-    serialization_helper(Job&& c) : m_callable(std::forward<Job>(c))
+    serialization_helper(Job&& c)noexcept : m_callable(std::forward<Job>(c))
     {}
     Job m_callable;
 };

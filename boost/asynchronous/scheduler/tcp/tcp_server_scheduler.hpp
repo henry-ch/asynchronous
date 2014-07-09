@@ -78,7 +78,7 @@ public:
                          std::string const & address,
                          unsigned int port,
                          Args... args)
-        : boost::asynchronous::detail::single_queue_scheduler_policy<Q>(boost::make_shared<queue_type>(args...))
+        : boost::asynchronous::detail::single_queue_scheduler_policy<Q>(boost::make_shared<queue_type>(std::move(args)...))
         , m_private_queue (boost::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >())
         , m_worker_pool(worker_pool)
         , m_address(address)
@@ -128,7 +128,7 @@ public:
         boost::asynchronous::detail::default_termination_task<typename Q::diagnostic_type,boost::thread> ttask(m_thread);
             // this task has to be executed lat => lowest prio
 #ifndef BOOST_NO_RVALUE_REFERENCES
-        boost::asynchronous::any_callable job(ttask);
+        boost::asynchronous::any_callable job(std::move(ttask));
         m_private_queue->push(std::move(job),std::numeric_limits<std::size_t>::max());
 #else
         m_private_queue->push(boost::asynchronous::any_callable(ttask),std::numeric_limits<std::size_t>::max());
@@ -138,7 +138,7 @@ public:
     {
         boost::asynchronous::detail::set_name_task<typename Q::diagnostic_type> ntask(name);
 #ifndef BOOST_NO_RVALUE_REFERENCES
-        boost::asynchronous::any_callable job(ntask);
+        boost::asynchronous::any_callable job(std::move(ntask));
         m_private_queue->push(std::move(job),std::numeric_limits<std::size_t>::max());
 #else
         m_private_queue->push(boost::asynchronous::any_callable(ntask),std::numeric_limits<std::size_t>::max());

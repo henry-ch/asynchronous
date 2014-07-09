@@ -33,7 +33,7 @@ struct any_queue_container_config
     {
         for (std::size_t i = 0; i< number; ++i)
         {
-            m_queues.push_back(boost::make_shared<Queue>(args...));
+            m_queues.push_back(boost::make_shared<Queue>(std::move(args)...));
         }
     }
     std::pair<typename queue_sequence::const_iterator,typename queue_sequence::const_iterator> queues()const

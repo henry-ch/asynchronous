@@ -121,7 +121,7 @@ public:
     boost::asynchronous::any_weak_scheduler<job_type> get_weak_scheduler() const
     {
         boost::asynchronous::detail::lockable_weak_scheduler<scheduler_type> w(m_scheduler);
-        return boost::asynchronous::any_weak_scheduler<job_type>(w);
+        return boost::asynchronous::any_weak_scheduler<job_type>(std::move(w));
     }
 
     std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues()
@@ -158,7 +158,8 @@ public:
     }
 
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    explicit scheduler_shared_proxy_impl(boost::shared_ptr<scheduler_type>&& scheduler): m_scheduler(scheduler){scheduler.reset();}
+    explicit scheduler_shared_proxy_impl(boost::shared_ptr<scheduler_type>&& scheduler)noexcept
+        : m_scheduler(std::forward<boost::shared_ptr<scheduler_type>>(scheduler)){}
 #else
     explicit scheduler_shared_proxy_impl(boost::shared_ptr<scheduler_type> scheduler): m_scheduler(scheduler){}
 #endif
@@ -252,7 +253,7 @@ public:
     boost::asynchronous::any_weak_scheduler<job_type> get_weak_scheduler() const
     {
         boost::asynchronous::detail::lockable_weak_scheduler<scheduler_type> w(m_impl->m_scheduler);
-        return boost::asynchronous::any_weak_scheduler<job_type>(w);
+        return boost::asynchronous::any_weak_scheduler<job_type>(std::move(w));
     }
     
     std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues()
@@ -268,7 +269,7 @@ public:
 #ifdef BOOST_ASYNCHRONOUS_NO_TYPE_ERASURE
         boost::shared_ptr<boost::asynchronous::detail::scheduler_shared_proxy_impl<S> > t = m_impl->shared_from_this();
         return boost::static_pointer_cast<
-                boost::asynchronous::internal_scheduler_aspect_concept<job_type> > (t);
+                boost::asynchronous::internal_scheduler_aspect_concept<job_type> > (std::move(t));
 #else        
         boost::asynchronous::internal_scheduler_aspect<job_type> a(m_impl->shared_from_this());
         return a;

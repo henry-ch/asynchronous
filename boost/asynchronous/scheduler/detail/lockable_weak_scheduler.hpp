@@ -27,8 +27,8 @@ struct lockable_weak_scheduler
     any_shared_scheduler<typename S::job_type> lock()const
     {
         boost::shared_ptr<S> wscheduler = m_scheduler.lock();
-        any_shared_scheduler_ptr<typename S::job_type> pscheduler(wscheduler);
-        return any_shared_scheduler<typename S::job_type>(pscheduler);
+        any_shared_scheduler_ptr<typename S::job_type> pscheduler(std::move(wscheduler));
+        return any_shared_scheduler<typename S::job_type>(std::move(pscheduler));
     }
 private:
     boost::weak_ptr<S> m_scheduler;

@@ -29,12 +29,32 @@ struct call_if_alive
 #else
     call_if_alive(Func const& f, boost::weak_ptr<T> tracked):m_wrapped(f),m_tracked(tracked){}
 #endif
+    call_if_alive(call_if_alive&& rhs)noexcept
+        : m_wrapped(std::move(rhs.m_wrapped))
+        , m_tracked(std::move(rhs.m_tracked))
+    {}
+    call_if_alive(call_if_alive const& rhs)noexcept
+        : m_wrapped(rhs.m_wrapped)
+        , m_tracked(rhs.m_tracked)
+    {}
+    call_if_alive& operator= (call_if_alive&& rhs)noexcept
+    {
+        std::swap(m_wrapped,rhs.m_wrapped);
+        std::swap(m_tracked,rhs.m_tracked);
+        return *this;
+    }
+    call_if_alive& operator= (call_if_alive const& rhs)noexcept
+    {
+        m_wrapped = rhs.m_wrapped;
+        m_tracked = rhs.m_tracked;
+        return *this;
+    }
     template <typename... Arg>
     R operator()(Arg... arg)
     {
         // call only if tracked object is alive
         if (!m_tracked.expired())
-            return m_wrapped(arg...);
+            return m_wrapped(std::move(arg)...);
         return R();
     }
 
@@ -49,6 +69,26 @@ struct call_if_alive<Func,T,void>
 #else
     call_if_alive(Func const& f, boost::weak_ptr<T> tracked):m_wrapped(f),m_tracked(tracked){}
 #endif
+    call_if_alive(call_if_alive&& rhs)noexcept
+        : m_wrapped(std::move(rhs.m_wrapped))
+        , m_tracked(std::move(rhs.m_tracked))
+    {}
+    call_if_alive(call_if_alive const& rhs)noexcept
+        : m_wrapped(rhs.m_wrapped)
+        , m_tracked(rhs.m_tracked)
+    {}
+    call_if_alive& operator= (call_if_alive&& rhs)noexcept
+    {
+        std::swap(m_wrapped,rhs.m_wrapped);
+        std::swap(m_tracked,rhs.m_tracked);
+        return *this;
+    }
+    call_if_alive& operator= (call_if_alive const& rhs)noexcept
+    {
+        m_wrapped = rhs.m_wrapped;
+        m_tracked = rhs.m_tracked;
+        return *this;
+    }
     template <typename... Arg>
     void operator()(Arg... arg)
     {
@@ -74,7 +114,26 @@ struct call_if_alive_exec
 #else
     call_if_alive_exec(Func const& f, boost::weak_ptr<T> tracked):m_wrapped(f),m_tracked(tracked){}
 #endif
-
+    call_if_alive_exec(call_if_alive_exec&& rhs)noexcept
+        : m_wrapped(std::move(rhs.m_wrapped))
+        , m_tracked(std::move(rhs.m_tracked))
+    {}
+    call_if_alive_exec(call_if_alive_exec const& rhs)noexcept
+        : m_wrapped(rhs.m_wrapped)
+        , m_tracked(rhs.m_tracked)
+    {}
+    call_if_alive_exec& operator= (call_if_alive_exec&& rhs)noexcept
+    {
+        std::swap(m_wrapped,rhs.m_wrapped);
+        std::swap(m_tracked,rhs.m_tracked);
+        return *this;
+    }
+    call_if_alive_exec& operator= (call_if_alive_exec const& rhs)noexcept
+    {
+        m_wrapped = rhs.m_wrapped;
+        m_tracked = rhs.m_tracked;
+        return *this;
+    }
     R operator()()
     {
         // call only if tracked object is alive
@@ -96,7 +155,26 @@ struct call_if_alive_exec<Func,T,R,typename ::boost::enable_if<boost::asynchrono
 #else
     call_if_alive_exec(Func const& f, boost::weak_ptr<T> tracked):m_wrapped(f),m_tracked(tracked){}
 #endif
-
+    call_if_alive_exec(call_if_alive_exec&& rhs)noexcept
+        : m_wrapped(std::move(rhs.m_wrapped))
+        , m_tracked(std::move(rhs.m_tracked))
+    {}
+    call_if_alive_exec(call_if_alive_exec const& rhs)noexcept
+        : m_wrapped(rhs.m_wrapped)
+        , m_tracked(rhs.m_tracked)
+    {}
+    call_if_alive_exec& operator= (call_if_alive_exec&& rhs)noexcept
+    {
+        std::swap(m_wrapped,rhs.m_wrapped);
+        std::swap(m_tracked,rhs.m_tracked);
+        return *this;
+    }
+    call_if_alive_exec& operator= (call_if_alive_exec const& rhs)noexcept
+    {
+        m_wrapped = rhs.m_wrapped;
+        m_tracked = rhs.m_tracked;
+        return *this;
+    }
     R operator()()
     {
         // call only if tracked object is alive

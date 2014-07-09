@@ -100,9 +100,9 @@ struct interruptible_job : public boost::asynchronous::job_traits<Job>::diagnost
         return "";
     }
 
-    boost::shared_ptr<boost::promise<boost::thread*> >    m_worker;
-    boost::shared_ptr<boost::asynchronous::detail::interrupt_state>                    m_state;
-    Job                                                   m_job;
+    boost::shared_ptr<boost::promise<boost::thread*> >                  m_worker;
+    boost::shared_ptr<boost::asynchronous::detail::interrupt_state>     m_state;
+    Job                                                                 m_job;
 };
 
 }}

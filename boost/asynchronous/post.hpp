@@ -49,12 +49,12 @@ struct move_task_helper
         t.reset();
         c.reset();
     }
-    move_task_helper(move_task_helper const& r): m_callback(r.m_callback), m_task(r.m_task)
+    move_task_helper(move_task_helper const& r)noexcept: m_callback(r.m_callback), m_task(r.m_task)
     {
         const_cast<move_task_helper&>(r).m_callback.reset();
         const_cast<move_task_helper&>(r).m_task.reset();
     }
-    move_task_helper& operator= (move_task_helper& r)
+    move_task_helper& operator= (move_task_helper& r)noexcept
     {
         m_callback = r.m_callback; r.m_callback.reset();
         m_task = r.m_task; r.m_task.reset();
@@ -67,17 +67,17 @@ struct move_task_helper
         t.reset();
         c.reset();
     }
-    move_task_helper(move_task_helper && r)
+    move_task_helper(move_task_helper && r)noexcept
         : m_callback(std::move(r.m_callback))
         , m_task(std::move(r.m_task))
     {
         r.m_callback.reset();
         r.m_task.reset();
     }
-    move_task_helper& operator= (move_task_helper&& r)
+    move_task_helper& operator= (move_task_helper&& r)noexcept
     {
-        m_callback = std::move(r.m_callback); r.m_callback.reset();
-        m_task = std::move(r.m_task); r.m_task.reset();
+        std::swap(m_callback,r.m_callback);
+        std::swap(m_task,r.m_task);
     }
 #endif
     void operator()(boost::future<R> result_func)const
@@ -99,13 +99,13 @@ namespace detail
         post_future_helper_base(boost::shared_ptr<boost::promise<R> > p, F&& f)
             : boost::asynchronous::job_traits<JOB>::diagnostic_type(),
               m_promise(p),m_func(boost::make_shared<F>(std::forward<F>(f))) {}
-        post_future_helper_base(post_future_helper_base&& rhs)
+        post_future_helper_base(post_future_helper_base&& rhs)noexcept
             : boost::asynchronous::job_traits<JOB>::diagnostic_type(),
               m_promise(std::move(rhs.m_promise)),m_func(std::move(rhs.m_func)) {}
-        post_future_helper_base& operator= (post_future_helper_base&& rhs)
+        post_future_helper_base& operator= (post_future_helper_base&& rhs)noexcept
         {
-            m_promise = std::move(rhs.m_promise);
-            m_func = std::move(rhs.m_func);
+            std::swap(m_promise,rhs.m_promise);
+            std::swap(m_func,rhs.m_func);
             return *this;
         }
 #endif
@@ -136,13 +136,13 @@ namespace detail
         post_future_helper_base(boost::shared_ptr<boost::promise<R> > p, F&& f)
             : boost::asynchronous::job_traits<JOB>::diagnostic_type(),
               m_promise(p),m_func(boost::make_shared<F>(std::forward<F>(f))) {}
-        post_future_helper_base(post_future_helper_base&& rhs)
+        post_future_helper_base(post_future_helper_base&& rhs)noexcept
             : boost::asynchronous::job_traits<JOB>::diagnostic_type(),
               m_promise(std::move(rhs.m_promise)),m_func(std::move(rhs.m_func)) {}
-        post_future_helper_base& operator= (post_future_helper_base&& rhs)
+        post_future_helper_base& operator= (post_future_helper_base&& rhs)noexcept
         {
-            m_promise = std::move(rhs.m_promise);
-            m_func = std::move(rhs.m_func);
+            std::swap(m_promise,rhs.m_promise);
+            std::swap(m_func,rhs.m_func);
             return *this;
         }
 #endif
@@ -163,12 +163,12 @@ namespace detail
             ar >> payload;
             if (!payload.m_has_exception)
             {
-                std::istringstream archive_stream(payload.m_data);
+                std::istringstream archive_stream(std::move(payload.m_data));
                 typedef typename Scheduler::job_type jobtype;
                 typename jobtype::iarchive archive(archive_stream);
                 R res;
                 archive >> res;
-                m_promise->set_value(res);
+                m_promise->set_value(std::move(res));
             }
             else
             {
@@ -201,13 +201,13 @@ namespace detail
         post_future_helper_base(boost::shared_ptr<boost::promise<R> > p, F&& f)
             : boost::asynchronous::job_traits<JOB>::diagnostic_type(),
               m_promise(p),m_func(boost::make_shared<F>(std::forward<F>(f))) {}
-        post_future_helper_base(post_future_helper_base&& rhs)
+        post_future_helper_base(post_future_helper_base&& rhs)noexcept
             : boost::asynchronous::job_traits<JOB>::diagnostic_type(),
               m_promise(std::move(rhs.m_promise)),m_func(std::move(rhs.m_func)) {}
-        post_future_helper_base& operator= (post_future_helper_base&& rhs)
+        post_future_helper_base& operator= (post_future_helper_base&& rhs)noexcept
         {
-            m_promise = std::move(rhs.m_promise);
-            m_func = std::move(rhs.m_func);
+            std::swap(m_promise,rhs.m_promise);
+            std::swap(m_func,rhs.m_func);
             return *this;
         }
 #endif
@@ -395,14 +395,14 @@ namespace detail
         post_callback_helper_base(Work&& w, Sched const& s, const std::string& task_name="",
                                   std::size_t cb_prio=0)
             : m_work(std::forward<Work>(w)),m_scheduler(s),m_task_name(task_name),m_cb_prio(cb_prio) {}
-        post_callback_helper_base(post_callback_helper_base&& rhs)
+        post_callback_helper_base(post_callback_helper_base&& rhs)noexcept
             : m_work(std::move(rhs.m_work)),m_scheduler(rhs.m_scheduler)
             , m_task_name(std::move(rhs.m_task_name)),m_cb_prio(rhs.m_cb_prio) {}
-        post_callback_helper_base& operator= (post_callback_helper_base&& rhs)
+        post_callback_helper_base& operator= (post_callback_helper_base&& rhs)noexcept
         {
-            m_work = std::move(rhs.m_work);
-            m_scheduler = rhs.m_scheduler;
-            m_task_name = std::move(rhs.m_task_name);
+            std::swap(m_work,rhs.m_work);
+            std::swap(m_scheduler,rhs.m_scheduler);
+            std::swap(m_task_name,rhs.m_task_name);
             m_cb_prio = rhs.m_cb_prio;
             return *this;
         }
@@ -426,22 +426,21 @@ namespace detail
                 ,m_work(w)
                 ,m_fu(boost::make_shared<boost::future<typename Work::result_type> >(std::move(fu))){}
             // TODO type_erasure problem?
-            callback_fct(callback_fct&& rhs):m_work(std::move(rhs.m_work)),m_fu(std::move(rhs.m_fu)){}
-            callback_fct& operator= (callback_fct&& rhs)
+            callback_fct(callback_fct&& rhs)noexcept :m_work(std::move(rhs.m_work)),m_fu(std::move(rhs.m_fu)){}
+            callback_fct& operator= (callback_fct&& rhs)noexcept
             {
-                m_work = std::move(rhs.m_work);
-                m_fu = std::move(rhs.m_fu);
+                std::swap(m_work,rhs.m_work);
+                std::swap(m_fu,rhs.m_fu);
                 return *this;
             }
-            callback_fct(callback_fct const& rhs)
+            callback_fct(callback_fct const& rhs)noexcept
                 :boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type()
                 ,m_work(rhs.m_work)
                 ,m_fu(rhs.m_fu){}
-            callback_fct& operator= (callback_fct const& rhs)
+            callback_fct& operator= (callback_fct const& rhs)noexcept
             {
-                m_work = rhs.m_work;
-                m_fu = rhs.m_fu;
-                rhs.m_fu.reset();
+                std::swap(m_work,rhs.m_work);
+                std::swap(m_fu,rhs.m_fu);
                 return *this;
             }
             // TODO type_erasure problem?
@@ -526,14 +525,14 @@ namespace detail
             : m_work(std::forward<Work>(w)),m_scheduler(s),m_task_name(task_name),m_cb_prio(cb_prio)
         {
         }
-        post_callback_helper_base(post_callback_helper_base&& rhs)
+        post_callback_helper_base(post_callback_helper_base&& rhs)noexcept
             : m_work(std::move(rhs.m_work)),m_scheduler(rhs.m_scheduler)
             , m_task_name(std::move(rhs.m_task_name)),m_cb_prio(rhs.m_cb_prio) {}
-        post_callback_helper_base& operator= (post_callback_helper_base&& rhs)
+        post_callback_helper_base& operator= (post_callback_helper_base&& rhs)noexcept
         {
-            m_work = std::move(rhs.m_work);
-            m_scheduler = rhs.m_scheduler;
-            m_task_name = std::move(rhs.m_task_name);
+            std::swap(m_work,rhs.m_work);
+            std::swap(m_scheduler,rhs.m_scheduler);
+            std::swap(m_task_name,rhs.m_task_name);
             m_cb_prio = rhs.m_cb_prio;
             return *this;
         }
@@ -553,22 +552,21 @@ namespace detail
                 :boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type()
                 ,m_work(w)
                 ,m_fu(boost::make_shared<boost::future<typename Work::result_type> >(std::move(fu))){}
-            callback_fct(callback_fct&& rhs):m_work(std::move(rhs.m_work)),m_fu(std::move(rhs.m_fu)){}
-            callback_fct& operator= (callback_fct&& rhs)
+            callback_fct(callback_fct&& rhs)noexcept:m_work(std::move(rhs.m_work)),m_fu(std::move(rhs.m_fu)){}
+            callback_fct& operator= (callback_fct&& rhs)noexcept
             {
-                m_work = std::move(rhs.m_work);
-                m_fu = std::move(rhs.m_fu);
+                std::swap(m_work,rhs.m_work);
+                std::swap(m_fu,rhs.m_fu);
                 return *this;
             }
-            callback_fct(callback_fct const& rhs)
+            callback_fct(callback_fct const& rhs)noexcept
                 :boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type()
                 ,m_work(rhs.m_work)
                 ,m_fu(rhs.m_fu){}
-            callback_fct& operator= (callback_fct const& rhs)
+            callback_fct& operator= (callback_fct const& rhs)noexcept
             {
-                m_work = rhs.m_work;
-                m_fu = rhs.m_fu;
-                rhs.m_fu.reset();
+                std::swap(m_work,rhs.m_work);
+                std::swap(m_fu,rhs.m_fu);
                 return *this;
             }
             void operator()()const
@@ -596,13 +594,13 @@ namespace detail
             boost::future<typename Work::result_type> work_fu = work_p.get_future();
             if (!payload.m_has_exception)
             {
-                std::istringstream archive_stream(payload.m_data);
+                std::istringstream archive_stream(std::move(payload.m_data));
                 typedef typename PostSched::job_type jobtype;
                 typename jobtype::iarchive archive(archive_stream);
 
                 typename Work::result_type res;
                 archive >> res;
-                work_p.set_value(res);
+                work_p.set_value(std::move(res));
             }
             else
             {
@@ -692,7 +690,7 @@ namespace detail
                         {
                             try
                             {
-                                work_result->set_value(std::get<0>(continuation_res).get());
+                                work_result->set_value(std::move(std::get<0>(continuation_res).get()));
                             }
                             catch(std::exception& e)
                             {
@@ -706,8 +704,8 @@ namespace detail
                     catch(std::exception& ){/* TODO */}
                 }
             );
-            boost::asynchronous::any_continuation ac(cont);
-            boost::asynchronous::get_continuations().push_front(ac);
+            boost::asynchronous::any_continuation ac(std::move(cont));
+            boost::asynchronous::get_continuations().emplace_front(std::move(ac));
         }
     };
     template <class Ret,class Sched,class Func,class Work,class F1,class F2,class CallbackFct,class CB>
@@ -752,8 +750,8 @@ namespace detail
                     catch(std::exception& ){/* TODO */}
                 }
             );
-            boost::asynchronous::any_continuation ac(cont);
-            boost::asynchronous::get_continuations().push_front(ac);
+            boost::asynchronous::any_continuation ac(std::move(cont));
+            boost::asynchronous::get_continuations().emplace_front(std::move(ac));
         }
     };
 
@@ -765,14 +763,14 @@ namespace detail
         post_callback_helper_continuation(Work&& w, Sched const& s, const std::string& task_name="",
                                   std::size_t cb_prio=0)
             : m_work(std::forward<Work>(w)),m_scheduler(s),m_task_name(task_name),m_cb_prio(cb_prio) {}
-        post_callback_helper_continuation(post_callback_helper_continuation&& rhs)
+        post_callback_helper_continuation(post_callback_helper_continuation&& rhs)noexcept
             : m_work(std::move(rhs.m_work)),m_scheduler(rhs.m_scheduler)
             , m_task_name(std::move(rhs.m_task_name)),m_cb_prio(rhs.m_cb_prio) {}
-        post_callback_helper_continuation& operator= (post_callback_helper_continuation&& rhs)
+        post_callback_helper_continuation& operator= (post_callback_helper_continuation&& rhs)noexcept
         {
-            m_work = std::move(rhs.m_work);
-            m_scheduler = rhs.m_scheduler;
-            m_task_name = std::move(rhs.m_task_name);
+            std::swap(m_work,rhs.m_work);
+            std::swap(m_scheduler,rhs.m_scheduler);
+            std::swap(m_task_name,rhs.m_task_name);
             m_cb_prio = rhs.m_cb_prio;
             return *this;
         }
@@ -792,15 +790,14 @@ namespace detail
                 :boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type()
                 ,m_work(w)
                 ,m_fu(boost::make_shared<boost::future<typename Work::result_type> >(std::move(fu))){}
-            callback_fct(callback_fct const& rhs)
+            callback_fct(callback_fct const& rhs)noexcept
                 :boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type()
                 ,m_work(rhs.m_work)
                 ,m_fu(rhs.m_fu){}
-            callback_fct& operator= (callback_fct const& rhs)
+            callback_fct& operator= (callback_fct const& rhs)noexcept
             {
-                m_work = rhs.m_work;
-                m_fu = rhs.m_fu;
-                rhs.m_fu.reset();
+                std::swap(m_work,rhs.m_work);
+                std::swap(m_fu,rhs.m_fu);
                 return *this;
             }
             void operator()()const
@@ -845,14 +842,14 @@ namespace detail
         post_callback_helper_continuation(Work&& w, Sched const& s, const std::string& task_name="",
                                   std::size_t cb_prio=0)
             : m_work(std::forward<Work>(w)),m_scheduler(s),m_task_name(task_name),m_cb_prio(cb_prio) {}
-        post_callback_helper_continuation(post_callback_helper_continuation&& rhs)
+        post_callback_helper_continuation(post_callback_helper_continuation&& rhs)noexcept
             : m_work(std::move(rhs.m_work)),m_scheduler(rhs.m_scheduler)
             , m_task_name(std::move(rhs.m_task_name)),m_cb_prio(rhs.m_cb_prio) {}
-        post_callback_helper_continuation& operator= (post_callback_helper_continuation&& rhs)
+        post_callback_helper_continuation& operator= (post_callback_helper_continuation&& rhs)noexcept
         {
-            m_work = std::move(rhs.m_work);
-            m_scheduler = rhs.m_scheduler;
-            m_task_name = std::move(rhs.m_task_name);
+            std::swap(m_work,rhs.m_work);
+            std::swap(m_scheduler,rhs.m_scheduler);
+            std::swap(m_task_name,rhs.m_task_name);
             m_cb_prio = rhs.m_cb_prio;
             return *this;
         }
@@ -872,15 +869,14 @@ namespace detail
                 :boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type()
                 ,m_work(w)
                 ,m_fu(boost::make_shared<boost::future<typename Work::result_type> >(std::move(fu))){}
-            callback_fct(callback_fct const& rhs)
+            callback_fct(callback_fct const& rhs)noexcept
                 :boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type()
                 ,m_work(rhs.m_work)
                 ,m_fu(rhs.m_fu){}
-            callback_fct& operator= (callback_fct const& rhs)
+            callback_fct& operator= (callback_fct const& rhs)noexcept
             {
-                m_work = rhs.m_work;
-                m_fu = rhs.m_fu;
-                rhs.m_fu.reset();
+                std::swap(m_work,rhs.m_work);
+                std::swap(m_fu,rhs.m_fu);
                 return *this;
             }
             void operator()()const
@@ -908,13 +904,13 @@ namespace detail
             boost::future<typename Work::result_type> work_fu = work_p.get_future();
             if (!payload.m_has_exception)
             {
-                std::istringstream archive_stream(payload.m_data);
+                std::istringstream archive_stream(std::move(payload.m_data));
                 typedef typename PostSched::job_type jobtype;
                 typename jobtype::iarchive archive(archive_stream);
 
                 typename Work::result_type res;
                 archive >> res;
-                work_p.set_value(res);
+                work_p.set_value(std::move(res));
             }
             else
             {

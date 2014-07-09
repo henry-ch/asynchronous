@@ -114,7 +114,7 @@ protected:
 #endif
 #ifndef BOOST_NO_CXX11_VARIADIC_TEMPLATES
     template<typename... Args>
-    single_queue_scheduler_policy(Args... args): m_queue(boost::make_shared<queue_type>(args...))
+    single_queue_scheduler_policy(Args... args): m_queue(boost::make_shared<queue_type>(std::move(args)...))
     {
     }
 #endif

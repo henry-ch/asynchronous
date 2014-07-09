@@ -454,8 +454,8 @@ private:
         init_helper(init_helper const& rhs)
           :boost::asynchronous::job_traits<callable_type>::diagnostic_type(),m_promise(rhs.m_promise){}
 #ifndef BOOST_NO_RVALUE_REFERENCES
-        init_helper(init_helper&& rhs):m_promise(std::move(rhs.m_promise)){}
-        init_helper& operator= (init_helper const&& rhs){m_promise = std::move(rhs.m_promise);}
+        init_helper(init_helper&& rhs) noexcept :m_promise(std::move(rhs.m_promise)){}
+        init_helper& operator= (init_helper const&& rhs)noexcept {m_promise = std::move(rhs.m_promise);}
 #endif
         template <typename... Args>
         void operator()(weak_scheduler_proxy_type proxy,Args... as)const
@@ -529,17 +529,17 @@ private:
             const_cast<servant_deleter&>(r).data.reset();
             done_promise = std::move(const_cast<servant_deleter&>(r).done_promise);
         }
-        servant_deleter& operator= (servant_deleter const& r)
+        servant_deleter& operator= (servant_deleter const& r)noexcept
         {
-            data = r.data; const_cast<servant_deleter&>(r).data.reset();
-            done_promise = std::move(const_cast<servant_deleter&>(r).done_promise);
+            std::swap(data,r.data);
+            std::swap(done_promise,r.done_promise);
             return *this;
         }
 #ifndef BOOST_NO_RVALUE_REFERENCES
         servant_deleter& operator= (servant_deleter&& r) noexcept
         {
-            data = r.data; r.data.reset();
-            done_promise = std::move(r.done_promise);
+            std::swap(data,r.data);
+            std::swap(done_promise,r.done_promise);
             return *this;
         }
 #endif

@@ -147,7 +147,7 @@ protected:
         m_queues.reserve(number_of_workers);
         for (size_t i = 0; i< number_of_workers;++i)
         {
-            m_queues.push_back(boost::make_shared<queue_type>(args...));
+            m_queues.push_back(boost::make_shared<queue_type>(std::move(args)...));
         }
     }
 #endif
