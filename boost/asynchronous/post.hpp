@@ -235,7 +235,7 @@ namespace detail
         {
             OP()(m_promise,m_func);
         }
-        boost::shared_ptr<boost::promise<R> > m_promise;
+        boost::promise<R> m_promise;
         F m_func;
     };
 }
@@ -579,12 +579,12 @@ namespace detail
         };
         std::string get_task_name()const
         {
-            return (*(m_work.m_task)).get_task_name();
+            return (m_work.m_task).get_task_name();
         }
         template <class Archive>
         void save(Archive & ar, const unsigned int /*version*/)const
         {
-            ar & *(m_work.m_task);
+            ar & m_work.m_task;
         }
         template <class Archive>
         void load(Archive & ar, const unsigned int /*version*/)
@@ -889,12 +889,12 @@ namespace detail
         };
         std::string get_task_name()const
         {
-            return (*(m_work.m_task)).get_task_name();
+            return (m_work.m_task).get_task_name();
         }
         template <class Archive>
         void save(Archive & ar, const unsigned int /*version*/)const
         {
-            ar & *(m_work.m_task);
+            ar & m_work.m_task;
         }
         template <class Archive>
         void load(Archive & ar, const unsigned int /*version*/)
