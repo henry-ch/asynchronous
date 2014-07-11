@@ -667,12 +667,11 @@ namespace detail
     struct post_helper_continuation
     {
         void operator()(std::string const& task_name,std::size_t cb_prio, Sched scheduler,
-                        move_task_helper<typename Func::return_type,F1,F2>& work,
-                        boost::shared_ptr<boost::promise<typename Func::return_type> > work_result)const
+                        move_task_helper<typename Func::return_type,F1,F2>& work)const
         {
             auto cont = work.m_task();
             //cont.on_done(detail::promise_mover<typename Func::return_type>(res));
-            cont.on_done([work,scheduler,work_result,task_name,cb_prio](std::tuple<boost::future<typename Func::return_type> >&& continuation_res)
+            cont.on_done([work,scheduler,task_name,cb_prio](std::tuple<boost::future<typename Func::return_type> >&& continuation_res)
                 {
                     try
                     {
@@ -681,21 +680,22 @@ namespace detail
                             // no need to do any work as there is no way to callback
                             return;
                         // call callback
-                        boost::future<typename Work::result_type> work_fu = work_result->get_future();
+                        boost::promise<typename Func::return_type> work_result;
+                        boost::future<typename Work::result_type> work_fu = work_result.get_future();
                         if(!std::get<0>(continuation_res).has_value())
                         {
                             boost::asynchronous::task_aborted_exception ta;
-                            work_result->set_exception(boost::copy_exception(ta));
+                            work_result.set_exception(boost::copy_exception(ta));
                         }
                         else
                         {
                             try
                             {
-                                work_result->set_value(std::move(std::get<0>(continuation_res).get()));
+                                work_result.set_value(std::move(std::get<0>(continuation_res).get()));
                             }
                             catch(std::exception& e)
                             {
-                                work_result->set_exception(boost::copy_exception(e));
+                                work_result.set_exception(boost::copy_exception(e));
                             }
                         }
 
@@ -713,12 +713,11 @@ namespace detail
     struct post_helper_continuation<Ret,Sched,Func,Work,F1,F2,CallbackFct,CB,typename ::boost::enable_if<boost::is_same<Ret,void> >::type>
     {
         void operator()(std::string const& task_name,std::size_t cb_prio, Sched scheduler,
-                        move_task_helper<typename Func::return_type,F1,F2>& work,
-                        boost::shared_ptr<boost::promise<typename Func::return_type> > work_result)const
+                        move_task_helper<typename Func::return_type,F1,F2>& work)const
         {
             auto cont = work.m_task();
             //cont.on_done(detail::promise_mover<typename Func::return_type>(res));
-            cont.on_done([work,scheduler,work_result,task_name,cb_prio](std::tuple<boost::future<typename Func::return_type> >&& continuation_res)
+            cont.on_done([work,scheduler,task_name,cb_prio](std::tuple<boost::future<typename Func::return_type> >&& continuation_res)
                 {
                     try
                     {
@@ -727,21 +726,22 @@ namespace detail
                             // no need to do any work as there is no way to callback
                             return;
                         // call callback
-                        boost::future<typename Work::result_type> work_fu = work_result->get_future();
+                        boost::promise<typename Func::return_type> work_result;
+                        boost::future<typename Work::result_type> work_fu = work_result.get_future();
                         if(!std::get<0>(continuation_res).has_value())
                         {
                             boost::asynchronous::task_aborted_exception ta;
-                            work_result->set_exception(boost::copy_exception(ta));
+                            work_result.set_exception(boost::copy_exception(ta));
                         }
                         else
                         {
                             try
                             {
-                                work_result->set_value();
+                                work_result.set_value();
                             }
                             catch(std::exception& e)
                             {
-                                work_result->set_exception(boost::copy_exception(e));
+                                work_result.set_exception(boost::copy_exception(e));
                             }
                         }
 
@@ -819,15 +819,10 @@ namespace detail
                     // no need to do any work as there is no way to callback
                     return;
             }
-            boost::shared_ptr<boost::promise<typename Work::result_type> > work_result(new boost::promise<typename Work::result_type>);
             // TODO check not empty
-            try
-            {
-                // call task
-                post_helper_continuation<typename Work::result_type,Sched,Func,Work,F1,F2,callback_fct,CB>()(m_task_name,m_cb_prio,m_scheduler,m_work,work_result);
-            }
-            catch(boost::asynchronous::task_aborted_exception& e){work_result->set_exception(boost::copy_exception(e));}
-            catch(...){work_result->set_exception(boost::current_exception());}
+            // call task
+            post_helper_continuation<typename Work::result_type,Sched,Func,Work,F1,F2,callback_fct,CB>()(m_task_name,m_cb_prio,m_scheduler,m_work);
+
         }
         Work m_work;
         Sched m_scheduler;
@@ -944,15 +939,9 @@ namespace detail
                     // no need to do any work as there is no way to callback
                     return;
             }
-            boost::shared_ptr<boost::promise<typename Work::result_type> > work_result(new boost::promise<typename Work::result_type>);
             // TODO check not empty
-            try
-            {
-                // call task
-                post_helper_continuation<typename Work::result_type,Sched,Func,Work,F1,F2,callback_fct,CB>()(m_task_name,m_cb_prio,m_scheduler,m_work,work_result);
-            }
-            catch(boost::asynchronous::task_aborted_exception& e){work_result->set_exception(boost::copy_exception(e));}
-            catch(...){work_result->set_exception(boost::current_exception());this->set_failed();}
+            // call task
+            post_helper_continuation<typename Work::result_type,Sched,Func,Work,F1,F2,callback_fct,CB>()(m_task_name,m_cb_prio,m_scheduler,m_work);
         }
         Work m_work;
         Sched m_scheduler;

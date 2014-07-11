@@ -104,7 +104,7 @@ struct continuation_task
 public:
     typedef Return res_type;
 
-    continuation_task(const std::string& name=""):m_promise(new boost::promise<Return>()),m_name(name){}
+    continuation_task(const std::string& name=""):m_promise(boost::make_shared<boost::promise<Return>>()),m_name(name){}
     continuation_task(continuation_task&& rhs)noexcept
         : m_promise(std::move(rhs.m_promise))
         , m_name(std::move(rhs.m_name))
@@ -199,7 +199,7 @@ public:
         return *this;
     }
 
-    continuation_task(const std::string& name=""):m_promise(new boost::promise<void>()),m_name(name){}
+    continuation_task(const std::string& name=""):m_promise(boost::make_shared<boost::promise<void>>()),m_name(name){}
 
     void set_value() const
     {
