@@ -212,9 +212,9 @@ struct continuation_as_seq
     typedef int is_continuation_task;
     typedef Return return_type;
 
-    continuation_as_seq(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state, Duration d,Seq&& seq)
-    : m_futures(new Seq(std::forward<Seq>(seq)))
-    , m_ready_futures(m_futures->size(),false)
+    continuation_as_seq(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state, Duration d,Seq seq)
+    : m_futures(std::move(seq))
+    , m_ready_futures(m_futures.size(),false)
     , m_state(state)
     , m_timeout(d)
     {
@@ -222,10 +222,48 @@ struct continuation_as_seq
         m_start = boost::chrono::high_resolution_clock::now();
         //TODO interruptible
     }
+    continuation_as_seq(continuation_as_seq&& rhs)noexcept
+        : m_futures(std::move(rhs.m_futures))
+        , m_ready_futures(std::move(rhs.m_ready_futures))
+        , m_done(std::move(rhs.m_done))
+        , m_state(std::move(rhs.m_state))
+        , m_timeout(std::move(rhs.m_timeout))
+        , m_start(std::move(rhs.m_start))
+    {
+    }
+    continuation_as_seq(continuation_as_seq const& rhs)noexcept
+        : m_futures(std::move((const_cast<continuation_as_seq&>(rhs)).m_futures))
+        , m_ready_futures(std::move((const_cast<continuation_as_seq&>(rhs)).m_ready_futures))
+        , m_done(std::move((const_cast<continuation_as_seq&>(rhs)).m_done))
+        , m_state(std::move((const_cast<continuation_as_seq&>(rhs)).m_state))
+        , m_timeout(std::move((const_cast<continuation_as_seq&>(rhs)).m_timeout))
+        , m_start(std::move((const_cast<continuation_as_seq&>(rhs)).m_start))
+    {
+    }
 
+    continuation_as_seq& operator= (continuation_as_seq&& rhs)noexcept
+    {
+        std::swap(m_futures,rhs.m_futures);
+        std::swap(m_ready_futures,rhs.m_ready_futures);
+        std::swap(m_done,rhs.m_done);
+        std::swap(m_state,rhs.m_state);
+        std::swap(m_timeout,rhs.m_timeout);
+        std::swap(m_start,rhs.m_start);
+        return *this;
+    }
+    continuation_as_seq& operator= (continuation_as_seq const& rhs)noexcept
+    {
+        std::swap(m_futures,(const_cast<continuation_as_seq&>(rhs)).m_futures);
+        std::swap(m_ready_futures,(const_cast<continuation_as_seq&>(rhs)).m_ready_futures);
+        std::swap(m_done,(const_cast<continuation_as_seq&>(rhs)).m_done);
+        std::swap(m_state,(const_cast<continuation_as_seq&>(rhs)).m_state);
+        std::swap(m_timeout,(const_cast<continuation_as_seq&>(rhs)).m_timeout);
+        std::swap(m_start,(const_cast<continuation_as_seq&>(rhs)).m_start);
+        return *this;
+    }
     void operator()()
     {
-        m_done(std::move(*m_futures));
+        m_done(std::move(m_futures));
     }
 
     template <class Func>
@@ -247,7 +285,7 @@ struct continuation_as_seq
             return true;
         }
         std::size_t index = 0;
-        for (typename Seq::const_iterator it = m_futures->begin(); it != m_futures->end() ;++it,++index)
+        for (typename Seq::const_iterator it = m_futures.begin(); it != m_futures.end() ;++it,++index)
         {
             if (m_ready_futures[index])
                 continue;
@@ -259,7 +297,7 @@ struct continuation_as_seq
     }
 //TODO temporary
 //private:
-    boost::shared_ptr<Seq> m_futures;
+    Seq m_futures;
     std::vector<bool> m_ready_futures;
     std::function<void(Seq&&)> m_done;
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> m_state;
