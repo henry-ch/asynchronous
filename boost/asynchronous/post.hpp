@@ -43,50 +43,50 @@ struct move_task_helper
 {
     typedef R result_type;
     typedef Task task_type;
-    move_task_helper(boost::shared_ptr<Task>& t, boost::shared_ptr<Callback> & c)
-        : m_callback(c), m_task(t)
+//    move_task_helper(boost::shared_ptr<Task>& t, boost::shared_ptr<Callback> & c)
+//        : m_callback(c), m_task(t)
+//    {
+//        t.reset();
+//        c.reset();
+//    }
+    move_task_helper(move_task_helper const& r)noexcept
+        : m_callback(std::move(const_cast<move_task_helper&>(r).m_callback))
+        , m_task(std::move(const_cast<move_task_helper&>(r).m_task))
     {
-        t.reset();
-        c.reset();
+//        const_cast<move_task_helper&>(r).m_callback.reset();
+//        const_cast<move_task_helper&>(r).m_task.reset();
     }
-    move_task_helper(move_task_helper const& r)noexcept: m_callback(r.m_callback), m_task(r.m_task)
+//    move_task_helper& operator= (move_task_helper& r)noexcept
+//    {
+//        m_callback = r.m_callback; r.m_callback.reset();
+//        m_task = r.m_task; r.m_task.reset();
+//    }
+    move_task_helper(Task t,Callback c)
+        :m_callback(std::move(c))
+        ,m_task(std::move(t))
     {
-        const_cast<move_task_helper&>(r).m_callback.reset();
-        const_cast<move_task_helper&>(r).m_task.reset();
-    }
-    move_task_helper& operator= (move_task_helper& r)noexcept
-    {
-        m_callback = r.m_callback; r.m_callback.reset();
-        m_task = r.m_task; r.m_task.reset();
-    }
-#ifndef BOOST_NO_RVALUE_REFERENCES
-    move_task_helper(boost::shared_ptr<Task>&& t,boost::shared_ptr<Callback> && c)
-        :m_callback(std::forward<boost::shared_ptr<Callback> >(c))
-        ,m_task(std::forward<boost::shared_ptr<Task> >(t))
-    {
-        t.reset();
-        c.reset();
+//        t.reset();
+//        c.reset();
     }
     move_task_helper(move_task_helper && r)noexcept
         : m_callback(std::move(r.m_callback))
         , m_task(std::move(r.m_task))
     {
-        r.m_callback.reset();
-        r.m_task.reset();
+//        r.m_callback.reset();
+//        r.m_task.reset();
     }
     move_task_helper& operator= (move_task_helper&& r)noexcept
     {
         std::swap(m_callback,r.m_callback);
         std::swap(m_task,r.m_task);
     }
-#endif
-    void operator()(boost::future<R> result_func)const
+    void operator()(boost::future<R> result_func)
     {
-        (*m_callback)(std::move(result_func));
+        m_callback(std::move(result_func));
     }
-    boost::shared_ptr<Callback> m_callback;
+    Callback m_callback;
     // task is only here to be moved to worker and then back for destruction in originator thread
-    boost::shared_ptr<Task> m_task;
+    Task m_task;
 };
 
 namespace detail
@@ -95,10 +95,10 @@ namespace detail
     struct post_future_helper_base : public boost::asynchronous::job_traits<JOB>::diagnostic_type
     {
         post_future_helper_base():boost::asynchronous::job_traits<JOB>::diagnostic_type(){}
-#ifndef BOOST_NO_RVALUE_REFERENCES
-        post_future_helper_base(boost::shared_ptr<boost::promise<R> > p, F&& f)
+
+        post_future_helper_base(boost::promise<R> p, F f)
             : boost::asynchronous::job_traits<JOB>::diagnostic_type(),
-              m_promise(p),m_func(boost::make_shared<F>(std::forward<F>(f))) {}
+              m_promise(std::move(p)),m_func(std::move(f)) {}
         post_future_helper_base(post_future_helper_base&& rhs)noexcept
             : boost::asynchronous::job_traits<JOB>::diagnostic_type(),
               m_promise(std::move(rhs.m_promise)),m_func(std::move(rhs.m_func)) {}
@@ -108,18 +108,16 @@ namespace detail
             std::swap(m_func,rhs.m_func);
             return *this;
         }
-#endif
-    //#else
+
         post_future_helper_base(post_future_helper_base const& rhs)
             :boost::asynchronous::job_traits<JOB>::diagnostic_type()
-            ,m_promise(rhs.m_promise),m_func(rhs.m_func){}
-    //#endif
+            ,m_promise(std::move(const_cast<post_future_helper_base&>(rhs).m_promise)),m_func(std::move(const_cast<post_future_helper_base&>(rhs).m_func)){}
         void operator()()
         {
-            OP()(m_promise,*m_func);
+            OP()(m_promise,m_func);
         }
-        boost::shared_ptr<boost::promise<R> > m_promise;
-        boost::shared_ptr<F> m_func;
+        boost::promise<R> m_promise;
+        F m_func;
     };
 
     // version for serializable tasks but not continuations
@@ -132,29 +130,31 @@ namespace detail
             : public boost::asynchronous::job_traits<JOB>::diagnostic_type
     {
         post_future_helper_base():boost::asynchronous::job_traits<JOB>::diagnostic_type(){}
-#ifndef BOOST_NO_RVALUE_REFERENCES
-        post_future_helper_base(boost::shared_ptr<boost::promise<R> > p, F&& f)
+
+        post_future_helper_base(boost::promise<R> p, F f)
             : boost::asynchronous::job_traits<JOB>::diagnostic_type(),
-              m_promise(p),m_func(boost::make_shared<F>(std::forward<F>(f))) {}
+              m_promise(std::move(p)),m_func(std::move(f)) {}
         post_future_helper_base(post_future_helper_base&& rhs)noexcept
             : boost::asynchronous::job_traits<JOB>::diagnostic_type(),
               m_promise(std::move(rhs.m_promise)),m_func(std::move(rhs.m_func)) {}
+
         post_future_helper_base& operator= (post_future_helper_base&& rhs)noexcept
         {
             std::swap(m_promise,rhs.m_promise);
             std::swap(m_func,rhs.m_func);
             return *this;
         }
-#endif
-    //#else
+
+
         post_future_helper_base(post_future_helper_base const& rhs)
-            :boost::asynchronous::job_traits<JOB>::diagnostic_type(),m_promise(rhs.m_promise)
-            ,m_func(rhs.m_func){}
-    //#endif
+            :boost::asynchronous::job_traits<JOB>::diagnostic_type()
+            ,m_promise(std::move(const_cast<post_future_helper_base&>(rhs).m_promise))
+            ,m_func(std::move(const_cast<post_future_helper_base&>(rhs).m_func)){}
+
         template <class Archive>
         void save(Archive & ar, const unsigned int /*version*/)const
         {
-            ar & *m_func;
+            ar & m_func;
         }
         template <class Archive>
         void load(Archive & ar, const unsigned int /*version*/)
@@ -168,24 +168,24 @@ namespace detail
                 typename jobtype::iarchive archive(archive_stream);
                 R res;
                 archive >> res;
-                m_promise->set_value(std::move(res));
+                m_promise.set_value(std::move(res));
             }
             else
             {
-                m_promise->set_exception(boost::copy_exception(payload.m_exception));
+                m_promise.set_exception(boost::copy_exception(payload.m_exception));
             }
         }
         std::string get_task_name()const
         {
-            return m_func->get_task_name();
+            return m_func.get_task_name();
         }
         BOOST_SERIALIZATION_SPLIT_MEMBER()
         void operator()()
         {
-            OP()(m_promise,*m_func);
+            OP()(m_promise,m_func);
         }
-        boost::shared_ptr<boost::promise<R> > m_promise;
-        boost::shared_ptr<F> m_func;
+        boost::promise<R> m_promise;
+        F m_func;
     };
     // version for tasks which are serializable AND continuations
     // TODO a bit better than checking R...
@@ -197,10 +197,10 @@ namespace detail
             : public boost::asynchronous::job_traits<JOB>::diagnostic_type
     {
         post_future_helper_base():boost::asynchronous::job_traits<JOB>::diagnostic_type(){}
-#ifndef BOOST_NO_RVALUE_REFERENCES
-        post_future_helper_base(boost::shared_ptr<boost::promise<R> > p, F&& f)
+
+        post_future_helper_base(boost::promise<R> p, F f)
             : boost::asynchronous::job_traits<JOB>::diagnostic_type(),
-              m_promise(p),m_func(boost::make_shared<F>(std::forward<F>(f))) {}
+              m_promise(std::move(p)),m_func(std::move(f)) {}
         post_future_helper_base(post_future_helper_base&& rhs)noexcept
             : boost::asynchronous::job_traits<JOB>::diagnostic_type(),
               m_promise(std::move(rhs.m_promise)),m_func(std::move(rhs.m_func)) {}
@@ -210,32 +210,33 @@ namespace detail
             std::swap(m_func,rhs.m_func);
             return *this;
         }
-#endif
-    //#else
+
         post_future_helper_base(post_future_helper_base const& rhs)
-            :boost::asynchronous::job_traits<JOB>::diagnostic_type(),m_promise(rhs.m_promise),m_func(rhs.m_func){}
-    //#endif
+            :boost::asynchronous::job_traits<JOB>::diagnostic_type()
+            ,m_promise(std::move(const_cast<post_future_helper_base&>(rhs).m_promise))
+            ,m_func(std::move(const_cast<post_future_helper_base&>(rhs).m_func)){}
+
         template <class Archive>
         void save(Archive & ar, const unsigned int /*version*/)const
         {
-            ar & *m_func;
+            ar & m_func;
         }
         template <class Archive>
         void load(Archive & ar, const unsigned int version)
         {
-            m_func->template as_result<typename Scheduler::job_type::iarchive,Archive>(ar,version);
+            m_func.template as_result<typename Scheduler::job_type::iarchive,Archive>(ar,version);
         }
         std::string get_task_name()const
         {
-            return m_func->get_task_name();
+            return m_func.get_task_name();
         }
         BOOST_SERIALIZATION_SPLIT_MEMBER()
         void operator()()
         {
-            OP()(m_promise,*m_func);
+            OP()(m_promise,m_func);
         }
         boost::shared_ptr<boost::promise<R> > m_promise;
-        boost::shared_ptr<F> m_func;
+        F m_func;
     };
 }
 
@@ -249,20 +250,20 @@ auto post_future(S const& scheduler, F const& func,
     -> typename boost::disable_if< boost::is_same<void,decltype(func())>,
                                    boost::future<decltype(func())> >::type
 {
-    boost::shared_ptr<boost::promise<decltype(func())> > p = boost::make_shared<boost::promise<decltype(func())> >();
-    boost::future<decltype(func())> fu(p->get_future());
+    boost::promise<decltype(func())> p;
+    boost::future<decltype(func())> fu(p.get_future());
 
     struct post_helper
     {
-        void operator()(boost::shared_ptr<boost::promise<decltype(func())> > sp, F& f)const
+        void operator()(boost::promise<decltype(func())>& sp, F& f)const
         {
-            try{sp->set_value(f());}
-            catch(...){sp->set_exception(boost::current_exception());}
+            try{sp.set_value(f());}
+            catch(...){sp.set_exception(boost::current_exception());}
         }
     };
 
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper,S> fct (p,std::move(func));
+    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper,S> fct (std::move(p),std::move(func));
     typename boost::asynchronous::job_traits<typename S::job_type>::wrapper_type w(std::move(fct));
     w.set_name(task_name);
     scheduler.post(std::move(w),prio);
@@ -289,20 +290,20 @@ auto post_future(S const& scheduler, F const& func,
     -> typename boost::enable_if< boost::is_same<void,decltype(func())>,
                                   boost::future<void> >::type
 {
-    boost::shared_ptr<boost::promise<void> > p= boost::make_shared<boost::promise<void> >();
-    boost::future<void> fu(p->get_future());
+    boost::promise<void> p;
+    boost::future<void> fu(p.get_future());
 
     struct post_helper
     {
-        void operator()(boost::shared_ptr<boost::promise<decltype(func())> > sp, F& f)const
+        void operator()(boost::promise<decltype(func())>& sp, F& f)const
         {
-            try{f();sp->set_value();}
-            catch(...){sp->set_exception(boost::current_exception());}
+            try{f();sp.set_value();}
+            catch(...){sp.set_exception(boost::current_exception());}
         }
     };
 
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper,S> fct (p,std::move(func));
+    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper,S> fct (std::move(p),std::move(func));
     typename boost::asynchronous::job_traits<typename S::job_type>::wrapper_type w(std::move(fct));
     w.set_name(task_name);
     scheduler.post(std::move(w),prio);
@@ -331,24 +332,24 @@ auto interruptible_post_future(S const& scheduler, F const& func,
     -> typename boost::disable_if< boost::is_same<void,decltype(func())>,
                                    std::tuple<boost::future<decltype(func())>,boost::asynchronous::any_interruptible > >::type
 {
-    boost::shared_ptr<boost::promise<decltype(func())> > p = boost::make_shared<boost::promise<decltype(func())> >();
-    boost::future<decltype(func())> fu(p->get_future());
+    boost::promise<decltype(func())> p;
+    boost::future<decltype(func())> fu(p.get_future());
 
     struct post_helper
     {
-        void operator()(boost::shared_ptr<boost::promise<decltype(func())> > sp, F& f)const
+        void operator()(boost::promise<decltype(func())>& sp, F& f)const
         {
-            try{sp->set_value(f());}
+            try{sp.set_value(f());}
             catch(boost::thread_interrupted&)
             {
                 boost::asynchronous::task_aborted_exception ta;
-                sp->set_exception(boost::copy_exception(ta));
+                sp.set_exception(boost::copy_exception(ta));
             }
-            catch(...){sp->set_exception(boost::current_exception());}
+            catch(...){sp.set_exception(boost::current_exception());}
         }
     };
 
-    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper,S> fct (p,std::move(func));
+    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper,S> fct (std::move(p),std::move(func));
     typename boost::asynchronous::job_traits<typename S::job_type>::wrapper_type w(std::move(fct));
     w.set_name(task_name);
     return std::make_tuple(std::move(fu),scheduler.interruptible_post(std::move(w),prio));
@@ -363,24 +364,24 @@ auto interruptible_post_future(S const& scheduler, F const& func,
     -> typename boost::enable_if< boost::is_same<void,decltype(func())>,
                                   std::tuple<boost::future<void>,boost::asynchronous::any_interruptible > >::type
 {
-    boost::shared_ptr<boost::promise<void> > p= boost::make_shared<boost::promise<void> >();
-    boost::future<void> fu(p->get_future());
+    boost::promise<void> p;
+    boost::future<void> fu(p.get_future());
 
     struct post_helper
     {
-        void operator()(boost::shared_ptr<boost::promise<decltype(func())> > sp, F& f)const
+        void operator()(boost::promise<decltype(func())>& sp, F& f)const
         {
-            try{f();sp->set_value();}
+            try{f();sp.set_value();}
             catch(boost::thread_interrupted&)
             {
                 boost::asynchronous::task_aborted_exception ta;
-                sp->set_exception(boost::copy_exception(ta));
+                sp.set_exception(boost::copy_exception(ta));
             }
-            catch(...){sp->set_exception(boost::current_exception());}
+            catch(...){sp.set_exception(boost::current_exception());}
         }
     };
 
-    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper,S> fct (p,std::move(func));
+    detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper,S> fct (std::move(p),std::move(func));
     typename boost::asynchronous::job_traits<typename S::job_type>::wrapper_type w(std::move(fct));
     w.set_name(task_name);
     return std::make_tuple(std::move(fu),scheduler.interruptible_post(std::move(w),prio));
@@ -424,7 +425,7 @@ namespace detail
             callback_fct(Work const& w,boost::future<typename Work::result_type> fu)
                 :boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type()
                 ,m_work(w)
-                ,m_fu(boost::make_shared<boost::future<typename Work::result_type> >(std::move(fu))){}
+                ,m_fu(std::move(fu)){}
             // TODO type_erasure problem?
             callback_fct(callback_fct&& rhs)noexcept :m_work(std::move(rhs.m_work)),m_fu(std::move(rhs.m_fu)){}
             callback_fct& operator= (callback_fct&& rhs)noexcept
@@ -435,8 +436,8 @@ namespace detail
             }
             callback_fct(callback_fct const& rhs)noexcept
                 :boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type()
-                ,m_work(rhs.m_work)
-                ,m_fu(rhs.m_fu){}
+                ,m_work(std::move((const_cast<callback_fct&>(rhs)).m_work))
+                ,m_fu(std::move((const_cast<callback_fct&>(rhs)).m_fu)){}
             callback_fct& operator= (callback_fct const& rhs)noexcept
             {
                 std::swap(m_work,rhs.m_work);
@@ -447,12 +448,12 @@ namespace detail
             //callback_fct& operator =( const callback_fct& ) = delete;
             //callback_fct ( const callback_fct& ) = delete;
             
-            void operator()()const
+            void operator()()
             {
-                m_work(std::move(*m_fu));
+                m_work(std::move(m_fu));
             }
             Work m_work;
-            boost::shared_ptr<boost::future<typename Work::result_type> > m_fu;
+            boost::future<typename Work::result_type> m_fu;
         };
 
         void operator()()
@@ -551,7 +552,7 @@ namespace detail
             callback_fct(Work const& w,boost::future<typename Work::result_type> fu)
                 :boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type()
                 ,m_work(w)
-                ,m_fu(boost::make_shared<boost::future<typename Work::result_type> >(std::move(fu))){}
+                ,m_fu(std::move(fu)){}
             callback_fct(callback_fct&& rhs)noexcept:m_work(std::move(rhs.m_work)),m_fu(std::move(rhs.m_fu)){}
             callback_fct& operator= (callback_fct&& rhs)noexcept
             {
@@ -561,20 +562,20 @@ namespace detail
             }
             callback_fct(callback_fct const& rhs)noexcept
                 :boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type()
-                ,m_work(rhs.m_work)
-                ,m_fu(rhs.m_fu){}
+                ,m_work(std::move((const_cast<callback_fct&>(rhs)).m_work))
+                ,m_fu(std::move((const_cast<callback_fct&>(rhs)).m_fu)){}
             callback_fct& operator= (callback_fct const& rhs)noexcept
             {
                 std::swap(m_work,rhs.m_work);
                 std::swap(m_fu,rhs.m_fu);
                 return *this;
             }
-            void operator()()const
+            void operator()()
             {
-                m_work(std::move(*m_fu));
+                m_work(std::move(m_fu));
             }
             Work m_work;
-            boost::shared_ptr<boost::future<typename Work::result_type> > m_fu;
+            boost::future<typename Work::result_type> m_fu;
         };
         std::string get_task_name()const
         {
@@ -669,7 +670,7 @@ namespace detail
                         move_task_helper<typename Func::return_type,F1,F2>& work,
                         boost::shared_ptr<boost::promise<typename Func::return_type> > work_result)const
         {
-            auto cont = (*work.m_task.get())();
+            auto cont = work.m_task();
             //cont.on_done(detail::promise_mover<typename Func::return_type>(res));
             cont.on_done([work,scheduler,work_result,task_name,cb_prio](std::tuple<boost::future<typename Func::return_type> >&& continuation_res)
                 {
@@ -715,7 +716,7 @@ namespace detail
                         move_task_helper<typename Func::return_type,F1,F2>& work,
                         boost::shared_ptr<boost::promise<typename Func::return_type> > work_result)const
         {
-            auto cont = (*work.m_task.get())();
+            auto cont = work.m_task();
             //cont.on_done(detail::promise_mover<typename Func::return_type>(res));
             cont.on_done([work,scheduler,work_result,task_name,cb_prio](std::tuple<boost::future<typename Func::return_type> >&& continuation_res)
                 {
@@ -789,23 +790,23 @@ namespace detail
             callback_fct(Work const& w,boost::future<typename Work::result_type> fu)
                 :boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type()
                 ,m_work(w)
-                ,m_fu(boost::make_shared<boost::future<typename Work::result_type> >(std::move(fu))){}
+                ,m_fu(std::move(fu)){}
             callback_fct(callback_fct const& rhs)noexcept
                 :boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type()
-                ,m_work(rhs.m_work)
-                ,m_fu(rhs.m_fu){}
+                ,m_work(std::move((const_cast<callback_fct&>(rhs)).m_work))
+                ,m_fu(std::move((const_cast<callback_fct&>(rhs)).m_fu)){}
             callback_fct& operator= (callback_fct const& rhs)noexcept
             {
                 std::swap(m_work,rhs.m_work);
                 std::swap(m_fu,rhs.m_fu);
                 return *this;
             }
-            void operator()()const
+            void operator()()
             {
-                m_work(std::move(*m_fu));
+                m_work(std::move(m_fu));
             }
             Work m_work;
-            boost::shared_ptr<boost::future<typename Work::result_type> > m_fu;
+            boost::future<typename Work::result_type> m_fu;
         };
 
         void operator()()
@@ -868,23 +869,23 @@ namespace detail
             callback_fct(Work const& w,boost::future<typename Work::result_type> fu)
                 :boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type()
                 ,m_work(w)
-                ,m_fu(boost::make_shared<boost::future<typename Work::result_type> >(std::move(fu))){}
+                ,m_fu(std::move(fu)){}
             callback_fct(callback_fct const& rhs)noexcept
                 :boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type()
-                ,m_work(rhs.m_work)
-                ,m_fu(rhs.m_fu){}
+                ,m_work(std::move((const_cast<callback_fct&>(rhs)).m_work))
+                ,m_fu(std::move((const_cast<callback_fct&>(rhs)).m_fu)){}
             callback_fct& operator= (callback_fct const& rhs)noexcept
             {
                 std::swap(m_work,rhs.m_work);
                 std::swap(m_fu,rhs.m_fu);
                 return *this;
             }
-            void operator()()const
+            void operator()()
             {
-                m_work(std::move(*m_fu));
+                m_work(std::move(m_fu));
             }
             Work m_work;
-            boost::shared_ptr<boost::future<typename Work::result_type> > m_fu;
+            boost::future<typename Work::result_type> m_fu;
         };
         std::string get_task_name()const
         {
@@ -974,39 +975,17 @@ auto post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_schedule
     {
         void operator()(move_task_helper<void,F1,F2>& work,boost::promise<void>& res)const
         {
-            (*work.m_task.get())();
+            work.m_task();
             res.set_value();
         }
     };
-
-    // we make a copy of the callback in a shared_ptr to be sure it gets destroyed in the
-    // originator thread. The shared_ptr is then "moved" to be sure the last copy is not in the worker thread
-#ifndef BOOST_NO_RVALUE_REFERENCES
-    boost::shared_ptr<F2> cb_ptr = boost::make_shared<F2>(std::move(cb_func));
-    boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(std::move(func));
-    move_task_helper<void,F1,F2> moved_work(std::move(func_ptr),std::move(cb_ptr));
+    move_task_helper<void,F1,F2> moved_work(std::move(func),std::move(cb_func));
     // create a task which calls passed task, then post the callback
     detail::post_callback_helper_base<move_task_helper<void,F1,F2>,S2,S1,post_helper,detail::cb_helper > task_then_cb (
                 std::move(moved_work), weak_cb_scheduler,task_name,cb_prio);
     typename boost::asynchronous::job_traits<typename S1::job_type>::wrapper_type w(std::move(task_then_cb));
     w.set_name(task_name);
     scheduler.post(std::move(w),post_prio);
-#else
-    boost::shared_ptr<F2> cb_ptr = boost::make_shared<F2>(cb_func);
-    boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(func);
-    move_task_helper<void,F1,F2> moved_work(func_ptr,cb_ptr);
-    // create a task which calls passed task, then post the callback
-    detail::post_callback_helper_base<move_task_helper<void,F1,F2>,S2,S1,post_helper,detail::cb_helper > task_then_cb (
-                moved_work, weak_cb_scheduler,task_name,cb_prio);
-    if (task_name.empty())
-    {
-        scheduler.post(task_then_cb);
-    }
-    else
-    {
-        scheduler.post_log(task_then_cb,task_name);
-    }
-#endif
 }
 
 template <class F1, class S1,class F2, class S2>
@@ -1026,44 +1005,17 @@ auto post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_schedule
     struct post_helper
     {
         void operator()(move_task_helper<decltype(func()),F1,F2>& work,boost::promise<decltype(func())>& res)const
-        {
-#ifndef BOOST_NO_RVALUE_REFERENCES   
-            res.set_value(std::move((*work.m_task.get())()));
-#else
-            res.set_value((*work.m_task.get())());
-#endif
+        { 
+            res.set_value(std::move(work.m_task()));
         }
     };
-    // we make a copy of the callback in a shared_ptr to be sure it gets destroyed in the
-    // originator thread. The shared_ptr is then "moved" to be sure the last copy is not in the worker thread
-
-#ifndef BOOST_NO_RVALUE_REFERENCES
-    boost::shared_ptr<F2> cb_ptr = boost::make_shared<F2>(std::move(cb_func));
-    boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(std::move(func));
-    move_task_helper<decltype(func()),F1,F2> moved_work(std::move(func_ptr),std::move(cb_ptr));
+    move_task_helper<decltype(func()),F1,F2> moved_work(std::move(func),std::move(cb_func));
     // create a task which calls passed task, then post the callback
     detail::post_callback_helper_base<move_task_helper<decltype(func()),F1,F2>,S2,S1,post_helper,detail::cb_helper > task_then_cb (
                 std::move(moved_work), weak_cb_scheduler,task_name,cb_prio);
     typename boost::asynchronous::job_traits<typename S1::job_type>::wrapper_type w(std::move(task_then_cb));
     w.set_name(task_name);
     scheduler.post(std::move(w),post_prio);
-#else
-    boost::shared_ptr<F2> cb_ptr = boost::make_shared<F2>(cb_func);
-    boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(func);
-    move_task_helper<decltype(func()),F1,F2> moved_work(func_ptr,cb_ptr);
-    // create a task which calls passed task, then post the callback
-    detail::post_callback_helper_base<move_task_helper<decltype(func()),F1,F2>,S2,S1,post_helper, detail::cb_helper > task_then_cb (
-                moved_work, weak_cb_scheduler,task_name,cb_prio);
-
-    if (task_name.empty())
-    {
-        scheduler.post(task_then_cb);
-    }
-    else
-    {
-        scheduler.post_log(task_then_cb,task_name);
-    }
-#endif
 }
 
 // version for continuations
@@ -1076,47 +1028,13 @@ auto post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_schedule
                    const std::string& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
     -> typename boost::enable_if< has_is_continuation_task<decltype(func())>,void >::type
 {
-//    // abstract away the return value of work functor
-//    struct post_helper
-//    {
-//        void operator()(move_task_helper<typename decltype(func())::return_type,F1,F2>& work,boost::shared_ptr<boost::promise<typename decltype(func())::return_type> > res)const
-//        {
-//            auto cont = (*work.m_task.get())();
-//            cont.on_done(detail::promise_mover<typename decltype(func())::return_type>(res));
-//            boost::asynchronous::any_continuation ac(cont);
-//            boost::asynchronous::get_continuations().push_front(ac);
-//        }
-//    };
-    // we make a copy of the callback in a shared_ptr to be sure it gets destroyed in the
-    // originator thread. The shared_ptr is then "moved" to be sure the last copy is not in the worker thread
-
-#ifndef BOOST_NO_RVALUE_REFERENCES
-    boost::shared_ptr<F2> cb_ptr = boost::make_shared<F2>(std::move(cb_func));
-    boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(std::move(func));
-    move_task_helper<typename decltype(func())::return_type,F1,F2> moved_work(std::move(func_ptr),std::move(cb_ptr));
+    move_task_helper<typename decltype(func())::return_type,F1,F2> moved_work(std::move(func),std::move(cb_func));
     // create a task which calls passed task, then post the callback
     detail::post_callback_helper_continuation<decltype(func()),F1,F2,move_task_helper<typename decltype(func())::return_type,F1,F2>,S2,S1,detail::cb_helper > task_then_cb (
                 std::move(moved_work), weak_cb_scheduler,task_name,cb_prio);
     typename boost::asynchronous::job_traits<typename S1::job_type>::wrapper_type w(std::move(task_then_cb));
     w.set_name(task_name);
     scheduler.post(std::move(w),post_prio);
-#else
-    boost::shared_ptr<F2> cb_ptr = boost::make_shared<F2>(cb_func);
-    boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(func);
-    move_task_helper<typename decltype(func())::return_type,F1,F2> moved_work(func_ptr,cb_ptr);
-    // create a task which calls passed task, then post the callback
-    detail::post_callback_helper_continuation<decltype(func()),F1,F2,move_task_helper<typename decltype(func())::return_type,F1,F2>,S2,S1,detail::cb_helper > task_then_cb (
-                moved_work, weak_cb_scheduler,task_name,cb_prio);
-
-    if (task_name.empty())
-    {
-        scheduler.post(task_then_cb);
-    }
-    else
-    {
-        scheduler.post_log(task_then_cb,task_name);
-    }
-#endif
 }
 
 //TODO macro...
@@ -1134,38 +1052,17 @@ auto interruptible_post_callback(S1 const& scheduler,F1 const& func,S2 const& we
     {
         void operator()(move_task_helper<void,F1,F2>& work,boost::promise<void>& res)const
         {
-            (*work.m_task.get())();
+            work.m_task();
             res.set_value();
         }
     };
-    // we make a copy of the callback in a shared_ptr to be sure it gets destroyed in the
-    // originator thread. The shared_ptr is then "moved" to be sure the last copy is not in the worker thread
-#ifndef BOOST_NO_RVALUE_REFERENCES
-    boost::shared_ptr<F2> cb_ptr = boost::make_shared<F2>(std::move(cb_func));
-    boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(std::move(func));
-    move_task_helper<void,F1,F2> moved_work(std::move(func_ptr),std::move(cb_ptr));
+    move_task_helper<void,F1,F2> moved_work(std::move(func),std::move(cb_func));
     // create a task which calls passed task, then post the callback
     detail::post_callback_helper_base<move_task_helper<void,F1,F2>,S2,S1,post_helper,detail::cb_helper > task_then_cb (
                 std::move(moved_work), weak_cb_scheduler,task_name,cb_prio);
     typename boost::asynchronous::job_traits<typename S1::job_type>::wrapper_type w(std::move(task_then_cb));
     w.set_name(task_name);
     return scheduler.interruptible_post(std::move(w),post_prio);
-#else
-    boost::shared_ptr<F2> cb_ptr = boost::make_shared<F2>(cb_func);
-    boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(func);
-    move_task_helper<void,F1,F2> moved_work(func_ptr,cb_ptr);
-    // create a task which calls passed task, then post the callback
-    detail::post_callback_helper_base<move_task_helper<void,F1,F2>,S2,S1,post_helper,detail::cb_helper > task_then_cb (
-                moved_work, weak_cb_scheduler,task_name,cb_prio);
-    if (task_name.empty())
-    {
-        return scheduler.interruptible_post(task_then_cb);
-    }
-    else
-    {
-        return scheduler.interruptible_post_log(task_then_cb,task_name);
-    }
-#endif
 }
 
 template <class F1, class S1,class F2, class S2>
@@ -1185,44 +1082,18 @@ auto interruptible_post_callback(S1 const& scheduler,F1 const& func,S2 const& we
     struct post_helper
     {
         void operator()(move_task_helper<decltype(func()),F1,F2>& work,boost::promise<decltype(func())>& res)const
-        {
-#ifndef BOOST_NO_RVALUE_REFERENCES   
-            res.set_value(std::move((*work.m_task.get())()));
-#else
-            res.set_value((*work.m_task.get())());
-#endif
+        {  
+            res.set_value(std::move(work.m_task()));
         }
     };
-    // we make a copy of the callback in a shared_ptr to be sure it gets destroyed in the
-    // originator thread. The shared_ptr is then "moved" to be sure the last copy is not in the worker thread
 
-#ifndef BOOST_NO_RVALUE_REFERENCES
-    boost::shared_ptr<F2> cb_ptr = boost::make_shared<F2>(std::move(cb_func));
-    boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(std::move(func));
-    move_task_helper<decltype(func()),F1,F2> moved_work(std::move(func_ptr),std::move(cb_ptr));
+    move_task_helper<decltype(func()),F1,F2> moved_work(std::move(func),std::move(cb_func));
     // create a task which calls passed task, then post the callback
     detail::post_callback_helper_base<move_task_helper<decltype(func()),F1,F2>,S2,S1,post_helper,detail::cb_helper > task_then_cb (
                 std::move(moved_work), weak_cb_scheduler,task_name,cb_prio);
     typename boost::asynchronous::job_traits<typename S1::job_type>::wrapper_type w(std::move(task_then_cb));
     w.set_name(task_name);
     return scheduler.interruptible_post(std::move(w),post_prio);
-#else
-    boost::shared_ptr<F2> cb_ptr = boost::make_shared<F2>(cb_func);
-    boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(func);
-    move_task_helper<decltype(func()),F1,F2> moved_work(func_ptr,cb_ptr);
-    // create a task which calls passed task, then post the callback
-    detail::post_callback_helper_base<move_task_helper<decltype(func()),F1,F2>,S2,S1,post_helper,detail::cb_helper > task_then_cb (
-                moved_work, weak_cb_scheduler,task_name,cb_prio);
-
-    if (task_name.empty())
-    {
-        return scheduler.interruptible_post(task_then_cb);
-    }
-    else
-    {
-        return scheduler.interruptible_post_log(task_then_cb,task_name);
-    }
-#endif
 }
 
 // version for continuations
@@ -1235,47 +1106,13 @@ auto interruptible_post_callback(S1 const& scheduler,F1 const& func,S2 const& we
                    const std::string& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
     -> typename boost::enable_if< has_is_continuation_task<decltype(func())>,boost::asynchronous::any_interruptible >::type
 {
-//    // abstract away the return value of work functor
-//    struct post_helper
-//    {
-//        void operator()(move_task_helper<typename decltype(func())::return_type,F1,F2>& work,boost::shared_ptr<boost::promise<typename decltype(func())::return_type> > res)const
-//        {
-//            auto cont = (*work.m_task.get())();
-//            cont.on_done(detail::promise_mover<typename decltype(func())::return_type>(res));
-//            boost::asynchronous::any_continuation ac(cont);
-//            boost::asynchronous::get_continuations().push_front(ac);
-//        }
-//    };
-    // we make a copy of the callback in a shared_ptr to be sure it gets destroyed in the
-    // originator thread. The shared_ptr is then "moved" to be sure the last copy is not in the worker thread
-
-#ifndef BOOST_NO_RVALUE_REFERENCES
-    boost::shared_ptr<F2> cb_ptr = boost::make_shared<F2>(std::move(cb_func));
-    boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(std::move(func));
-    move_task_helper<typename decltype(func())::return_type,F1,F2> moved_work(std::move(func_ptr),std::move(cb_ptr));
+    move_task_helper<typename decltype(func())::return_type,F1,F2> moved_work(std::move(func),std::move(cb_func));
     // create a task which calls passed task, then post the callback
     detail::post_callback_helper_continuation<decltype(func()),F1,F2,move_task_helper<typename decltype(func())::return_type,F1,F2>,S2,S1,detail::cb_helper > task_then_cb (
                 std::move(moved_work), weak_cb_scheduler,task_name,cb_prio);
     typename boost::asynchronous::job_traits<typename S1::job_type>::wrapper_type w(std::move(task_then_cb));
     w.set_name(task_name);
     return scheduler.interruptible_post(std::move(w),post_prio);
-#else
-    boost::shared_ptr<F2> cb_ptr = boost::make_shared<F2>(cb_func);
-    boost::shared_ptr<F1> func_ptr = boost::make_shared<F1>(func);
-    move_task_helper<typename decltype(func())::return_type,F1,F2> moved_work(func_ptr,cb_ptr);
-    // create a task which calls passed task, then post the callback
-    detail::post_callback_helper_continuation<decltype(func()),F1,F2,move_task_helper<typename decltype(func())::return_type,F1,F2>,S2,S1,detail::cb_helper > task_then_cb (
-                moved_work, weak_cb_scheduler,task_name,cb_prio);
-
-    if (task_name.empty())
-    {
-        return scheduler.interruptible_post(task_then_cb);
-    }
-    else
-    {
-        return scheduler.interruptible_post_log(task_then_cb,task_name);
-    }
-#endif
 }
 
 }}
