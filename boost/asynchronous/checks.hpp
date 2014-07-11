@@ -25,7 +25,7 @@ template <class Func, class T,class R>
 struct call_if_alive
 {
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    call_if_alive(Func&& f, boost::weak_ptr<T> tracked):m_wrapped(std::forward<Func>(f)),m_tracked(tracked){}
+    call_if_alive(Func f, boost::weak_ptr<T> tracked):m_wrapped(std::move(f)),m_tracked(tracked){}
 #else
     call_if_alive(Func const& f, boost::weak_ptr<T> tracked):m_wrapped(f),m_tracked(tracked){}
 #endif
@@ -34,8 +34,8 @@ struct call_if_alive
         , m_tracked(std::move(rhs.m_tracked))
     {}
     call_if_alive(call_if_alive const& rhs)noexcept
-        : m_wrapped(rhs.m_wrapped)
-        , m_tracked(rhs.m_tracked)
+        : m_wrapped(std::move(const_cast<call_if_alive&>(rhs).m_wrapped))
+        , m_tracked(std::move(const_cast<call_if_alive&>(rhs).m_tracked))
     {}
     call_if_alive& operator= (call_if_alive&& rhs)noexcept
     {
@@ -45,8 +45,8 @@ struct call_if_alive
     }
     call_if_alive& operator= (call_if_alive const& rhs)noexcept
     {
-        m_wrapped = rhs.m_wrapped;
-        m_tracked = rhs.m_tracked;
+        std::swap(m_wrapped,std::move(const_cast<call_if_alive&>(rhs).m_wrapped));
+        std::swap(m_tracked,std::move(const_cast<call_if_alive&>(rhs).m_tracked));
         return *this;
     }
     template <typename... Arg>
@@ -65,7 +65,7 @@ template <class Func, class T>
 struct call_if_alive<Func,T,void>
 {
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    call_if_alive(Func&& f, boost::weak_ptr<T> tracked):m_wrapped(std::forward<Func>(f)),m_tracked(tracked){}
+    call_if_alive(Func f, boost::weak_ptr<T> tracked):m_wrapped(std::move(f)),m_tracked(tracked){}
 #else
     call_if_alive(Func const& f, boost::weak_ptr<T> tracked):m_wrapped(f),m_tracked(tracked){}
 #endif
@@ -74,8 +74,8 @@ struct call_if_alive<Func,T,void>
         , m_tracked(std::move(rhs.m_tracked))
     {}
     call_if_alive(call_if_alive const& rhs)noexcept
-        : m_wrapped(rhs.m_wrapped)
-        , m_tracked(rhs.m_tracked)
+        : m_wrapped(std::move(const_cast<call_if_alive&>(rhs).m_wrapped))
+        , m_tracked(std::move(const_cast<call_if_alive&>(rhs).m_tracked))
     {}
     call_if_alive& operator= (call_if_alive&& rhs)noexcept
     {
@@ -85,8 +85,8 @@ struct call_if_alive<Func,T,void>
     }
     call_if_alive& operator= (call_if_alive const& rhs)noexcept
     {
-        m_wrapped = rhs.m_wrapped;
-        m_tracked = rhs.m_tracked;
+        std::swap(m_wrapped,std::move(const_cast<call_if_alive&>(rhs).m_wrapped));
+        std::swap(m_tracked,std::move(const_cast<call_if_alive&>(rhs).m_tracked));
         return *this;
     }
     template <typename... Arg>
@@ -119,8 +119,8 @@ struct call_if_alive_exec
         , m_tracked(std::move(rhs.m_tracked))
     {}
     call_if_alive_exec(call_if_alive_exec const& rhs)noexcept
-        : m_wrapped(rhs.m_wrapped)
-        , m_tracked(rhs.m_tracked)
+        : m_wrapped(std::move(const_cast<call_if_alive_exec&>(rhs).m_wrapped))
+        , m_tracked(std::move(const_cast<call_if_alive_exec&>(rhs).m_tracked))
     {}
     call_if_alive_exec& operator= (call_if_alive_exec&& rhs)noexcept
     {
@@ -130,8 +130,8 @@ struct call_if_alive_exec
     }
     call_if_alive_exec& operator= (call_if_alive_exec const& rhs)noexcept
     {
-        m_wrapped = rhs.m_wrapped;
-        m_tracked = rhs.m_tracked;
+        std::swap(m_wrapped,std::move(const_cast<call_if_alive_exec&>(rhs).m_wrapped));
+        std::swap(m_tracked,std::move(const_cast<call_if_alive_exec&>(rhs).m_tracked));
         return *this;
     }
     R operator()()
@@ -160,8 +160,8 @@ struct call_if_alive_exec<Func,T,R,typename ::boost::enable_if<boost::asynchrono
         , m_tracked(std::move(rhs.m_tracked))
     {}
     call_if_alive_exec(call_if_alive_exec const& rhs)noexcept
-        : m_wrapped(rhs.m_wrapped)
-        , m_tracked(rhs.m_tracked)
+        : m_wrapped(std::move(const_cast<call_if_alive_exec&>(rhs).m_wrapped))
+        , m_tracked(std::move(const_cast<call_if_alive_exec&>(rhs).m_tracked))
     {}
     call_if_alive_exec& operator= (call_if_alive_exec&& rhs)noexcept
     {
@@ -171,8 +171,8 @@ struct call_if_alive_exec<Func,T,R,typename ::boost::enable_if<boost::asynchrono
     }
     call_if_alive_exec& operator= (call_if_alive_exec const& rhs)noexcept
     {
-        m_wrapped = rhs.m_wrapped;
-        m_tracked = rhs.m_tracked;
+        std::swap(m_wrapped,std::move(const_cast<call_if_alive_exec&>(rhs).m_wrapped));
+        std::swap(m_tracked,std::move(const_cast<call_if_alive_exec&>(rhs).m_tracked));
         return *this;
     }
     R operator()()
@@ -208,15 +208,15 @@ struct call_if_alive_exec<Func,T,R,typename ::boost::enable_if<boost::asynchrono
 
 #ifndef BOOST_NO_RVALUE_REFERENCES
 template <class F, class T,class R=void>
-call_if_alive<F,T,R> check_alive(F&& func, boost::shared_ptr<T> tracked)
+call_if_alive<F,T,R> check_alive(F func, boost::shared_ptr<T> tracked)
 {
-    call_if_alive<F,T,R> wrapped(std::forward<F>(func),boost::weak_ptr<T>(tracked));
+    call_if_alive<F,T,R> wrapped(std::move(func),boost::weak_ptr<T>(tracked));
     return std::move(wrapped);
 }
 template <class F, class T,class R=void>
-call_if_alive<F,T,R> check_alive(F&& func, boost::weak_ptr<T> tracked)
+call_if_alive<F,T,R> check_alive(F func, boost::weak_ptr<T> tracked)
 {
-    call_if_alive<F,T,R> wrapped(std::forward<F>(func),tracked);
+    call_if_alive<F,T,R> wrapped(std::move(func),tracked);
     return std::move(wrapped);
 }
 #else
@@ -237,15 +237,15 @@ call_if_alive<F,T,R> check_alive(F const& func, boost::weak_ptr<T> tracked)
 
 #ifndef BOOST_NO_RVALUE_REFERENCES
 template <class F, class T>
-auto check_alive_before_exec(F&& func, boost::shared_ptr<T> tracked) -> call_if_alive_exec<F,T,decltype(func())>
+auto check_alive_before_exec(F func, boost::shared_ptr<T> tracked) -> call_if_alive_exec<F,T,decltype(func())>
 {
-    call_if_alive_exec<F,T,decltype(func())> wrapped(std::forward<F>(func),boost::weak_ptr<T>(tracked));
+    call_if_alive_exec<F,T,decltype(func())> wrapped(std::move(func),boost::weak_ptr<T>(tracked));
     return std::move(wrapped);
 }
 template <class F, class T>
-auto check_alive_before_exec(F&& func, boost::weak_ptr<T> tracked) -> call_if_alive_exec<F,T,decltype(func())>
+auto check_alive_before_exec(F func, boost::weak_ptr<T> tracked) -> call_if_alive_exec<F,T,decltype(func())>
 {
-    call_if_alive_exec<F,T,decltype(func())> wrapped(std::forward<F>(func),tracked);
+    call_if_alive_exec<F,T,decltype(func())> wrapped(std::move(func),tracked);
     return std::move(wrapped);
 }
 #else
