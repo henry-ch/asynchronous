@@ -256,47 +256,47 @@ private:
         lockable_shared_scheduler(std::vector<boost::asynchronous::any_shared_scheduler<job_type> >&& schedulers)
             : m_schedulers(std::forward<std::vector<boost::asynchronous::any_shared_scheduler<job_type> > >(schedulers)){}
 #ifndef BOOST_NO_RVALUE_REFERENCES
-        void post(job_type&& job)
+        void post(job_type job)
         {
-            post(std::forward<job_type>(job),0);
+            post(std::move(job),0);
         }
-        void post(job_type&& job,std::size_t priority)
+        void post(job_type job,std::size_t priority)
         {
             if (!m_schedulers.empty())
                 ((m_schedulers[this->find_position(priority,m_schedulers.size())])).post(std::forward<job_type>(job));
         }
-        void post(boost::asynchronous::any_callable&& job,const std::string& name)
+        void post(boost::asynchronous::any_callable job,const std::string& name)
         {
-            typename boost::asynchronous::job_traits<job_type>::wrapper_type w(std::forward<boost::asynchronous::any_callable>(job));
+            typename boost::asynchronous::job_traits<job_type>::wrapper_type w(std::move(job));
             w.set_name(name);
             post(std::move(w));
         }
-        void post(boost::asynchronous::any_callable&& job,const std::string& name,std::size_t priority)
+        void post(boost::asynchronous::any_callable job,const std::string& name,std::size_t priority)
         {
-            typename boost::asynchronous::job_traits<job_type>::wrapper_type w(std::forward<boost::asynchronous::any_callable>(job));
+            typename boost::asynchronous::job_traits<job_type>::wrapper_type w(std::move(job));
             w.set_name(name);
             post(std::move(w),priority);
         }
-        boost::asynchronous::any_interruptible interruptible_post(job_type&& job)
+        boost::asynchronous::any_interruptible interruptible_post(job_type job)
         {
-            return interruptible_post(std::forward<job_type>(job),0);
+            return interruptible_post(std::move(job),0);
         }
-        boost::asynchronous::any_interruptible interruptible_post(job_type&& job,std::size_t priority)
+        boost::asynchronous::any_interruptible interruptible_post(job_type job,std::size_t priority)
         {
             if (m_schedulers.empty())
                 return boost::asynchronous::any_interruptible();
-            return (m_schedulers[this->find_position(priority,m_schedulers.size())]).interruptible_post(std::forward<job_type>(job));
+            return (m_schedulers[this->find_position(priority,m_schedulers.size())]).interruptible_post(std::move(job));
         }
-        boost::asynchronous::any_interruptible interruptible_post(boost::asynchronous::any_callable&& job,const std::string& name)
+        boost::asynchronous::any_interruptible interruptible_post(boost::asynchronous::any_callable job,const std::string& name)
         {
-            typename boost::asynchronous::job_traits<job_type>::wrapper_type w(std::forward<boost::asynchronous::any_callable>(job));
+            typename boost::asynchronous::job_traits<job_type>::wrapper_type w(std::move(job));
             w.set_name(name);
             return interruptible_post(std::move(w));
         }
-        boost::asynchronous::any_interruptible interruptible_post(boost::asynchronous::any_callable&& job,const std::string& name,
+        boost::asynchronous::any_interruptible interruptible_post(boost::asynchronous::any_callable job,const std::string& name,
                                                                std::size_t priority)
         {
-            typename boost::asynchronous::job_traits<job_type>::wrapper_type w(std::forward<boost::asynchronous::any_callable>(job));
+            typename boost::asynchronous::job_traits<job_type>::wrapper_type w(std::move(job));
             w.set_name(name);
             return interruptible_post(std::move(w),priority);
         }

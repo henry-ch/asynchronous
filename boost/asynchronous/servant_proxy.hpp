@@ -322,7 +322,7 @@ public:
         bool ok = s.timed_wait(boost::posix_time::milliseconds(max_create_wait_ms));
         if(ok)
         {
-            m_servant = s.get();
+            m_servant = std::move(s.get());
         }
         else
         {
@@ -357,9 +357,9 @@ public:
         m_proxy.reset();
     }
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    void post(callable_type&& job, std::size_t prio=0) const
+    void post(callable_type job, std::size_t prio=0) const
     {
-        m_proxy.post(std::forward<callable_type>(job),prio);
+        m_proxy.post(std::move(job),prio);
     }
 #else
     void post(callable_type job, std::size_t prio=0) const
@@ -440,7 +440,7 @@ private:
         bool ok = fu.timed_wait(boost::posix_time::milliseconds(max_create_wait_ms));
         if(ok)
         {
-            m_servant = fu.get();
+            m_servant = std::move(fu.get());
         }
         else
         {

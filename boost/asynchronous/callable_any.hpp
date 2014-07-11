@@ -35,14 +35,37 @@ typedef ::boost::mpl::vector<
 > any_callable_concept;
 typedef boost::type_erasure::any<any_callable_concept> any_callable_helper;
 
-struct any_callable: public boost::asynchronous::any_callable_helper
+struct any_callable
 {
-    any_callable(){}
+    any_callable():m_inner(){}
     template <class T>
-    any_callable(T t):any_callable_helper(std::move(t)){}
+    any_callable(T t):m_inner(std::move(t)){}
+    any_callable(any_callable&& rhs)noexcept
+        : m_inner(std::forward<boost::asynchronous::any_callable_helper>(rhs.m_inner))
+    {}
+    any_callable& operator=(any_callable&& rhs)
+    {
+        std::swap(m_inner,rhs.m_inner);
+        return *this;
+    }
+    any_callable(any_callable const& rhs)noexcept
+        : m_inner(std::move(const_cast<any_callable&>(rhs).m_inner))
+    {}
+    any_callable& operator=(any_callable const& rhs)
+    {
+        m_inner= std::move(const_cast<any_callable&>(rhs).m_inner);
+        return *this;
+    }
+    void operator()()
+    {
+        m_inner();
+    }
+
     // dummies
     typedef boost::archive::text_oarchive oarchive;
     typedef boost::archive::text_iarchive iarchive;
+private:
+    boost::asynchronous::any_callable_helper m_inner;
 };
 
 }} // boost::async

@@ -40,17 +40,17 @@ public:
         return m_queue->get_queue_size();
     }
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    void post(typename queue_type::job_type && job, std::size_t prio)
+    void post(typename queue_type::job_type job, std::size_t prio)
     {
         boost::asynchronous::job_traits<typename queue_type::job_type>::set_posted_time(job);
-        m_queue->push(std::forward<typename queue_type::job_type>(job),prio);
+        m_queue->push(std::move(job),prio);
     }
-    void post(typename queue_type::job_type && job)
+    void post(typename queue_type::job_type job)
     {
-        post(std::forward<typename queue_type::job_type>(job),0);
+        post(std::move(job),0);
     }
     
-    boost::asynchronous::any_interruptible interruptible_post(typename queue_type::job_type && job,
+    boost::asynchronous::any_interruptible interruptible_post(typename queue_type::job_type job,
                                                           std::size_t prio)
     {
         boost::shared_ptr<boost::asynchronous::detail::interrupt_state>
@@ -58,18 +58,18 @@ public:
         boost::shared_ptr<boost::promise<boost::thread*> > wpromise = boost::make_shared<boost::promise<boost::thread*> >();
         boost::asynchronous::job_traits<typename queue_type::job_type>::set_posted_time(job);
         boost::asynchronous::interruptible_job<typename queue_type::job_type,this_type>
-                ijob(std::forward<typename queue_type::job_type>(job),wpromise,state);
+                ijob(std::move(job),wpromise,state);
 
-        m_queue->push(std::forward<typename queue_type::job_type>(ijob),prio);
+        m_queue->push(std::move(ijob),prio);
 
         boost::future<boost::thread*> fu = wpromise->get_future();
         boost::asynchronous::interrupt_helper interruptible(std::move(fu),state);
 
         return boost::asynchronous::any_interruptible(interruptible);
     }
-    boost::asynchronous::any_interruptible interruptible_post(typename queue_type::job_type && job)
+    boost::asynchronous::any_interruptible interruptible_post(typename queue_type::job_type job)
     {
-        return interruptible_post(std::forward<typename queue_type::job_type>(job),0);
+        return interruptible_post(std::move(job),0);
     }
 #else
     void post(typename queue_type::job_type& job, std::size_t prio=0)

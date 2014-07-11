@@ -144,17 +144,17 @@ public:
         m_private_queue->push(boost::asynchronous::any_callable(ntask),std::numeric_limits<std::size_t>::max());
 #endif
     }
-    void post(typename queue_type::job_type && job, std::size_t prio)
+    void post(typename queue_type::job_type job, std::size_t prio)
     {
         boost::asynchronous::job_traits<typename queue_type::job_type>::set_posted_time(job);
-        this->m_queue->push(std::forward<typename queue_type::job_type>(job),prio);
+        this->m_queue->push(std::move(job),prio);
     }
-    void post(typename queue_type::job_type && job)
+    void post(typename queue_type::job_type job)
     {
-        post(std::forward<typename queue_type::job_type>(job),0);
+        post(std::move(job),0);
     }
 
-    boost::asynchronous::any_interruptible interruptible_post(typename queue_type::job_type && /*job*/,
+    boost::asynchronous::any_interruptible interruptible_post(typename queue_type::job_type /*job*/,
                                                           std::size_t /*prio*/)
     {
 //        boost::shared_ptr<boost::asynchronous::detail::interrupt_state>
@@ -173,16 +173,16 @@ public:
         //TODO
         return boost::asynchronous::any_interruptible();
     }
-    boost::asynchronous::any_interruptible interruptible_post(typename queue_type::job_type && job)
+    boost::asynchronous::any_interruptible interruptible_post(typename queue_type::job_type job)
     {
-        return interruptible_post(std::forward<typename queue_type::job_type>(job),0);
+        return interruptible_post(std::move(job),0);
     }
-    boost::asynchronous::any_interruptible interruptible_post(boost::asynchronous::any_callable&& /*job*/,const std::string& /*name*/)
+    boost::asynchronous::any_interruptible interruptible_post(boost::asynchronous::any_callable /*job*/,const std::string& /*name*/)
     {
         //TODO
         return boost::asynchronous::any_interruptible();
     }
-    boost::asynchronous::any_interruptible interruptible_post(boost::asynchronous::any_callable&& /*job*/,const std::string& /*name*/,
+    boost::asynchronous::any_interruptible interruptible_post(boost::asynchronous::any_callable /*job*/,const std::string& /*name*/,
                                                            std::size_t /*priority*/)
     {
         //TODO

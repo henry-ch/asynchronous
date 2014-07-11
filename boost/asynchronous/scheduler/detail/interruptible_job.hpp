@@ -48,6 +48,11 @@ private:
 template <class Job,class Scheduler>
 struct interruptible_job : public boost::asynchronous::job_traits<Job>::diagnostic_type
 {
+    interruptible_job(interruptible_job&& )=default;
+    interruptible_job(interruptible_job const& )=default;
+    interruptible_job& operator= (interruptible_job&& )=default;
+    interruptible_job& operator= (interruptible_job const& )=default;
+
 #ifndef BOOST_NO_RVALUE_REFERENCES
     interruptible_job(Job&& job,
 #else

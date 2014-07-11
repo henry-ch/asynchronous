@@ -58,8 +58,7 @@ template<class Q,
          boost::asynchronous::default_save_cpu_load<>
 #endif
          >
-class multiqueue_threadpool_scheduler: public boost::asynchronous::detail::multi_queue_scheduler_policy<Q,FindPosition>
-                                     , public boost::enable_shared_from_this<multiqueue_threadpool_scheduler<Q,FindPosition> >
+class multiqueue_threadpool_scheduler: public boost::asynchronous::detail::multi_queue_scheduler_policy<Q,FindPosition>                                     
 {
 public:
     typedef Q queue_type;

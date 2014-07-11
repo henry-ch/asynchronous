@@ -61,9 +61,9 @@ public:
         BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy_impl::post has empty scheduler");
         move_post(std::move(job),priority);
     }
-    void move_post(job_type&& job,std::size_t priority=0) const
+    void move_post(job_type job,std::size_t priority=0) const
     {
-        m_scheduler->post(std::forward<job_type>(job),priority);
+        m_scheduler->post(std::move(job),priority);
     }
     boost::asynchronous::any_interruptible interruptible_post(job_type job) const
     {
@@ -75,10 +75,10 @@ public:
         BOOST_ASSERT_MSG(m_scheduler,"scheduler_shared_proxy_impl::interruptible_post has empty scheduler");
         return move_interruptible_post(std::move(job),priority);
     }
-    boost::asynchronous::any_interruptible move_interruptible_post(job_type && job,
+    boost::asynchronous::any_interruptible move_interruptible_post(job_type job,
                                                                 std::size_t priority=0) const
     {
-       return m_scheduler->interruptible_post(std::forward<job_type>(job),priority);
+       return m_scheduler->interruptible_post(std::move(job),priority);
     }
 #else
     void post(job_type job) const
@@ -199,9 +199,9 @@ public:
     {
         move_post(std::move(job),priority);
     }
-    void move_post(job_type&& job,std::size_t priority=0) const
+    void move_post(job_type job,std::size_t priority=0) const
     {
-        m_impl->post(std::forward<job_type>(job),priority);
+        m_impl->post(std::move(job),priority);
     }
     boost::asynchronous::any_interruptible interruptible_post(job_type job) const
     {
@@ -211,10 +211,10 @@ public:
     {
         return move_interruptible_post(std::move(job),priority);
     }
-    boost::asynchronous::any_interruptible move_interruptible_post(job_type && job,
+    boost::asynchronous::any_interruptible move_interruptible_post(job_type job,
                                                                 std::size_t priority=0) const
     {
-       return m_impl->interruptible_post(std::forward<job_type>(job),priority);
+       return m_impl->interruptible_post(std::move(job),priority);
     }
 #else
     void post(job_type job) const

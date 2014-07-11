@@ -48,8 +48,8 @@ struct any_shared_scheduler_concept :
 #ifndef BOOST_NO_RVALUE_REFERENCES
     boost::asynchronous::has_post<void(JOB&&), boost::type_erasure::_a>,
     boost::asynchronous::has_post<void(JOB&&, std::size_t), boost::type_erasure::_a>,
-    boost::asynchronous::has_interruptible_post<boost::asynchronous::any_interruptible(JOB&&), boost::type_erasure::_a>,
-    boost::asynchronous::has_interruptible_post<boost::asynchronous::any_interruptible(JOB&&, std::size_t),
+    boost::asynchronous::has_interruptible_post<boost::asynchronous::any_interruptible(JOB), boost::type_erasure::_a>,
+    boost::asynchronous::has_interruptible_post<boost::asynchronous::any_interruptible(JOB, std::size_t),
                                              boost::type_erasure::_a>,
 #else
     boost::asynchronous::has_post<void(JOB), boost::type_erasure::_a>,
@@ -86,10 +86,10 @@ template <class JOB = boost::asynchronous::any_callable,class Clock = boost::chr
 struct any_shared_scheduler_concept
 {
     virtual ~any_shared_scheduler_concept<JOB,Clock>(){}
-    virtual void post(JOB&&) =0;
-    virtual void post(JOB&&, std::size_t) =0;
-    virtual boost::asynchronous::any_interruptible interruptible_post(JOB&&) =0;
-    virtual boost::asynchronous::any_interruptible interruptible_post(JOB&&, std::size_t) =0;
+    virtual void post(JOB) =0;
+    virtual void post(JOB, std::size_t) =0;
+    virtual boost::asynchronous::any_interruptible interruptible_post(JOB) =0;
+    virtual boost::asynchronous::any_interruptible interruptible_post(JOB, std::size_t) =0;
     
     virtual std::vector<boost::thread::id> thread_ids() const =0;
     virtual std::size_t get_queue_size()const=0;
@@ -133,21 +133,21 @@ public:
         return my_ptr.is_valid();
 #endif
     }
-    void post(JOB&& job) const
+    void post(JOB job) const
     {
-        (*my_ptr).post(std::forward<JOB>(job));
+        (*my_ptr).post(std::move(job));
     }
-    void post(JOB&& job, std::size_t priority) const
+    void post(JOB job, std::size_t priority) const
     {
-        (*my_ptr).post(std::forward<JOB>(job),priority);
+        (*my_ptr).post(std::move(job),priority);
     }
-    boost::asynchronous::any_interruptible interruptible_post(JOB&& job) const
+    boost::asynchronous::any_interruptible interruptible_post(JOB job) const
     {
-        return (*my_ptr).interruptible_post(std::forward<JOB>(job));
+        return (*my_ptr).interruptible_post(std::move(job));
     }
-    boost::asynchronous::any_interruptible interruptible_post(JOB&& job, std::size_t priority) const
+    boost::asynchronous::any_interruptible interruptible_post(JOB job, std::size_t priority) const
     {
-        return (*my_ptr).interruptible_post(std::forward<JOB>(job),priority);
+        return (*my_ptr).interruptible_post(std::move(job),priority);
     }
     std::vector<boost::thread::id> thread_ids() const
     {

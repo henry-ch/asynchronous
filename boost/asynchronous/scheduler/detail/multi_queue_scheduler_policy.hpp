@@ -56,53 +56,53 @@ public:
     }
 
 
-    void post(typename queue_type::job_type && job, std::size_t prio)
+    void post(typename queue_type::job_type job, std::size_t prio)
     {
         boost::asynchronous::job_traits<typename queue_type::job_type>::set_posted_time(job);
         if (prio == std::numeric_limits<std::size_t>::max())
         {
             // shutdown jobs have to be sent to all queues
-            m_queues[m_next_shutdown_bucket.load()% m_queues.size()]->push(std::forward<typename queue_type::job_type>(job),prio);
+            m_queues[m_next_shutdown_bucket.load()% m_queues.size()]->push(std::move(job),prio);
             ++m_next_shutdown_bucket;
         }
         else
         {
-            m_queues[this->find_position(prio,m_queues.size())]->push(std::forward<typename queue_type::job_type>(job),prio);
+            m_queues[this->find_position(prio,m_queues.size())]->push(std::move(job),prio);
         }
     }    
-    void post(typename queue_type::job_type && job)
+    void post(typename queue_type::job_type job)
     {
-        post(std::forward<typename queue_type::job_type>(job),0);
+        post(std::move(job),0);
     }
-    void post(boost::asynchronous::any_callable&& job,const std::string& name)
+    void post(boost::asynchronous::any_callable job,const std::string& name)
     {
-        typename boost::asynchronous::job_traits<job_type>::wrapper_type w(std::forward<boost::asynchronous::any_callable>(job));
+        typename boost::asynchronous::job_traits<job_type>::wrapper_type w(std::move(job));
         w.set_name(name);
         post(std::move(w));        
     }
-    void post(boost::asynchronous::any_callable&& job,const std::string& name,std::size_t priority)
+    void post(boost::asynchronous::any_callable job,const std::string& name,std::size_t priority)
     {
-        typename boost::asynchronous::job_traits<job_type>::wrapper_type w(std::forward<boost::asynchronous::any_callable>(job));
+        typename boost::asynchronous::job_traits<job_type>::wrapper_type w(std::move(job));
         w.set_name(name);
         post(std::move(w),priority);
     }    
-    boost::asynchronous::any_interruptible interruptible_post(typename queue_type::job_type && job,std::size_t prio)
+    boost::asynchronous::any_interruptible interruptible_post(typename queue_type::job_type job,std::size_t prio)
     {
         boost::shared_ptr<boost::asynchronous::detail::interrupt_state>
                 state = boost::make_shared<boost::asynchronous::detail::interrupt_state>();
         boost::shared_ptr<boost::promise<boost::thread*> > wpromise = boost::make_shared<boost::promise<boost::thread*> >();
         boost::asynchronous::job_traits<typename queue_type::job_type>::set_posted_time(job);
         boost::asynchronous::interruptible_job<typename queue_type::job_type,this_type>
-                ijob(std::forward<typename queue_type::job_type>(job),wpromise,state);
+                ijob(std::move(job),wpromise,state);
         if (prio == std::numeric_limits<std::size_t>::max())
         {
             // shutdown jobs have to be sent to all queues
-            m_queues[m_next_shutdown_bucket.load()% m_queues.size()]->push(std::forward<typename queue_type::job_type>(ijob),prio);
+            m_queues[m_next_shutdown_bucket.load()% m_queues.size()]->push(std::move(ijob),prio);
             ++m_next_shutdown_bucket;
         }
         else
         {
-            m_queues[this->find_position(prio,m_queues.size())]->push(std::forward<typename queue_type::job_type>(ijob),prio);
+            m_queues[this->find_position(prio,m_queues.size())]->push(std::move(ijob),prio);
         }
 
         boost::future<boost::thread*> fu = wpromise->get_future();
@@ -110,20 +110,20 @@ public:
 
         return boost::asynchronous::any_interruptible(interruptible);
     }
-    boost::asynchronous::any_interruptible interruptible_post(typename queue_type::job_type && job)
+    boost::asynchronous::any_interruptible interruptible_post(typename queue_type::job_type job)
     {
-        return interruptible_post(std::forward<typename queue_type::job_type>(job),0);
+        return interruptible_post(std::move(job),0);
     }
-    boost::asynchronous::any_interruptible interruptible_post(boost::asynchronous::any_callable&& job,const std::string& name)
+    boost::asynchronous::any_interruptible interruptible_post(boost::asynchronous::any_callable job,const std::string& name)
     {
-        typename boost::asynchronous::job_traits<job_type>::wrapper_type w(std::forward<boost::asynchronous::any_callable>(job));
+        typename boost::asynchronous::job_traits<job_type>::wrapper_type w(std::move(job));
         w.set_name(name);
         return interruptible_post(std::move(w));
     }
-    boost::asynchronous::any_interruptible interruptible_post(boost::asynchronous::any_callable&& job,const std::string& name,
+    boost::asynchronous::any_interruptible interruptible_post(boost::asynchronous::any_callable job,const std::string& name,
                                                            std::size_t priority)
     {
-        typename boost::asynchronous::job_traits<job_type>::wrapper_type w(std::forward<boost::asynchronous::any_callable>(job));
+        typename boost::asynchronous::job_traits<job_type>::wrapper_type w(std::move(job));
         w.set_name(name);
         return interruptible_post(std::move(w),priority);
     }
