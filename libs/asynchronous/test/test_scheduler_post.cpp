@@ -22,6 +22,7 @@
 #include <boost/asynchronous/scheduler/multiqueue_threadpool_scheduler.hpp>
 #include <boost/asynchronous/servant_proxy.hpp>
 #include <boost/asynchronous/post.hpp>
+#include <boost/asynchronous/extensions/tbb/tbb_concurrent_queue.hpp>
 #include "test_common.hpp"
 
 //#define BOOST_TEST_MODULE MyTest2
@@ -216,4 +217,31 @@ BOOST_AUTO_TEST_CASE( post_composite_threadpool_scheduler )
         ids.insert(tid);
     }
     BOOST_CHECK_MESSAGE(ids.size() <=7,"too many threads used in scheduler");
+}
+
+BOOST_AUTO_TEST_CASE( post_multiqueue_threadpool_scheduler_tbb_concurrent_queue )
+{
+    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
+                new boost::asynchronous::multiqueue_threadpool_scheduler<boost::asynchronous::tbb_concurrent_queue<> >(4));
+
+    std::vector<boost::thread::id> sids = scheduler.thread_ids();
+    BOOST_CHECK_MESSAGE(number_of_threads(sids.begin(),sids.end())==4,"scheduler has wrong number of threads");
+    std::vector<boost::shared_future<boost::thread::id> > fus;
+    for (int i = 0 ; i< 10 ; ++i)
+    {
+        boost::shared_ptr<boost::promise<boost::thread::id> > p = boost::make_shared<boost::promise<boost::thread::id> >();
+        fus.push_back(p->get_future());
+        scheduler.post(boost::asynchronous::any_callable(DummyJob(p)));
+    }
+    boost::wait_for_all(fus.begin(), fus.end());
+    std::set<boost::thread::id> ids;
+
+    for (std::vector<boost::shared_future<boost::thread::id> >::iterator it = fus.begin(); it != fus.end() ; ++it)
+    {
+        boost::thread::id tid = (*it).get();
+        std::vector<boost::thread::id> itids = scheduler.thread_ids();
+        BOOST_CHECK_MESSAGE(contains_id(itids.begin(),itids.end(),tid),"task executed in the wrong thread");
+        ids.insert(tid);
+    }
+    BOOST_CHECK_MESSAGE(ids.size() <=4,"too many threads used in scheduler");
 }
