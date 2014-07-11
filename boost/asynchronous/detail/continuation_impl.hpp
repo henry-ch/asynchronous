@@ -35,11 +35,49 @@ struct continuation
     typedef Return return_type;
     typedef Tuple tuple_type;
 
-    continuation(continuation&&)=default;
-    continuation(continuation const&)=default;
+    continuation(continuation&& rhs)noexcept
+        : m_futures(std::move(rhs.m_futures))
+        , m_ready_futures(std::move(rhs.m_ready_futures))
+        , m_done(std::move(rhs.m_done))
+        , m_state(std::move(rhs.m_state))
+        , m_timeout(std::move(rhs.m_timeout))
+        , m_start(std::move(rhs.m_start))
+    {
+    }
+    continuation(continuation const& rhs)noexcept
+        : m_futures(std::move((const_cast<continuation&>(rhs)).m_futures))
+        , m_ready_futures(std::move((const_cast<continuation&>(rhs)).m_ready_futures))
+        , m_done(std::move((const_cast<continuation&>(rhs)).m_done))
+        , m_state(std::move((const_cast<continuation&>(rhs)).m_state))
+        , m_timeout(std::move((const_cast<continuation&>(rhs)).m_timeout))
+        , m_start(std::move((const_cast<continuation&>(rhs)).m_start))
+    {
+    }
+
+    continuation& operator= (continuation&& rhs)noexcept
+    {
+        std::swap(m_futures,rhs.m_futures);
+        std::swap(m_ready_futures,rhs.m_ready_futures);
+        std::swap(m_done,rhs.m_done);
+        std::swap(m_state,rhs.m_state);
+        std::swap(m_timeout,rhs.m_timeout);
+        std::swap(m_start,rhs.m_start);
+        return *this;
+    }
+    continuation& operator= (continuation const& rhs)noexcept
+    {
+        std::swap(m_futures,(const_cast<continuation&>(rhs)).m_futures);
+        std::swap(m_ready_futures,(const_cast<continuation&>(rhs)).m_ready_futures);
+        std::swap(m_done,(const_cast<continuation&>(rhs)).m_done);
+        std::swap(m_state,(const_cast<continuation&>(rhs)).m_state);
+        std::swap(m_timeout,(const_cast<continuation&>(rhs)).m_timeout);
+        std::swap(m_start,(const_cast<continuation&>(rhs)).m_start);
+        return *this;
+    }
+
     template <typename... Args>
-    continuation(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state,boost::shared_ptr<Tuple> t, Duration d, Args&&... args)
-    : m_futures(t)
+    continuation(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state,Tuple t, Duration d, Args&&... args)
+    : m_futures(std::move(t))
     , m_ready_futures(std::tuple_size<Tuple>::value,false)
     , m_state(state)
     , m_timeout(d)
@@ -58,8 +96,8 @@ struct continuation
             m_state->add_subs(interruptibles.begin(),interruptibles.end());
     }
     // version where we already get futures
-    continuation(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state,boost::shared_ptr<Tuple> t, Duration d)
-    : m_futures(t)
+    continuation(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state,Tuple t, Duration d)
+    : m_futures(std::move(t))
     , m_ready_futures(std::tuple_size<Tuple>::value,false)
     , m_state(state)
     , m_timeout(d)
@@ -102,7 +140,7 @@ struct continuation
 
     void operator()()
     {
-        m_done(std::move(*m_futures));
+        m_done(std::move(m_futures));
     }
 
     template <class Func>
@@ -126,12 +164,12 @@ struct continuation
 
         bool ready=true;
         std::size_t index = 0;
-        check_ready(ready,index,*m_futures,m_ready_futures);
+        check_ready(ready,index,m_futures,m_ready_futures);
         return ready;
     }
 //TODO temporary
 //private:
-    boost::shared_ptr<Tuple> m_futures;
+    Tuple m_futures;
     std::vector<bool> m_ready_futures;
     std::function<void(Tuple&&)> m_done;
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> m_state;
@@ -238,12 +276,9 @@ auto call_get_future(T& t) -> decltype(t.get_future())
 
 //create a tuple of futures
 template <typename... Args>
-auto make_future_tuple(Args&... args) -> boost::shared_ptr<decltype(std::make_tuple(call_get_future(args)...))>
+auto make_future_tuple(Args&... args) -> decltype(std::make_tuple(call_get_future(args)...))
 {
-    boost::shared_ptr<decltype(std::make_tuple(call_get_future(args)...))> sp =
-            boost::make_shared<decltype(std::make_tuple(call_get_future(args)...))>
-                 (std::make_tuple(call_get_future(args)...));
-    return sp;
+    return std::make_tuple(call_get_future(args)...);
 }
 
 template <typename Front,typename... Tail>

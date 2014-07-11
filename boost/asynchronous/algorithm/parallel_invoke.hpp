@@ -38,7 +38,7 @@ struct parallel_invoke_helper: public boost::asynchronous::continuation_task<Ret
     parallel_invoke_helper(Args&&... args)
     {
         typedef decltype(boost::asynchronous::detail::make_future_tuple(args...)) sp_future_type;
-        typedef typename sp_future_type::element_type future_type;
+        typedef sp_future_type future_type;
         boost::asynchronous::continuation_result<ReturnType> task_res = this->this_task_result();
         boost::asynchronous::create_continuation_job<Job>(
                     // called when subtasks are done, set our result
@@ -64,7 +64,7 @@ struct parallel_invoke_helper_timeout: public boost::asynchronous::continuation_
     parallel_invoke_helper_timeout(Duration const& d,Args&&... args)
     {
         typedef decltype(boost::asynchronous::detail::make_future_tuple(args...)) sp_future_type;
-        typedef typename sp_future_type::element_type future_type;
+        typedef sp_future_type future_type;
         boost::asynchronous::continuation_result<ReturnType> task_res = this->this_task_result();
         boost::asynchronous::create_continuation_job_timeout<Job>(
                     // called when subtasks are done, set our result
@@ -141,9 +141,9 @@ auto to_continuation_task(T task)
 
 template <class Job, typename... Args>
 auto parallel_invoke(Args&&... args)
-    -> boost::asynchronous::detail::continuation<typename decltype(boost::asynchronous::detail::make_future_tuple(args...))::element_type,Job>
+    -> boost::asynchronous::detail::continuation<decltype(boost::asynchronous::detail::make_future_tuple(args...)),Job>
 {
-    typedef typename decltype(boost::asynchronous::detail::make_future_tuple(args...))::element_type ReturnType;
+    typedef decltype(boost::asynchronous::detail::make_future_tuple(args...)) ReturnType;
 
     return boost::asynchronous::top_level_continuation_log<ReturnType,Job>
             (boost::asynchronous::detail::parallel_invoke_helper<ReturnType,Job>(std::forward<Args>(args)...));
@@ -151,9 +151,9 @@ auto parallel_invoke(Args&&... args)
 // version with timeout
 template <class Job, class Duration, typename... Args>
 auto parallel_invoke_timeout(Duration const& d, Args&&... args)
-    -> boost::asynchronous::detail::continuation<typename decltype(boost::asynchronous::detail::make_future_tuple(args...))::element_type,Job>
+    -> boost::asynchronous::detail::continuation<decltype(boost::asynchronous::detail::make_future_tuple(args...)),Job>
 {
-    typedef typename decltype(boost::asynchronous::detail::make_future_tuple(args...))::element_type ReturnType;
+    typedef decltype(boost::asynchronous::detail::make_future_tuple(args...)) ReturnType;
 
     return boost::asynchronous::top_level_continuation_log<ReturnType,Job>
             (boost::asynchronous::detail::parallel_invoke_helper_timeout<ReturnType,Job,Duration>(d,std::forward<Args>(args)...));
