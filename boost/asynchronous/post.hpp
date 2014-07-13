@@ -43,37 +43,21 @@ struct move_task_helper
 {
     typedef R result_type;
     typedef Task task_type;
-//    move_task_helper(boost::shared_ptr<Task>& t, boost::shared_ptr<Callback> & c)
-//        : m_callback(c), m_task(t)
-//    {
-//        t.reset();
-//        c.reset();
-//    }
+
     move_task_helper(move_task_helper const& r)noexcept
         : m_callback(std::move(const_cast<move_task_helper&>(r).m_callback))
         , m_task(std::move(const_cast<move_task_helper&>(r).m_task))
     {
-//        const_cast<move_task_helper&>(r).m_callback.reset();
-//        const_cast<move_task_helper&>(r).m_task.reset();
     }
-//    move_task_helper& operator= (move_task_helper& r)noexcept
-//    {
-//        m_callback = r.m_callback; r.m_callback.reset();
-//        m_task = r.m_task; r.m_task.reset();
-//    }
     move_task_helper(Task t,Callback c)
         :m_callback(std::move(c))
         ,m_task(std::move(t))
     {
-//        t.reset();
-//        c.reset();
     }
     move_task_helper(move_task_helper && r)noexcept
         : m_callback(std::move(r.m_callback))
         , m_task(std::move(r.m_task))
     {
-//        r.m_callback.reset();
-//        r.m_task.reset();
     }
     move_task_helper& operator= (move_task_helper&& r)noexcept
     {
@@ -407,18 +391,13 @@ namespace detail
             m_cb_prio = rhs.m_cb_prio;
             return *this;
         }
-        // TODO type_erasure problem?
-        //post_callback_helper_base& operator =( const post_callback_helper_base& ) = delete;
-        //post_callback_helper_base ( const post_callback_helper_base& ) = delete;
 #endif
-    //#else
         post_callback_helper_base(post_callback_helper_base const& rhs)
             : boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type(),
               m_work(rhs.m_work),m_scheduler(rhs.m_scheduler),m_task_name(rhs.m_task_name),m_cb_prio(rhs.m_cb_prio){}
         post_callback_helper_base(Work const& w, Sched const& s, const std::string& task_name="",std::size_t cb_prio=0)
             : boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type(),
               m_work(w),m_scheduler(s),m_task_name(task_name),m_cb_prio(cb_prio){}
-    //#endif
 
         struct callback_fct : public boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type
         {            
@@ -444,9 +423,6 @@ namespace detail
                 std::swap(m_fu,rhs.m_fu);
                 return *this;
             }
-            // TODO type_erasure problem?
-            //callback_fct& operator =( const callback_fct& ) = delete;
-            //callback_fct ( const callback_fct& ) = delete;
             
             void operator()()
             {
@@ -643,7 +619,6 @@ namespace detail
             catch(std::exception& ){/* TODO */}
         }
 
-        //void operator()(boost::future<typename Work::result_type> work_fu)
         void callback_ready(boost::future<typename Work::result_type> work_fu)
         {
             try
@@ -670,7 +645,6 @@ namespace detail
                         move_task_helper<typename Func::return_type,F1,F2>& work)const
         {
             auto cont = work.m_task();
-            //cont.on_done(detail::promise_mover<typename Func::return_type>(res));
             cont.on_done([work,scheduler,task_name,cb_prio](std::tuple<boost::future<typename Func::return_type> >&& continuation_res)
                 {
                     try
@@ -716,7 +690,6 @@ namespace detail
                         move_task_helper<typename Func::return_type,F1,F2>& work)const
         {
             auto cont = work.m_task();
-            //cont.on_done(detail::promise_mover<typename Func::return_type>(res));
             cont.on_done([work,scheduler,task_name,cb_prio](std::tuple<boost::future<typename Func::return_type> >&& continuation_res)
                 {
                     try
@@ -776,14 +749,13 @@ namespace detail
             return *this;
         }
 #endif
-    //#else
         post_callback_helper_continuation(post_callback_helper_continuation const& rhs)
             : boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type(),
               m_work(rhs.m_work),m_scheduler(rhs.m_scheduler),m_task_name(rhs.m_task_name),m_cb_prio(rhs.m_cb_prio){}
         post_callback_helper_continuation(Work const& w, Sched const& s, const std::string& task_name="",std::size_t cb_prio=0)
             : boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type(),
               m_work(w),m_scheduler(s),m_task_name(task_name),m_cb_prio(cb_prio){}
-    //#endif
+
 
         struct callback_fct : public boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type
         {
@@ -850,14 +822,12 @@ namespace detail
             return *this;
         }
 #endif
-    //#else
         post_callback_helper_continuation(post_callback_helper_continuation const& rhs)
             : boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type(),
               m_work(rhs.m_work),m_scheduler(rhs.m_scheduler),m_task_name(rhs.m_task_name),m_cb_prio(rhs.m_cb_prio){}
         post_callback_helper_continuation(Work const& w, Sched const& s, const std::string& task_name="",std::size_t cb_prio=0)
             : boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type(),
               m_work(w),m_scheduler(s),m_task_name(task_name),m_cb_prio(cb_prio){}
-    //#endif
 
         struct callback_fct : public boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type
         {
