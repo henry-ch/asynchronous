@@ -282,7 +282,10 @@ namespace boost { namespace asynchronous
 
 
 
-struct servant_proxy_timeout : public std::exception
+struct servant_proxy_timeout : public virtual boost::exception, public virtual std::exception
+{
+};
+struct empty_servant : public virtual boost::exception, public virtual std::exception
 {
 };
 
@@ -323,6 +326,11 @@ public:
         if(ok)
         {
             m_servant = std::move(s.get());
+            // servant ought not be empty
+            if (!m_servant)
+            {
+                throw empty_servant();
+            }
         }
         else
         {
@@ -337,6 +345,11 @@ public:
         if(ok)
         {
             m_servant = boost::make_shared<servant_type>(std::move(s.get()));
+            // servant ought not be empty
+            if (!m_servant)
+            {
+                throw empty_servant();
+            }
         }
         else
         {

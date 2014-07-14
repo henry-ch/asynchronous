@@ -15,7 +15,7 @@
 
 namespace boost { namespace asynchronous
 {
-struct task_aborted_exception : virtual boost::exception, virtual std::exception
+struct task_aborted_exception : public virtual boost::exception, public virtual std::exception
 {
 };
 }}
