@@ -86,7 +86,7 @@ public:
 
     ~single_thread_scheduler()
     {
-        boost::asynchronous::detail::default_termination_task<typename Q::diagnostic_type,boost::thread> ttask(m_thread);
+        boost::asynchronous::detail::default_termination_task<typename Q::diagnostic_type,boost::thread> ttask;
         // this task has to be executed lat => lowest prio
 #ifndef BOOST_NO_RVALUE_REFERENCES
         boost::asynchronous::any_callable job(std::move(ttask));

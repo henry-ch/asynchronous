@@ -25,28 +25,10 @@ namespace boost { namespace asynchronous { namespace detail
 template <class Diag, class ThreadType>
 struct default_termination_task: public Diag
 {
-    default_termination_task( boost::shared_ptr<ThreadType> w): m_workers(std::move(w)){}
-    default_termination_task(default_termination_task&& rhs)noexcept
-        : m_workers(std::move(rhs.m_workers))
-    {}
-    default_termination_task(default_termination_task const& rhs)noexcept
-        : Diag(),m_workers(rhs.m_workers)
-    {}
-    default_termination_task& operator= (default_termination_task&& rhs)noexcept
-    {
-        std::swap(m_workers,rhs.m_workers);
-        return *this;
-    }
-    default_termination_task& operator= (default_termination_task const& rhs)noexcept
-    {
-        m_workers = rhs.m_workers;
-        return *this;
-    }
     void operator()()const
     {
         throw boost::asynchronous::detail::shutdown_exception();
     }
-    boost::shared_ptr<ThreadType> m_workers;
 };
 
 template<class ThreadType>

@@ -112,7 +112,7 @@ public:
     {        
         for (size_t i = 0; i< m_data->m_min_number_of_workers;++i)
         {
-            boost::asynchronous::detail::default_termination_task<typename Q::diagnostic_type,boost::thread_group> ttask(m_data->m_group);
+            boost::asynchronous::detail::default_termination_task<typename Q::diagnostic_type,boost::thread_group> ttask;
             // this task has to be executed lat => lowest prio
 #ifndef BOOST_NO_RVALUE_REFERENCES
             boost::asynchronous::any_callable job(std::move(ttask));
