@@ -104,7 +104,7 @@ namespace detail
         F m_func;
     };
 
-    // version for serializable tasks but not continuations
+    // version for serializable tasks but not continuation tasks
     // TODO a bit better than checking R...
     template <class R,class F,class JOB, class OP,class Scheduler>
     struct post_future_helper_base<R,F,JOB,OP,Scheduler,
@@ -171,7 +171,7 @@ namespace detail
         boost::promise<R> m_promise;
         F m_func;
     };
-    // version for tasks which are serializable AND continuations
+    // version for tasks which are serializable AND continuation tasks
     // TODO a bit better than checking R...
     template <class R,class F,class JOB, class OP,class Scheduler>
     struct post_future_helper_base<R,F,JOB,OP,Scheduler,
@@ -372,6 +372,113 @@ namespace detail
             boost::asynchronous::any_continuation ac(std::move(cont));
             boost::asynchronous::get_continuations().emplace_front(std::move(ac));
         }
+        boost::promise<R> m_promise;
+        F m_func;
+    };
+
+    // version for continuations and serializable non-void tasks (we consider void tasks as useless for serialization)
+    template <class R,class F,class JOB>
+    struct post_future_helper_continuation<R,F,JOB,
+                                          typename ::boost::enable_if<boost::asynchronous::detail::is_serializable<F>>::type>
+            : public boost::asynchronous::job_traits<JOB>::diagnostic_type
+    {
+        post_future_helper_continuation():boost::asynchronous::job_traits<JOB>::diagnostic_type(){}
+
+        post_future_helper_continuation(boost::promise<R> p, F f)
+            : boost::asynchronous::job_traits<JOB>::diagnostic_type(),
+              m_promise(std::move(p)),m_func(std::move(f)) {}
+        post_future_helper_continuation(post_future_helper_continuation&& rhs)noexcept
+            : boost::asynchronous::job_traits<JOB>::diagnostic_type(),
+              m_promise(std::move(rhs.m_promise)),m_func(std::move(rhs.m_func)) {}
+        post_future_helper_continuation& operator= (post_future_helper_continuation&& rhs)noexcept
+        {
+            std::swap(m_promise,rhs.m_promise);
+            std::swap(m_func,rhs.m_func);
+            return *this;
+        }
+
+        post_future_helper_continuation(post_future_helper_continuation const& rhs)
+            :boost::asynchronous::job_traits<JOB>::diagnostic_type()
+            ,m_promise(std::move(const_cast<post_future_helper_continuation&>(rhs).m_promise)),m_func(std::move(const_cast<post_future_helper_continuation&>(rhs).m_func)){}
+
+        // to move our promise into continuation
+        struct promise_move_helper
+        {
+            promise_move_helper(boost::promise<R> p):m_promise(std::move(p)){}
+            promise_move_helper(promise_move_helper&& rhs)noexcept
+                : m_promise(std::move(rhs.m_promise))
+            {}
+            promise_move_helper& operator= (promise_move_helper&& rhs)noexcept
+            {
+                std::swap(m_promise,rhs.m_promise);
+                return *this;
+            }
+            promise_move_helper(promise_move_helper const& rhs)noexcept
+                : m_promise(std::move(const_cast<promise_move_helper&>(rhs).m_promise))
+            {}
+            promise_move_helper& operator= (promise_move_helper const& rhs)noexcept
+            {
+                std::swap(m_promise,const_cast<promise_move_helper&>(rhs).m_promise);
+                return *this;
+            }
+            void operator()(std::tuple<boost::future<R> >&& continuation_res)
+            {
+                if(!std::get<0>(continuation_res).has_value())
+                {
+                    boost::asynchronous::task_aborted_exception ta;
+                    m_promise.set_exception(boost::copy_exception(ta));
+                }
+                else
+                {
+                    try
+                    {
+                        m_promise.set_value(std::move(std::get<0>(continuation_res).get()));
+                    }
+                    catch(std::exception& e)
+                    {
+                        m_promise.set_exception(boost::copy_exception(e));
+                    }
+                }
+            }
+            boost::promise<R> m_promise;
+        };
+
+        void operator()()
+        {
+            auto cont = m_func();
+            cont.on_done(promise_move_helper(std::move(m_promise)));
+            boost::asynchronous::any_continuation ac(std::move(cont));
+            boost::asynchronous::get_continuations().emplace_front(std::move(ac));
+        }
+        template <class Archive>
+        void save(Archive & ar, const unsigned int /*version*/)const
+        {
+            ar & m_func;
+        }
+        template <class Archive>
+        void load(Archive & ar, const unsigned int /*version*/)
+        {
+            boost::asynchronous::tcp::client_request::message_payload payload;
+            ar >> payload;
+            if (!payload.m_has_exception)
+            {
+                std::istringstream archive_stream(std::move(payload.m_data));
+                typename JOB::iarchive archive(archive_stream);
+                R res;
+                archive >> res;
+                m_promise.set_value(std::move(res));
+            }
+            else
+            {
+                m_promise.set_exception(boost::copy_exception(payload.m_exception));
+            }
+        }
+        std::string get_task_name()const
+        {
+            return m_func.get_task_name();
+        }
+        BOOST_SERIALIZATION_SPLIT_MEMBER()
+
         boost::promise<R> m_promise;
         F m_func;
     };
