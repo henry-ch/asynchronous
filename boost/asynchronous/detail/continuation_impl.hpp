@@ -146,7 +146,7 @@ struct continuation
     template <class Func>
     void on_done(Func f)
     {
-        m_done = f;
+        m_done = std::move(f);
     }
     bool is_ready()
     {
