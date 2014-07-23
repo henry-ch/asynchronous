@@ -19,6 +19,7 @@
 #include <boost/mpl/vector.hpp>
 #include <boost/mpl/identity.hpp>
 #include <boost/chrono/chrono.hpp>
+#include <boost/thread/thread.hpp>
 
 #include <boost/type_erasure/any.hpp>
 #include <boost/type_erasure/builtin.hpp>
