@@ -12,6 +12,7 @@
 
 #include <string>
 #include <sstream>
+#include <functional>
 #include <boost/asynchronous/scheduler/tss_scheduler.hpp>
 #include <boost/asynchronous/detail/continuation_impl.hpp>
 #include <boost/asynchronous/scheduler/detail/any_continuation.hpp>
@@ -26,75 +27,103 @@ template <class Return>
 struct continuation_result
 {
 public:
-    continuation_result(boost::shared_ptr<boost::promise<Return> > p):m_promise(p){}
+    continuation_result(boost::shared_ptr<boost::promise<Return> > p,std::function<void()> f):m_promise(p),m_done_func(f){}
     continuation_result(continuation_result&& rhs)noexcept
         : m_promise(std::move(rhs.m_promise))
+        , m_done_func(std::move(rhs.m_done_func))
     {}
     continuation_result(continuation_result const& rhs)noexcept
         : m_promise(rhs.m_promise)
+        , m_done_func(rhs.m_done_func)
     {}
     continuation_result& operator= (continuation_result&& rhs)noexcept
     {
         std::swap(m_promise,rhs.m_promise);
+        std::swap(m_done_func,rhs.m_done_func);
         return *this;
     }
     continuation_result& operator= (continuation_result const& rhs)noexcept
     {
         m_promise = rhs.m_promise;
+        m_done_func = rhs.m_done_func;
         return *this;
     }
     void set_value(Return const& val)const
     {
         m_promise->set_value(val);
+        // inform caller if any
+        if (m_done_func)
+            (m_done_func)();
     }
     void emplace_value(Return&& val)const
     {
         m_promise->set_value(std::forward<Return>(val));
+        // inform caller if any
+        if (m_done_func)
+            (m_done_func)();
     }
     void set_exception(boost::exception_ptr p)const
     {
         m_promise->set_exception(p);
+        // inform caller if any
+        if (m_done_func)
+            (m_done_func)();
     }
 
 private:
     boost::shared_ptr<boost::promise<Return> > m_promise;
+    std::function<void()> m_done_func;
 };
 template <>
 struct continuation_result<void>
 {
 public:
-    continuation_result(boost::shared_ptr<boost::promise<void> > p):m_promise(p){}
+    continuation_result(boost::shared_ptr<boost::promise<void> > p,std::function<void()> f):m_promise(p),m_done_func(f){}
     continuation_result(continuation_result&& rhs)noexcept
         : m_promise(std::move(rhs.m_promise))
+        , m_done_func(std::move(rhs.m_done_func))
     {}
     continuation_result(continuation_result const& rhs)noexcept
         : m_promise(rhs.m_promise)
+        , m_done_func(rhs.m_done_func)
     {}
     continuation_result& operator= (continuation_result&& rhs)noexcept
     {
         std::swap(m_promise,rhs.m_promise);
+        std::swap(m_done_func,rhs.m_done_func);
         return *this;
     }
     continuation_result& operator= (continuation_result const& rhs)noexcept
     {
         m_promise = rhs.m_promise;
+        m_done_func = rhs.m_done_func;
         return *this;
     }
     void set_value()const
     {
         m_promise->set_value();
+        // inform caller if any
+        if (m_done_func)
+            (m_done_func)();
     }
     void emplace_value()const
     {
         m_promise->set_value();
+        // inform caller if any
+        if (m_done_func)
+            (m_done_func)();
     }
     void set_exception(boost::exception_ptr p)const
     {
         m_promise->set_exception(p);
+        // inform caller if any
+        if (m_done_func)
+            (m_done_func)();
     }
 
 private:
     boost::shared_ptr<boost::promise<void> > m_promise;
+    std::function<void()> m_done_func;
 };
 
 // the base class of continuation tasks Provides typedefs and hides promise.
@@ -108,26 +137,26 @@ public:
     continuation_task(continuation_task&& rhs)noexcept
         : m_promise(std::move(rhs.m_promise))
         , m_name(std::move(rhs.m_name))
+        , m_done_func(std::move(rhs.m_done_func))
     {}
     continuation_task(continuation_task const& rhs)noexcept
         : m_promise(rhs.m_promise)
         , m_name(rhs.m_name)
+        , m_done_func(rhs.m_done_func)
     {}
     continuation_task& operator= (continuation_task&& rhs)noexcept
     {
         std::swap(m_promise,rhs.m_promise);
         std::swap(m_name,rhs.m_name);
+        std::swap(m_done_func,rhs.m_done_func);
         return *this;
     }
     continuation_task& operator= (continuation_task const& rhs)noexcept
     {
         m_promise = rhs.m_promise;
         m_name = rhs.m_name;
+        m_done_func = rhs.m_done_func;
         return *this;
-    }
-    void set_value(Return const& val) const
-    {
-        m_promise->set_value(val);
     }
 
     boost::future<Return> get_future()const
@@ -146,7 +175,7 @@ public:
 
     boost::asynchronous::continuation_result<Return> this_task_result()const
     {
-        return continuation_result<Return>(m_promise);
+        return continuation_result<Return>(m_promise,m_done_func);
     }
     // called in case task is stolen by some client and only the result is returned
     template <class Archive,class InternalArchive>
@@ -168,9 +197,14 @@ public:
             get_promise()->set_exception(boost::copy_exception(payload.m_exception));
         }
     }
+    void set_done_func(std::function<void()> f)
+    {
+        m_done_func=std::move(f);
+    }
 private:
     boost::shared_ptr<boost::promise<Return> > m_promise;
     std::string m_name;
+    std::function<void()> m_done_func;
 };
 template <>
 struct continuation_task<void>
@@ -181,30 +215,29 @@ public:
     continuation_task(continuation_task&& rhs)noexcept
         : m_promise(std::move(rhs.m_promise))
         , m_name(std::move(rhs.m_name))
+        , m_done_func(std::move(rhs.m_done_func))
     {}
     continuation_task(continuation_task const& rhs)noexcept
         : m_promise(rhs.m_promise)
         , m_name(rhs.m_name)
+        , m_done_func(rhs.m_done_func)
     {}
     continuation_task& operator= (continuation_task&& rhs)noexcept
     {
         std::swap(m_promise,rhs.m_promise);
         std::swap(m_name,rhs.m_name);
+        std::swap(m_done_func,rhs.m_done_func);
         return *this;
     }
     continuation_task& operator= (continuation_task const& rhs)noexcept
     {
         m_promise = rhs.m_promise;
         m_name = rhs.m_name;
+        m_done_func = rhs.m_done_func;
         return *this;
     }
 
     continuation_task(const std::string& name=""):m_promise(boost::make_shared<boost::promise<void>>()),m_name(name){}
-
-    void set_value() const
-    {
-        m_promise->set_value();
-    }
 
     boost::future<void> get_future()const
     {
@@ -222,7 +255,7 @@ public:
 
     boost::asynchronous::continuation_result<void> this_task_result()const
     {
-        return continuation_result<void>(m_promise);
+        return continuation_result<void>(m_promise,m_done_func);
     }
     // called in case task is stolen by some client and only the result is returned
     template <class Archive,class InternalArchive>
@@ -239,9 +272,15 @@ public:
             get_promise()->set_exception(boost::copy_exception(payload.m_exception));
         }
     }
+    void set_done_func(std::function<void()> f)
+    {
+        m_done_func=std::move(f);
+    }
+
 private:
     boost::shared_ptr<boost::promise<void> > m_promise;
     std::string m_name;
+    std::function<void()> m_done_func;
 };
 // inside a task, create a continuation handling any number of subtasks
 template <class OnDone, typename... Args>
@@ -253,7 +292,7 @@ create_continuation(OnDone&& on_done, Args&&... args)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
     typedef decltype(boost::asynchronous::detail::make_future_tuple(args...)) future_type;
-    boost::asynchronous::detail::continuation<void,boost::asynchronous::any_callable,future_type> c (
+    boost::asynchronous::detail::callback_continuation<void,boost::asynchronous::any_callable,future_type> c (
                 state,boost::asynchronous::detail::make_future_tuple(args...), boost::chrono::milliseconds(0), std::forward<Args>(args)...);
     c.on_done(std::forward<OnDone>(on_done));
     boost::asynchronous::any_continuation a(std::move(c));
