@@ -73,7 +73,7 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
                         moved_job->serialize(archive,0);
                         return archive_stream.str();
                     },
-                    [moved_job,diag,this](boost::future<std::string> fu)mutable
+                    [moved_job,diag,this](boost::asynchronous::expected<std::string> fu)mutable
                     {
                         waiting_job new_job(std::move(*moved_job),
                                             boost::asynchronous::tcp::server_reponse(this->m_next_task_id++,fu.get(),

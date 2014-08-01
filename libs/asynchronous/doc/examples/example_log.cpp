@@ -57,7 +57,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
                         return 42;}//always...
                 ,
                // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
-               [this](boost::future<int> res){
+               [this](boost::asynchronous::expected<int> res){
                             this->on_callback(res.get());
                },// callback functor.
                // the task / callback name for logging
@@ -76,7 +76,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
                         boost::this_thread::sleep(boost::posix_time::milliseconds(2000));}
                 ,
                // callback functor.
-               [this](boost::future<void> ){
+               [this](boost::asynchronous::expected<void> ){
                     std::cout << "Callback, has a good chance not to be called." << std::endl;
                 },
                // the task / callback name for logging

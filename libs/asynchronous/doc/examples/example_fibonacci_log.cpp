@@ -90,7 +90,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
                  }// work
                ,
                // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
-               [this](boost::future<long> res){
+               [this](boost::asynchronous::expected<long> res){
                             this->on_callback(res.get());
                },// callback functor.
                "calc_fibonacci"

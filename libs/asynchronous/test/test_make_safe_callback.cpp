@@ -70,7 +70,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
            {
              cb();
            },
-           [](boost::future<void>){}
+           [](boost::asynchronous::expected<void>){}
         );
 
         return fu;

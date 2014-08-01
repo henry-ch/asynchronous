@@ -109,7 +109,7 @@ public:
         call_callback(t.get_proxy(),
                       t.unsafe_async_wait(make_safe_callback(std::move(f))),
                       // ignore async_wait callback functor., real callback is above
-                      [](boost::future<void> ){}
+                      [](boost::asynchronous::expected<void> ){}
                       );
     }
                 

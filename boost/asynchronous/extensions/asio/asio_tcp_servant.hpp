@@ -21,7 +21,7 @@ public:
         (static_cast<Derived*>(this))->call_callback(resolver.get_proxy(),
                             resolver.unsafe_async_resolve(q,(static_cast<Derived*>(this))->make_safe_callback(f)),
                             // ignore async_resolve callback functor, real callback is above
-                            [](boost::future<void> ){}
+                            [](boost::asynchronous::expected<void> ){}
                            );
     } 
 };

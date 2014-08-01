@@ -70,7 +70,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         // start long tasks
         post_callback(
            [startp,end]()mutable{ task_called=true;startp->set_value();end.get();},// work
-           [](boost::future<void> ){ BOOST_FAIL( "unexpected call of callback" );}// should not be called
+           [](boost::asynchronous::expected<void> ){ BOOST_FAIL( "unexpected call of callback" );}// should not be called
         );
     }
     void start_endless_async_work2()
@@ -84,7 +84,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         // start long task, which will never be called
         post_callback(
                 void_task(),// work
-                [](boost::future<void> ){ BOOST_FAIL( "unexpected call of callback" );}// should not be called
+                [](boost::asynchronous::expected<void> ){ BOOST_FAIL( "unexpected call of callback" );}// should not be called
         );
     }
 

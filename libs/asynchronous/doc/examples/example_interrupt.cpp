@@ -36,7 +36,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     boost::this_thread::sleep(boost::posix_time::milliseconds(1000));}
                ,
                // callback functor.
-               [](boost::future<void> ){std::cout << "Callback will most likely not be called" << std::endl;}
+               [](boost::asynchronous::expected<void> ){std::cout << "Callback will most likely not be called" << std::endl;}
         );
         // let the task start (not sure but likely)
         // if it had no time to start, well, then it will never.

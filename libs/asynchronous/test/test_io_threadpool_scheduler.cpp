@@ -70,7 +70,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
             }
             post_callback(
                [fub,bpromise]()mutable{ bpromise->set_value();fub.get(); return boost::this_thread::get_id(); },
-               [this,apromise](boost::future<boost::thread::id> fu)
+               [this,apromise](boost::asynchronous::expected<boost::thread::id> fu)
                {
                     ++this->m_current;
                     this->m_worker_ids.insert(fu.get());

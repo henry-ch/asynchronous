@@ -78,7 +78,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                         const_cast<int&>(i) += 2;
                                                       },1500);
                     },// work
-           [aPromise,tp,this](boost::future<void> res){
+           [aPromise,tp,this](boost::asynchronous::expected<void> res){
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
                         std::vector<boost::thread::id> ids = tp.thread_ids();
@@ -125,7 +125,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                                const_cast<int&>(i) += 2;
                                                              },1500);
                     },// work
-           [aPromise,tp,this](boost::future<void> res){
+           [aPromise,tp,this](boost::asynchronous::expected<void> res){
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
                         std::vector<boost::thread::id> ids = tp.thread_ids();
@@ -173,7 +173,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                         const_cast<int&>(i) += 2;
                                                       },1500);
                     },// work
-           [aPromise,tp,this](boost::future<std::vector<int>> res){
+           [aPromise,tp,this](boost::asynchronous::expected<std::vector<int>> res){
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
                         std::vector<boost::thread::id> ids = tp.thread_ids();
@@ -226,7 +226,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                                const_cast<int&>(i) += 2;
                                                              },1500);
                     },// work
-           [aPromise,tp,this](boost::future<std::vector<int>> res){
+           [aPromise,tp,this](boost::asynchronous::expected<std::vector<int>> res){
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
                         std::vector<boost::thread::id> ids = tp.thread_ids();

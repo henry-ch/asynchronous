@@ -105,7 +105,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                  }// work
                ,
                // callback with fibonacci result.
-               [this](boost::future<long> res){
+               [this](boost::asynchronous::expected<long> res){
                             std::cout << "called CB of interruptible_post_callback" << std::endl;
                             std::cout << "future has value: " << std::boolalpha << res.has_value() << std::endl; //false
                             std::cout << "future has exception: " << std::boolalpha << res.has_exception() << std::endl; //true, task_aborted_exception

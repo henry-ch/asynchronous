@@ -85,7 +85,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
                     return boost::asynchronous::parallel_extremum(this->m_data.begin(),this->m_data.end(),[](int a,int b){return a <b;},20);
                     },// work
-           [aPromise,tp,this](boost::future<int> res){
+           [aPromise,tp,this](boost::asynchronous::expected<int> res){
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
                         std::vector<boost::thread::id> ids = tp.thread_ids();
@@ -115,7 +115,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
                     return boost::asynchronous::parallel_extremum(const_cast<std::vector<int>const&>(this->m_data), [](int a,int b){return a>b;},20);
                     },// work
-           [aPromise,tp,this](boost::future<int> res){
+           [aPromise,tp,this](boost::asynchronous::expected<int> res){
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
                         std::vector<boost::thread::id> ids = tp.thread_ids();
@@ -145,7 +145,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
                     return boost::asynchronous::parallel_extremum(std::move(this->m_data), [](int a,int b){return a <b;}, 20);
                     },// work
-           [aPromise,tp,this](boost::future<int> res){
+           [aPromise,tp,this](boost::asynchronous::expected<int> res){
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
                         std::vector<boost::thread::id> ids = tp.thread_ids();
@@ -180,7 +180,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                                                                     }, 20),
                                                                   [](int a,int b){return a>b;}, 20);
                     },// work
-           [aPromise,tp,this](boost::future<int> res){
+           [aPromise,tp,this](boost::asynchronous::expected<int> res){
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
                         std::vector<boost::thread::id> ids = tp.thread_ids();

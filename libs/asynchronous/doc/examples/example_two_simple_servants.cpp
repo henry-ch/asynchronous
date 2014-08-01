@@ -57,13 +57,13 @@ struct Servant2 : boost::asynchronous::trackable_servant<>
         call_callback(m_worker.get_proxy(),
                       m_worker.foo(),
                       // callback functor.
-                      [](boost::future<int> res)
+                      [](boost::asynchronous::expected<int> res)
                       {std::cout << "callback of foo in doIt with result: " << res.get() << std::endl;}
         );
         call_callback(m_worker.get_proxy(),
                       m_worker.foobar(1,'a'),
                       // callback functor.
-                      [p](boost::future<void> )
+                      [p](boost::asynchronous::expected<void> )
                       {std::cout << "callback of foobar in doIt" << std::endl;p->set_value();}
         );
         return fu;

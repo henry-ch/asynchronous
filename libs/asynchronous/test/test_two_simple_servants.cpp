@@ -87,7 +87,7 @@ struct Servant2 : boost::asynchronous::trackable_servant<>
         call_callback(m_worker.get_proxy(),
                       m_worker.foo(),
                       // callback functor.
-                      [this_thread_id](boost::future<int> res)
+                      [this_thread_id](boost::asynchronous::expected<int> res)
                       {
                           BOOST_REQUIRE_MESSAGE(this_thread_id==boost::this_thread::get_id(),"servant callback in wrong thread.");
                           BOOST_REQUIRE_MESSAGE(res.get()==5,"foo delivered wrong response.");
@@ -96,7 +96,7 @@ struct Servant2 : boost::asynchronous::trackable_servant<>
         call_callback(m_worker.get_proxy(),
                       m_worker.foobar(1,'a'),
                       // callback functor.
-                      [this_thread_id,p](boost::future<void> )
+                      [this_thread_id,p](boost::asynchronous::expected<void> )
                       {
                             BOOST_CHECK_MESSAGE(this_thread_id==boost::this_thread::get_id(),"servant callback in wrong thread.");
                             p->set_value();

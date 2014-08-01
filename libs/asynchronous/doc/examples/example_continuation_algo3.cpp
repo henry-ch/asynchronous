@@ -149,7 +149,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                  }// work
                ,
                // callback with result.
-               [this](boost::future<long> res){
+               [this](boost::asynchronous::expected<long> res){
                         try
                         {
                             this->on_callback(res.get());

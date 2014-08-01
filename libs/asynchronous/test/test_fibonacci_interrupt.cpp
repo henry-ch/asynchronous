@@ -106,7 +106,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                  }// work
                ,
                // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
-               [this](boost::future<long> res){
+               [this](boost::asynchronous::expected<long> res){
                             BOOST_CHECK_MESSAGE(!contains_id(tpids.begin(),tpids.end(),boost::this_thread::get_id()),"fibonacci callback executed in the wrong thread(pool)");
                             BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
                             BOOST_CHECK_MESSAGE(!res.has_value(),"callback should not get a value.");

@@ -29,7 +29,7 @@ void QtServant::signaled()
                 }// work
             ,
            // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
-           [](boost::future<void>){
+           [](boost::asynchronous::expected<void>){
                       std::cout << "work done. Thread in callback: " << boost::this_thread::get_id() << std::endl;
            }// callback functor.
     );
@@ -46,7 +46,7 @@ void QtServant::signaled2()
                 }// work
             ,
            // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
-           [](boost::future<int> fu) {
+           [](boost::asynchronous::expected<int> fu) {
                       std::cout << "in callback: " << boost::this_thread::get_id() << std::endl;
                       std::cout << "task threw exception?: " << std::boolalpha << fu.has_exception() << std::endl;
                       std::cout << "result: " << fu.get() << std::endl;

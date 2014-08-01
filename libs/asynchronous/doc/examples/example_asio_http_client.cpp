@@ -98,7 +98,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                        std::string s2 = this->m_requested_data[1];
                        std::string s3 = this->m_requested_data[2];
                        // this callback (executing in our thread) will be called after each comparison
-                       auto cb1 = [this,s1](boost::future<bool> res)
+                       auto cb1 = [this,s1](boost::asynchronous::expected<bool> res)
                        {
                           if (res.get())
                               ++this->m_check_string_count;

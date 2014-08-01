@@ -54,7 +54,7 @@ struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any
                     tcp_example::serializable_fib_task(n,cutoff)
                ,
                // callback with fibonacci result.
-               [this](boost::future<long> res){
+               [this](boost::asynchronous::expected<long> res){
                             this->on_callback(res.get());
                }// callback functor.
         );

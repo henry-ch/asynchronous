@@ -29,6 +29,7 @@
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/exceptions.hpp>
 #include <boost/asynchronous/job_traits.hpp>
+#include <boost/asynchronous/expected.hpp>
 #include <boost/asynchronous/scheduler/detail/any_continuation.hpp>
 #include <boost/asynchronous/scheduler/tss_scheduler.hpp>
 #include <boost/asynchronous/detail/metafunctions.hpp>
@@ -64,7 +65,7 @@ struct move_task_helper
         std::swap(m_callback,r.m_callback);
         std::swap(m_task,r.m_task);
     }
-    void operator()(boost::future<R> result_func)
+    void operator()(boost::asynchronous::expected<R> result_func)
     {
         m_callback(std::move(result_func));
     }
@@ -686,7 +687,7 @@ namespace detail
 
         struct callback_fct : public boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type
         {            
-            callback_fct(Work const& w,boost::future<typename Work::result_type> fu)
+            callback_fct(Work const& w,boost::asynchronous::expected<typename Work::result_type> fu)
                 :boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type()
                 ,m_work(w)
                 ,m_fu(std::move(fu)){}
@@ -714,29 +715,20 @@ namespace detail
                 m_work(std::move(m_fu));
             }
             Work m_work;
-            boost::future<typename Work::result_type> m_fu;
+            boost::asynchronous::expected<typename Work::result_type> m_fu;
         };
 
         void operator()()
         {
-            // by convention, we decide to lock the caller scheduler only from from task callback
-            // but not start if calling scheduler is gone
-            {
-                auto shared_scheduler = m_scheduler.lock();
-                if (!shared_scheduler.is_valid())
-                    // no need to do any work as there is no way to callback
-                    return;
-            }
-            boost::promise<typename Work::result_type> work_result;
-            boost::future<typename Work::result_type> work_fu = work_result.get_future();
+            boost::asynchronous::expected<typename Work::result_type> ex;
             // TODO check not empty
             try
             {
                 // call task
-                OP()(m_work,work_result);
+                OP()(m_work,ex);
             }
-            catch(boost::asynchronous::task_aborted_exception& e){work_result.set_exception(boost::copy_exception(e));}
-            catch(...){work_result.set_exception(boost::current_exception());this->set_failed();}
+            catch(boost::asynchronous::task_aborted_exception& e){ex.set_exception(boost::copy_exception(e));}
+            catch(...){ex.set_exception(boost::current_exception());this->set_failed();}
             try
             {
                 auto shared_scheduler = m_scheduler.lock();
@@ -744,7 +736,7 @@ namespace detail
                     // no need to do any work as there is no way to callback
                     return;
                 // call callback
-                callback_fct cb(std::move(m_work),std::move(work_fu));
+                callback_fct cb(std::move(m_work),std::move(ex));
                 CB()(shared_scheduler,std::move(cb),m_task_name,m_cb_prio);
             }
             catch(std::exception& ){/* TODO */}
@@ -810,7 +802,7 @@ namespace detail
 
         struct callback_fct : public boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type
         {            
-            callback_fct(Work const& w,boost::future<typename Work::result_type> fu)
+            callback_fct(Work const& w,boost::asynchronous::expected<typename Work::result_type> fu)
                 :boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type()
                 ,m_work(w)
                 ,m_fu(std::move(fu)){}
@@ -836,7 +828,7 @@ namespace detail
                 m_work(std::move(m_fu));
             }
             Work m_work;
-            boost::future<typename Work::result_type> m_fu;
+            boost::asynchronous::expected<typename Work::result_type> m_fu;
         };
         std::string get_task_name()const
         {
@@ -852,8 +844,7 @@ namespace detail
         {
             boost::asynchronous::tcp::client_request::message_payload payload;
             ar >> payload;
-            boost::promise<typename Work::result_type> work_p;
-            boost::future<typename Work::result_type> work_fu = work_p.get_future();
+            boost::asynchronous::expected<typename Work::result_type> ex;
             if (!payload.m_has_exception)
             {
                 std::istringstream archive_stream(std::move(payload.m_data));
@@ -862,35 +853,26 @@ namespace detail
 
                 typename Work::result_type res;
                 archive >> res;
-                work_p.set_value(std::move(res));
+                ex.set_value(std::move(res));
             }
             else
             {
-                work_p.set_exception(boost::copy_exception(payload.m_exception));
+                ex.set_exception(boost::copy_exception(payload.m_exception));
             }
-            callback_ready(std::move(work_fu));
+            callback_ready(std::move(ex));
         }
         BOOST_SERIALIZATION_SPLIT_MEMBER()
         void operator()()
         {
-            // by convention, we decide to lock the caller scheduler only from from task callback
-            // but not start if calling scheduler is gone
-            {
-                auto shared_scheduler = m_scheduler.lock();
-                if (!shared_scheduler.is_valid())
-                    // no need to do any work as there is no way to callback
-                    return;
-            }
-            boost::promise<typename Work::result_type> work_result;
-            boost::future<typename Work::result_type> work_fu = work_result.get_future();
+            boost::asynchronous::expected<typename Work::result_type> ex;
             // TODO check not empty
             try
             {
                 // call task
-                OP()(m_work,work_result);
+                OP()(m_work,ex);
             }
-            catch(boost::asynchronous::task_aborted_exception& e){work_result.set_exception(boost::copy_exception(e));}
-            catch(...){work_result.set_exception(boost::current_exception());this->set_failed();}
+            catch(boost::asynchronous::task_aborted_exception& e){ex.set_exception(boost::copy_exception(e));}
+            catch(...){ex.set_exception(boost::current_exception());this->set_failed();}
             try
             {
                 auto shared_scheduler = m_scheduler.lock();
@@ -898,13 +880,13 @@ namespace detail
                     // no need to do any work as there is no way to callback
                     return;
                 // call callback
-                callback_fct cb(std::move(m_work),std::move(work_fu));
+                callback_fct cb(std::move(m_work),std::move(ex));
                 CB()(shared_scheduler,std::move(cb),m_task_name,m_cb_prio);
             }
             catch(std::exception& ){/* TODO */}
         }
 
-        void callback_ready(boost::future<typename Work::result_type> work_fu)
+        void callback_ready(boost::asynchronous::expected<typename Work::result_type> work_fu)
         {
             try
             {
@@ -939,26 +921,25 @@ namespace detail
                             // no need to do any work as there is no way to callback
                             return;
                         // call callback
-                        boost::promise<typename Func::return_type> work_result;
-                        boost::future<typename Work::result_type> work_fu = work_result.get_future();
+                        boost::asynchronous::expected<typename Work::result_type> ex;
                         if(!std::get<0>(continuation_res).has_value())
                         {
                             boost::asynchronous::task_aborted_exception ta;
-                            work_result.set_exception(boost::copy_exception(ta));
+                            ex.set_exception(boost::copy_exception(ta));
                         }
                         else
                         {
                             try
                             {
-                                work_result.set_value(std::move(std::get<0>(continuation_res).get()));
+                                ex.set_value(std::move(std::get<0>(continuation_res).get()));
                             }
                             catch(std::exception& e)
                             {
-                                work_result.set_exception(boost::copy_exception(e));
+                                ex.set_exception(boost::copy_exception(e));
                             }
                         }
 
-                        CallbackFct cb(std::move(work),std::move(work_fu));
+                        CallbackFct cb(std::move(work),std::move(ex));
                         CB()(shared_scheduler,std::move(cb),task_name,cb_prio);
                     }
                     catch(std::exception& ){/* TODO */}
@@ -984,26 +965,25 @@ namespace detail
                             // no need to do any work as there is no way to callback
                             return;
                         // call callback
-                        boost::promise<typename Func::return_type> work_result;
-                        boost::future<typename Work::result_type> work_fu = work_result.get_future();
+                        boost::asynchronous::expected<typename Work::result_type> ex;
                         if(!std::get<0>(continuation_res).has_value())
                         {
                             boost::asynchronous::task_aborted_exception ta;
-                            work_result.set_exception(boost::copy_exception(ta));
+                            ex.set_exception(boost::copy_exception(ta));
                         }
                         else
                         {
                             try
                             {
-                                work_result.set_value();
+                                ex.set_value();
                             }
                             catch(std::exception& e)
                             {
-                                work_result.set_exception(boost::copy_exception(e));
+                                ex.set_exception(boost::copy_exception(e));
                             }
                         }
 
-                        CallbackFct cb(std::move(work),std::move(work_fu));
+                        CallbackFct cb(std::move(work),std::move(ex));
                         CB()(shared_scheduler,std::move(cb),task_name,cb_prio);
                     }
                     catch(std::exception& ){/* TODO */}
@@ -1044,7 +1024,7 @@ namespace detail
 
         struct callback_fct : public boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type
         {
-            callback_fct(Work const& w,boost::future<typename Work::result_type> fu)
+            callback_fct(Work const& w,boost::asynchronous::expected<typename Work::result_type> fu)
                 :boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type()
                 ,m_work(w)
                 ,m_fu(std::move(fu)){}
@@ -1063,19 +1043,11 @@ namespace detail
                 m_work(std::move(m_fu));
             }
             Work m_work;
-            boost::future<typename Work::result_type> m_fu;
+            boost::asynchronous::expected<typename Work::result_type> m_fu;
         };
 
         void operator()()
         {
-            // by convention, we decide to lock the caller scheduler only from from task callback
-            // but not start if calling scheduler is gone
-            {
-                auto shared_scheduler = m_scheduler.lock();
-                if (!shared_scheduler.is_valid())
-                    // no need to do any work as there is no way to callback
-                    return;
-            }
             // TODO check not empty
             // call task
             post_helper_continuation<typename Work::result_type,Sched,Func,Work,F1,F2,callback_fct,CB>()(m_task_name,m_cb_prio,m_scheduler,m_work);
@@ -1116,7 +1088,7 @@ namespace detail
 
         struct callback_fct : public boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type
         {
-            callback_fct(Work const& w,boost::future<typename Work::result_type> fu)
+            callback_fct(Work const& w,boost::asynchronous::expected<typename Work::result_type> fu)
                 :boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type()
                 ,m_work(w)
                 ,m_fu(std::move(fu)){}
@@ -1135,7 +1107,7 @@ namespace detail
                 m_work(std::move(m_fu));
             }
             Work m_work;
-            boost::future<typename Work::result_type> m_fu;
+            boost::asynchronous::expected<typename Work::result_type> m_fu;
         };
         std::string get_task_name()const
         {
@@ -1151,8 +1123,7 @@ namespace detail
         {
             boost::asynchronous::tcp::client_request::message_payload payload;
             ar >> payload;
-            boost::promise<typename Work::result_type> work_p;
-            boost::future<typename Work::result_type> work_fu = work_p.get_future();
+            boost::asynchronous::expected<typename Work::result_type> ex;
             if (!payload.m_has_exception)
             {
                 std::istringstream archive_stream(std::move(payload.m_data));
@@ -1161,16 +1132,16 @@ namespace detail
 
                 typename Work::result_type res;
                 archive >> res;
-                work_p.set_value(std::move(res));
+                ex.set_value(std::move(res));
             }
             else
             {
-                work_p.set_exception(boost::copy_exception(payload.m_exception));
+                ex.set_exception(boost::copy_exception(payload.m_exception));
             }
-            callback_ready(std::move(work_fu));
+            callback_ready(std::move(ex));
         }
         BOOST_SERIALIZATION_SPLIT_MEMBER()
-        void callback_ready(boost::future<typename Work::result_type> work_fu)
+        void callback_ready(boost::asynchronous::expected<typename Work::result_type> work_fu)
         {
             try
             {
@@ -1186,14 +1157,6 @@ namespace detail
         }
         void operator()()
         {
-            // by convention, we decide to lock the caller scheduler only from from task callback
-            // but not start if calling scheduler is gone
-            {
-                auto shared_scheduler = m_scheduler.lock();
-                if (!shared_scheduler.is_valid())
-                    // no need to do any work as there is no way to callback
-                    return;
-            }
             // TODO check not empty
             // call task
             post_helper_continuation<typename Work::result_type,Sched,Func,Work,F1,F2,callback_fct,CB>()(m_task_name,m_cb_prio,m_scheduler,m_work);
@@ -1217,10 +1180,9 @@ auto post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_schedule
     // abstract away the return value of work functor
     struct post_helper
     {
-        void operator()(move_task_helper<void,F1,F2>& work,boost::promise<void>& res)const
+        void operator()(move_task_helper<void,F1,F2>& work,boost::asynchronous::expected<void>&)const
         {
             work.m_task();
-            res.set_value();
         }
     };
     move_task_helper<void,F1,F2> moved_work(std::move(func),std::move(cb_func));
@@ -1248,7 +1210,7 @@ auto post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_schedule
     // abstract away the return value of work functor
     struct post_helper
     {
-        void operator()(move_task_helper<decltype(func()),F1,F2>& work,boost::promise<decltype(func())>& res)const
+        void operator()(move_task_helper<decltype(func()),F1,F2>& work,boost::asynchronous::expected<decltype(func())>& res)const
         { 
             res.set_value(std::move(work.m_task()));
         }
@@ -1294,10 +1256,9 @@ auto interruptible_post_callback(S1 const& scheduler,F1 const& func,S2 const& we
     // abstract away the return value of work functor
     struct post_helper
     {
-        void operator()(move_task_helper<void,F1,F2>& work,boost::promise<void>& res)const
+        void operator()(move_task_helper<void,F1,F2>& work,boost::asynchronous::expected<void>&)const
         {
             work.m_task();
-            res.set_value();
         }
     };
     move_task_helper<void,F1,F2> moved_work(std::move(func),std::move(cb_func));
@@ -1325,7 +1286,7 @@ auto interruptible_post_callback(S1 const& scheduler,F1 const& func,S2 const& we
     // abstract away the return value of work functor
     struct post_helper
     {
-        void operator()(move_task_helper<decltype(func()),F1,F2>& work,boost::promise<decltype(func())>& res)const
+        void operator()(move_task_helper<decltype(func()),F1,F2>& work,boost::asynchronous::expected<decltype(func())>& res)const
         {  
             res.set_value(std::move(work.m_task()));
         }

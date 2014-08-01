@@ -71,7 +71,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                         boost::asynchronous::lazy_irange(0L, COUNT, pi()), sum, STEP_SIZE),
                                     mult);
                    },// work
-                   [aPromise](boost::future<double> res){
+                   [aPromise](boost::asynchronous::expected<double> res){
                         aPromise->set_value(res.get());
                    }// callback functor.
         );

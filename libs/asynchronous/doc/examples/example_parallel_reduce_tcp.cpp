@@ -66,7 +66,7 @@ struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any
         post_callback(
                     dummy_parallel_reduce_task(),
                    // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
-                   [this](boost::future<long> res){
+                   [this](boost::asynchronous::expected<long> res){
                         try
                         {
                             std::cout << "Result should be 705082704. Is: " << res.get() << std::endl;

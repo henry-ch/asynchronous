@@ -41,7 +41,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
         post_callback(
                [](){return 42;}// work
                 ,
-               [this](boost::future<int> res){
+               [this](boost::asynchronous::expected<int> res){
                    this->m_promise->set_value(res.get());
                },// callback functor.
                // task name for logging

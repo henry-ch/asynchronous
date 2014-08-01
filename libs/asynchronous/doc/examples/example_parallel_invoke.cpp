@@ -53,7 +53,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                 );
                    },// work
                    // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
-                   [this](boost::future<std::tuple<boost::future<void>,boost::future<double>>> res)
+                   [this](boost::asynchronous::expected<std::tuple<boost::future<void>,boost::future<double>>> res)
                    {
                         try
                         {

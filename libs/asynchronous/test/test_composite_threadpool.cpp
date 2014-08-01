@@ -81,7 +81,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         return 42; //always...
                     }// work
                 ,
-               [this,ao_id](boost::future<int> res){
+               [this,ao_id](boost::asynchronous::expected<int> res){
                         BOOST_CHECK_MESSAGE(ao_id == boost::this_thread::get_id(),"servant callback in wrong thread.");
                         this->on_callback(res.get());
                },// callback functor.

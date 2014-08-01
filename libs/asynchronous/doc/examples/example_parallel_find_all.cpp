@@ -68,7 +68,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                       }// work
                 ,
                // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
-               [this](boost::future<std::vector<int>> res){
+               [this](boost::asynchronous::expected<std::vector<int>> res){
                             this->on_callback(res.get());
                }// callback functor.
         );

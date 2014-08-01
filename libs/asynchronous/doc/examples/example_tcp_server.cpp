@@ -67,7 +67,7 @@ struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any
             post_callback(
                    dummy_tcp_task(i),
                    // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
-                   [this](boost::future<int> res){
+                   [this](boost::asynchronous::expected<int> res){
                                 try{
                                     this->on_callback(res.get());
                                 }

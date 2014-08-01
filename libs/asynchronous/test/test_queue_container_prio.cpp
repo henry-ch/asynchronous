@@ -46,7 +46,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         ++cpt;
         post_callback(
                [](){},// work
-               [res](boost::future<void> ){
+               [res](boost::asynchronous::expected<void> ){
                   BOOST_CHECK_MESSAGE(cpt==2,"start_async_work's callback' should have been called third.");++cpt;res->set_value();}// callback functor.
                ,"",
                3,3
