@@ -23,6 +23,7 @@
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/any_scheduler.hpp>
 #include <boost/asynchronous/scheduler/detail/interrupt_state.hpp>
+#include <boost/asynchronous/expected.hpp>
 
 BOOST_MPL_HAS_XXX_TRAIT_DEF(state)
 BOOST_MPL_HAS_XXX_TRAIT_DEF(iterator)
@@ -36,6 +37,17 @@ struct continuation
     typedef int is_continuation_task;
     typedef Return return_type;
     typedef Tuple tuple_type;
+    // metafunction telling if we are future or expected based sind
+    template <class T>
+    struct continuation_args
+    {
+        typedef boost::future<T> type;
+    };
+    // workaround for compiler crash (gcc 4.7)
+    boost::future<Return> get_continuation_args()const
+    {
+        return boost::future<Return>();
+    }
 
     continuation(continuation&& rhs)noexcept
         : m_futures(std::move(rhs.m_futures))
@@ -207,12 +219,23 @@ struct continuation
 
 };
 
-template <class Return, typename Job, typename Tuple=std::tuple<boost::future<Return> > , typename Duration = boost::chrono::milliseconds >
+template <class Return, typename Job, typename Tuple=std::tuple<boost::asynchronous::expected<Return> > , typename Duration = boost::chrono::milliseconds >
 struct callback_continuation
 {
     typedef int is_continuation_task;
     typedef Return return_type;
     typedef Tuple tuple_type;
+    // metafunction telling if we are future or expected based
+    template <class T>
+    struct continuation_args
+    {
+        typedef boost::asynchronous::expected<T> type;
+    };
+    // workaround for compiler crash (gcc 4.7)
+    boost::asynchronous::expected<Return> get_continuation_args()const
+    {
+        return boost::asynchronous::expected<Return>();
+    }
 
     callback_continuation(callback_continuation&& rhs)noexcept
         : m_state(std::move(rhs.m_state))
@@ -260,20 +283,25 @@ struct callback_continuation
         std::vector<boost::asynchronous::any_interruptible> interruptibles;
         if (locked_scheduler.is_valid())
         {
-            continuation_ctor_helper(locked_scheduler,interruptibles,std::forward<Args>(args)...);
+            continuation_ctor_helper<0>
+                (locked_scheduler,interruptibles,std::forward<Args>(args)...);
         }
         if (m_state)
             m_state->add_subs(interruptibles.begin(),interruptibles.end());
     }
 
-    template <typename T,typename Interruptibles,typename Last>
+    template <int I,typename T,typename Interruptibles,typename Last>
     void continuation_ctor_helper(T& sched, Interruptibles& interruptibles,Last&& l)
     {
         std::string n(std::move(l.get_name()));
         if (!m_state)
         {
             auto finished = m_finished;
-            l.set_done_func([finished](){finished->done();});
+            l.set_done_func([finished](boost::asynchronous::expected<typename Last::res_type> r)
+                            {
+                               std::get<I>((*finished).m_futures) = std::move(r);
+                               finished->done();
+                            });
             // no interruptible requested
             boost::asynchronous::post_future(sched,std::forward<Last>(l),n);
         }
@@ -284,11 +312,15 @@ struct callback_continuation
         }
     }
 
-    template <typename T,typename Interruptibles,typename... Tail, typename Front>
+    template <int I,typename T,typename Interruptibles,typename... Tail, typename Front>
     void continuation_ctor_helper(T& sched, Interruptibles& interruptibles,Front&& front,Tail&&... tail)
     {
         auto finished = m_finished;
-        front.set_done_func([finished](){finished->done();});
+        front.set_done_func([finished](boost::asynchronous::expected<typename Front::res_type> r)
+                            {
+                               std::get<I>((*finished).m_futures) = std::move(r);
+                               finished->done();
+                            });
         std::string n(std::move(front.get_name()));
         if (!m_state)
         {
@@ -299,7 +331,7 @@ struct callback_continuation
         {
             interruptibles.push_back(std::get<1>(boost::asynchronous::interruptible_post_future(sched,std::forward<Front>(front),n)));
         }
-        continuation_ctor_helper(sched,interruptibles,std::forward<Tail>(tail)...);
+        continuation_ctor_helper<I+1>(sched,interruptibles,std::forward<Tail>(tail)...);
     }
 
     void operator()()
@@ -406,6 +438,17 @@ struct continuation_as_seq
 {
     typedef int is_continuation_task;
     typedef Return return_type;
+    // metafunction telling if we are future or expected based sind
+    template <class T>
+    struct continuation_args
+    {
+        typedef boost::future<T> type;
+    };
+    // workaround for compiler crash (gcc 4.7)
+    boost::future<Return> get_continuation_args()const
+    {
+        return boost::future<Return>();
+    }
 
     continuation_as_seq(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state, Duration d,Seq seq)
     : m_futures(std::move(seq))
@@ -512,6 +555,19 @@ template <typename... Args>
 auto make_future_tuple(Args&... args) -> decltype(std::make_tuple(call_get_future(args)...))
 {
     return std::make_tuple(call_get_future(args)...);
+}
+template <typename T>
+auto call_get_expected(T& ) -> boost::asynchronous::expected<typename T::res_type>
+{
+    // TODO not with empty ctor
+    return boost::asynchronous::expected<typename T::res_type>();
+}
+
+//create a tuple of futures
+template <typename... Args>
+auto make_expected_tuple(Args&... args) -> decltype(std::make_tuple(call_get_expected(args)...))
+{
+    return std::make_tuple(call_get_expected(args)...);
 }
 
 template <typename Front,typename... Tail>

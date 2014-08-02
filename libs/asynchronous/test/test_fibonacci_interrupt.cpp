@@ -58,8 +58,8 @@ struct fib_task : public boost::asynchronous::continuation_task<long>
         }
         else
         {
-            boost::asynchronous::create_continuation(
-                        [task_res](std::tuple<boost::future<long>,boost::future<long> > res)
+            boost::asynchronous::create_callback_continuation(
+                        [task_res](std::tuple<boost::asynchronous::expected<long>,boost::asynchronous::expected<long> > res)
                         {
                             BOOST_CHECK_MESSAGE(std::get<0>(res).has_exception(),"Fib subtask 99 got no exception");
                             BOOST_CHECK_MESSAGE(std::get<1>(res).has_exception(),"Fib subtask 98 got no exception");
@@ -102,7 +102,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                 [n,cutoff]()
                 {
                     BOOST_CHECK_MESSAGE(contains_id(tpids.begin(),tpids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
-                    return boost::asynchronous::top_level_continuation<long>(fib_task(n,cutoff));
+                    return boost::asynchronous::top_level_callback_continuation<long>(fib_task(n,cutoff));
                  }// work
                ,
                // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called

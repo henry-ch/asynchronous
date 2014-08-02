@@ -912,7 +912,9 @@ namespace detail
                         move_task_helper<typename Func::return_type,F1,F2>& work)const
         {
             auto cont = work.m_task();
-            cont.on_done([work,scheduler,task_name,cb_prio](std::tuple<boost::future<typename Func::return_type> >&& continuation_res)
+            typedef decltype(cont.get_continuation_args()) cont_return_type;
+            cont.on_done([work,scheduler,task_name,cb_prio]
+                         (std::tuple<cont_return_type> continuation_res)
                 {
                     try
                     {
@@ -922,7 +924,7 @@ namespace detail
                             return;
                         // call callback
                         boost::asynchronous::expected<typename Work::result_type> ex;
-                        if(!std::get<0>(continuation_res).has_value())
+                        if(!(std::get<0>(continuation_res)).has_value())
                         {
                             boost::asynchronous::task_aborted_exception ta;
                             ex.set_exception(boost::copy_exception(ta));
@@ -956,7 +958,9 @@ namespace detail
                         move_task_helper<typename Func::return_type,F1,F2>& work)const
         {
             auto cont = work.m_task();
-            cont.on_done([work,scheduler,task_name,cb_prio](std::tuple<boost::future<typename Func::return_type> >&& continuation_res)
+            typedef decltype(cont.get_continuation_args()) cont_return_type;
+            cont.on_done([work,scheduler,task_name,cb_prio]
+                         (std::tuple<cont_return_type>&& continuation_res)
                 {
                     try
                     {

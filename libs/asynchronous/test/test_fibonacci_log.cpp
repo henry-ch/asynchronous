@@ -54,8 +54,8 @@ struct fib_task : public boost::asynchronous::continuation_task<long>
         }
         else
         {
-            boost::asynchronous::create_continuation_job<servant_job>(
-                        [task_res](std::tuple<boost::future<long>,boost::future<long> > res)
+            boost::asynchronous::create_callback_continuation_job<servant_job>(
+                        [task_res](std::tuple<boost::asynchronous::expected<long>,boost::asynchronous::expected<long> > res)
                         {
                             long r = std::get<0>(res).get() + std::get<1>(res).get();
                             task_res.set_value(r);
@@ -101,7 +101,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
                 [n,cutoff]()
                 {
                     BOOST_CHECK_MESSAGE(contains_id(tpids.begin(),tpids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
-                    return boost::asynchronous::top_level_continuation_log<long,servant_job>(fib_task(n,cutoff));
+                    return boost::asynchronous::top_level_callback_continuation_job<long,servant_job>(fib_task(n,cutoff));
                  }// work
                ,
                // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
