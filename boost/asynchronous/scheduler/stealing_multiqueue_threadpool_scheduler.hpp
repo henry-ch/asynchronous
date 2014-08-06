@@ -262,6 +262,7 @@ public:
         // thread scheduler => tss
         boost::asynchronous::any_weak_scheduler<job_type> self_as_weak = boost::asynchronous::detail::lockable_weak_scheduler<this_type>(this_);
         boost::asynchronous::get_thread_scheduler<job_type>(self_as_weak,true);
+        boost::asynchronous::get_own_queue_index<>(index+1,true);
 
         std::deque<boost::asynchronous::any_continuation>& waiting =
                 boost::asynchronous::get_continuations(std::deque<boost::asynchronous::any_continuation>(),true);

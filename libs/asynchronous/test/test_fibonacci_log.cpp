@@ -179,10 +179,7 @@ BOOST_AUTO_TEST_CASE( test_fibonacci_log_30_18 )
                     BOOST_CHECK_MESSAGE(!(*jit).is_failed(),"no task should have failed.");
                 }
             }
-            for (std::map<int,bool>::const_iterator it=tasks.begin(); it != tasks.end();++it)
-            {
-                BOOST_CHECK_MESSAGE((*it).second ,"a fibonacci task has not been called");
-            }
+            //no more possible to test task name called with optimization that some tasks are called immediately instead of being posted
         }
     }
 }

@@ -24,6 +24,7 @@
 #include <boost/asynchronous/any_scheduler.hpp>
 #include <boost/asynchronous/scheduler/detail/interrupt_state.hpp>
 #include <boost/asynchronous/expected.hpp>
+#include <boost/asynchronous/scheduler/tss_scheduler.hpp>
 
 BOOST_MPL_HAS_XXX_TRAIT_DEF(state)
 BOOST_MPL_HAS_XXX_TRAIT_DEF(iterator)
@@ -302,13 +303,15 @@ struct callback_continuation
                                std::get<I>((*finished).m_futures) = std::move(r);
                                finished->done();
                             });
-            // no interruptible requested
-            boost::asynchronous::post_future(sched,std::forward<Last>(l),n);
+            // we execute one task ourselves to save one post
+            l();
         }
         else if(!m_state->is_interrupted())
         {
             // interruptible requested
-            interruptibles.push_back(std::get<1>(boost::asynchronous::interruptible_post_future(sched,std::forward<Last>(l),n)));
+            interruptibles.push_back(std::get<1>(
+                                         boost::asynchronous::interruptible_post_future(sched,std::forward<Last>(l),n,
+                                                                                        boost::asynchronous::get_own_queue_index<>())));
         }
     }
 
@@ -325,11 +328,13 @@ struct callback_continuation
         if (!m_state)
         {
             // no interruptible requested
-            boost::asynchronous::post_future(sched,std::forward<Front>(front),n);
+            boost::asynchronous::post_future(sched,std::forward<Front>(front),n,boost::asynchronous::get_own_queue_index<>());
         }
         else
         {
-            interruptibles.push_back(std::get<1>(boost::asynchronous::interruptible_post_future(sched,std::forward<Front>(front),n)));
+            interruptibles.push_back(std::get<1>(
+                                         boost::asynchronous::interruptible_post_future(sched,std::forward<Front>(front),n,
+                                                                                        boost::asynchronous::get_own_queue_index<>())));
         }
         continuation_ctor_helper<I+1>(sched,interruptibles,std::forward<Tail>(tail)...);
     }

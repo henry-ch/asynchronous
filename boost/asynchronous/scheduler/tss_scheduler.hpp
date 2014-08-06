@@ -70,6 +70,19 @@ boost::shared_ptr<boost::asynchronous::detail::interrupt_state> get_interrupt_st
     return s_state.get()->m_state;
 }
 
+template <class dummy = void >
+ std::size_t get_own_queue_index(std::size_t i=0,bool reset=false)
+{
+    static boost::thread_specific_ptr< std::size_t > s_index;
+    if (reset)
+    {
+        s_index.reset(new std::size_t(i));
+    }
+    if (s_index.get() == 0)
+        return 0;
+    return *s_index.get();
+}
+
 }}
 
 #endif // BOOST_ASYNCHRON_SCHEDULER_TSS_SCHEDULERHPP
