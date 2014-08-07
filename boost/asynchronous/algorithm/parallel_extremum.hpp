@@ -31,13 +31,6 @@ struct selector {
         return c(a, b) ? a : b;
     }
 };
-
-// just for real ranges
-template <class T,class Job>
-struct get_iterator_value_type
-{
-    typedef boost::asynchronous::detail::continuation<typename std::iterator_traits<decltype(boost::begin(std::declval<T>()))>::value_type, Job> type;
-};
 }
 
 // Moved Ranges
@@ -74,7 +67,7 @@ auto parallel_extremum(Range range, Comparison c, long cutoff, const std::string
 // Iterators
 template <class Iterator, class Comparison, class Job=boost::asynchronous::any_callable>
 auto parallel_extremum(Iterator beg, Iterator end, Comparison c, long cutoff, const std::string& task_name="", std::size_t prio=0)
-    -> boost::asynchronous::detail::continuation<typename std::iterator_traits<Iterator>::value_type, Job>
+    -> boost::asynchronous::detail::callback_continuation<typename std::iterator_traits<Iterator>::value_type, Job>
 {
     return boost::asynchronous::parallel_reduce(beg, end, detail::selector<Comparison>(c), cutoff, task_name, prio);
 }

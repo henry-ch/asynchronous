@@ -43,5 +43,26 @@ void safe_advance(Iterator& it, Distance n, Iterator end)
 {
     safe_advance_helper(it,n,end,typename std::iterator_traits<Iterator>::iterator_category());
 }
+
+// finds the best position to cut a range in 2: in the middle if random access iterators, given cutoff otherwise
+template <class Iterator, class Distance>
+Iterator find_cutoff_helper(Iterator it, Distance n, Iterator end,std::random_access_iterator_tag)
+{
+    if (end-it <= n)
+        return end;
+    return it + (end-it)/2;
+}
+template <class Iterator, class Distance>
+Iterator find_cutoff_helper(Iterator it, Distance n, Iterator end,std::input_iterator_tag)
+{
+    // advance up to cutoff or end
+    boost::asynchronous::detail::safe_advance(it,n,end);
+    return it;
+}
+template <class Iterator, class Distance>
+Iterator find_cutoff(Iterator it, Distance n, Iterator end)
+{
+    return find_cutoff_helper(it,n,end,typename std::iterator_traits<Iterator>::iterator_category());
+}
 }}}
 #endif // BOOST_ASYNCHRONOUS_SAFE_ADVANCE_HPP

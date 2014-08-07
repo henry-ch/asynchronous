@@ -294,72 +294,72 @@ BOOST_AUTO_TEST_CASE( test_parallel_for )
     BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
 }
 
-//BOOST_AUTO_TEST_CASE( test_parallel_for_range )
-//{
-//    servant_dtor=false;
-//    {
-//        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-//                                                                            boost::asynchronous::lockfree_queue<> >);
+BOOST_AUTO_TEST_CASE( test_parallel_for_range )
+{
+    servant_dtor=false;
+    {
+        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<> >);
 
-//        main_thread_id = boost::this_thread::get_id();
-//        ServantProxy proxy(scheduler);
-//        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_async_work_range();
-//        try
-//        {
-//            boost::shared_future<void> resfuv = fuv.get();
-//            resfuv.get();
-//        }
-//        catch(...)
-//        {
-//            BOOST_FAIL( "unexpected exception" );
-//        }
-//    }
-//    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
-//}
+        main_thread_id = boost::this_thread::get_id();
+        ServantProxy proxy(scheduler);
+        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_async_work_range();
+        try
+        {
+            boost::shared_future<void> resfuv = fuv.get();
+            resfuv.get();
+        }
+        catch(...)
+        {
+            BOOST_FAIL( "unexpected exception" );
+        }
+    }
+    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
+}
 
-//BOOST_AUTO_TEST_CASE( test_parallel_for_range2 )
-//{
-//    servant_dtor=false;
-//    {
-//        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-//                                                                            boost::asynchronous::lockfree_queue<> >);
+BOOST_AUTO_TEST_CASE( test_parallel_for_range2 )
+{
+    servant_dtor=false;
+    {
+        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<> >);
 
-//        main_thread_id = boost::this_thread::get_id();
-//        ServantProxy proxy(scheduler);
-//        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_async_work_range2();
-//        try
-//        {
-//            boost::shared_future<void> resfuv = fuv.get();
-//            resfuv.get();
-//        }
-//        catch(...)
-//        {
-//            BOOST_FAIL( "unexpected exception" );
-//        }
-//    }
-//    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
-//}
+        main_thread_id = boost::this_thread::get_id();
+        ServantProxy proxy(scheduler);
+        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_async_work_range2();
+        try
+        {
+            boost::shared_future<void> resfuv = fuv.get();
+            resfuv.get();
+        }
+        catch(...)
+        {
+            BOOST_FAIL( "unexpected exception" );
+        }
+    }
+    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
+}
 
-//BOOST_AUTO_TEST_CASE( test_parallel_for_range3 )
-//{
-//    servant_dtor=false;
-//    {
-//        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-//                                                                            boost::asynchronous::lockfree_queue<> >);
+BOOST_AUTO_TEST_CASE( test_parallel_for_range3 )
+{
+    servant_dtor=false;
+    {
+        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<> >);
 
-//        main_thread_id = boost::this_thread::get_id();
-//        ServantProxy proxy(scheduler);
-//        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_async_work_range3();
-//        try
-//        {
-//            boost::shared_future<void> resfuv = fuv.get();
-//            resfuv.get();
-//        }
-//        catch(...)
-//        {
-//            BOOST_FAIL( "unexpected exception" );
-//        }
-//    }
-//    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
-//}
+        main_thread_id = boost::this_thread::get_id();
+        ServantProxy proxy(scheduler);
+        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_async_work_range3();
+        try
+        {
+            boost::shared_future<void> resfuv = fuv.get();
+            resfuv.get();
+        }
+        catch(...)
+        {
+            BOOST_FAIL( "unexpected exception" );
+        }
+    }
+    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
+}
 
