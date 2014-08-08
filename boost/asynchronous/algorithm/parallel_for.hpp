@@ -199,10 +199,10 @@ struct parallel_for_range_move_helper<Range,Func,Job,typename ::boost::enable_if
                         },
                         // recursive tasks
                         parallel_for_range_move_helper<sub_range,Func,Job>(
-                                    boost::copy_range< sub_range>(boost::make_iterator_range(boost::begin(*range),it)),
+                                    boost::copy_range< sub_range>(boost::make_iterator_range(boost::begin(range),it)),
                                     func_,cutoff_,task_name_,prio_),
                         parallel_for_range_move_helper<sub_range,Func,Job>(
-                                    boost::copy_range< sub_range>(boost::make_iterator_range(it,boost::end(*range))),
+                                    boost::copy_range< sub_range>(boost::make_iterator_range(it,boost::end(range))),
                                     func_,cutoff_,task_name_,prio_)
             );
         }
