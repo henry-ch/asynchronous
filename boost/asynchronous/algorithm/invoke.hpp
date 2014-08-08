@@ -42,7 +42,7 @@ struct invoke_helper: public boost::asynchronous::continuation_task<Return>
     {
         boost::asynchronous::continuation_result<Return> task_res = this->this_task_result();
         auto func(std::move(func_));
-        cont_.on_done([task_res,func](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res)
+        cont_.on_done([task_res,func](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
         {
             try
             {
@@ -54,8 +54,8 @@ struct invoke_helper: public boost::asynchronous::continuation_task<Return>
             }
         }
         );
-        boost::asynchronous::any_continuation ac(cont_);
-        boost::asynchronous::get_continuations().push_front(ac);
+        boost::asynchronous::any_continuation ac(std::move(cont_));
+        boost::asynchronous::get_continuations().emplace_front(std::move(ac));
     }
 private:
     Continuation cont_;
@@ -75,7 +75,7 @@ struct invoke_helper<Continuation,Func,Job,Return,typename ::boost::enable_if<bo
     {
         boost::asynchronous::continuation_result<Return> task_res = this->this_task_result();
         auto func(std::move(func_));
-        cont_.on_done([task_res,func](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res)
+        cont_.on_done([task_res,func](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
         {
             try
             {
@@ -87,8 +87,8 @@ struct invoke_helper<Continuation,Func,Job,Return,typename ::boost::enable_if<bo
             }
         }
         );
-        boost::asynchronous::any_continuation ac(cont_);
-        boost::asynchronous::get_continuations().push_front(ac);
+        boost::asynchronous::any_continuation ac(std::move(cont_));
+        boost::asynchronous::get_continuations().emplace_front(std::move(ac));
     }
     template <class Archive>
     void serialize(Archive & ar, const unsigned int /*version*/)
@@ -105,11 +105,11 @@ private:
 template <class Continuation, class Func, class Job=boost::asynchronous::any_callable>
 auto invoke(Continuation c,Func func)
     -> typename boost::enable_if<has_is_continuation_task<Continuation>,
-            boost::asynchronous::detail::continuation<decltype(func(typename Continuation::return_type())),Job> >::type
+            boost::asynchronous::detail::callback_continuation<decltype(func(typename Continuation::return_type())),Job> >::type
 {
-    return boost::asynchronous::top_level_continuation_log<decltype(func(typename Continuation::return_type())),Job>
+    return boost::asynchronous::top_level_callback_continuation_job<decltype(func(typename Continuation::return_type())),Job>
             (boost::asynchronous::detail::invoke_helper<Continuation,Func,Job,decltype(func(typename Continuation::return_type()))>
-                (c,std::move(func)));
+                (std::move(c),std::move(func)));
 }
 
 }}
