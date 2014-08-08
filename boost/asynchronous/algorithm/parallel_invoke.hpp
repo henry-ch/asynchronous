@@ -14,7 +14,6 @@
 #include <vector>
 #include <tuple>
 
-#include <boost/thread/future.hpp>
 #include <boost/utility/enable_if.hpp>
 #include <boost/serialization/vector.hpp>
 
@@ -31,58 +30,64 @@ namespace boost { namespace asynchronous
 {
 namespace detail
 {
-template <class ReturnType, class Job>
+template <class ReturnType, class Job,typename... Args>
 struct parallel_invoke_helper: public boost::asynchronous::continuation_task<ReturnType>
 {
-    template <typename... Args>
-    parallel_invoke_helper(Args&&... args)
+    parallel_invoke_helper(ReturnType expected_tuple,Args... args)
+        : m_expected_tuple(std::move(expected_tuple))
+        , m_tuple(std::make_tuple(std::move(args)...))
     {
-        typedef decltype(boost::asynchronous::detail::make_future_tuple(args...)) sp_future_type;
-        typedef sp_future_type future_type;
+    }
+    void operator()()
+    {
         boost::asynchronous::continuation_result<ReturnType> task_res = this->this_task_result();
-        boost::asynchronous::create_continuation_job<Job>(
+        boost::asynchronous::create_callback_continuation_job<Job>(
                     // called when subtasks are done, set our result
-                    [task_res](future_type res)
+                    [task_res](ReturnType res)
                     {
                         task_res.emplace_value(std::move(res));
                     },
+                    std::move(m_expected_tuple),
                     // recursive tasks
-                    args...);
-    }
-    void operator()()const
-    {
+                    std::move(m_tuple));
     }
     template <class Archive>
     void serialize(Archive & /*ar*/, const unsigned int /*version*/)
     {
     }
+    ReturnType m_expected_tuple;
+    std::tuple<Args...> m_tuple;
 };
-template <class ReturnType, class Job,class Duration>
+template <class ReturnType, class Job,class Duration,typename... Args>
 struct parallel_invoke_helper_timeout: public boost::asynchronous::continuation_task<ReturnType>
 {
-    template <typename... Args>
-    parallel_invoke_helper_timeout(Duration const& d,Args&&... args)
+    parallel_invoke_helper_timeout(Duration const& d,ReturnType expected_tuple,Args... args)
+        : m_expected_tuple(std::move(expected_tuple))
+        , m_tuple(std::make_tuple(std::move(args)...))
+        , m_duration(d)
     {
-        typedef decltype(boost::asynchronous::detail::make_future_tuple(args...)) sp_future_type;
-        typedef sp_future_type future_type;
+    }
+    void operator()()
+    {
         boost::asynchronous::continuation_result<ReturnType> task_res = this->this_task_result();
-        boost::asynchronous::create_continuation_job_timeout<Job>(
+        boost::asynchronous::create_callback_continuation_job_timeout<Job>(
                     // called when subtasks are done, set our result
-                    [task_res](future_type res)
+                    [task_res](ReturnType res)
                     {
                         task_res.emplace_value(std::move(res));
                     },
-                    d,
+                    m_duration,
+                    std::move(m_expected_tuple),
                     // recursive tasks
-                    args...);
-    }
-    void operator()()const
-    {
+                    std::move(m_tuple));
     }
     template <class Archive>
     void serialize(Archive & /*ar*/, const unsigned int /*version*/)
     {
     }
+    ReturnType m_expected_tuple;
+    std::tuple<Args...> m_tuple;
+    Duration m_duration;
 };
 }
 template <class Return, class Func>
@@ -140,23 +145,25 @@ auto to_continuation_task(T task)
 }
 
 template <class Job, typename... Args>
-auto parallel_invoke(Args&&... args)
-    -> boost::asynchronous::detail::continuation<decltype(boost::asynchronous::detail::make_future_tuple(args...)),Job>
+auto parallel_invoke(Args... args)
+    -> boost::asynchronous::detail::callback_continuation<decltype(boost::asynchronous::detail::make_expected_tuple(args...)),Job>
 {
-    typedef decltype(boost::asynchronous::detail::make_future_tuple(args...)) ReturnType;
+    typedef decltype(boost::asynchronous::detail::make_expected_tuple(args...)) ReturnType;
 
-    return boost::asynchronous::top_level_continuation_log<ReturnType,Job>
-            (boost::asynchronous::detail::parallel_invoke_helper<ReturnType,Job>(std::forward<Args>(args)...));
+    return boost::asynchronous::top_level_callback_continuation_job<ReturnType,Job>
+            (boost::asynchronous::detail::parallel_invoke_helper<ReturnType,Job,Args...>
+               (boost::asynchronous::detail::make_expected_tuple(args...),std::move(args)...));
 }
 // version with timeout
 template <class Job, class Duration, typename... Args>
-auto parallel_invoke_timeout(Duration const& d, Args&&... args)
-    -> boost::asynchronous::detail::continuation<decltype(boost::asynchronous::detail::make_future_tuple(args...)),Job>
+auto parallel_invoke_timeout(Duration const& d, Args... args)
+    -> boost::asynchronous::detail::callback_continuation<decltype(boost::asynchronous::detail::make_expected_tuple(args...)),Job>
 {
-    typedef decltype(boost::asynchronous::detail::make_future_tuple(args...)) ReturnType;
+    typedef decltype(boost::asynchronous::detail::make_expected_tuple(args...)) ReturnType;
 
-    return boost::asynchronous::top_level_continuation_log<ReturnType,Job>
-            (boost::asynchronous::detail::parallel_invoke_helper_timeout<ReturnType,Job,Duration>(d,std::forward<Args>(args)...));
+    return boost::asynchronous::top_level_callback_continuation_job<ReturnType,Job>
+            (boost::asynchronous::detail::parallel_invoke_helper_timeout<ReturnType,Job,Duration,Args...>
+               (d,boost::asynchronous::detail::make_expected_tuple(args...),std::move(args)...));
 }
 }}
 
