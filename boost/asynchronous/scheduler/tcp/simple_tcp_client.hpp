@@ -52,7 +52,8 @@ static void send_task_result(boost::asynchronous::tcp::client_request const& req
     std::vector<boost::asio::const_buffer> buffers;
     buffers.push_back(boost::asio::buffer(*outbound_header));
     buffers.push_back(boost::asio::buffer(*outbound_buffer));
-    boost::asio::async_write(*asocket, buffers,[outbound_buffer,outbound_header](const boost::system::error_code&,std::size_t) {/*ignore*/});
+    boost::asio::async_write(*asocket, buffers,[outbound_buffer,outbound_header](const boost::system::error_code&,std::size_t )
+    {/*ignore*/});
 }
 
 }
@@ -577,7 +578,7 @@ void deserialize_and_call_task(Task& t,boost::asynchronous::tcp::server_reponse 
     when_done(request);
 }
                                                                   \
-// register a top-levelcontinuation task for deserialization
+// register a top-level continuation task for deserialization
 template <class Task, class SerializableType = boost::asynchronous::any_serializable>
 void deserialize_and_call_top_level_continuation_task(
         Task& t,boost::asynchronous::tcp::server_reponse const& resp,
@@ -618,7 +619,7 @@ void deserialize_and_call_top_level_continuation_task(
     boost::asynchronous::any_continuation ac(cont);
     boost::asynchronous::get_continuations().push_front(ac);
 }
-// register a top-levelcontinuation task for deserialization
+// register a continuation task for deserialization
 template <class Task, class SerializableType = boost::asynchronous::any_serializable>
 void deserialize_and_call_continuation_task(
         Task& t,boost::asynchronous::tcp::server_reponse const& resp,
@@ -659,6 +660,88 @@ void deserialize_and_call_continuation_task(
          }
     , t.get_future()
     );
+}
+
+// register callback continuations
+template <class Task, class SerializableType = boost::asynchronous::any_serializable>
+void deserialize_and_call_callback_continuation_task(
+        Task& t,boost::asynchronous::tcp::server_reponse const& resp,
+        std::function<void(boost::asynchronous::tcp::client_request const&)>const& when_done)
+{
+    // deserialize job, execute code, serialize result
+    std::istringstream task_stream(resp.m_task);
+    typename SerializableType::iarchive task_archive(task_stream);
+    boost::asynchronous::tcp::client_request request (BOOST_ASYNCHRONOUS_TCP_CLIENT_JOB_RESULT);
+    request.m_task_id = resp.m_task_id;
+    task_archive >> t;
+    // create continuation waiting for task completion
+    boost::asynchronous::create_callback_continuation_job<SerializableType>
+        ([request,when_done](std::tuple<boost::asynchronous::expected<typename Task::res_type> > continuation_res)mutable
+         {
+            std::ostringstream res_archive_stream;
+            typename SerializableType::oarchive res_archive(res_archive_stream);
+            try
+            {
+                // serialize result
+                auto res = (std::get<0>(continuation_res)).get();
+                res_archive << res;
+                request.m_load.m_data = res_archive_stream.str();
+            }
+            catch (std::exception& e)
+            {
+                request.m_load.m_has_exception=true;
+                request.m_load.m_exception=boost::asynchronous::tcp::transport_exception(e.what());
+            }
+            catch(...)
+            {
+                request.m_load.m_has_exception=true;
+                request.m_load.m_exception=boost::asynchronous::tcp::transport_exception("...");
+            }
+            when_done(request);
+         }
+         , std::move(t)
+    );
+}
+//register top-level callback continuations
+template <class Task, class SerializableType = boost::asynchronous::any_serializable>
+void deserialize_and_call_top_level_callback_continuation_task(
+        Task& t,boost::asynchronous::tcp::server_reponse const& resp,
+        std::function<void(boost::asynchronous::tcp::client_request const&)>const& when_done)
+{
+    // deserialize job, execute code, serialize result
+    std::istringstream task_stream(resp.m_task);
+    typename SerializableType::iarchive task_archive(task_stream);
+    boost::asynchronous::tcp::client_request request (BOOST_ASYNCHRONOUS_TCP_CLIENT_JOB_RESULT);
+    request.m_task_id = resp.m_task_id;
+    task_archive >> t;
+    // call task
+    auto cont = t();
+    cont.on_done([request,when_done](std::tuple<boost::asynchronous::expected<typename decltype(t())::return_type> >&& continuation_res)mutable
+        {
+            std::ostringstream res_archive_stream;
+            typename SerializableType::oarchive res_archive(res_archive_stream);
+            try
+            {
+                // serialize result
+                auto res = (std::get<0>(continuation_res)).get();
+                res_archive << res;
+                request.m_load.m_data = res_archive_stream.str();
+            }
+            catch (std::exception& e)
+            {
+                request.m_load.m_has_exception=true;
+                request.m_load.m_exception=boost::asynchronous::tcp::transport_exception(e.what());
+            }
+            catch(...)
+            {
+                request.m_load.m_has_exception=true;
+                request.m_load.m_exception=boost::asynchronous::tcp::transport_exception("...");
+            }
+            when_done(request);
+        }
+    );
+    boost::asynchronous::any_continuation ac(std::move(cont));
+    boost::asynchronous::get_continuations().emplace_front(std::move(ac));
 }
 }}}
 #endif // BOOST_ASYNCHRONOUS_SCHEDULER_TCP_SIMPLE_TCP_CLIENT_HPP

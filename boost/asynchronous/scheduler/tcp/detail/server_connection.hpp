@@ -68,7 +68,7 @@ public:
                                                         std::string archive_data(&(*inbound_buffer)[0], inbound_buffer->size());
                                                         std::istringstream archive_stream(archive_data);
                                                         typename SerializableType::iarchive archive(archive_stream);
-                                                        boost::asynchronous::tcp::client_request msg;
+                                                        boost::asynchronous::tcp::client_request msg;                                                        
                                                         archive >> msg;
                                                         callback(msg);
                                                         this->start(callback);

@@ -116,6 +116,7 @@ void example_parallel_for_tcp()
             boost::shared_future<boost::shared_future<void> > fu = proxy.start_async_work();
             boost::shared_future<void> resfu = fu.get();
             resfu.get();
+            std::cout << "shutting down example_parallel_for_tcp \n" << std::endl;
         }
     }
     std::cout << "end example_parallel_for_tcp \n" << std::endl;

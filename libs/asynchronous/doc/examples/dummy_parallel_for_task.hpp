@@ -32,17 +32,16 @@ struct dummy_parallel_for_subtask : public boost::asynchronous::serializable_tas
 
 struct dummy_parallel_for_task : public boost::asynchronous::serializable_task
 {
-    dummy_parallel_for_task():boost::asynchronous::serializable_task("dummy_parallel_for_task"),m_data(1000000,1){}
+    dummy_parallel_for_task():boost::asynchronous::serializable_task("dummy_parallel_for_task"),m_data(50000,1){}
     template <class Archive>
     void serialize(Archive & ar, const unsigned int /*version*/)
     {
-        std::cout << "dummy_parallel_for_task::serialize" << std::endl;
         ar & m_data;
     }
     auto operator()() -> decltype(boost::asynchronous::parallel_for<std::vector<int>,dummy_parallel_for_subtask,boost::asynchronous::any_serializable>(
                                       std::move(std::vector<int>()),
                                       dummy_parallel_for_subtask(2),
-                                      10))
+                                      1000))
     {
         return boost::asynchronous::parallel_for
                 <std::vector<int>,dummy_parallel_for_subtask,boost::asynchronous::any_serializable>(
