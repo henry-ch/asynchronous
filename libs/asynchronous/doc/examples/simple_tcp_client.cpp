@@ -58,20 +58,23 @@ int main(int argc, char* argv[])
             else if (task_name=="dummy_parallel_for_subtask")
             {
                 boost::asynchronous::parallel_for_range_move_helper<vector<int>,
-                                                                            dummy_parallel_for_subtask,
-                                                                            boost::asynchronous::any_serializable> t;
+                                                                    dummy_parallel_for_subtask,
+                                                                    boost::asynchronous::any_serializable> t;
                 boost::asynchronous::tcp::deserialize_and_call_callback_continuation_task(t,resp,when_done);
             }
-//            else if (task_name=="dummy_parallel_reduce_task")
-//            {
-//                dummy_parallel_reduce_task t;
-//                boost::asynchronous::tcp::deserialize_and_call_top_level_continuation_task(t,resp,when_done);
-//            }
-//            else if (task_name=="dummy_parallel_reduce_subtask")
-//            {
-//                boost::asynchronous::serializable_reduce<dummy_parallel_reduce_subtask,vector<long>> t;
-//                boost::asynchronous::tcp::deserialize_and_call_task(t,resp,when_done);
-//            }
+            else if (task_name=="dummy_parallel_reduce_task")
+            {
+                dummy_parallel_reduce_task t;
+                boost::asynchronous::tcp::deserialize_and_call_top_level_callback_continuation_task(t,resp,when_done);
+            }
+            else if (task_name=="dummy_parallel_reduce_subtask")
+            {
+                boost::asynchronous::parallel_reduce_range_move_helper<vector<long>,
+                                                                       dummy_parallel_reduce_subtask,
+                                                                       long,
+                                                                       boost::asynchronous::any_serializable> t;
+                boost::asynchronous::tcp::deserialize_and_call_callback_continuation_task(t,resp,when_done);
+            }
             // else whatever functor we support
             else
             {

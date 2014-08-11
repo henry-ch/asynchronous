@@ -107,8 +107,6 @@ auto parallel_reduce(Iterator beg, Iterator end,Func func,long cutoff,
 }
 
 // version for moved ranges
-namespace detail
-{
 template <class Range, class Func, class ReturnType, class Job,class Enable=void>
 struct parallel_reduce_range_move_helper: public boost::asynchronous::continuation_task<ReturnType>
 {
@@ -125,7 +123,8 @@ struct parallel_reduce_range_move_helper: public boost::asynchronous::continuati
         // if not at end, recurse, otherwise execute here
         if (it == boost::end(*range))
         {
-            task_res.emplace_value(std::move(reduce<decltype(it), Func, ReturnType>(boost::begin(*range),it,std::move(func_))));
+            task_res.emplace_value(std::move(boost::asynchronous::detail::reduce<decltype(it), Func, ReturnType>
+                                                                        (boost::begin(*range),it,std::move(func_))));
         }
         else
         {
@@ -146,9 +145,9 @@ struct parallel_reduce_range_move_helper: public boost::asynchronous::continuati
                     }
                 },
                 // recursive tasks
-                parallel_reduce_helper<decltype(boost::begin(*range_)),Func,ReturnType,Job>(
+                boost::asynchronous::detail::parallel_reduce_helper<decltype(boost::begin(*range_)),Func,ReturnType,Job>(
                     boost::begin(*range),it,func_,cutoff_,task_name_,prio_),
-                parallel_reduce_helper<decltype(boost::begin(*range_)),Func,ReturnType,Job>(
+                boost::asynchronous::detail::parallel_reduce_helper<decltype(boost::begin(*range_)),Func,ReturnType,Job>(
                     it,boost::end(*range),func_,cutoff_,task_name_,prio_)
             );
         }
@@ -159,15 +158,16 @@ struct parallel_reduce_range_move_helper: public boost::asynchronous::continuati
     std::string task_name_;
     std::size_t prio_;
 };
-}
 
-namespace detail
-{
 template <class Range, class Func, class ReturnType, class Job>
 struct parallel_reduce_range_move_helper<Range,Func,ReturnType,Job,typename ::boost::enable_if<boost::asynchronous::detail::is_serializable<Func> >::type>
         : public boost::asynchronous::continuation_task<ReturnType>
         , public boost::asynchronous::serializable_task
 {
+    //default ctor only when deserialized immediately after
+    parallel_reduce_range_move_helper():boost::asynchronous::serializable_task("")
+    {
+    }
     parallel_reduce_range_move_helper(Range&& range,Func func,long cutoff,
                         const std::string& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<ReturnType>()
@@ -184,7 +184,8 @@ struct parallel_reduce_range_move_helper<Range,Func,ReturnType,Job,typename ::bo
         // if not at end, recurse, otherwise execute here
         if (it == boost::end(*range))
         {
-            task_res.emplace_value(std::move(reduce<decltype(it), Func, ReturnType>(boost::begin(*range),it,std::move(func_))));
+            task_res.emplace_value(std::move(boost::asynchronous::detail::reduce<decltype(it), Func, ReturnType>
+                                                                            (boost::begin(*range),it,std::move(func_))));
         }
         else
         {
@@ -240,7 +241,6 @@ struct parallel_reduce_range_move_helper<Range,Func,ReturnType,Job,typename ::bo
     std::string task_name_;
     std::size_t prio_;
 };
-}
 
 template <class Range, class Func, class Job=boost::asynchronous::any_callable>
 auto parallel_reduce(Range&& range,Func func,long cutoff,
@@ -248,7 +248,7 @@ auto parallel_reduce(Range&& range,Func func,long cutoff,
 {
     typedef decltype(func(*(range.begin()), *(range.end()))) ReturnType;
     return boost::asynchronous::top_level_callback_continuation_job<ReturnType,Job>
-            (boost::asynchronous::detail::parallel_reduce_range_move_helper<Range,Func,ReturnType,Job>(std::forward<Range>(range),func,cutoff,task_name,prio));
+            (boost::asynchronous::parallel_reduce_range_move_helper<Range,Func,ReturnType,Job>(std::forward<Range>(range),func,cutoff,task_name,prio));
 }
 
 // version for ranges held only by reference
