@@ -63,9 +63,9 @@ struct fib_task : public boost::asynchronous::continuation_task<long>
         else
         {
             // n> cutoff, create 2 new tasks and when both are done, set our result (res(task1) + res(task2))
-            boost::asynchronous::create_continuation_job<boost::asynchronous::any_serializable>(
+            boost::asynchronous::create_callback_continuation_job<boost::asynchronous::any_serializable>(
                         // called when subtasks are done, set our result
-                        [task_res](std::tuple<boost::future<long>,boost::future<long> > res)
+                        [task_res](std::tuple<boost::asynchronous::expected<long>,boost::asynchronous::expected<long> > res)
                         {
                             long r = std::get<0>(res).get() + std::get<1>(res).get();
                             task_res.set_value(r);
@@ -89,11 +89,10 @@ struct serializable_fib_task : public boost::asynchronous::serializable_task
         ar & cutoff_;
     }
     auto operator()()const
-        -> decltype(boost::asynchronous::top_level_continuation_log<long,boost::asynchronous::any_serializable>
+        -> decltype(boost::asynchronous::top_level_callback_continuation_job<long,boost::asynchronous::any_serializable>
                     (tcp_example::fib_task(long(0),long(0))))
     {
-        //TODO better than _log...
-        auto cont =  boost::asynchronous::top_level_continuation_log<long,boost::asynchronous::any_serializable>
+        auto cont =  boost::asynchronous::top_level_callback_continuation_job<long,boost::asynchronous::any_serializable>
                 (tcp_example::fib_task(n_,cutoff_));
         return cont;
 
