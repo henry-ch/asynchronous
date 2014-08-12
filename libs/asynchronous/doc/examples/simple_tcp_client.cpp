@@ -32,7 +32,6 @@ int main(int argc, char* argv[])
            std::function<void(boost::asynchronous::tcp::client_request const&)> when_done)
         {
             std::cout << "got task: " << task_name
-//                      << " task: " << resp.m_task
                       << " m_task_id: " << resp.m_task_id
                       << std::endl;
             if (task_name=="dummy_tcp_task")

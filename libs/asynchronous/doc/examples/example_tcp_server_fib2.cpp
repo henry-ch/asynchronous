@@ -3,6 +3,7 @@
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
+#include <boost/asynchronous/queue/guarded_deque.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/scheduler/tcp/tcp_server_scheduler.hpp>
 #include <boost/asynchronous/servant_proxy.hpp>
@@ -21,6 +22,8 @@ using namespace std;
 
 namespace
 {
+typename boost::chrono::high_resolution_clock::time_point start;
+typename boost::chrono::high_resolution_clock::time_point stop;
 struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,boost::asynchronous::any_serializable>
 {
     // optional, ctor is simple enough not to be posted
@@ -35,6 +38,7 @@ struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any
     // called when task done, in our thread
     void on_callback(long res)
     {
+        stop = boost::chrono::high_resolution_clock::now();
         // inform test caller
         m_promise->set_value(res);
     }
@@ -75,8 +79,6 @@ void example_post_tcp_fib2(std::string const& server_address,std::string const& 
                            std::string const& own_server_address, long own_server_port, int threads, long fibo_val,long cutoff)
 {
 //    std::cout << "fibonacci single-threaded" << std::endl;
-    typename boost::chrono::high_resolution_clock::time_point start;
-    typename boost::chrono::high_resolution_clock::time_point stop;
 //    start = boost::chrono::high_resolution_clock::now();
 //    long sres = tcp_example::serial_fib(fibo_val);
 //    stop = boost::chrono::high_resolution_clock::now();
@@ -89,7 +91,7 @@ void example_post_tcp_fib2(std::string const& server_address,std::string const& 
         // we need a pool where the tasks execute
         auto pool = boost::asynchronous::create_shared_scheduler_proxy(
                     new boost::asynchronous::threadpool_scheduler<
-                            boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable> >(threads));
+                            boost::asynchronous::guarded_deque<boost::asynchronous::any_serializable> >(threads));
         // a client will steal jobs in this pool
         auto cscheduler = boost::asynchronous::create_shared_scheduler_proxy(
                             new boost::asynchronous::asio_scheduler<
@@ -121,8 +123,13 @@ void example_post_tcp_fib2(std::string const& server_address,std::string const& 
                 throw boost::asynchronous::tcp::transport_exception("unknown task");
             }
         };
-        boost::asynchronous::tcp::simple_tcp_client_proxy client_proxy(cscheduler,pool,server_address,server_port,executor,
-                                                                       10/*ms between calls to server*/);
+        typename boost::asynchronous::tcp::get_correct_simple_tcp_client_proxy<boost::asynchronous::tcp::queue_size_check_policy<>>::type
+                    client_proxy(
+                        cscheduler,pool,server_address,server_port,executor,
+                        0/*ms between calls to server*/,
+                        0 /* number of jobs we try to keep in queue */);
+//        boost::asynchronous::tcp::simple_tcp_client_proxy client_proxy(cscheduler,pool,server_address,server_port,executor,
+//                                                                       10/*ms between calls to server*/);
         // we need a server
         // we use a tcp pool using 1 worker
         auto server_pool = boost::asynchronous::create_shared_scheduler_proxy(
@@ -150,7 +157,6 @@ void example_post_tcp_fib2(std::string const& server_address,std::string const& 
             boost::shared_future<boost::shared_future<long> > fu = proxy.calc_fibonacci(fibo_val,cutoff);
             boost::shared_future<long> resfu = fu.get();
             long res = resfu.get();
-            stop = boost::chrono::high_resolution_clock::now();
             std::cout << "res= " << res << std::endl;
             std::cout << "fibonacci parallel TCP 2 took in us:"
                       <<  (boost::chrono::nanoseconds(stop - start).count() / 1000) <<"\n" <<std::endl;
@@ -158,8 +164,5 @@ void example_post_tcp_fib2(std::string const& server_address,std::string const& 
     }
     std::cout << "end example_post_tcp_fib2 \n" << std::endl;
 }
-
-
-
 
 
