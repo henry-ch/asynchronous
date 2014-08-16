@@ -167,7 +167,7 @@ struct continuation_task
 public:
     typedef Return res_type;
 
-    continuation_task(const std::string& name=""):m_promise(boost::make_shared<boost::promise<Return>>()),m_name(name){}
+    continuation_task(const std::string& name=""):m_promise(),m_name(name){}
     continuation_task(continuation_task&& rhs)noexcept
         : m_promise(std::move(rhs.m_promise))
         , m_name(std::move(rhs.m_name))
@@ -195,11 +195,17 @@ public:
 
     boost::future<Return> get_future()const
     {
+        // create only when asked
+        if (!m_promise)
+            const_cast<continuation_task<Return>&>(*this).m_promise = boost::make_shared<boost::promise<Return>>();
         return m_promise->get_future();
     }
 
     boost::shared_ptr<boost::promise<Return> > get_promise()const
     {
+        // create only when asked
+        if (!m_promise)
+            const_cast<continuation_task<Return>&>(*this).m_promise = boost::make_shared<boost::promise<Return>>();
         return m_promise;
     }
     std::string get_name()const
@@ -277,15 +283,21 @@ public:
         return *this;
     }
 
-    continuation_task(const std::string& name=""):m_promise(boost::make_shared<boost::promise<void>>()),m_name(name){}
+    continuation_task(const std::string& name=""):m_promise(),m_name(name){}
 
     boost::future<void> get_future()const
     {
+        // create only when asked
+        if (!m_promise)
+            const_cast<continuation_task<void>&>(*this).m_promise = boost::make_shared<boost::promise<void>>();
         return m_promise->get_future();
     }
 
     boost::shared_ptr<boost::promise<void> > get_promise()const
     {
+        // create only when asked
+        if (!m_promise)
+            const_cast<continuation_task<void>&>(*this).m_promise = boost::make_shared<boost::promise<void>>();
         return m_promise;
     }
     std::string get_name()const
