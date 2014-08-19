@@ -153,7 +153,7 @@ public:
     }
     // try to execute a job, return true
     static bool execute_one_job(boost::shared_ptr<queue_type> queue,CPULoad& cpu_load,boost::shared_ptr<diag_type> diagnostics,
-                                std::deque<boost::asynchronous::any_continuation>& waiting)
+                                std::list<boost::asynchronous::any_continuation>& waiting)
     {
         bool popped = false;
         // get a job
@@ -180,7 +180,7 @@ public:
                 // look for waiting tasks
                 if (!waiting.empty())
                 {
-                    for (std::deque<boost::asynchronous::any_continuation>::iterator it = waiting.begin(); it != waiting.end();)
+                    for (std::list<boost::asynchronous::any_continuation>::iterator it = waiting.begin(); it != waiting.end();)
                     {
                         if ((*it).is_ready())
                         {
@@ -219,8 +219,8 @@ public:
         boost::asynchronous::any_weak_scheduler<job_type> self_as_weak = boost::asynchronous::detail::lockable_weak_scheduler<this_type>(this_);
         boost::asynchronous::get_thread_scheduler<job_type>(self_as_weak,true);
 
-        std::deque<boost::asynchronous::any_continuation>& waiting =
-                boost::asynchronous::get_continuations(std::deque<boost::asynchronous::any_continuation>(),true);
+        std::list<boost::asynchronous::any_continuation>& waiting =
+                boost::asynchronous::get_continuations(std::list<boost::asynchronous::any_continuation>(),true);
 
         CPULoad cpu_load;
         while(true)

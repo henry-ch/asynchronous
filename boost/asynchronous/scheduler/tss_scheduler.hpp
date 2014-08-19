@@ -1,7 +1,7 @@
 #ifndef BOOST_ASYNCHRON_SCHEDULER_TSS_SCHEDULERHPP
 #define BOOST_ASYNCHRON_SCHEDULER_TSS_SCHEDULERHPP
 
-#include <deque>
+#include <list>
 
 #include <boost/thread/tss.hpp>
 
@@ -32,18 +32,20 @@ boost::asynchronous::any_weak_scheduler<Job> get_thread_scheduler(boost::asynchr
 
 struct tss_any_continuation_wrapper
 {
-    tss_any_continuation_wrapper(std::deque<boost::asynchronous::any_continuation>&& c)
-        :m_continuations(std::forward<std::deque<boost::asynchronous::any_continuation> >(c)){}
+    tss_any_continuation_wrapper(std::list<boost::asynchronous::any_continuation>&& c)
+        :m_continuations(std::forward<std::list<boost::asynchronous::any_continuation> >(c)){}
 
-    std::deque<boost::asynchronous::any_continuation> m_continuations;
+    std::list<boost::asynchronous::any_continuation> m_continuations;
 };
 template <class dummy = void >
-std::deque<boost::asynchronous::any_continuation>& get_continuations(std::deque<boost::asynchronous::any_continuation>&& c= std::deque<boost::asynchronous::any_continuation>(), bool reset=false )
+std::list<boost::asynchronous::any_continuation>& get_continuations(
+        std::list<boost::asynchronous::any_continuation>&& c= std::list<boost::asynchronous::any_continuation>(),
+        bool reset=false )
 {
     static boost::thread_specific_ptr<boost::asynchronous::tss_any_continuation_wrapper > s_continuations;
     if (reset)
     {
-        s_continuations.reset(new boost::asynchronous::tss_any_continuation_wrapper(std::forward<std::deque<boost::asynchronous::any_continuation> >(c)));
+        s_continuations.reset(new boost::asynchronous::tss_any_continuation_wrapper(std::forward<std::list<boost::asynchronous::any_continuation> >(c)));
     }
     return s_continuations.get()->m_continuations;
 }

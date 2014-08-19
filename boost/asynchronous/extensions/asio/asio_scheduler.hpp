@@ -341,8 +341,8 @@ private:
         boost::asynchronous::any_weak_scheduler<job_type> self_as_weak = boost::asynchronous::detail::lockable_weak_scheduler<this_type>(this_);
         boost::asynchronous::get_thread_scheduler<job_type>(self_as_weak,true);
 
-        std::deque<boost::asynchronous::any_continuation>& waiting =
-                boost::asynchronous::get_continuations(std::deque<boost::asynchronous::any_continuation>(),true);
+        std::list<boost::asynchronous::any_continuation>& waiting =
+                boost::asynchronous::get_continuations(std::list<boost::asynchronous::any_continuation>(),true);
 
         CPULoad cpu_load;
         while(true)
@@ -389,7 +389,7 @@ private:
                     // look for waiting tasks
                     if (!waiting.empty())
                     {
-                        for (std::deque<boost::asynchronous::any_continuation>::iterator it = waiting.begin(); it != waiting.end();)
+                        for (std::list<boost::asynchronous::any_continuation>::iterator it = waiting.begin(); it != waiting.end();)
                         {
                             if ((*it).is_ready())
                             {
