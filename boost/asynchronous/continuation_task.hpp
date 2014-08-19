@@ -562,8 +562,7 @@ void create_callback_continuation(OnDone&& on_done, Args&&... args)
                 state,boost::asynchronous::detail::make_expected_tuple(args...), boost::chrono::milliseconds(0),
                 std::forward<Args>(args)...);
     c.on_done(std::forward<OnDone>(on_done));
-    boost::asynchronous::any_continuation a(std::move(c));
-    boost::asynchronous::get_continuations().emplace_front(std::move(a));
+    // no need of registration as no timeout checking
 }
 template <class OnDone, typename FutureType, typename... Args>
 void create_callback_continuation(OnDone&& on_done, FutureType expected_tuple, std::tuple<Args...> args)
@@ -573,8 +572,7 @@ void create_callback_continuation(OnDone&& on_done, FutureType expected_tuple, s
                 state,std::move(expected_tuple), boost::chrono::milliseconds(0),
                 std::move(args));
     c.on_done(std::forward<OnDone>(on_done));
-    boost::asynchronous::any_continuation a(std::move(c));
-    boost::asynchronous::get_continuations().emplace_front(std::move(a));
+    // no need of registration as no timeout checking
 }
 template <typename Job, class OnDone, typename... Args>
 void create_callback_continuation_job(OnDone&& on_done, Args&&... args)
@@ -586,8 +584,7 @@ void create_callback_continuation_job(OnDone&& on_done, Args&&... args)
                 state,boost::asynchronous::detail::make_expected_tuple(args...), boost::chrono::milliseconds(0),
                 std::forward<Args>(args)...);
     c.on_done(std::forward<OnDone>(on_done));
-    boost::asynchronous::any_continuation a(std::move(c));
-    boost::asynchronous::get_continuations().emplace_front(std::move(a));
+    // no need of registration as no timeout checking
 }
 template <typename Job, class OnDone, typename FutureType, typename... Args>
 void create_callback_continuation_job(OnDone&& on_done, FutureType expected_tuple, std::tuple<Args...> args)
@@ -597,8 +594,7 @@ void create_callback_continuation_job(OnDone&& on_done, FutureType expected_tupl
                 state,std::move(expected_tuple), boost::chrono::milliseconds(0),
                 std::move(args));
     c.on_done(std::forward<OnDone>(on_done));
-    boost::asynchronous::any_continuation a(std::move(c));
-    boost::asynchronous::get_continuations().emplace_front(std::move(a));
+    // no need of registration as no timeout checking
 }
 template <typename Job, class OnDone, class Duration, typename... Args>
 void create_callback_continuation_job_timeout(OnDone&& on_done, Duration const& d, Args&&... args)
