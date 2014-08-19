@@ -209,7 +209,7 @@ public:
                     {
                         if ((*it).is_ready())
                         {
-                            boost::asynchronous::any_continuation c = *it;
+                            boost::asynchronous::any_continuation c = std::move(*it);
                             it = waiting.erase(it);
                             c();
                         }
