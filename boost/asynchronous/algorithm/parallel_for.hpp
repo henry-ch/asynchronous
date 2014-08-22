@@ -185,7 +185,9 @@ struct parallel_for_range_move_helper<Range,Func,Job,typename ::boost::enable_if
         if (it == end_)
         {
             std::for_each(begin_,it,func_);
-            task_res.emplace_value(std::move(boost::copy_range< Range>(boost::make_iterator_range(begin_,it))));
+            Range res;
+            std::move(begin_,it,std::back_inserter(res));
+            task_res.emplace_value(std::move(res));
         }
         else
         {
