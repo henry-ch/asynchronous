@@ -12,6 +12,7 @@
 #include <libs/asynchronous/doc/examples/dummy_parallel_for_task.hpp>
 #include <libs/asynchronous/doc/examples/dummy_parallel_reduce_task.hpp>
 #include <libs/asynchronous/doc/examples/dummy_parallel_find_all_task.hpp>
+#include <libs/asynchronous/doc/examples/dummy_parallel_count_task.hpp>
 
 using namespace std;
 
@@ -85,6 +86,18 @@ int main(int argc, char* argv[])
                 boost::asynchronous::parallel_find_all_range_move_helper<vector<int>,
                                                                        dummy_parallel_find_all_subtask,
                                                                        vector<int>,
+                                                                       boost::asynchronous::any_serializable> t;
+                boost::asynchronous::tcp::deserialize_and_call_callback_continuation_task(t,resp,when_done);
+            }
+            else if (task_name=="dummy_parallel_count_task")
+            {
+                dummy_parallel_count_task t;
+                boost::asynchronous::tcp::deserialize_and_call_top_level_callback_continuation_task(t,resp,when_done);
+            }
+            else if (task_name=="dummy_parallel_count_subtask")
+            {
+                boost::asynchronous::parallel_count_range_move_helper<vector<int>,
+                                                                       dummy_parallel_count_subtask,
                                                                        boost::asynchronous::any_serializable> t;
                 boost::asynchronous::tcp::deserialize_and_call_callback_continuation_task(t,resp,when_done);
             }

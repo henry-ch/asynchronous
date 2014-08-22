@@ -7,17 +7,17 @@
 //
 // For more information, see http://www.boost.org
 
-#ifndef DUMMY_PARALLEL_FIND_ALL_TASK_HPP
-#define DUMMY_PARALLEL_FIND_ALL_TASK_HPP
+#ifndef DUMMY_PARALLEL_COUNT_TASK_HPP
+#define DUMMY_PARALLEL_COUNT_TASK_HPP
 
 #include <boost/asynchronous/scheduler/serializable_task.hpp>
-#include <boost/asynchronous/algorithm/parallel_find_all.hpp>
+#include <boost/asynchronous/algorithm/parallel_count.hpp>
 #include <boost/asynchronous/any_serializable.hpp>
 
-struct dummy_parallel_find_all_subtask : public boost::asynchronous::serializable_task
+struct dummy_parallel_count_subtask : public boost::asynchronous::serializable_task
 {
-    dummy_parallel_find_all_subtask(int min_=0,int max_=0)
-        :boost::asynchronous::serializable_task("dummy_parallel_find_all_subtask")
+    dummy_parallel_count_subtask(int min_=0,int max_=0)
+        :boost::asynchronous::serializable_task("dummy_parallel_count_subtask")
         ,m_min(min_),m_max(max_){}
     template <class Archive>
     void serialize(Archive & ar, const unsigned int /*version*/)
@@ -33,34 +33,34 @@ struct dummy_parallel_find_all_subtask : public boost::asynchronous::serializabl
     int m_min;
     int m_max;
 };
-std::vector<int> mkdata_pfa() {
+std::vector<int> mkdata_pc() {
     std::vector<int> result;
     for (int i = 0; i < 50000; ++i) {
         result.push_back(i);
     }
     return result;
 }
-struct dummy_parallel_find_all_task : public boost::asynchronous::serializable_task
+struct dummy_parallel_count_task : public boost::asynchronous::serializable_task
 {
-    dummy_parallel_find_all_task():boost::asynchronous::serializable_task("dummy_parallel_find_all_task"),m_data(mkdata_pfa()){}
+    dummy_parallel_count_task():boost::asynchronous::serializable_task("dummy_parallel_count_task"),m_data(mkdata_pc()){}
     template <class Archive>
     void serialize(Archive & ar, const unsigned int /*version*/)
     {
         ar & m_data;
     }
-    auto operator()() -> decltype(boost::asynchronous::parallel_find_all<std::vector<int>,dummy_parallel_find_all_subtask,std::vector<int>,boost::asynchronous::any_serializable>(
+    auto operator()() -> decltype(boost::asynchronous::parallel_count<std::vector<int>,dummy_parallel_count_subtask,boost::asynchronous::any_serializable>(
                                       std::move(std::vector<int>()),
-                                      dummy_parallel_find_all_subtask(400,600),
+                                      dummy_parallel_count_subtask(400,600),
                                       1000))
     {
-        return boost::asynchronous::parallel_find_all
-                <std::vector<int>,dummy_parallel_find_all_subtask,std::vector<int>,boost::asynchronous::any_serializable>(
+        return boost::asynchronous::parallel_count
+                <std::vector<int>,dummy_parallel_count_subtask,boost::asynchronous::any_serializable>(
             std::move(m_data),
-            dummy_parallel_find_all_subtask(400,600),
+            dummy_parallel_count_subtask(400,600),
             10);
     }
 
     std::vector<int> m_data;
 };
-#endif // DUMMY_PARALLEL_FIND_ALL_TASK_HPP
 
+#endif // DUMMY_PARALLEL_COUNT_TASK_HPP
