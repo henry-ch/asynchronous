@@ -256,11 +256,12 @@ typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::
 parallel_for(Range&& range,Func func,long cutoff,
              const std::string& task_name="", std::size_t prio=0)
 {
-    auto beg = boost::begin(range);
-    auto end = boost::end(range);
+    auto r = boost::make_shared<Range>(std::forward<Range>(range));
+    auto beg = boost::begin(*r);
+    auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
             (boost::asynchronous::parallel_for_range_move_helper<Range,Func,Job>
-                (boost::make_shared<Range>(std::forward<Range>(range)),beg,end,func,cutoff,task_name,prio));
+                (r,beg,end,func,cutoff,task_name,prio));
 }
 
 // version for ranges held only by reference => will return nothing (void)
