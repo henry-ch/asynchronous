@@ -31,11 +31,21 @@ public:
         , m_exception(std::move(rhs.m_exception))
     {
     }
-
+    expected(expected const& rhs) noexcept
+        : m_value(rhs.m_value)
+        , m_exception(rhs.m_exception)
+    {
+    }
     expected& operator=(expected&& rhs) noexcept
     {
         std::swap(m_value,rhs.m_value);
         std::swap(m_exception,rhs.m_exception);
+        return *this;
+    }
+    expected& operator=(expected const& rhs) noexcept
+    {
+        m_value = rhs.m_value;
+        m_exception = rhs.m_exception;
         return *this;
     }
     void set_exception(const boost::exception_ptr & ex)
@@ -58,6 +68,11 @@ public:
     {
         return !!m_exception;
     }
+    boost::exception_ptr get_exception_ptr()
+    {
+        return m_exception;
+    }
+
     bool has_value() const
     {
         return !has_exception();
@@ -80,6 +95,11 @@ public:
     explicit expected(boost::exception_ptr ex)
     : m_exception(std::move(ex)) {}
 
+    expected(expected const& rhs) noexcept
+        : m_exception(rhs.m_exception)
+    {
+    }
+
     expected(expected&& rhs) noexcept
     : m_exception(std::move(rhs.m_exception))
     {
@@ -88,6 +108,11 @@ public:
     expected& operator=(expected&& rhs) noexcept
     {
         std::swap(m_exception,rhs.m_exception);
+        return *this;
+    }
+    expected& operator=(expected const& rhs) noexcept
+    {
+        m_exception = rhs.m_exception;
         return *this;
     }
     void set_exception(const boost::exception_ptr & ex)
@@ -107,6 +132,10 @@ public:
     bool has_exception() const
     {
         return !!m_exception;
+    }
+    boost::exception_ptr get_exception_ptr()
+    {
+        return m_exception;
     }
     bool has_value() const
     {
