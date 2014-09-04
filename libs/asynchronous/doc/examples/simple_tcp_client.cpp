@@ -13,6 +13,7 @@
 #include <libs/asynchronous/doc/examples/dummy_parallel_reduce_task.hpp>
 #include <libs/asynchronous/doc/examples/dummy_parallel_find_all_task.hpp>
 #include <libs/asynchronous/doc/examples/dummy_parallel_count_task.hpp>
+#include <libs/asynchronous/doc/examples/dummy_parallel_sort_task.hpp>
 
 using namespace std;
 
@@ -99,6 +100,19 @@ int main(int argc, char* argv[])
                 boost::asynchronous::parallel_count_range_move_helper<vector<int>,
                                                                        dummy_parallel_count_subtask,
                                                                        boost::asynchronous::any_serializable> t;
+                boost::asynchronous::tcp::deserialize_and_call_callback_continuation_task(t,resp,when_done);
+            }
+            else if (task_name=="dummy_parallel_sort_task")
+            {
+                dummy_parallel_sort_task t;
+                boost::asynchronous::tcp::deserialize_and_call_top_level_callback_continuation_task(t,resp,when_done);
+            }
+            else if (task_name=="dummy_parallel_sort_subtask")
+            {
+                boost::asynchronous::parallel_sort_range_move_helper<vector<int>,
+                                                                       dummy_parallel_sort_subtask,
+                                                                       boost::asynchronous::any_serializable,
+                                                                       boost::asynchronous::std_sort> t;
                 boost::asynchronous::tcp::deserialize_and_call_callback_continuation_task(t,resp,when_done);
             }
             // else whatever functor we support

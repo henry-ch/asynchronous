@@ -29,7 +29,6 @@
 #include <boost/range/begin.hpp>
 #include <boost/range/end.hpp>
 #include <boost/range/iterator_range.hpp>
-#include <boost/range/algorithm_ext/push_back.hpp>
 
 namespace boost { namespace asynchronous
 {
@@ -306,15 +305,16 @@ struct parallel_sort_range_move_helper<Range,Func,Job, Sort,typename ::boost::en
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
                         [task_res,it,func](std::tuple<boost::asynchronous::expected<Range>,boost::asynchronous::expected<Range> > res)
-                        {
-                            Range range;
+                        {                            
                             try
                             {
+
                                 // TODO move possible?
-                                range = boost::push_back(range,std::move(std::get<0>(res).get()));
-                                range = boost::push_back(range,std::move(std::get<1>(res).get()));
+                                auto r1 = std::move(std::get<0>(res).get());
+                                auto r2 = std::move(std::get<1>(res).get());
+                                Range range(r1.size()+r2.size());
                                 // merge both sorted sub-ranges
-                                std::inplace_merge(boost::begin(range),it,boost::end(range),func);
+                                std::merge(boost::begin(r1),boost::end(r1),boost::begin(r2),boost::end(r2), boost::begin(range),func);
                                 task_res.emplace_value(std::move(range));
                             }
                             catch(std::exception& e)
