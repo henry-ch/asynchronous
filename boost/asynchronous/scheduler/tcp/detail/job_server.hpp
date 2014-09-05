@@ -43,22 +43,14 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
         : boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,PoolJobType>(scheduler,worker)
         , m_next_task_id(0)
         , m_stealing(stealing)
+        , m_address(address)
+        , m_port(port)
     {
         // For TCP communication we use an asio-based scheduler with 1 thread
-        auto asioWorkers =
+        m_asioWorkers =
                 boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::asio_scheduler<>(1));
 
-        // created posted function when a client connects
-        std::function<void(boost::asio::ip::tcp::socket)> f =
-                [this](boost::asio::ip::tcp::socket s)mutable
-                {
-                    const auto c = boost::make_shared<boost::asynchronous::tcp::server_connection<SerializableType> >(std::move(s));
-                    std::function<void(boost::asynchronous::tcp::client_request)> cb=
-                            [this,c](boost::asynchronous::tcp::client_request request){this->handleRequest(request, c);};
-                    c->start(this->make_safe_callback(cb));
-                };
-
-        m_asio_comm.push_back(boost::asynchronous::tcp::asio_comm_server_proxy(asioWorkers, address, port, f));
+        setup_connection();
     }
 
     void add_task(SerializableType job,diag_type diag)
@@ -108,6 +100,26 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
     }
 
 private:
+    void setup_connection()
+    {
+        // created posted function when a client connects
+        std::function<void(boost::asio::ip::tcp::socket)> f =
+                [this](boost::asio::ip::tcp::socket s)mutable
+                {
+                    const auto c = boost::make_shared<boost::asynchronous::tcp::server_connection<SerializableType> >(std::move(s));
+                    std::function<void(boost::asynchronous::tcp::client_request)> cb=
+                            [this,c](boost::asynchronous::tcp::client_request request){this->handleRequest(request, c);};
+                    c->start(this->make_safe_callback(cb));
+                };
+
+        m_asio_comm.push_back(boost::asynchronous::tcp::asio_comm_server_proxy(m_asioWorkers, m_address, m_port, f));
+    }
+    void reset_connection()
+    {
+        m_asio_comm.clear();
+        setup_connection();
+    }
+
     void send_first_job(boost::shared_ptr<boost::asynchronous::tcp::server_connection<SerializableType> > connection)
     {
         // set started time to when job gets stolen
@@ -161,6 +173,11 @@ private:
             }
             // else ignore TODO log?
         }
+        else if (request.m_cmd_id == BOOST_ASYNCHRONOUS_TCP_CLIENT_COM_ERROR)
+        {
+            // reset all and wait for retry
+            reset_connection();
+        }
         else
         {
             // unknown command, ignore
@@ -187,10 +204,13 @@ private:
     // always increasing task counter for ids
     long m_next_task_id;
     bool m_stealing;
+    std::string m_address;
+    unsigned int m_port;
     // jobs waiting for a client offer to process
     std::deque<waiting_job> m_unprocessed_jobs;
     // job being executed and waiting for a result
     std::set<waiting_job,sort_tasks> m_waiting_jobs;
+    boost::asynchronous::any_shared_scheduler_proxy<> m_asioWorkers;
     std::vector<boost::asynchronous::tcp::asio_comm_server_proxy> m_asio_comm;
     std::deque<boost::shared_ptr<boost::asynchronous::tcp::server_connection<SerializableType> > > m_waiting_connections;
 };

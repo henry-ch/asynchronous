@@ -48,7 +48,7 @@ public:
                     {
                         // Header doesn't seem to be valid. Close connection.
                         // wrong header
-                        this->stop();
+                        callback(boost::asynchronous::tcp::client_request(BOOST_ASYNCHRONOUS_TCP_CLIENT_COM_ERROR));
                     }
                     // read message
                     boost::shared_ptr<std::vector<char> > inbound_buffer = boost::make_shared<std::vector<char> >();
@@ -59,7 +59,7 @@ public:
                                             {
                                                 if (ec1)
                                                 {
-                                                    this->stop();
+                                                    callback(boost::asynchronous::tcp::client_request(BOOST_ASYNCHRONOUS_TCP_CLIENT_COM_ERROR));
                                                 }
                                                 else
                                                 {
@@ -76,21 +76,16 @@ public:
                                                     catch (std::exception& e)
                                                     {
                                                         // Unable to decode data.
-                                                        this->stop();
+                                                        callback(boost::asynchronous::tcp::client_request(BOOST_ASYNCHRONOUS_TCP_CLIENT_COM_ERROR));
                                                     }
                                                 }
                                             });
                 }
                 else
                 {
-                    this->stop();
+                    callback(boost::asynchronous::tcp::client_request(BOOST_ASYNCHRONOUS_TCP_CLIENT_COM_ERROR));
                 }
             });
-    }
-
-    void stop()
-    {
-        m_socket.close();
     }
 
     void send(boost::asynchronous::tcp::server_reponse const & reply)
@@ -108,7 +103,7 @@ public:
         if (!header_stream || header_stream.str().size() != m_header_length)
         {
             // Something went wrong
-            stop();
+            //TODO stop();
         }
         boost::shared_ptr<std::string> outbound_header = boost::make_shared<std::string>(header_stream.str());
         // Write the serialized data to the socket. We use "gather-write" to send
@@ -121,7 +116,7 @@ public:
                                  {
                                     if (ec)
                                     {
-                                        this->stop();
+                                        //TODO this->stop();
                                     }
                                  });
     }

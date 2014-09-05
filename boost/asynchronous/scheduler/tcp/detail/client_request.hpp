@@ -19,9 +19,10 @@
 // supported commands:
 // 1 => get job
 // 2 => return result
+// 3 => communication error
 #define BOOST_ASYNCHRONOUS_TCP_CLIENT_GET_JOB 1
 #define BOOST_ASYNCHRONOUS_TCP_CLIENT_JOB_RESULT 2
-
+#define BOOST_ASYNCHRONOUS_TCP_CLIENT_COM_ERROR 3
 
 namespace boost { namespace asynchronous { namespace tcp {
 

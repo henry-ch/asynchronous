@@ -30,7 +30,7 @@ struct asio_comm_server : boost::asynchronous::trackable_servant<>
                      unsigned int port,
                      std::function<void(boost::asio::ip::tcp::socket)> connectionHandler)
     : boost::asynchronous::trackable_servant<>(scheduler)
-        , m_connection_handler(connectionHandler)
+        , m_connection_handler(std::move(connectionHandler))
         , m_acceptor(*boost::asynchronous::get_io_service<>())
         , m_socket(*boost::asynchronous::get_io_service<>())
     {
