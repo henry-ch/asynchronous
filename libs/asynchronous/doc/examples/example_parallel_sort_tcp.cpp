@@ -35,7 +35,7 @@ struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any
         // we need a pool to execute jobs ourselves
         auto pool = boost::asynchronous::create_shared_scheduler_proxy(
                     new boost::asynchronous::threadpool_scheduler<
-                            boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable> >(0));
+                            boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable> >(1));
         // We need a worker pool
         // possibly for us, and we want to share it with the tcp pool for its serialization work
         boost::asynchronous::any_shared_scheduler_proxy<> workers = boost::asynchronous::create_shared_scheduler_proxy(

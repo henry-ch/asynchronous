@@ -464,7 +464,7 @@ private:
     enum { m_header_length = 10 };
 };
 
-#ifdef BOOST_ASYNCHRONOUS_NO_TEMPLATE_PROXY_CLASSES
+#ifndef BOOST_ASYNCHRONOUS_USE_TEMPLATE_PROXY_CLASSES
 
 // the proxy of AsioCommunicationServant for use in an external thread
 class simple_tcp_client_proxy: public boost::asynchronous::servant_proxy<simple_tcp_client_proxy,

@@ -194,7 +194,7 @@ private:
     std::vector<boost::asynchronous::tcp::asio_comm_server_proxy> m_asio_comm;
     std::deque<boost::shared_ptr<boost::asynchronous::tcp::server_connection<SerializableType> > > m_waiting_connections;
 };
-#ifdef BOOST_ASYNCHRONOUS_NO_TEMPLATE_PROXY_CLASSES
+#ifndef BOOST_ASYNCHRONOUS_USE_TEMPLATE_PROXY_CLASSES
 
 class job_server_proxy : public boost::asynchronous::servant_proxy<job_server_proxy,job_server<boost::asynchronous::any_callable> >
 {
