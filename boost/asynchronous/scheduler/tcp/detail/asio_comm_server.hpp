@@ -52,22 +52,23 @@ private:
     void do_accept()
     {
         m_acceptor.async_accept(m_socket,
-            [this](boost::system::error_code ec)
-            {
-                // Check whether the server was stopped by a signal before this completion handler had
-                // a chance to run.
-                if (!m_acceptor.is_open())
-                {
-                    return;
-                }
+                                make_safe_callback(std::function<void(boost::system::error_code)>(
+                                [this](boost::system::error_code ec)
+                                {
+                                    // Check whether the server was stopped by a signal before this completion handler had
+                                    // a chance to run.
+                                    if (!m_acceptor.is_open())
+                                    {
+                                        return;
+                                    }
 
-                if (!ec)
-                {
-                    m_connection_handler(std::move(m_socket));
-                }
+                                    if (!ec)
+                                    {
+                                        m_connection_handler(std::move(m_socket));
+                                    }
 
-                do_accept();
-            });
+                                    do_accept();
+            })));
     }
 
 private:
