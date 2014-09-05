@@ -315,10 +315,11 @@ private:
         {
             // resolve and connect
             boost::asio::ip::tcp::resolver::query query(m_server, m_path);
-                      m_resolver.async_resolve(query,
-                          boost::bind(&simple_tcp_client::handle_resolve, this,
-                            boost::asio::placeholders::error,
-                            boost::asio::placeholders::iterator,cb));
+            m_resolver.async_resolve(
+                      query,
+                      this->make_safe_callback(std::function<void(const boost::system::error_code&,boost::asio::ip::tcp::tcp::resolver::iterator)>(
+                                             [cb,this](const boost::system::error_code& err,boost::asio::ip::tcp::tcp::resolver::iterator endpoint_iterator)mutable
+                                             {this->handle_resolve(err,endpoint_iterator,std::move(cb)); })));
         }
         else if (m_connection_state.load() == connection_state::connected)
         {
@@ -334,9 +335,10 @@ private:
         {
             // Attempt a connection to each endpoint in the list until we
             // successfully establish a connection.
-            boost::asio::async_connect(*m_socket, endpoint_iterator,
-              boost::bind(&simple_tcp_client::handle_connect, this,
-                boost::asio::placeholders::error,cb));
+            boost::asio::async_connect(
+                        *m_socket, endpoint_iterator,
+                        this->make_safe_callback(std::function<void(const boost::system::error_code&,boost::asio::ip::tcp::resolver::iterator)>(
+                                               [this,cb](const boost::system::error_code& err,boost::asio::ip::tcp::resolver::iterator){this->handle_connect(err,std::move(cb));})));
         }
         // else bad luck, will try later
         else
@@ -386,11 +388,11 @@ private:
         buffers.push_back(boost::asio::buffer(*outbound_header));
         buffers.push_back(boost::asio::buffer(*outbound_buffer));
         boost::asio::async_write(*m_socket, buffers,
-                               boost::bind(&simple_tcp_client::handle_write_request, this,
-                                 boost::asio::placeholders::error,cb,outbound_buffer,outbound_header) );
+                                 this->make_safe_callback(std::function<void(const boost::system::error_code&,std::size_t)>(
+                                                        [this,cb,outbound_buffer,outbound_header](const boost::system::error_code& err,std::size_t)mutable
+                                                        {this->handle_write_request(err,cb);})));
     }
-    void handle_write_request(const boost::system::error_code& err,std::function<void(std::string)> callback,
-                              boost::shared_ptr<std::string> /*ignored*/,boost::shared_ptr<std::string> /*ignored*/)
+    void handle_write_request(const boost::system::error_code& err,std::function<void(std::string)> callback)
     {
         if (err)
         {
@@ -402,6 +404,7 @@ private:
         boost::shared_ptr<std::vector<char> > inbound_header = boost::make_shared<std::vector<char> >();
         inbound_header->resize(m_header_length);
         boost::asio::async_read(*m_socket,boost::asio::buffer(*inbound_header),
+            this->make_safe_callback(std::function<void(const boost::system::error_code&,size_t)>(
             [this, callback,inbound_header](boost::system::error_code ec, size_t /*bytes_transferred*/)mutable
             {
                 if (!ec)
@@ -420,6 +423,7 @@ private:
                     boost::shared_ptr<std::vector<char> > inbound_buffer = boost::make_shared<std::vector<char> >();
                     inbound_buffer->resize(inbound_data_size);
                     boost::asio::async_read(*(this->m_socket),boost::asio::buffer(*inbound_buffer),
+                                            this->make_safe_callback(std::function<void(const boost::system::error_code&,size_t)>(
                                             [this, callback,inbound_buffer](boost::system::error_code ec, size_t /*bytes_transferred*/) mutable
                                             {
                                                 if (ec)
@@ -433,14 +437,14 @@ private:
                                                     std::string archive_data(&(*inbound_buffer)[0], inbound_buffer->size());
                                                     callback(archive_data);
                                                 }
-                                            });
+                                            })));
                 }
                 else
                 {
                     this->stop();
                     callback(std::string(""));
                 }
-            });
+            })));
     }
 
     // TODO state machine...
