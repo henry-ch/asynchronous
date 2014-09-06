@@ -68,7 +68,7 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
                     [moved_job,diag,this](boost::asynchronous::expected<std::string> fu)mutable
                     {
                         waiting_job new_job(std::move(*moved_job),
-                                            boost::asynchronous::tcp::server_reponse(this->m_next_task_id++,fu.get(),
+                                            boost::asynchronous::tcp::server_reponse(++this->m_next_task_id,fu.get(),
                                                                                      moved_job->get_task_name()),
                                             diag);
                         this->m_unprocessed_jobs.emplace_back(std::move(new_job));
@@ -94,7 +94,9 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
              = m_waiting_connections.begin();
              it != m_waiting_connections.end(); ++it)
         {
-             (*it)->send(boost::asynchronous::tcp::server_reponse(0,"",""));
+            std::function<void(boost::asynchronous::tcp::server_reponse)> cb=
+                    [this](boost::asynchronous::tcp::server_reponse ){};
+             (*it)->send(boost::asynchronous::tcp::server_reponse(0,"",""),cb);
         }
         m_waiting_connections.clear();
     }
@@ -106,7 +108,8 @@ private:
         std::function<void(boost::asio::ip::tcp::socket)> f =
                 [this](boost::asio::ip::tcp::socket s)mutable
                 {
-                    const auto c = boost::make_shared<boost::asynchronous::tcp::server_connection<SerializableType> >(std::move(s));
+                    const auto c = boost::make_shared<boost::asynchronous::tcp::server_connection<SerializableType> >(
+                                this->get_scheduler(),std::move(s));
                     std::function<void(boost::asynchronous::tcp::client_request)> cb=
                             [this,c](boost::asynchronous::tcp::client_request request){this->handleRequest(request, c);};
                     c->start(this->make_safe_callback(cb));
@@ -122,9 +125,13 @@ private:
 
     void send_first_job(boost::shared_ptr<boost::asynchronous::tcp::server_connection<SerializableType> > connection)
     {
+        // prepare callback if failed
+        std::function<void(boost::asynchronous::tcp::server_reponse)> cb=
+                [this](boost::asynchronous::tcp::server_reponse msg){this->handle_error_send(msg);};
+
         // set started time to when job gets stolen
         boost::asynchronous::job_traits<SerializableType>::set_started_time(m_unprocessed_jobs.front().m_job);
-        connection->send(m_unprocessed_jobs.front().m_serialized);
+        connection->send(m_unprocessed_jobs.front().m_serialized,cb);
         m_waiting_jobs.insert(m_unprocessed_jobs.front());
         m_unprocessed_jobs.pop_front();
     }
@@ -142,7 +149,9 @@ private:
             else if(!m_stealing)
             {
                 // no job and no stealing => immediate answer
-                connection->send(boost::asynchronous::tcp::server_reponse(0,"",""));
+                std::function<void(boost::asynchronous::tcp::server_reponse)> cb=
+                        [this](boost::asynchronous::tcp::server_reponse ){};
+                connection->send(boost::asynchronous::tcp::server_reponse(0,"",""),cb);
             }
             else
             {
@@ -181,6 +190,21 @@ private:
         else
         {
             // unknown command, ignore
+        }
+    }
+    void handle_error_send(boost::asynchronous::tcp::server_reponse msg)
+    {
+        // if this was not a real job, ignore
+        if (msg.m_task_id != 0)
+        {
+            // a real task got an error during communication and will no be processed this time, get it back
+            waiting_job searched_job(SerializableType(),boost::asynchronous::tcp::server_reponse(msg.m_task_id,"",""),diag_type());
+            auto it = m_waiting_jobs.find(searched_job);
+            if (it != m_waiting_jobs.end())
+            {
+                m_unprocessed_jobs.emplace_front(std::move(*it));
+                m_waiting_jobs.erase(it);
+            }
         }
     }
 

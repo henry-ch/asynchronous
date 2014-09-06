@@ -16,17 +16,19 @@
 #include <sstream>
 
 #include <boost/asio.hpp>
-
+#include <boost/asynchronous/trackable_servant.hpp>
 #include <boost/asynchronous/scheduler/tcp/detail/client_request.hpp>
 #include <boost/asynchronous/scheduler/tcp/detail/server_response.hpp>
 
 namespace boost { namespace asynchronous { namespace tcp {
 template<class SerializableType>
-class server_connection
+class server_connection: boost::asynchronous::trackable_servant<boost::asynchronous::any_callable>
 {
 public:
-    explicit server_connection(boost::asio::ip::tcp::socket socket)
-        : m_socket(std::move(socket))
+    explicit server_connection(boost::asynchronous::any_weak_scheduler<boost::asynchronous::any_callable> scheduler,
+                               boost::asio::ip::tcp::socket socket)
+        : boost::asynchronous::trackable_servant<boost::asynchronous::any_callable>(scheduler)
+        , m_socket(std::move(socket))
     {
     }
 
@@ -37,6 +39,7 @@ public:
     {
         boost::shared_ptr<std::vector<char> > inbound_header = boost::make_shared<std::vector<char> >(m_header_length);
         boost::asio::async_read(m_socket,boost::asio::buffer(*inbound_header),
+                                this->make_safe_callback(std::function<void(boost::system::error_code ec, size_t )>(
             [this, callback,inbound_header](boost::system::error_code ec, size_t /*bytes_transferred*/)mutable
             {
                 if (!ec)
@@ -54,6 +57,7 @@ public:
                     boost::shared_ptr<std::vector<char> > inbound_buffer = boost::make_shared<std::vector<char> >();
                     inbound_buffer->resize(inbound_data_size);
                     boost::asio::async_read(this->m_socket,boost::asio::buffer(*inbound_buffer),
+                                            this->make_safe_callback(std::function<void(boost::system::error_code ec, size_t )>(
                                             [this, callback,inbound_buffer,inbound_header]
                                             (boost::system::error_code ec1, size_t /*bytes_transferred*/)mutable
                                             {
@@ -79,16 +83,18 @@ public:
                                                         callback(boost::asynchronous::tcp::client_request(BOOST_ASYNCHRONOUS_TCP_CLIENT_COM_ERROR));
                                                     }
                                                 }
-                                            });
+                                            })));
                 }
                 else
                 {
                     callback(boost::asynchronous::tcp::client_request(BOOST_ASYNCHRONOUS_TCP_CLIENT_COM_ERROR));
                 }
-            });
+            })));
     }
 
-    void send(boost::asynchronous::tcp::server_reponse const & reply)
+    // callback will be called only if failed, otherwise wait for result
+    void send(boost::asynchronous::tcp::server_reponse const & reply,
+              std::function<void(boost::asynchronous::tcp::server_reponse)> cb_if_failed)
     {
         // Serialize the data first so we know how large it is.
         std::ostringstream archive_stream;
@@ -103,7 +109,7 @@ public:
         if (!header_stream || header_stream.str().size() != m_header_length)
         {
             // Something went wrong
-            //TODO stop();
+            cb_if_failed(reply);
         }
         boost::shared_ptr<std::string> outbound_header = boost::make_shared<std::string>(header_stream.str());
         // Write the serialized data to the socket. We use "gather-write" to send
@@ -111,14 +117,16 @@ public:
         std::vector<boost::asio::const_buffer> buffers;
         buffers.push_back(boost::asio::buffer(*outbound_header));
         buffers.push_back(boost::asio::buffer(*outbound_buffer));
+        boost::asynchronous::tcp::server_reponse error_response(reply.m_task_id,"","");
         boost::asio::async_write(m_socket, buffers,
-                                 [this,outbound_header,outbound_buffer](boost::system::error_code ec, size_t /*bytes_sent*/)
+                                 this->make_safe_callback(std::function<void(boost::system::error_code ec, size_t )>(
+                                 [this,outbound_header,outbound_buffer,cb_if_failed,error_response](boost::system::error_code ec, size_t /*bytes_sent*/)
                                  {
                                     if (ec)
                                     {
-                                        //TODO this->stop();
+                                        cb_if_failed(error_response);
                                     }
-                                 });
+                                 })));
     }
 
 private:
