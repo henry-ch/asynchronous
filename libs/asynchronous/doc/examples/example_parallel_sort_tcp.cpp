@@ -35,7 +35,7 @@ struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any
         // we need a pool to execute jobs ourselves
         auto pool = boost::asynchronous::create_shared_scheduler_proxy(
                     new boost::asynchronous::threadpool_scheduler<
-                            boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable> >(1));
+                            boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable> >(0));
         // We need a worker pool
         // possibly for us, and we want to share it with the tcp pool for its serialization work
         boost::asynchronous::any_shared_scheduler_proxy<> workers = boost::asynchronous::create_shared_scheduler_proxy(
@@ -93,7 +93,7 @@ private:
 // for testing
 void generate()
 {
-    m_data = std::vector<int>(50000,1);
+    m_data = std::vector<int>(5000000,1);
     std::random_device rd;
     std::mt19937 mt(rd());
     std::uniform_int_distribution<> dis(0, 10000);

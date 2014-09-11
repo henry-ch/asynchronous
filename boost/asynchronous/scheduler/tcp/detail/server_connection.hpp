@@ -19,16 +19,18 @@
 #include <boost/asynchronous/trackable_servant.hpp>
 #include <boost/asynchronous/scheduler/tcp/detail/client_request.hpp>
 #include <boost/asynchronous/scheduler/tcp/detail/server_response.hpp>
+#include <boost/asynchronous/servant_proxy.hpp>
+#include <boost/asynchronous/diagnostics/any_loggable_serializable.hpp>
 
 namespace boost { namespace asynchronous { namespace tcp {
 template<class SerializableType>
-class server_connection: boost::asynchronous::trackable_servant<boost::asynchronous::any_callable>
+class server_connection: public boost::asynchronous::trackable_servant<boost::asynchronous::any_callable>
 {
 public:
     explicit server_connection(boost::asynchronous::any_weak_scheduler<boost::asynchronous::any_callable> scheduler,
-                               boost::asio::ip::tcp::socket socket)
+                               boost::shared_ptr<boost::asio::ip::tcp::socket> socket)
         : boost::asynchronous::trackable_servant<boost::asynchronous::any_callable>(scheduler)
-        , m_socket(std::move(socket))
+        , m_socket(socket)
     {
     }
 
@@ -38,9 +40,10 @@ public:
     void start(std::function<void(boost::asynchronous::tcp::client_request)> callback)
     {
         boost::shared_ptr<std::vector<char> > inbound_header = boost::make_shared<std::vector<char> >(m_header_length);
-        boost::asio::async_read(m_socket,boost::asio::buffer(*inbound_header),
+        auto asocket= m_socket;
+        boost::asio::async_read(*m_socket,boost::asio::buffer(*inbound_header),
                                 this->make_safe_callback(std::function<void(boost::system::error_code ec, size_t )>(
-            [this, callback,inbound_header](boost::system::error_code ec, size_t /*bytes_transferred*/)mutable
+            [this, callback,inbound_header,asocket](boost::system::error_code ec, size_t /*bytes_transferred*/)mutable
             {
                 if (!ec)
                 {
@@ -56,9 +59,10 @@ public:
                     // read message
                     boost::shared_ptr<std::vector<char> > inbound_buffer = boost::make_shared<std::vector<char> >();
                     inbound_buffer->resize(inbound_data_size);
-                    boost::asio::async_read(this->m_socket,boost::asio::buffer(*inbound_buffer),
+                    auto asocket= m_socket;
+                    boost::asio::async_read(*m_socket,boost::asio::buffer(*inbound_buffer),
                                             this->make_safe_callback(std::function<void(boost::system::error_code ec, size_t )>(
-                                            [this, callback,inbound_buffer,inbound_header]
+                                            [this, callback,inbound_buffer,inbound_header,asocket]
                                             (boost::system::error_code ec1, size_t /*bytes_transferred*/)mutable
                                             {
                                                 if (ec1)
@@ -72,7 +76,7 @@ public:
                                                         std::string archive_data(&(*inbound_buffer)[0], inbound_buffer->size());
                                                         std::istringstream archive_stream(archive_data);
                                                         typename SerializableType::iarchive archive(archive_stream);
-                                                        boost::asynchronous::tcp::client_request msg;                                                        
+                                                        boost::asynchronous::tcp::client_request msg;
                                                         archive >> msg;
                                                         callback(msg);
                                                         this->start(callback);
@@ -118,9 +122,10 @@ public:
         buffers.push_back(boost::asio::buffer(*outbound_header));
         buffers.push_back(boost::asio::buffer(*outbound_buffer));
         boost::asynchronous::tcp::server_reponse error_response(reply.m_task_id,"","");
-        boost::asio::async_write(m_socket, buffers,
+        auto asocket= m_socket;
+        boost::asio::async_write(*m_socket, buffers,
                                  this->make_safe_callback(std::function<void(boost::system::error_code ec, size_t )>(
-                                 [this,outbound_header,outbound_buffer,cb_if_failed,error_response](boost::system::error_code ec, size_t /*bytes_sent*/)
+                                 [this,outbound_header,outbound_buffer,cb_if_failed,error_response,asocket](boost::system::error_code ec, size_t /*bytes_sent*/)
                                  {
                                     if (ec)
                                     {
@@ -130,11 +135,53 @@ public:
     }
 
 private:
-    boost::asio::ip::tcp::socket m_socket;
+    boost::shared_ptr<boost::asio::ip::tcp::socket> m_socket;
     std::string m_address;
     // The size of a fixed length header.
     // TODO not fixed
     enum { m_header_length = 10 };
+};
+
+class server_connection_proxy_log_serialize : public boost::asynchronous::servant_proxy<server_connection_proxy_log_serialize,
+                                                                              boost::asynchronous::tcp::server_connection<boost::asynchronous::any_loggable_serializable<>>>
+{
+public:
+    template<class Scheduler>
+    server_connection_proxy_log_serialize( Scheduler scheduler,
+                            boost::shared_ptr<boost::asio::ip::tcp::socket> socket)
+        : boost::asynchronous::servant_proxy<server_connection_proxy_log_serialize,
+                                             boost::asynchronous::tcp::server_connection<boost::asynchronous::any_loggable_serializable<>>>
+          (scheduler,std::move(socket))
+    {}
+
+    BOOST_ASYNC_POST_MEMBER(start)
+    BOOST_ASYNC_POST_MEMBER(send)
+};
+struct server_connection_proxy_serialize : public boost::asynchronous::servant_proxy<server_connection_proxy_serialize,
+                                                                              boost::asynchronous::tcp::server_connection<boost::asynchronous::any_serializable>>
+{
+public:
+    template<class Scheduler>
+    server_connection_proxy_serialize( Scheduler scheduler,
+                            boost::shared_ptr<boost::asio::ip::tcp::socket> socket)
+        : boost::asynchronous::servant_proxy<server_connection_proxy_serialize,
+                                             boost::asynchronous::tcp::server_connection<boost::asynchronous::any_serializable>>
+          (scheduler,std::move(socket))
+    {}
+
+    BOOST_ASYNC_POST_MEMBER(start)
+    BOOST_ASYNC_POST_MEMBER(send)
+};
+// choose correct proxy
+template <class SerializableType = boost::asynchronous::any_serializable>
+struct get_correct_server_connection_proxy
+{
+    typedef boost::asynchronous::tcp::server_connection_proxy_serialize type;
+};
+template <>
+struct get_correct_server_connection_proxy<boost::asynchronous::any_loggable_serializable<> >
+{
+    typedef boost::asynchronous::tcp::server_connection_proxy_log_serialize type;
 };
 
 }}}

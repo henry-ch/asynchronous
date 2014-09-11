@@ -52,7 +52,7 @@ static void send_task_result(boost::asynchronous::tcp::client_request const& req
     std::vector<boost::asio::const_buffer> buffers;
     buffers.push_back(boost::asio::buffer(*outbound_header));
     buffers.push_back(boost::asio::buffer(*outbound_buffer));
-    boost::asio::async_write(*asocket, buffers,[outbound_buffer,outbound_header](const boost::system::error_code&,std::size_t )
+    boost::asio::async_write(*asocket, buffers,[outbound_buffer,outbound_header,asocket](const boost::system::error_code&,std::size_t )
     {/*ignore*/});
 }
 
