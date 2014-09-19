@@ -271,6 +271,7 @@ private:
         if ((m_connection_state == connection_state::connecting)||(m_connection_state == connection_state::getting_work))
         {
             // we will have to wait
+            cb(std::string(""));
             return;
         }
         else if (m_connection_state == connection_state::connected)
@@ -330,8 +331,11 @@ private:
     void get_task(std::function<void(std::string)> cb)
     {
         if (m_is_writing)
+        {
             // already writing give up
+            cb(std::string(""));
             return;
+        }
         m_connection_state = connection_state::getting_work;
         m_is_writing = true;
         std::ostringstream archive_stream;

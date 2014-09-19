@@ -63,7 +63,7 @@ struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any
     // call to this is posted and executes in our (safe) single-thread scheduler
     boost::shared_future<void> start_async_work()
     {
-        std::cout << "start_async_work()" << std::endl;
+        std::cout << "start parallel sort" << std::endl;
         // for testing purpose
         boost::shared_future<void> fu = m_promise->get_future();
         post_callback(
@@ -72,13 +72,10 @@ struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any
                    [this](boost::asynchronous::expected<std::vector<int>> res){
                         try
                         {
-                            std::vector<int> v = res.get();
+                            std::cout << "parallel sort finished" << std::endl;
+                            std::vector<int> v = std::move(res.get());
                             std::sort(m_data.begin(),m_data.end(),std::less<int>());
                             std::cout << "Same result as std::sort? " << std::boolalpha << (v==m_data) <<std::endl;
-//                            for (std::size_t i = 0 ; i < v.size(); ++i)
-//                            {
-//                                std::cout << "v[" << i << "]= " << v[i] << std::endl;
-//                            }
                             this->on_callback();
                         }
                         catch(std::exception& e)

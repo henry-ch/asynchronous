@@ -129,7 +129,7 @@ int main(int argc, char* argv[])
                         new boost::asynchronous::threadpool_scheduler<
                             boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable> >(threads));
             boost::asynchronous::tcp::simple_tcp_client_proxy proxy(scheduler,pool,server_address,server_port,executor,
-                                                                    500/*ms between calls to server*/);
+                                                                    10/*ms between calls to server*/);
             // run forever
             boost::future<boost::future<void> > fu = proxy.run();
             boost::future<void> fu_end = fu.get();
@@ -145,7 +145,7 @@ int main(int argc, char* argv[])
             // or simple_tcp_client_proxy<boost::asynchronous::tcp::queue_size_check_policy<>> if your compiler can (clang)
             typename boost::asynchronous::tcp::get_correct_simple_tcp_client_proxy<boost::asynchronous::tcp::queue_size_check_policy<>>::type proxy(
                         scheduler,pool,server_address,server_port,executor,
-                        500/*ms between calls to server*/,
+                        10/*ms between calls to server*/,
                         job_getting_policy /* number of jobs we try to keep in queue */);
             // run forever
             boost::future<boost::future<void> > fu = proxy.run();
