@@ -64,7 +64,7 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
                         std::ostringstream archive_stream;
                         typename SerializableType::oarchive archive(archive_stream);
                         moved_job->serialize(archive,0);
-                        return archive_stream.str();
+                        return std::move(archive_stream.str());
                     },
                     [moved_job,diag,this](boost::asynchronous::expected<std::string> fu)mutable
                     {
@@ -113,7 +113,7 @@ private:
         // use a weak_ptr so that connection will not keep itself alive
         boost::weak_ptr<server_connection_type> wconnection(c);
         std::function<void(boost::asynchronous::tcp::client_request)> cb=
-                [this,wconnection](boost::asynchronous::tcp::client_request request){this->handleRequest(request, wconnection);};
+                [this,wconnection](boost::asynchronous::tcp::client_request request){this->handleRequest(std::move(request), wconnection);};
         c->start(this->make_safe_callback(cb));
     }
 
@@ -131,7 +131,7 @@ private:
     {
         // prepare callback if failed
         std::function<void(boost::asynchronous::tcp::server_reponse)> cb=
-                [this](boost::asynchronous::tcp::server_reponse msg){this->handle_error_send(msg);};
+                [this](boost::asynchronous::tcp::server_reponse msg){this->handle_error_send(std::move(msg));};
 
         // set started time to when job gets stolen
         boost::asynchronous::job_traits<SerializableType>::set_started_time(m_unprocessed_jobs.front().m_job);
@@ -179,9 +179,8 @@ private:
                 std::ostringstream load_archive_stream;
                 typename SerializableType::oarchive load_archive(load_archive_stream);
                 load_archive << request.m_load;
-                std::string msg_load=load_archive_stream.str();
 
-                std::istringstream archive_stream(msg_load);
+                std::istringstream archive_stream(std::move(load_archive_stream.str()));
                 typename SerializableType::iarchive archive(archive_stream);
                 // set finish time to when result is sent, close diagnostics
                 boost::asynchronous::job_traits<SerializableType>::set_finished_time(const_cast<SerializableType&>((*it).m_job));
@@ -220,8 +219,8 @@ private:
     // waiting jobs in serialized and callable forms
     struct waiting_job
     {
-        waiting_job(SerializableType&& job, boost::asynchronous::tcp::server_reponse serialized, diag_type const& diag)
-            : m_job(std::forward<SerializableType>(job)), m_serialized(serialized), m_diag(diag)
+        waiting_job(SerializableType job, boost::asynchronous::tcp::server_reponse serialized, diag_type const& diag)
+            : m_job(std::move(job)), m_serialized(serialized), m_diag(diag)
         {}
         SerializableType m_job;
         boost::asynchronous::tcp::server_reponse m_serialized;

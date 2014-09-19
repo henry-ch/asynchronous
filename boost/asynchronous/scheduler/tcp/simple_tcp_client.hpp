@@ -180,7 +180,7 @@ private:
 
             while(cpt_stolen > 0)
             {
-                std::istringstream task_stream(m_response.m_task);
+                std::istringstream task_stream(std::move(m_response.m_task));
                 typename SerializableType::iarchive task_archive(task_stream);
                 std::string as_string;
                 task_archive >> as_string;
@@ -193,7 +193,7 @@ private:
                 [done_fct](boost::asynchronous::tcp::client_request const& req)
                 {
                     boost::shared_ptr<boost::asynchronous::tcp::client_request> request (boost::make_shared<boost::asynchronous::tcp::client_request>(std::move(req)));
-                    done_fct(request);
+                    done_fct(std::move(request));
                 }
             );
         }
@@ -224,7 +224,7 @@ private:
             request->m_load = std::move(payload);
 
             auto done_fct = m_done;
-            done_fct(request);
+            done_fct(std::move(request));
         }
         BOOST_SERIALIZATION_SPLIT_MEMBER()
 
@@ -237,7 +237,6 @@ private:
 
     void check_for_work()
     {
-        //TODO string&
         std::function<void(std::string)> cb =
         [this](std::string archive_data)
         {
@@ -245,7 +244,7 @@ private:
             if (!archive_data.empty())
             {
                 // got work, deserialize message
-                std::istringstream archive_stream(archive_data);
+                std::istringstream archive_stream(std::move(archive_data));
                 typename SerializableType::iarchive archive(archive_stream);
                 boost::asynchronous::tcp::server_reponse resp(0,"","");
                 archive >> resp;
@@ -381,7 +380,7 @@ private:
             {
                 if (!ec)
                 {
-                    std::istringstream is(std::string(&(*inbound_header)[0], this->m_header_length));
+                    std::istringstream is(std::move(std::string(&(*inbound_header)[0], this->m_header_length)));
                     std::size_t inbound_data_size = 0;
                     if (!(is >> std::hex >> inbound_data_size))
                     {
@@ -408,7 +407,7 @@ private:
                                                 {
                                                     m_connection_state = connection_state::connected;
                                                     std::string archive_data(&(*inbound_buffer)[0], inbound_buffer->size());
-                                                    callback(archive_data);
+                                                    callback(std::move(archive_data));
                                                 }
                                             })));
                 }
@@ -572,7 +571,7 @@ template <class Task, class SerializableType = boost::asynchronous::any_serializ
 void deserialize_and_call_task(Task& t,boost::asynchronous::tcp::server_reponse const& resp,
                                std::function<void(boost::asynchronous::tcp::client_request const&)>const& when_done)
 {
-    std::istringstream task_stream(resp.m_task);
+    std::istringstream task_stream(std::move(resp.m_task));
     typename SerializableType::iarchive task_archive(task_stream);
     std::ostringstream res_archive_stream;
     typename SerializableType::oarchive res_archive(res_archive_stream);
@@ -605,7 +604,7 @@ void deserialize_and_call_top_level_continuation_task(
         std::function<void(boost::asynchronous::tcp::client_request const&)>const& when_done)
 {
     // deserialize job, execute code, serialize result
-    std::istringstream task_stream(resp.m_task);
+    std::istringstream task_stream(std::move(resp.m_task));
     typename SerializableType::iarchive task_archive(task_stream);
     boost::asynchronous::tcp::client_request request (BOOST_ASYNCHRONOUS_TCP_CLIENT_JOB_RESULT);
     request.m_task_id = resp.m_task_id;
@@ -646,7 +645,7 @@ void deserialize_and_call_continuation_task(
         std::function<void(boost::asynchronous::tcp::client_request const&)>const& when_done)
 {
     // deserialize job, execute code, serialize result
-    std::istringstream task_stream(resp.m_task);
+    std::istringstream task_stream(std::move(resp.m_task));
     typename SerializableType::iarchive task_archive(task_stream);
     boost::asynchronous::tcp::client_request request (BOOST_ASYNCHRONOUS_TCP_CLIENT_JOB_RESULT);
     request.m_task_id = resp.m_task_id;
@@ -689,7 +688,7 @@ void deserialize_and_call_callback_continuation_task(
         std::function<void(boost::asynchronous::tcp::client_request const&)>const& when_done)
 {
     // deserialize job, execute code, serialize result
-    std::istringstream task_stream(resp.m_task);
+    std::istringstream task_stream(std::move(resp.m_task));
     typename SerializableType::iarchive task_archive(task_stream);
     boost::asynchronous::tcp::client_request request (BOOST_ASYNCHRONOUS_TCP_CLIENT_JOB_RESULT);
     request.m_task_id = resp.m_task_id;
@@ -729,7 +728,7 @@ void deserialize_and_call_top_level_callback_continuation_task(
         std::function<void(boost::asynchronous::tcp::client_request const&)>const& when_done)
 {
     // deserialize job, execute code, serialize result
-    std::istringstream task_stream(resp.m_task);
+    std::istringstream task_stream(std::move(resp.m_task));
     typename SerializableType::iarchive task_archive(task_stream);
     boost::asynchronous::tcp::client_request request (BOOST_ASYNCHRONOUS_TCP_CLIENT_JOB_RESULT);
     request.m_task_id = resp.m_task_id;
