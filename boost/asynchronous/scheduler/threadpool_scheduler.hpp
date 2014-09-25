@@ -202,7 +202,10 @@ public:
         }
         catch(std::exception&)
         {
-            boost::asynchronous::job_traits<typename Q::job_type>::set_failed(job);
+            if (popped)
+            {
+                boost::asynchronous::job_traits<typename Q::job_type>::set_failed(job);
+            }
         }
         return popped;
     }
