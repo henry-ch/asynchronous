@@ -88,7 +88,7 @@ struct any_shared_scheduler_proxy_concept:
     boost::type_erasure::copy_constructible<>
 >{} ;
 
-template <class T = boost::asynchronous::any_callable,class Clock = boost::chrono::high_resolution_clock>
+template <class T = BOOST_ASYNCHRONOUS_DEFAULT_JOB,class Clock = boost::chrono::high_resolution_clock>
 struct any_shared_scheduler_proxy_ptr: boost::type_erasure::any<boost::asynchronous::any_shared_scheduler_proxy_concept<T,Clock> >
 {
     typedef T job_type;
@@ -100,7 +100,7 @@ struct any_shared_scheduler_proxy_ptr: boost::type_erasure::any<boost::asynchron
     any_shared_scheduler_proxy_ptr(U const& u):
         boost::type_erasure::any<boost::asynchronous::any_shared_scheduler_proxy_concept<T,Clock> > (u){}
 };
-template <class JOB = boost::asynchronous::any_callable,class Clock = boost::chrono::high_resolution_clock>
+template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB,class Clock = boost::chrono::high_resolution_clock>
 class any_shared_scheduler_proxy
 {
 public:
@@ -186,7 +186,7 @@ struct internal_scheduler_aspect
         boost::shared_ptr<boost::asynchronous::internal_scheduler_aspect_concept<T> > (u){}
 };
 
-template <class JOB = boost::asynchronous::any_callable,class Clock = boost::chrono::high_resolution_clock>
+template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB,class Clock = boost::chrono::high_resolution_clock>
 struct any_shared_scheduler_proxy_concept
 {
     virtual ~any_shared_scheduler_proxy_concept<JOB,Clock>(){}
@@ -204,7 +204,7 @@ struct any_shared_scheduler_proxy_concept
     virtual boost::asynchronous::internal_scheduler_aspect<JOB> get_internal_scheduler_aspect() =0;
     virtual void set_name(std::string const&)=0;
 };
-template <class JOB = boost::asynchronous::any_callable,class Clock = boost::chrono::high_resolution_clock>
+template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB,class Clock = boost::chrono::high_resolution_clock>
 class any_shared_scheduler_proxy
 {
 public:
@@ -287,7 +287,7 @@ struct any_weak_scheduler_proxy_concept :
     boost::type_erasure::typeid_<>,
     boost::asynchronous::has_lock<any_shared_scheduler_proxy<JOB,Clock>(), const boost::type_erasure::_self>
 > {};
-template <class T = boost::asynchronous::any_callable, class Clock = boost::chrono::high_resolution_clock>
+template <class T = BOOST_ASYNCHRONOUS_DEFAULT_JOB, class Clock = boost::chrono::high_resolution_clock>
 struct any_weak_scheduler_proxy: boost::type_erasure::any<boost::asynchronous::any_weak_scheduler_proxy_concept<T,Clock> >
 {
     typedef T job_type;

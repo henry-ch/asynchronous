@@ -102,7 +102,7 @@ private:
 };
 }
 // Notice: return value of Continuation must have a default-ctor
-template <class Continuation, class Func, class Job=boost::asynchronous::any_callable>
+template <class Continuation, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 auto invoke(Continuation c,Func func)
     -> typename boost::enable_if<has_is_continuation_task<Continuation>,
             boost::asynchronous::detail::callback_continuation<decltype(func(typename Continuation::return_type())),Job> >::type

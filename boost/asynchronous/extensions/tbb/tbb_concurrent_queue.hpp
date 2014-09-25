@@ -10,7 +10,7 @@
 namespace boost { namespace asynchronous
 {
 
-template <class JOB = boost::asynchronous::any_callable >
+template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB >
 class tbb_concurrent_queue:
 #ifdef BOOST_ASYNCHRONOUS_NO_TYPE_ERASURE
         public boost::asynchronous::any_queue_concept<JOB>,

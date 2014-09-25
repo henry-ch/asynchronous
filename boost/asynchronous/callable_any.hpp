@@ -70,5 +70,8 @@ private:
 
 }} // boost::async
 
+#ifndef BOOST_ASYNCHRONOUS_DEFAULT_JOB
+#define BOOST_ASYNCHRONOUS_DEFAULT_JOB boost::asynchronous::any_callable
+#endif
 
 #endif /* BOOST_ASYNC_CALLABLE_ANY_HPP */

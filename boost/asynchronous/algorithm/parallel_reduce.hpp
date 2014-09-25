@@ -97,7 +97,7 @@ struct parallel_reduce_helper: public boost::asynchronous::continuation_task<Ret
     std::size_t prio_;
 };
 }
-template <class Iterator, class Func, class Job=boost::asynchronous::any_callable>
+template <class Iterator, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 auto parallel_reduce(Iterator beg, Iterator end,Func func,long cutoff,
              const std::string& task_name="", std::size_t prio=0) -> boost::asynchronous::detail::callback_continuation<decltype(func(std::declval<typename Iterator::value_type>(), std::declval<typename Iterator::value_type>())),Job>
 {
@@ -249,7 +249,7 @@ struct parallel_reduce_range_move_helper<Range,Func,ReturnType,Job,typename ::bo
     decltype(boost::end(*range_)) end_;
 };
 
-template <class Range, class Func, class Job=boost::asynchronous::any_callable>
+template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 auto parallel_reduce(Range&& range,Func func,long cutoff,
              const std::string& task_name="", std::size_t prio=0) -> typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<decltype(func(*(range.begin()), *(range.end()))),Job> >::type
 {
@@ -313,7 +313,7 @@ struct parallel_reduce_range_helper: public boost::asynchronous::continuation_ta
     std::size_t prio_;
 };
 }
-template <class Range, class Func, class Job=boost::asynchronous::any_callable>
+template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 auto parallel_reduce(Range const& range,Func func,long cutoff,
              const std::string& task_name="", std::size_t prio=0) -> typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<decltype(func(*(range.begin()), *(range.end()))),Job> >::type
 {
@@ -410,7 +410,7 @@ struct parallel_reduce_continuation_range_helper<Continuation,Func,ReturnType,Jo
 #define _VALUE std::declval<_VALUE_TYPE>()
 #define _FUNC_RETURN_TYPE decltype(func(_VALUE, _VALUE))
 
-template <class Range, class Func, class Job=boost::asynchronous::any_callable>
+template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 auto parallel_reduce(Range range,Func func,long cutoff,
              const std::string& task_name="", std::size_t prio=0)
   -> typename boost::enable_if<has_is_continuation_task<Range>, boost::asynchronous::detail::callback_continuation<_FUNC_RETURN_TYPE, Job>>::type

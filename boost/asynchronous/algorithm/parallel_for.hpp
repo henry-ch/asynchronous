@@ -87,7 +87,7 @@ struct parallel_for_helper: public boost::asynchronous::continuation_task<void>
     std::size_t prio_;
 };
 }
-template <class Iterator, class Func, class Job=boost::asynchronous::any_callable>
+template <class Iterator, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<void,Job>
 parallel_for(Iterator beg, Iterator end,Func func,long cutoff,
              const std::string& task_name="", std::size_t prio=0)
@@ -253,7 +253,7 @@ struct parallel_for_range_move_helper<Range,Func,Job,typename ::boost::enable_if
     decltype(boost::end(*range_)) end_;
 };
 
-template <class Range, class Func, class Job=boost::asynchronous::any_callable>
+template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<Range,Job> >::type
 parallel_for(Range&& range,Func func,long cutoff,
              const std::string& task_name="", std::size_t prio=0)
@@ -318,7 +318,7 @@ struct parallel_for_range_helper: public boost::asynchronous::continuation_task<
     std::size_t prio_;
 };
 }
-template <class Range, class Func, class Job=boost::asynchronous::any_callable>
+template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<void,Job> >::type
 parallel_for(Range const& range,Func func,long cutoff,
              const std::string& task_name="", std::size_t prio=0)
@@ -410,7 +410,7 @@ struct parallel_for_continuation_range_helper<Continuation,Func,Job,typename ::b
     std::size_t prio_;
 };
 }
-template <class Range, class Func, class Job=boost::asynchronous::any_callable>
+template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::enable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_for(Range range,Func func,long cutoff,
              const std::string& task_name="", std::size_t prio=0)

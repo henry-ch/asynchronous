@@ -41,7 +41,7 @@
 namespace boost { namespace asynchronous
 {
 
-template<class Q, class PoolJobType = boost::asynchronous::any_callable,
+template<class Q, class PoolJobType = BOOST_ASYNCHRONOUS_DEFAULT_JOB,
          bool IsStealing=false,
          class CPULoad =
 #ifndef BOOST_ASYNCHRONOUS_SAVE_CPU_LOAD

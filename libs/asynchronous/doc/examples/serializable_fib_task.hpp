@@ -163,11 +163,11 @@ struct serializable_fib_task_bin : public boost::asynchronous::serializable_task
         ar & cutoff_;
     }
     auto operator()()const
-        -> decltype(boost::asynchronous::top_level_continuation_log<long,boost::asynchronous::any_bin_serializable>
+        -> decltype(boost::asynchronous::top_level_continuation_job<long,boost::asynchronous::any_bin_serializable>
                     (tcp_example::fib_task_bin(long(0),long(0))))
     {
         //TODO better than _log...
-        auto cont =  boost::asynchronous::top_level_continuation_log<long,boost::asynchronous::any_bin_serializable>
+        auto cont =  boost::asynchronous::top_level_continuation_job<long,boost::asynchronous::any_bin_serializable>
                 (tcp_example::fib_task_bin(n_,cutoff_));
         return cont;
 

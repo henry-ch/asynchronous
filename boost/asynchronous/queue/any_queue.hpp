@@ -48,7 +48,7 @@ struct any_queue_ptr_concept:
     boost::type_erasure::typeid_<>
 > {};
 
-template <class JOB = boost::asynchronous::any_callable>
+template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 struct any_queue_ptr: public boost::type_erasure::any<boost::asynchronous::any_queue_ptr_concept<JOB> >
                 , public boost::asynchronous::queue_base<JOB>
 {
@@ -75,7 +75,7 @@ struct any_queue_concept:
     boost::type_erasure::typeid_<>
 > {};
 
-template <class JOB = boost::asynchronous::any_callable>
+template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 struct any_queue: public boost::type_erasure::any<boost::asynchronous::any_queue_concept<JOB> >
                 , public boost::asynchronous::queue_base<JOB>
 {

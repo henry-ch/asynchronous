@@ -153,7 +153,7 @@ struct dymmy_weak_qt_scheduler
 // servant for using a Qt event loop for callback dispatching.
 // hides threadpool, adds automatic trackability for callbacks and tasks
 // inherit from it to get functionality
-template <class WJOB = boost::asynchronous::any_callable>
+template <class WJOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 class qt_servant
 {
 public:

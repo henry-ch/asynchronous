@@ -118,7 +118,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
                 {
                      // a top-level continuation is the first one in a recursive serie.
                      // Its result will be passed to callback
-                     return boost::asynchronous::top_level_continuation_log<long,servant_job>(main_task());
+                     return boost::asynchronous::top_level_continuation_job<long,servant_job>(main_task());
                  }// work
                ,
                // callback with result.

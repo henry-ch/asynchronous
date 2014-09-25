@@ -110,7 +110,7 @@ struct parallel_count_helper: public boost::asynchronous::continuation_task<long
 };
 }
 template <class Iterator, class Func,
-          class Job=boost::asynchronous::any_callable>
+          class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<long,Job>
 parallel_count(Iterator beg, Iterator end,Func func,long cutoff,
              const std::string& task_name="", std::size_t prio=0)
@@ -169,7 +169,7 @@ struct parallel_count_range_helper: public boost::asynchronous::continuation_tas
     std::size_t prio_;
 };
 }
-template <class Range, class Func, class Job=boost::asynchronous::any_callable>
+template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<long,Job> >::type
 parallel_count(Range const& range,Func func,long cutoff,
              const std::string& task_name="", std::size_t prio=0)
@@ -317,7 +317,7 @@ struct parallel_count_range_move_helper<Range,Func,Job,typename ::boost::enable_
     decltype(boost::end(*range_)) end_;
 };
 
-template <class Range, class Func, class Job=boost::asynchronous::any_callable>
+template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<long,Job> >::type
 parallel_count(Range&& range,Func func,long cutoff,
              const std::string& task_name="", std::size_t prio=0)
@@ -414,12 +414,12 @@ struct parallel_count_continuation_range_helper<Continuation,Func,Job,typename :
 };
 }
 
-template <class Range, class Func, class Job=boost::asynchronous::any_callable>
+template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::enable_if<has_is_continuation_task<Range>, boost::asynchronous::detail::continuation<long, Job>>::type
 parallel_count(Range range,Func func,long cutoff,
              const std::string& task_name="", std::size_t prio=0)
 {
-    return boost::asynchronous::top_level_continuation_log<long,Job>
+    return boost::asynchronous::top_level_continuation_job<long,Job>
             (boost::asynchronous::detail::parallel_count_continuation_range_helper<Range,Func,Job>(range,func,cutoff,task_name,prio));
 }
 

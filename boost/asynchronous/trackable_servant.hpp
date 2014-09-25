@@ -27,7 +27,7 @@ struct track{};
 // simple class for post and callback management
 // hides threadpool and weak scheduler, adds automatic trackability for callbacks and tasks
 // inherit from it to get functionality
-template <class JOB = boost::asynchronous::any_callable,class WJOB = boost::asynchronous::any_callable>
+template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB,class WJOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 class trackable_servant
 {
 public:
