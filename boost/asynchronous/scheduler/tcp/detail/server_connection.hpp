@@ -142,46 +142,24 @@ private:
     enum { m_header_length = 10 };
 };
 
-class server_connection_proxy_log_serialize : public boost::asynchronous::servant_proxy<server_connection_proxy_log_serialize,
-                                                                              boost::asynchronous::tcp::server_connection<boost::asynchronous::any_loggable_serializable<>>>
+template <class Job>
+struct server_connection_proxy : public boost::asynchronous::servant_proxy<server_connection_proxy<Job>,
+                                                                           boost::asynchronous::tcp::server_connection<Job>>
 {
 public:
     template<class Scheduler>
-    server_connection_proxy_log_serialize( Scheduler scheduler,
+    server_connection_proxy( Scheduler scheduler,
                             boost::shared_ptr<boost::asio::ip::tcp::socket> socket)
-        : boost::asynchronous::servant_proxy<server_connection_proxy_log_serialize,
-                                             boost::asynchronous::tcp::server_connection<boost::asynchronous::any_loggable_serializable<>>>
+        : boost::asynchronous::servant_proxy<server_connection_proxy,
+                                             boost::asynchronous::tcp::server_connection<Job>>
           (scheduler,std::move(socket))
     {}
-
+    typedef typename boost::asynchronous::servant_proxy<server_connection_proxy<Job>,
+                                             boost::asynchronous::tcp::server_connection<Job>>::servant_type servant_type;
+    typedef typename boost::asynchronous::servant_proxy<server_connection_proxy<Job>,
+                                             boost::asynchronous::tcp::server_connection<Job>>::callable_type callable_type;
     BOOST_ASYNC_POST_MEMBER(start)
     BOOST_ASYNC_POST_MEMBER(send)
-};
-struct server_connection_proxy_serialize : public boost::asynchronous::servant_proxy<server_connection_proxy_serialize,
-                                                                              boost::asynchronous::tcp::server_connection<boost::asynchronous::any_serializable>>
-{
-public:
-    template<class Scheduler>
-    server_connection_proxy_serialize( Scheduler scheduler,
-                            boost::shared_ptr<boost::asio::ip::tcp::socket> socket)
-        : boost::asynchronous::servant_proxy<server_connection_proxy_serialize,
-                                             boost::asynchronous::tcp::server_connection<boost::asynchronous::any_serializable>>
-          (scheduler,std::move(socket))
-    {}
-
-    BOOST_ASYNC_POST_MEMBER(start)
-    BOOST_ASYNC_POST_MEMBER(send)
-};
-// choose correct proxy
-template <class SerializableType = boost::asynchronous::any_serializable>
-struct get_correct_server_connection_proxy
-{
-    typedef boost::asynchronous::tcp::server_connection_proxy_serialize type;
-};
-template <>
-struct get_correct_server_connection_proxy<boost::asynchronous::any_loggable_serializable<> >
-{
-    typedef boost::asynchronous::tcp::server_connection_proxy_log_serialize type;
 };
 
 }}}

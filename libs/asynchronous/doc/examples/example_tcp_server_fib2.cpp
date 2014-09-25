@@ -123,13 +123,21 @@ void example_post_tcp_fib2(std::string const& server_address,std::string const& 
                 throw boost::asynchronous::tcp::transport_exception("unknown task");
             }
         };
-        typename boost::asynchronous::tcp::get_correct_simple_tcp_client_proxy<boost::asynchronous::tcp::queue_size_check_policy<>>::type
+// g++ in uncooperative, clang no
+#if defined(__clang__)
+        boost::asynchronous::tcp::simple_tcp_client_proxy_ext<boost::asynchronous::tcp::queue_size_check_policy<>>
                     client_proxy(
                         cscheduler,pool,server_address,server_port,executor,
                         0/*ms between calls to server*/,
                         0 /* number of jobs we try to keep in queue */);
-//        boost::asynchronous::tcp::simple_tcp_client_proxy client_proxy(cscheduler,pool,server_address,server_port,executor,
-//                                                                       10/*ms between calls to server*/);
+#else
+        typename boost::asynchronous::tcp::get_correct_simple_tcp_client_proxy<boost::asynchronous::tcp::queue_size_check_policy<>>::type
+                   client_proxy(
+                       cscheduler,pool,server_address,server_port,executor,
+                       0/*ms between calls to server*/,
+                       0 /* number of jobs we try to keep in queue */);
+#endif
+
         // we need a server
         // we use a tcp pool using 1 worker
         auto server_pool = boost::asynchronous::create_shared_scheduler_proxy(

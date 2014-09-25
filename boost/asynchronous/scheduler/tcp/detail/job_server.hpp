@@ -34,7 +34,7 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
 {
     typedef int simple_ctor;
     typedef boost::shared_ptr<typename boost::asynchronous::job_traits<SerializableType>::diagnostic_table_type> diag_type;
-    typedef typename get_correct_server_connection_proxy<SerializableType>::type server_connection_type;
+    typedef server_connection_proxy<SerializableType> server_connection_type;
 
     job_server(boost::asynchronous::any_weak_scheduler<boost::asynchronous::any_callable> scheduler,
                boost::asynchronous::any_shared_scheduler_proxy<PoolJobType> worker,
