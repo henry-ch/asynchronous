@@ -348,8 +348,50 @@ parallel_find_all(Range&& range,Func func,long cutoff,
 // version for ranges given as continuation
 namespace detail
 {
-template <class Continuation, class Func, class ReturnRange, class Job>
+// adapter to non-callback continuations
+template <class Continuation, class Func, class ReturnRange, class Job,class Enable=void>
 struct parallel_find_all_continuation_range_helper: public boost::asynchronous::continuation_task<ReturnRange>
+{
+    parallel_find_all_continuation_range_helper(Continuation const& c,Func func,long cutoff,
+                        const std::string& task_name, std::size_t prio)
+        :cont_(c),func_(std::move(func)),cutoff_(cutoff),task_name_(std::move(task_name)),prio_(prio)
+    {}
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<ReturnRange> task_res = this->this_task_result();
+        auto func(std::move(func_));
+        auto cutoff = cutoff_;
+        auto task_name = task_name_;
+        auto prio = prio_;
+        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res)
+        {
+            try
+            {
+                auto new_continuation = boost::asynchronous::parallel_find_all<typename Continuation::return_type, Func, ReturnRange, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
+                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<ReturnRange> >&& new_continuation_res)
+                {
+                    task_res.emplace_value(std::move(std::get<0>(new_continuation_res).get()));
+                });
+            }
+            catch(std::exception& e)
+            {
+                task_res.set_exception(boost::copy_exception(e));
+            }
+        }
+        );
+        boost::asynchronous::any_continuation ac(std::move(cont_));
+        boost::asynchronous::get_continuations().emplace_front(std::move(ac));
+    }
+    Continuation cont_;
+    Func func_;
+    long cutoff_;
+    std::string task_name_;
+    std::size_t prio_;
+};
+// Continuation is a callback continuation
+template <class Continuation, class Func, class ReturnRange, class Job>
+struct parallel_find_all_continuation_range_helper<Continuation,Func,ReturnRange,Job,typename ::boost::enable_if< has_is_callback_continuation_task<Continuation> >::type>
+        : public boost::asynchronous::continuation_task<ReturnRange>
 {
     parallel_find_all_continuation_range_helper(Continuation const& c,Func func,long cutoff,
                         const std::string& task_name, std::size_t prio)
@@ -371,8 +413,6 @@ struct parallel_find_all_continuation_range_helper: public boost::asynchronous::
                 {
                     task_res.emplace_value(std::move(std::get<0>(new_continuation_res).get()));
                 });
-                boost::asynchronous::any_continuation nac(std::move(new_continuation));
-                boost::asynchronous::get_continuations().emplace_front(std::move(nac));
             }
             catch(std::exception& e)
             {
@@ -380,8 +420,6 @@ struct parallel_find_all_continuation_range_helper: public boost::asynchronous::
             }
         }
         );
-        boost::asynchronous::any_continuation ac(std::move(cont_));
-        boost::asynchronous::get_continuations().emplace_front(std::move(ac));
     }
     Continuation cont_;
     Func func_;
