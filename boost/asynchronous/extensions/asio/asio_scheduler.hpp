@@ -348,9 +348,10 @@ private:
         while(true)
         {
             job_type job;
+            bool popped = false;
             try
             {
-                bool popped = (ioservice->poll_one() != 0);
+                popped = (ioservice->poll_one() != 0);
                 if (popped)
                 {
                     cpu_load.popped_job();
@@ -419,7 +420,10 @@ private:
             }
             catch(std::exception&)
             {
-                boost::asynchronous::job_traits<job_type>::set_failed(job);
+                if (popped)
+                {
+                    boost::asynchronous::job_traits<job_type>::set_failed(job);
+                }
             }
         }
     }
