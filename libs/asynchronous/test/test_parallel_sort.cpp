@@ -42,6 +42,14 @@ struct my_exception : virtual boost::exception, virtual std::exception
         return "my_exception";
     }
 };
+void generate(std::vector<int>& data)
+{
+    data = std::vector<int>(10000,1);
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_int_distribution<> dis(0, 1000);
+    std::generate(data.begin(), data.end(), std::bind(dis, std::ref(mt)));
+}
 
 struct Servant : boost::asynchronous::trackable_servant<>
 {
@@ -52,7 +60,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                    new boost::asynchronous::threadpool_scheduler<
                                                            boost::asynchronous::lockfree_queue<> >(6)))
     {
-        generate();
+        generate(m_data);
     }
     ~Servant()
     {
@@ -85,7 +93,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         std::sort(data_copy.begin(),data_copy.end(),std::less<int>());
                         BOOST_CHECK_MESSAGE(data_copy == this->m_data,"parallel_sort gave a wrong value.");
                         // reset
-                        generate();
+                        generate(this->m_data);
                         aPromise->set_value();
            }// callback functor.
         );
@@ -116,7 +124,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         std::stable_sort(data_copy.begin(),data_copy.end(),std::less<int>());
                         BOOST_CHECK_MESSAGE(data_copy == this->m_data,"parallel_stable_sort gave a wrong value.");
                         // reset
-                        generate();
+                        generate(this->m_data);
                         aPromise->set_value();
            }// callback functor.
         );
@@ -147,7 +155,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         std::sort(data_copy.begin(),data_copy.end(),std::less<int>());
                         BOOST_CHECK_MESSAGE(data_copy == this->m_data,"parallel_sort gave a wrong value.");
                         // reset
-                        generate();
+                        generate(this->m_data);
                         aPromise->set_value();
            }// callback functor.
         );
@@ -178,7 +186,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         std::stable_sort(data_copy.begin(),data_copy.end(),std::less<int>());
                         BOOST_CHECK_MESSAGE(data_copy == this->m_data,"parallel_stable_sort gave a wrong value.");
                         // reset
-                        generate();
+                        generate(this->m_data);
                         aPromise->set_value();
            }// callback functor.
         );
@@ -210,7 +218,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         auto modified_vec = res.get();
                         BOOST_CHECK_MESSAGE(data_copy == modified_vec,"parallel_sort gave a wrong value.");
                         // reset
-                        generate();
+                        generate(this->m_data);
                         aPromise->set_value();
            }// callback functor.
         );
@@ -249,23 +257,13 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         auto modified_vec = res.get();
                         BOOST_CHECK_MESSAGE(data_copy == modified_vec,"parallel_sort gave a wrong value.");
                         // reset
-                        generate();
+                        generate(this->m_data);
                         aPromise->set_value();
            }// callback functor.
         );
         return fu;
     }
 private:
-    // helper, generate vector
-    void generate()
-    {
-        m_data = std::vector<int>(10000,1);
-        std::random_device rd;
-        std::mt19937 mt(rd());
-        std::uniform_int_distribution<> dis(0, 1000);
-        std::generate(m_data.begin(), m_data.end(), std::bind(dis, std::ref(mt)));
-    }
-
     std::vector<int> m_data;
 };
 
@@ -417,4 +415,25 @@ BOOST_AUTO_TEST_CASE( test_parallel_stable_sort_continuation )
         }
     }
     BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
+}
+BOOST_AUTO_TEST_CASE( test_parallel_sort_post_future )
+{
+    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::threadpool_scheduler<
+                                                                                boost::asynchronous::lockfree_queue<> >(6));
+    std::vector<int> data;
+    generate(data);
+    // make a copy and execute in pool
+    boost::future<std::vector<int>> fu = boost::asynchronous::post_future(
+                scheduler,
+                [data]() mutable {return boost::asynchronous::parallel_sort_move(std::move(data),std::less<int>(),1500);});
+    try
+    {
+        std::vector<int> res = std::move(fu.get());
+        std::sort(data.begin(),data.end(),std::less<int>());
+        BOOST_CHECK_MESSAGE(res == data,"parallel_sort gave a wrong value.");
+    }
+    catch(...)
+    {
+        BOOST_FAIL( "unexpected exception" );
+    }
 }

@@ -267,7 +267,8 @@ namespace detail
                 std::swap(m_promise,const_cast<promise_move_helper&>(rhs).m_promise);
                 return *this;
             }
-            void operator()(std::tuple<boost::future<R> >&& continuation_res)
+            template <class Res>
+            void operator()(std::tuple<Res>&& continuation_res)
             {
                 if(!std::get<0>(continuation_res).has_value())
                 {
@@ -344,7 +345,8 @@ namespace detail
                 std::swap(m_promise,const_cast<promise_move_helper&>(rhs).m_promise);
                 return *this;
             }
-            void operator()(std::tuple<boost::future<R> >&& continuation_res)
+            template <class Res>
+            void operator()(std::tuple<Res>&& continuation_res)
             {
                 if(!std::get<0>(continuation_res).has_value())
                 {
@@ -422,7 +424,8 @@ namespace detail
                 std::swap(m_promise,const_cast<promise_move_helper&>(rhs).m_promise);
                 return *this;
             }
-            void operator()(std::tuple<boost::future<R> >&& continuation_res)
+            template <class Res>
+            void operator()(std::tuple<Res>&& continuation_res)
             {
                 if(!std::get<0>(continuation_res).has_value())
                 {
