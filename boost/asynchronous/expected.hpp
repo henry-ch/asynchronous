@@ -56,13 +56,13 @@ public:
     {
         m_value=std::move(value);
     }
-    value_type get()
+    value_type& get()
     {
         if (m_exception)
         {
             boost::rethrow_exception(m_exception);
         }
-        return std::move(m_value);
+        return m_value;
     }
     bool has_exception() const
     {
