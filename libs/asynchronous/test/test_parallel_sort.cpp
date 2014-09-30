@@ -45,8 +45,10 @@ struct my_exception : virtual boost::exception, virtual std::exception
 void generate(std::vector<int>& data)
 {
     data = std::vector<int>(10000,1);
-    std::random_device rd;
-    std::mt19937 mt(rd());
+    // avoid mingw bug by not using random_device
+    //std::random_device rd;
+    //std::mt19937 mt(rd());
+    std::mt19937 mt(static_cast<unsigned int>(std::time(nullptr)));
     std::uniform_int_distribution<> dis(0, 1000);
     std::generate(data.begin(), data.end(), std::bind(dis, std::ref(mt)));
 }
