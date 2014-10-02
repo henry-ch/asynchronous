@@ -296,14 +296,15 @@ struct callback_continuation
     void continuation_ctor_helper(T& sched, Interruptibles& interruptibles,Last&& l)
     {
         std::string n(std::move(l.get_name()));
+        auto finished = m_finished;
+        l.set_done_func([finished](boost::asynchronous::expected<typename Last::res_type> r)
+                        {
+                           std::get<I>((*finished).m_futures) = std::move(r);
+                           finished->done();
+                        });
         if (!m_state)
         {
-            auto finished = m_finished;
-            l.set_done_func([finished](boost::asynchronous::expected<typename Last::res_type> r)
-                            {
-                               std::get<I>((*finished).m_futures) = std::move(r);
-                               finished->done();
-                            });
+
             // we execute one task ourselves to save one post
             l();
         }
@@ -367,15 +368,15 @@ struct callback_continuation
     continuation_ctor_helper_tuple(T& sched, Interruptibles& interruptibles,std::tuple<ArgsTuple...>& l)
     {
         std::string n(std::move(std::get<I>(l).get_name()));
+        auto finished = m_finished;
+        std::get<I>(l).set_done_func([finished](boost::asynchronous::expected<
+                                                    typename std::tuple_element<I, std::tuple<ArgsTuple...>>::type::res_type> r)
+                        {
+                           std::get<I>((*finished).m_futures) = std::move(r);
+                           finished->done();
+                        });
         if (!m_state)
         {
-            auto finished = m_finished;
-            std::get<I>(l).set_done_func([finished](boost::asynchronous::expected<
-                                                        typename std::tuple_element<I, std::tuple<ArgsTuple...>>::type::res_type> r)
-                            {
-                               std::get<I>((*finished).m_futures) = std::move(r);
-                               finished->done();
-                            });
             // we execute one task ourselves to save one post
             std::get<I>(l)();
         }
