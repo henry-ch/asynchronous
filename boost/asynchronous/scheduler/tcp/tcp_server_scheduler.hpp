@@ -261,7 +261,7 @@ public:
                     {
                         cpu_load.popped_job();
                         // forward to server
-                        server.add_task(std::move(job),diagnostics);
+                        server.add_task(job,diagnostics);
 
                     }
                     if (!popped && server.requests_stealing().get())
@@ -273,7 +273,7 @@ public:
                             if (popped)
                             {
                                 // forward to server
-                                server.add_task(std::move(job),diagnostics);
+                                server.add_task(job,diagnostics);
                                 break;
                             }
                         }
