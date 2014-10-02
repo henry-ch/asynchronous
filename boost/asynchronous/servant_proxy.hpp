@@ -289,7 +289,7 @@ struct empty_servant : public virtual boost::exception, public virtual std::exce
 {
 };
 
-template <class ServantProxy,class Servant, class Callable = boost::asynchronous::any_callable,int max_create_wait_ms = 5000>
+template <class ServantProxy,class Servant, class Callable = BOOST_ASYNCHRONOUS_DEFAULT_JOB,int max_create_wait_ms = 5000>
 class servant_proxy
 {
 public:

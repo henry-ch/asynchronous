@@ -86,7 +86,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
         post_callback(
                 [n,cutoff]()
                 {
-                     return boost::asynchronous::top_level_continuation_log<long,servant_job>(fib_task(n,cutoff));
+                     return boost::asynchronous::top_level_continuation_job<long,servant_job>(fib_task(n,cutoff));
                  }// work
                ,
                // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called

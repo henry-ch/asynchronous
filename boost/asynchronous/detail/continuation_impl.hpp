@@ -224,6 +224,7 @@ template <class Return, typename Job, typename Tuple=std::tuple<boost::asynchron
 struct callback_continuation
 {
     typedef int is_continuation_task;
+    typedef int is_callback_continuation_task;
     typedef Return return_type;
     typedef Tuple tuple_type;
     // metafunction telling if we are future or expected based

@@ -47,7 +47,7 @@ private:
 };
 
 // this class manages a sequence of (possibly different) queues
-template <class JOB = boost::asynchronous::any_callable, 
+template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB,
           class PushPolicy = boost::asynchronous::default_find_position< > >
 class any_queue_container: 
 #ifdef BOOST_ASYNCHRONOUS_NO_TYPE_ERASURE

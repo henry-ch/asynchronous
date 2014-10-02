@@ -141,7 +141,7 @@ struct simple_tcp_client : boost::asynchronous::trackable_servant<boost::asynchr
     {
         check_for_work();
         // start continuous task
-        return m_done.get_future();
+        return std::move(m_done.get_future());
     }
 
 private:
@@ -484,8 +484,6 @@ private:
     enum { m_header_length = 10 };
 };
 
-#ifndef BOOST_ASYNCHRONOUS_USE_TEMPLATE_PROXY_CLASSES
-
 // the proxy of AsioCommunicationServant for use in an external thread
 class simple_tcp_client_proxy: public boost::asynchronous::servant_proxy<simple_tcp_client_proxy,
                                boost::asynchronous::tcp::simple_tcp_client<boost::asynchronous::tcp::client_time_check_policy<boost::asynchronous::any_serializable> > >
@@ -538,34 +536,35 @@ struct get_correct_simple_tcp_client_proxy<boost::asynchronous::tcp::queue_size_
     typedef boost::asynchronous::tcp::simple_tcp_client_proxy_queue_size type;
 };
 
-#else
+
 // the proxy of AsioCommunicationServant for use in an external thread
-template <class T, class SerializableType = boost::asynchronous::any_serializable>
-class simple_tcp_client_proxy: public boost::asynchronous::servant_proxy<simple_tcp_client_proxy<T>,
-                               boost::asynchronous::tcp::simple_tcp_client<T> >
+template <class T = boost::asynchronous::tcp::client_time_check_policy<boost::asynchronous::any_serializable> ,
+          class SerializableType = boost::asynchronous::any_serializable>
+class simple_tcp_client_proxy_ext: public boost::asynchronous::servant_proxy<simple_tcp_client_proxy_ext<T,SerializableType>,
+                                                                         boost::asynchronous::tcp::simple_tcp_client<T> >
 {
 public:
     // ctor arguments are forwarded to AsioCommunicationServant
     template <class Scheduler,typename... Args>
-    simple_tcp_client_proxy(Scheduler s,
+    simple_tcp_client_proxy_ext(Scheduler s,
                             boost::asynchronous::any_shared_scheduler_proxy<SerializableType> pool,
                             const std::string& server, const std::string& path,
                             std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,
                                                std::function<void(boost::asynchronous::tcp::client_request const&)>)> const& executor,
                             Args... args):
-        boost::asynchronous::servant_proxy<simple_tcp_client_proxy<T>,boost::asynchronous::tcp::simple_tcp_client<T> >
+        boost::asynchronous::servant_proxy<simple_tcp_client_proxy_ext<T,SerializableType>,boost::asynchronous::tcp::simple_tcp_client<T> >
             (s,pool,server,path,executor,args...)
     {}
+    typedef typename boost::asynchronous::servant_proxy<
+                            simple_tcp_client_proxy_ext<T,SerializableType>,
+                            boost::asynchronous::tcp::simple_tcp_client<T> >::servant_type servant_type;
+    typedef typename boost::asynchronous::servant_proxy<
+                            simple_tcp_client_proxy_ext<T,SerializableType>,
+                            boost::asynchronous::tcp::simple_tcp_client<T> >::callable_type callable_type;
+
     // we offer a single member for posting
     BOOST_ASYNC_FUTURE_MEMBER(run)
 };
-// choose correct proxy (just for compatibility with limited version from above
-template <class Job>
-struct get_correct_simple_tcp_client_proxy
-{
-    typedef boost::asynchronous::tcp::simple_tcp_client_proxy<Job> type;
-};
-#endif
 
 // register a task for deserialization
 template <class Task, class SerializableType = boost::asynchronous::any_serializable>

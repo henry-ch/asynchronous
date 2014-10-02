@@ -12,14 +12,14 @@
 
 namespace boost { namespace asynchronous
 {
-template <class Job = boost::asynchronous::any_callable >
+template <class Job = BOOST_ASYNCHRONOUS_DEFAULT_JOB >
 struct tss_any_weak_scheduler_wrapper
 {
     tss_any_weak_scheduler_wrapper(boost::asynchronous::any_weak_scheduler<Job> s):m_scheduler(s){}
     boost::asynchronous::any_weak_scheduler<Job> m_scheduler;
 };
 
-template <class Job = boost::asynchronous::any_callable >
+template <class Job = BOOST_ASYNCHRONOUS_DEFAULT_JOB >
 boost::asynchronous::any_weak_scheduler<Job> get_thread_scheduler(boost::asynchronous::any_weak_scheduler<Job> wscheduler= boost::asynchronous::any_weak_scheduler<Job>(), bool reset=false )
 {
     static boost::thread_specific_ptr<boost::asynchronous::tss_any_weak_scheduler_wrapper<Job> > s_scheduler;

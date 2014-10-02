@@ -72,7 +72,7 @@ struct any_shared_scheduler_concept :
                                           const boost::type_erasure::_a>
 > {};
 
-template <class T = boost::asynchronous::any_callable, class Clock = boost::chrono::high_resolution_clock >
+template <class T = BOOST_ASYNCHRONOUS_DEFAULT_JOB, class Clock = boost::chrono::high_resolution_clock >
 struct any_shared_scheduler_ptr: boost::type_erasure::any<boost::asynchronous::any_shared_scheduler_concept<T,Clock> >
 {
     typedef T job_type;
@@ -83,7 +83,7 @@ struct any_shared_scheduler_ptr: boost::type_erasure::any<boost::asynchronous::a
 
 };
 #else
-template <class JOB = boost::asynchronous::any_callable,class Clock = boost::chrono::high_resolution_clock>
+template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB,class Clock = boost::chrono::high_resolution_clock>
 struct any_shared_scheduler_concept
 {
     virtual ~any_shared_scheduler_concept<JOB,Clock>(){}
@@ -97,7 +97,7 @@ struct any_shared_scheduler_concept
     virtual std::map<std::string,std::list<boost::asynchronous::diagnostic_item<Clock> > > get_diagnostics(std::size_t =0)const =0;
     virtual void clear_diagnostics() =0;
 };
-template <class T = boost::asynchronous::any_callable,class Clock = boost::chrono::high_resolution_clock>
+template <class T = BOOST_ASYNCHRONOUS_DEFAULT_JOB,class Clock = boost::chrono::high_resolution_clock>
 struct any_shared_scheduler_ptr: boost::shared_ptr<boost::asynchronous::any_shared_scheduler_concept<T,Clock> >
 {
     typedef T job_type;
@@ -111,7 +111,7 @@ struct any_shared_scheduler_ptr: boost::shared_ptr<boost::asynchronous::any_shar
 };
 #endif
 
-template <class JOB = boost::asynchronous::any_callable,class Clock = boost::chrono::high_resolution_clock>
+template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB,class Clock = boost::chrono::high_resolution_clock>
 class any_shared_scheduler
 {
 public:
@@ -179,7 +179,7 @@ struct any_weak_scheduler_concept :
     boost::type_erasure::typeid_<>,
     boost::asynchronous::has_lock<any_shared_scheduler<JOB>(), const boost::type_erasure::_self>
 > {};
-template <class T = boost::asynchronous::any_callable, class Clock = boost::chrono::high_resolution_clock>
+template <class T = BOOST_ASYNCHRONOUS_DEFAULT_JOB, class Clock = boost::chrono::high_resolution_clock>
 struct any_weak_scheduler: boost::type_erasure::any<boost::asynchronous::any_weak_scheduler_concept<T,Clock> >
 {
     typedef T job_type;

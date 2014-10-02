@@ -128,11 +128,17 @@ int main(int argc, char* argv[])
             auto pool = boost::asynchronous::create_shared_scheduler_proxy(
                         new boost::asynchronous::threadpool_scheduler<
                             boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable> >(threads));
+// g++ in uncooperative, clang no
+#if defined(__clang__)
+            boost::asynchronous::tcp::simple_tcp_client_proxy_ext<> proxy(scheduler,pool,server_address,server_port,executor,
+                                                                    10/*ms between calls to server*/);
+#else
             boost::asynchronous::tcp::simple_tcp_client_proxy proxy(scheduler,pool,server_address,server_port,executor,
                                                                     10/*ms between calls to server*/);
+#endif
             // run forever
-            boost::future<boost::future<void> > fu = proxy.run();
-            boost::future<void> fu_end = fu.get();
+            boost::future<boost::future<void> > fu = std::move(proxy.run());
+            boost::future<void> fu_end = std::move(fu.get());
             fu_end.get();
         }
         else
@@ -142,14 +148,21 @@ int main(int argc, char* argv[])
                         new boost::asynchronous::threadpool_scheduler<
                             boost::asynchronous::guarded_deque<boost::asynchronous::any_serializable> >(threads));
             // more advanced policy
-            // or simple_tcp_client_proxy<boost::asynchronous::tcp::queue_size_check_policy<>> if your compiler can (clang)
-            typename boost::asynchronous::tcp::get_correct_simple_tcp_client_proxy<boost::asynchronous::tcp::queue_size_check_policy<>>::type proxy(
+// g++ in uncooperative, clang no
+#if defined(__clang__)
+            boost::asynchronous::tcp::simple_tcp_client_proxy_ext<boost::asynchronous::tcp::queue_size_check_policy<>> proxy(
                         scheduler,pool,server_address,server_port,executor,
                         10/*ms between calls to server*/,
                         job_getting_policy /* number of jobs we try to keep in queue */);
+#else
+            typename boost::asynchronous::tcp::get_correct_simple_tcp_client_proxy<boost::asynchronous::tcp::queue_size_check_policy<>>::type proxy(
+                       scheduler,pool,server_address,server_port,executor,
+                       10/*ms between calls to server*/,
+                       job_getting_policy /* number of jobs we try to keep in queue */);
+#endif
             // run forever
-            boost::future<boost::future<void> > fu = proxy.run();
-            boost::future<void> fu_end = fu.get();
+            boost::future<boost::future<void> > fu = std::move(proxy.run());
+            boost::future<void> fu_end = std::move(fu.get());
             fu_end.get();
         }
     }

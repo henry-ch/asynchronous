@@ -373,7 +373,7 @@ boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type> create_sha
 #endif
 
 #ifdef BOOST_ASYNCHRONOUS_NO_TYPE_ERASURE
-template<class JOB = boost::asynchronous::any_callable,class Clock = boost::chrono::high_resolution_clock>
+template<class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB,class Clock = boost::chrono::high_resolution_clock>
 class scheduler_weak_proxy
 {
 public:

@@ -45,7 +45,7 @@
 namespace boost { namespace asynchronous
 {
 //TODO boost.parameter
-template<class Job = boost::asynchronous::any_callable, 
+template<class Job = BOOST_ASYNCHRONOUS_DEFAULT_JOB,
          class FindPosition=boost::asynchronous::default_find_position< >,
          class Clock = boost::chrono::high_resolution_clock >
 class composite_threadpool_scheduler: 
