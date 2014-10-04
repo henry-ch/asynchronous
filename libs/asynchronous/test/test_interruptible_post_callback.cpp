@@ -44,7 +44,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         boost::asynchronous::any_interruptible interruptible =
         interruptible_post_callback(
                [p](){p->set_value();boost::this_thread::sleep(boost::posix_time::milliseconds(1000000));},
-               [](boost::asynchronous::expected<void> ){BOOST_FAIL( "unexpected call of callback" );}// should not be called
+               [](boost::asynchronous::expected<void> ){BOOST_ERROR( "unexpected call of callback" );}// should not be called
         );
         apromise.set_value(interruptible);
         return fu;
@@ -67,8 +67,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
         // start long tasks
         boost::asynchronous::any_interruptible interruptible =
         interruptible_post_callback(
-           [](){BOOST_FAIL( "unexpected call of task" );},
-           [](boost::asynchronous::expected<void> ){BOOST_FAIL( "unexpected call of callback" );}// should not be called
+           [](){BOOST_ERROR( "unexpected call of task" );},
+           [](boost::asynchronous::expected<void> ){BOOST_ERROR( "unexpected call of callback" );}// should not be called
         );
         apromise.set_value(interruptible);
         return std::make_pair(m_ready,fu2);
