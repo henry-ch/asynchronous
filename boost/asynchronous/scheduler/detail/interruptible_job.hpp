@@ -78,7 +78,7 @@ struct interruptible_job : public boost::asynchronous::job_traits<Job>::diagnost
 
     void operator()()
     {
-        // save state to tss (valid until next task)
+        // save state to tss
         boost::asynchronous::get_interrupt_state<>(m_state,true);
         // if already interrupted, we don't need to start
         if (m_state->is_interrupted())
@@ -96,6 +96,8 @@ struct interruptible_job : public boost::asynchronous::job_traits<Job>::diagnost
         // ok we were not interrupted
         this->set_interrupted(false);
         m_state->complete();
+        // remove state from tss
+        boost::asynchronous::get_interrupt_state<>(boost::shared_ptr<boost::asynchronous::detail::interrupt_state>(),true);
     }
     template<class Archive>
     void serialize(Archive & , const unsigned int /* version */){/* not implemented */}
