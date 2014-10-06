@@ -408,6 +408,8 @@ private:
                     // nothing for us to do, give up our time slice
                     boost::this_thread::yield();
                 }
+                // remove state from tss
+                boost::asynchronous::get_interrupt_state<>(boost::shared_ptr<boost::asynchronous::detail::interrupt_state>(),true);
             }
             catch(boost::asynchronous::detail::shutdown_exception&)
             {
@@ -423,6 +425,8 @@ private:
                 if (popped)
                 {
                     boost::asynchronous::job_traits<job_type>::set_failed(job);
+                    // remove state from tss
+                    boost::asynchronous::get_interrupt_state<>(boost::shared_ptr<boost::asynchronous::detail::interrupt_state>(),true);
                 }
             }
         }
