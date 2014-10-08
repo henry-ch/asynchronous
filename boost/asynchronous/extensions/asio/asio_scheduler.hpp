@@ -414,6 +414,7 @@ private:
             catch(boost::asynchronous::detail::shutdown_exception&)
             {
                 // we are done
+                delete m_self_thread.release();
                 return;
             }
             catch(boost::thread_interrupted&)

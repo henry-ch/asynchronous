@@ -247,6 +247,7 @@ public:
             {
                 // we are done, execute jobs posted short before to the end, then shutdown
                 while(execute_one_job(queue,cpu_load,diagnostics,waiting));
+                delete boost::asynchronous::detail::single_queue_scheduler_policy<Q>::m_self_thread.release();
                 return;
             }
             catch(boost::thread_interrupted&)
