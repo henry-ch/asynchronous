@@ -20,6 +20,7 @@
 #include <boost/chrono.hpp>
 #include <boost/thread/mutex.hpp>
 
+#include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/any_scheduler.hpp>
 #include <boost/asynchronous/scheduler/detail/interrupt_state.hpp>
@@ -32,7 +33,7 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(iterator)
 namespace boost { namespace asynchronous { namespace detail {
 
 // the continuation task implementation
-template <class Return, typename Job, typename Tuple=std::tuple<boost::future<Return> > , typename Duration = boost::chrono::milliseconds >
+template <class Return, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB, typename Tuple=std::tuple<boost::future<Return> > , typename Duration = boost::chrono::milliseconds >
 struct continuation
 {
     typedef int is_continuation_task;
@@ -220,7 +221,7 @@ struct continuation
 
 };
 
-template <class Return, typename Job, typename Tuple=std::tuple<boost::asynchronous::expected<Return> > , typename Duration = boost::chrono::milliseconds >
+template <class Return, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB, typename Tuple=std::tuple<boost::asynchronous::expected<Return> > , typename Duration = boost::chrono::milliseconds >
 struct callback_continuation
 {
     typedef int is_continuation_task;
