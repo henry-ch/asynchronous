@@ -187,7 +187,7 @@ struct continuation
 //private:
     Tuple m_futures;
     std::vector<bool> m_ready_futures;
-    std::function<void(Tuple&&)> m_done;
+    std::function<void(Tuple)> m_done;
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> m_state;
     Duration m_timeout;
     typename boost::chrono::high_resolution_clock::time_point m_start;
@@ -272,14 +272,17 @@ struct callback_continuation
         return *this;
     }
 
-    template <typename... Args>
-    callback_continuation(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state,Tuple t, Duration d, Args&&... args)
+    template <typename Func, typename... Args>
+    callback_continuation(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state,Tuple t, Duration d, Func f,
+                          Args&&... args)
     : m_state(state)
     , m_timeout(d)
     , m_finished(boost::make_shared<subtask_finished>(std::move(t),!!m_state,(m_timeout.count() != 0)))
     {
         // remember when we started
         m_start = boost::chrono::high_resolution_clock::now();
+
+        on_done(std::move(f));
 
         boost::asynchronous::any_weak_scheduler<Job> weak_scheduler = boost::asynchronous::get_thread_scheduler<Job>();
         boost::asynchronous::any_shared_scheduler<Job> locked_scheduler = weak_scheduler.lock();
@@ -291,6 +294,7 @@ struct callback_continuation
         }
         if (m_state)
             m_state->add_subs(interruptibles.begin(),interruptibles.end());
+
     }
 
     // handles the difference between normal tasks and continuations given as normal tasks
@@ -359,8 +363,8 @@ struct callback_continuation
     }
 
 
-    template <typename... Args>
-    callback_continuation(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state,Tuple t, Duration d,
+    template <typename Func,typename... Args>
+    callback_continuation(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state,Tuple t, Duration d,Func f,
                           std::tuple<Args...> args)
     : m_state(state)
     , m_timeout(d)
@@ -368,6 +372,8 @@ struct callback_continuation
     {
         // remember when we started
         m_start = boost::chrono::high_resolution_clock::now();
+
+        on_done(std::move(f));
 
         boost::asynchronous::any_weak_scheduler<Job> weak_scheduler = boost::asynchronous::get_thread_scheduler<Job>();
         boost::asynchronous::any_shared_scheduler<Job> locked_scheduler = weak_scheduler.lock();
@@ -379,6 +385,7 @@ struct callback_continuation
         }
         if (m_state)
             m_state->add_subs(interruptibles.begin(),interruptibles.end());
+
     }
     template <int I,typename T,typename Interruptibles,typename... ArgsTuple>
     typename boost::enable_if_c<I == sizeof...(ArgsTuple)-1,void>::type
@@ -475,7 +482,7 @@ struct callback_continuation
         void on_done(Func f)
         {
             m_done = std::move(f);
-            if (!m_interrupted && (m_ready_futures.load() == std::tuple_size<Tuple>::value))
+            if (m_done && !m_interrupted && (m_ready_futures.load() == std::tuple_size<Tuple>::value))
             {
                  return_result();
             }
@@ -497,28 +504,25 @@ struct callback_continuation
                 if (m_done)
                 {
                     m_done(std::move(m_futures));
-                    m_done= std::function<void(Tuple&&)>();
+                    m_done= std::function<void(Tuple)>();
                 }
             }
             else
             {
-                boost::mutex::scoped_lock lock(m_mutex);
                 if (m_done)
                 {
                     m_done(std::move(m_futures));
-                    m_done= std::function<void(Tuple&&)>();
+                    m_done= std::function<void(Tuple)>();
                 }
             }
         }
 
         Tuple m_futures;
         std::atomic<std::size_t> m_ready_futures;
-        std::function<void(Tuple&&)> m_done;
+        std::function<void(Tuple)> m_done;
         const bool m_interruptible;
         std::atomic<bool> m_interrupted;
         const bool m_supports_timeout;
-        // protects m_done in case of an interruption
-        mutable boost::mutex m_mutex;
     };
 
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> m_state;
