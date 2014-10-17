@@ -227,7 +227,7 @@ struct parallel_sort_range_move_helper: public boost::asynchronous::continuation
         if (it == boost::end(*range))
         {
             Sort()(boost::begin(*range),it,func_);
-            task_res.emplace_value(std::move(*range));
+            task_res.set_value(std::move(*range));
         }
         else
         {
@@ -243,7 +243,7 @@ struct parallel_sort_range_move_helper: public boost::asynchronous::continuation
                                 std::get<1>(res).get();
                                 // merge both sorted sub-ranges
                                 std::inplace_merge(boost::begin(*range),it,boost::end(*range),func);
-                                task_res.emplace_value(std::move(*range));
+                                task_res.set_value(std::move(*range));
                             }
                             catch(std::exception& e)
                             {
@@ -297,7 +297,7 @@ struct parallel_sort_range_move_helper<Range,Func,Job, Sort,typename ::boost::en
             // TODO reserve if possible
             Range res;
             std::move(begin_,it,std::back_inserter(res));
-            task_res.emplace_value(std::move(res));
+            task_res.set_value(std::move(res));
         }
         else
         {
@@ -315,7 +315,7 @@ struct parallel_sort_range_move_helper<Range,Func,Job, Sort,typename ::boost::en
                                 Range range(r1.size()+r2.size());
                                 // merge both sorted sub-ranges
                                 std::merge(boost::begin(r1),boost::end(r1),boost::begin(r2),boost::end(r2), boost::begin(range),func);
-                                task_res.emplace_value(std::move(range));
+                                task_res.set_value(std::move(range));
                             }
                             catch(std::exception& e)
                             {
@@ -417,7 +417,7 @@ struct parallel_sort_continuation_range_helper: public boost::asynchronous::cont
                 auto new_continuation = boost::asynchronous::parallel_sort_move<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
                 new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
                 {
-                    task_res.emplace_value(std::move(std::get<0>(new_continuation_res).get()));
+                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                 });
             }
             catch(std::exception& e)
@@ -458,7 +458,7 @@ struct parallel_sort_continuation_range_helper<Continuation,Func,Job,typename ::
                 auto new_continuation = boost::asynchronous::parallel_sort_move<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
                 new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
                 {
-                    task_res.emplace_value(std::move(std::get<0>(new_continuation_res).get()));
+                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                 });
             }
             catch(std::exception& e)
@@ -497,7 +497,7 @@ struct parallel_stable_sort_continuation_range_helper: public boost::asynchronou
                 auto new_continuation = boost::asynchronous::parallel_stable_sort_move(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
                 new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
                 {
-                    task_res.emplace_value(std::move(std::get<0>(new_continuation_res).get()));
+                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                 });
             }
             catch(std::exception& e)
@@ -538,7 +538,7 @@ struct parallel_stable_sort_continuation_range_helper<Continuation,Func,Job,type
                 auto new_continuation = boost::asynchronous::parallel_stable_sort_move(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
                 new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
                 {
-                    task_res.emplace_value(std::move(std::get<0>(new_continuation_res).get()));
+                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                 });
             }
             catch(std::exception& e)

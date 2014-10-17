@@ -76,7 +76,7 @@ struct parallel_count_helper: public boost::asynchronous::continuation_task<long
         // if not at end, recurse, otherwise execute here
         if (it == end_)
         {
-            task_res.emplace_value(boost::asynchronous::detail::count(boost::make_iterator_range(beg_, it),func_));
+            task_res.set_value(std::move(boost::asynchronous::detail::count(boost::make_iterator_range(beg_, it),func_)));
         }
         else
         {
@@ -137,7 +137,7 @@ struct parallel_count_range_helper: public boost::asynchronous::continuation_tas
         // if not at end, recurse, otherwise execute here
         if (it == boost::end(range_))
         {
-            task_res.emplace_value(boost::asynchronous::detail::count(boost::make_iterator_range(boost::begin(range_), it),std::move(func_)));
+            task_res.set_value(std::move(boost::asynchronous::detail::count(boost::make_iterator_range(boost::begin(range_), it),std::move(func_))));
         }
         else
         {
@@ -196,7 +196,7 @@ struct parallel_count_range_move_helper: public boost::asynchronous::continuatio
         // if not at end, recurse, otherwise execute here
         if (it == boost::end(*range))
         {
-            task_res.emplace_value(boost::asynchronous::detail::count(boost::make_iterator_range(boost::begin(*range), it),std::move(func_)));
+            task_res.set_value(std::move(boost::asynchronous::detail::count(boost::make_iterator_range(boost::begin(*range), it),std::move(func_))));
         }
         else
         {
@@ -254,7 +254,7 @@ struct parallel_count_range_move_helper<Range,Func,Job,typename ::boost::enable_
         // if not at end, recurse, otherwise execute here
         if (it == end_)
         {
-            task_res.emplace_value(boost::asynchronous::detail::count(boost::make_iterator_range(begin_, it),std::move(func_)));
+            task_res.set_value(std::move(boost::asynchronous::detail::count(boost::make_iterator_range(begin_, it),std::move(func_))));
         }
         else
         {

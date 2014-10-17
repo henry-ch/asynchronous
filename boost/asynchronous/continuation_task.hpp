@@ -50,28 +50,16 @@ public:
         m_done_func = rhs.m_done_func;
         return *this;
     }
-    void set_value(Return const& val)const
+    void set_value(Return val)const
     {       
         // inform caller if any
         if (m_done_func)
         {
-            (m_done_func)(boost::asynchronous::expected<Return>(val));
+            (m_done_func)(boost::asynchronous::expected<Return>(std::move(val)));
         }
         else
         {
-            m_promise->set_value(val);
-        }
-    }
-    void emplace_value(Return&& val)const
-    {        
-        // inform caller if any
-        if (m_done_func)
-        {
-            (m_done_func)(boost::asynchronous::expected<Return>(std::forward<Return>(val)));
-        }
-        else
-        {
-           m_promise->set_value(std::forward<Return>(val));
+            m_promise->set_value(std::move(val));
         }
     }
     void set_exception(boost::exception_ptr p)const
@@ -119,18 +107,6 @@ public:
     }
     void set_value()const
     {        
-        // inform caller if any
-        if (m_done_func)
-        {
-            (m_done_func)(boost::asynchronous::expected<void>());
-        }
-        else
-        {
-            m_promise->set_value();
-        }
-    }
-    void emplace_value()const
-    {
         // inform caller if any
         if (m_done_func)
         {

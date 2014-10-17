@@ -121,7 +121,7 @@ struct parallel_for_range_move_helper: public boost::asynchronous::continuation_
         if (it == boost::end(*range))
         {
             std::for_each(boost::begin(*range),it,func_);
-            task_res.emplace_value(std::move(*range));
+            task_res.set_value(std::move(*range));
         }
         else
         {
@@ -134,7 +134,7 @@ struct parallel_for_range_move_helper: public boost::asynchronous::continuation_
                                 // get to check that no exception
                                 std::get<0>(res).get();
                                 std::get<1>(res).get();
-                                task_res.emplace_value(std::move(*range));
+                                task_res.set_value(std::move(*range));
                             }
                             catch(std::exception& e)
                             {
@@ -187,7 +187,7 @@ struct parallel_for_range_move_helper<Range,Func,Job,typename ::boost::enable_if
             std::for_each(begin_,it,func_);
             Range res;
             std::move(begin_,it,std::back_inserter(res));
-            task_res.emplace_value(std::move(res));
+            task_res.set_value(std::move(res));
         }
         else
         {
@@ -201,7 +201,7 @@ struct parallel_for_range_move_helper<Range,Func,Job,typename ::boost::enable_if
                                 // TODO move possible?
                                 range = boost::push_back(range,std::move(std::get<0>(res).get()));
                                 range = boost::push_back(range,std::move(std::get<1>(res).get()));
-                                task_res.emplace_value(std::move(range));
+                                task_res.set_value(std::move(range));
                             }
                             catch(std::exception& e)
                             {
@@ -352,7 +352,7 @@ struct parallel_for_continuation_range_helper: public boost::asynchronous::conti
                 auto new_continuation = boost::asynchronous::parallel_for<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
                 new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
                 {
-                    task_res.emplace_value(std::move(std::get<0>(new_continuation_res).get()));
+                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                 });
             }
             catch(std::exception& e)
@@ -393,7 +393,7 @@ struct parallel_for_continuation_range_helper<Continuation,Func,Job,typename ::b
                 auto new_continuation = boost::asynchronous::parallel_for<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
                 new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
                 {
-                    task_res.emplace_value(std::move(std::get<0>(new_continuation_res).get()));
+                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                 });
             }
             catch(std::exception& e)

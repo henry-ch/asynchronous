@@ -63,7 +63,7 @@ struct parallel_reduce_helper: public boost::asynchronous::continuation_task<Ret
         // if not at end, recurse, otherwise execute here
         if (it == end_)
         {
-            task_res.emplace_value(std::move(reduce<Iterator, Func, ReturnType>(beg_,it,std::move(func_))));
+            task_res.set_value(std::move(reduce<Iterator, Func, ReturnType>(beg_,it,std::move(func_))));
         }
         else
         {
@@ -76,7 +76,7 @@ struct parallel_reduce_helper: public boost::asynchronous::continuation_task<Ret
                     {
                         ReturnType rt = std::get<0>(res).get();
                         rt = std::move(func(rt, std::get<1>(res).get()));
-                        task_res.emplace_value(std::move(rt));
+                        task_res.set_value(std::move(rt));
                     }
                     catch(std::exception& e)
                     {
@@ -124,7 +124,7 @@ struct parallel_reduce_range_move_helper: public boost::asynchronous::continuati
         // if not at end, recurse, otherwise execute here
         if (it == boost::end(*range))
         {
-            task_res.emplace_value(std::move(boost::asynchronous::detail::reduce<decltype(it), Func, ReturnType>
+            task_res.set_value(std::move(boost::asynchronous::detail::reduce<decltype(it), Func, ReturnType>
                                                                         (boost::begin(*range),it,std::move(func_))));
         }
         else
@@ -138,7 +138,7 @@ struct parallel_reduce_range_move_helper: public boost::asynchronous::continuati
                     {
                         ReturnType rt = std::get<0>(res).get();
                         rt = std::move(func(rt, std::get<1>(res).get()));
-                        task_res.emplace_value(std::move(rt));
+                        task_res.set_value(std::move(rt));
                     }
                     catch(std::exception& e)
                     {
@@ -184,7 +184,7 @@ struct parallel_reduce_range_move_helper<Range,Func,ReturnType,Job,typename ::bo
         // if not at end, recurse, otherwise execute here
         if (it == end_)
         {
-            task_res.emplace_value(std::move(boost::asynchronous::detail::reduce<decltype(it), Func, ReturnType>
+            task_res.set_value(std::move(boost::asynchronous::detail::reduce<decltype(it), Func, ReturnType>
                                                                             (begin_,it,std::move(func_))));
         }
         else
@@ -198,7 +198,7 @@ struct parallel_reduce_range_move_helper<Range,Func,ReturnType,Job,typename ::bo
                             {
                                 ReturnType rt = std::get<0>(res).get();
                                 rt = std::move(func(rt, std::get<1>(res).get()));
-                                task_res.emplace_value(std::move(rt));
+                                task_res.set_value(std::move(rt));
                             }
                             catch(std::exception& e)
                             {
@@ -280,7 +280,7 @@ struct parallel_reduce_range_helper: public boost::asynchronous::continuation_ta
         // if not at end, recurse, otherwise execute here
         if (it == boost::end(range_))
         {
-            task_res.emplace_value(std::move(reduce<decltype(it), Func, ReturnType>(boost::begin(range_),it,std::move(func_))));
+            task_res.set_value(std::move(reduce<decltype(it), Func, ReturnType>(boost::begin(range_),it,std::move(func_))));
         }
         else
         {
@@ -293,7 +293,7 @@ struct parallel_reduce_range_helper: public boost::asynchronous::continuation_ta
                             {
                                 ReturnType rt = std::get<0>(res).get();
                                 rt = std::move(func(rt, std::get<1>(res).get()));
-                                task_res.emplace_value(std::move(rt));
+                                task_res.set_value(std::move(rt));
                             }
                             catch(std::exception& e)
                             {
@@ -347,7 +347,7 @@ struct parallel_reduce_continuation_range_helper: public boost::asynchronous::co
                 auto new_continuation = boost::asynchronous::parallel_reduce<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
                 new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<ReturnType> >&& new_continuation_res)
                 {
-                    task_res.emplace_value(std::move(std::get<0>(new_continuation_res).get()));
+                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                 });
             }
             catch(std::exception& e)
@@ -388,7 +388,7 @@ struct parallel_reduce_continuation_range_helper<Continuation,Func,ReturnType,Jo
               auto new_continuation = boost::asynchronous::parallel_reduce<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
               new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<ReturnType> >&& new_continuation_res)
               {
-                  task_res.emplace_value(std::move(std::get<0>(new_continuation_res).get()));
+                  task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
               });
           }
           catch(std::exception& e)
