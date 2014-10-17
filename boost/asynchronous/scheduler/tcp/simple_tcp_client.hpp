@@ -654,7 +654,7 @@ void deserialize_and_call_continuation_task(
     t();
     // create continuation waiting for task completion
     boost::asynchronous::create_continuation
-        ([request,when_done](std::tuple<boost::future<typename Task::res_type> > continuation_res)mutable
+        ([request,when_done](std::tuple<boost::future<typename Task::return_type> > continuation_res)mutable
          {
             std::ostringstream res_archive_stream;
             typename SerializableType::oarchive res_archive(res_archive_stream);
@@ -695,7 +695,7 @@ void deserialize_and_call_callback_continuation_task(
     task_archive >> t;
     // create continuation waiting for task completion
     boost::asynchronous::create_callback_continuation_job<SerializableType>
-        ([request,when_done](std::tuple<boost::asynchronous::expected<typename Task::res_type> > continuation_res)mutable
+        ([request,when_done](std::tuple<boost::asynchronous::expected<typename Task::return_type> > continuation_res)mutable
          {
             std::ostringstream res_archive_stream;
             typename SerializableType::oarchive res_archive(res_archive_stream);

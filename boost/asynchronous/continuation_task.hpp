@@ -165,7 +165,7 @@ template <class Return>
 struct continuation_task
 {
 public:
-    typedef Return res_type;
+    typedef Return return_type;
 
     continuation_task(const std::string& name=""):m_promise(),m_name(name){}
     continuation_task(continuation_task&& rhs)noexcept
@@ -256,7 +256,7 @@ template <>
 struct continuation_task<void>
 {
 public:
-    typedef void res_type;
+    typedef void return_type;
 
     continuation_task(continuation_task&& rhs)noexcept
         : m_promise(std::move(rhs.m_promise))
