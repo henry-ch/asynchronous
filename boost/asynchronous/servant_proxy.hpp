@@ -556,10 +556,16 @@ private:
             return *this;
         }
 #endif
+        ~servant_deleter()
+        {
+            // this has to be done whatever happens
+            if(done_promise)
+                done_promise->set_value();
+        }
+
         void operator()()
         {
-            data.reset();
-            done_promise->set_value();
+            data.reset();            
         }
         boost::shared_ptr<servant_type> data;
         boost::shared_ptr<boost::promise<void>> done_promise;
