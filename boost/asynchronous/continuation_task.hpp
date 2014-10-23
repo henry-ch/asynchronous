@@ -596,7 +596,7 @@ boost::asynchronous::detail::callback_continuation<Return,BOOST_ASYNCHRONOUS_DEF
     typedef typename boost::asynchronous::detail::callback_continuation<Return,BOOST_ASYNCHRONOUS_DEFAULT_JOB>::tuple_type Tuple;
     return boost::asynchronous::detail::callback_continuation<Return,BOOST_ASYNCHRONOUS_DEFAULT_JOB> (
                 state,boost::asynchronous::detail::make_expected_tuple(t), boost::chrono::milliseconds(0),
-                std::function<void(Tuple)>(),std::forward<FirstTask>(t));
+                true,std::forward<FirstTask>(t));
 }
 template <class Return, typename Job, class FirstTask>
 boost::asynchronous::detail::callback_continuation<Return,Job> top_level_callback_continuation_job(FirstTask&& t)
@@ -605,7 +605,7 @@ boost::asynchronous::detail::callback_continuation<Return,Job> top_level_callbac
     typedef typename boost::asynchronous::detail::callback_continuation<Return,Job>::tuple_type Tuple;
     return boost::asynchronous::detail::callback_continuation<Return,Job>(
                 state,boost::asynchronous::detail::make_expected_tuple(t), boost::chrono::milliseconds(0),
-                std::function<void(Tuple)>(),std::forward<FirstTask>(t));
+                true,std::forward<FirstTask>(t));
 }
 }}
 
