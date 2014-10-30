@@ -116,7 +116,7 @@ parallel_sort(Iterator beg, Iterator end,Func func,long cutoff,
              const std::string& task_name="", std::size_t prio=0)
 {
     return boost::asynchronous::top_level_callback_continuation_job<void,Job>
-            (boost::asynchronous::detail::parallel_sort_helper<Iterator,Func,Job,boost::asynchronous::std_sort>(beg,end,func,cutoff,task_name,prio));
+            (boost::asynchronous::detail::parallel_sort_helper<Iterator,Func,Job,boost::asynchronous::std_sort>(beg,end,std::move(func),cutoff,task_name,prio));
 }
 template <class Iterator, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<void,Job>
@@ -124,7 +124,7 @@ parallel_stable_sort(Iterator beg, Iterator end,Func func,long cutoff,
              const std::string& task_name="", std::size_t prio=0)
 {
     return boost::asynchronous::top_level_callback_continuation_job<void,Job>
-            (boost::asynchronous::detail::parallel_sort_helper<Iterator,Func,Job,boost::asynchronous::std_stable_sort>(beg,end,func,cutoff,task_name,prio));
+            (boost::asynchronous::detail::parallel_sort_helper<Iterator,Func,Job,boost::asynchronous::std_stable_sort>(beg,end,std::move(func),cutoff,task_name,prio));
 }
 
 // version for ranges held only by reference => will return nothing (void)
@@ -191,7 +191,7 @@ parallel_sort(Range& range,Func func,long cutoff,
              const std::string& task_name="", std::size_t prio=0)
 {
    return boost::asynchronous::top_level_callback_continuation_job<void,Job>
-            (boost::asynchronous::detail::parallel_sort_range_helper<Range,Func,Job,boost::asynchronous::std_sort>(range,func,cutoff,task_name,prio));
+            (boost::asynchronous::detail::parallel_sort_range_helper<Range,Func,Job,boost::asynchronous::std_sort>(range,std::move(func),cutoff,task_name,prio));
 }
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<void,Job> >::type
@@ -199,7 +199,7 @@ parallel_stable_sort(Range& range,Func func,long cutoff,
              const std::string& task_name="", std::size_t prio=0)
 {
    return boost::asynchronous::top_level_callback_continuation_job<void,Job>
-            (boost::asynchronous::detail::parallel_sort_range_helper<Range,Func,Job,boost::asynchronous::std_stable_sort>(range,func,cutoff,task_name,prio));
+            (boost::asynchronous::detail::parallel_sort_range_helper<Range,Func,Job,boost::asynchronous::std_stable_sort>(range,std::move(func),cutoff,task_name,prio));
 }
 
 // version for moved ranges => will return the range as continuation
@@ -377,7 +377,7 @@ parallel_sort_move(Range&& range,Func func,long cutoff,
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
             (boost::asynchronous::parallel_sort_range_move_helper<Range,Func,Job,boost::asynchronous::std_sort>
-                (r,beg,end,func,cutoff,task_name,prio));
+                (r,beg,end,std::move(func),cutoff,task_name,prio));
 }
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<Range,Job> >::type
@@ -389,7 +389,7 @@ parallel_stable_sort_move(Range&& range,Func func,long cutoff,
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
             (boost::asynchronous::parallel_sort_range_move_helper<Range,Func,Job,boost::asynchronous::std_stable_sort>
-                (r,beg,end,func,cutoff,task_name,prio));
+                (r,beg,end,std::move(func),cutoff,task_name,prio));
 }
 
 // version for ranges given as continuation => will return the range as continuation
@@ -562,7 +562,7 @@ parallel_sort(Range range,Func func,long cutoff,
              const std::string& task_name="", std::size_t prio=0)
 {
     return boost::asynchronous::top_level_callback_continuation_job<typename Range::return_type,Job>
-            (boost::asynchronous::detail::parallel_sort_continuation_range_helper<Range,Func,Job>(range,func,cutoff,task_name,prio));
+            (boost::asynchronous::detail::parallel_sort_continuation_range_helper<Range,Func,Job>(range,std::move(func),cutoff,task_name,prio));
 }
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::enable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
@@ -570,7 +570,7 @@ parallel_stable_sort(Range range,Func func,long cutoff,
              const std::string& task_name="", std::size_t prio=0)
 {
     return boost::asynchronous::top_level_callback_continuation_job<typename Range::return_type,Job>
-            (boost::asynchronous::detail::parallel_stable_sort_continuation_range_helper<Range,Func,Job>(range,func,cutoff,task_name,prio));
+            (boost::asynchronous::detail::parallel_stable_sort_continuation_range_helper<Range,Func,Job>(range,std::move(func),cutoff,task_name,prio));
 }
 
 }}
