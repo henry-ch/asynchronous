@@ -363,7 +363,17 @@ struct callback_continuation
                 if (last_task)
                 {
                     // we execute one task ourselves to save one post
-                    t();
+                    try
+                    {
+                        t();
+                    }
+                    catch(std::exception& e)
+                    {
+                        boost::asynchronous::expected<typename Task::return_type> r;
+                        r.set_exception(boost::copy_exception(e));
+                        std::get<I>((*finished).m_futures) = std::move(r);
+                        finished->done();
+                    }
                 }
                 else
                 {
@@ -423,7 +433,17 @@ struct callback_continuation
         if (!m_state)
         {
             // we execute one task ourselves to save one post
-            std::get<I>(l)();
+            try
+            {
+                std::get<I>(l)();
+            }
+            catch(std::exception& e)
+            {
+                boost::asynchronous::expected<typename std::tuple_element<I, std::tuple<ArgsTuple...>>::type::return_type> r;
+                r.set_exception(boost::copy_exception(e));
+                std::get<I>((*finished).m_futures) = std::move(r);
+                finished->done();
+            }
         }
         else if(!m_state->is_interrupted())
         {

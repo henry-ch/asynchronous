@@ -292,10 +292,17 @@ namespace detail
 
         void operator()()
         {
-            auto cont = m_func();
-            cont.on_done(promise_move_helper(std::move(m_promise)));
-            boost::asynchronous::any_continuation ac(std::move(cont));
-            boost::asynchronous::get_continuations().emplace_front(std::move(ac));
+            try
+            {
+                auto cont = m_func();
+                cont.on_done(promise_move_helper(std::move(m_promise)));
+                boost::asynchronous::any_continuation ac(std::move(cont));
+                boost::asynchronous::get_continuations().emplace_front(std::move(ac));
+            }
+            catch(std::exception& e)
+            {
+                m_promise.set_exception(boost::copy_exception(e));
+            }
         }
         boost::promise<R> m_promise;
         F m_func;
@@ -370,10 +377,17 @@ namespace detail
 
         void operator()()
         {
-            auto cont = m_func();
-            cont.on_done(promise_move_helper(std::move(m_promise)));
-            boost::asynchronous::any_continuation ac(std::move(cont));
-            boost::asynchronous::get_continuations().emplace_front(std::move(ac));
+            try
+            {
+                auto cont = m_func();
+                cont.on_done(promise_move_helper(std::move(m_promise)));
+                boost::asynchronous::any_continuation ac(std::move(cont));
+                boost::asynchronous::get_continuations().emplace_front(std::move(ac));
+            }
+            catch(std::exception& e)
+            {
+                m_promise.set_exception(boost::copy_exception(e));
+            }
         }
         boost::promise<R> m_promise;
         F m_func;
@@ -449,10 +463,17 @@ namespace detail
 
         void operator()()
         {
-            auto cont = m_func();
-            cont.on_done(promise_move_helper(std::move(m_promise)));
-            boost::asynchronous::any_continuation ac(std::move(cont));
-            boost::asynchronous::get_continuations().emplace_front(std::move(ac));
+            try
+            {
+                auto cont = m_func();
+                cont.on_done(promise_move_helper(std::move(m_promise)));
+                boost::asynchronous::any_continuation ac(std::move(cont));
+                boost::asynchronous::get_continuations().emplace_front(std::move(ac));
+            }
+            catch(std::exception& e)
+            {
+                m_promise.set_exception(boost::copy_exception(e));
+            }
         }
         template <class Archive>
         void save(Archive & ar, const unsigned int /*version*/)const
