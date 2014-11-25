@@ -141,7 +141,21 @@ public:
              std::list<typename boost::asynchronous::job_traits<job_type>::diagnostic_item_type > >
     get_diagnostics(std::size_t pos=0)const
     {
-        return (m_subpools[this->find_position(pos,m_subpools.size())]).get_diagnostics(pos);
+        if (pos==0)
+        {
+            std::map<std::string,
+                     std::list<typename boost::asynchronous::job_traits<job_type>::diagnostic_item_type > > res;
+            for (typename std::vector<subpool_type>::const_iterator it = m_subpools.begin(); it != m_subpools.end();++it)
+            {
+                auto one_diag = (*it).get_diagnostics();
+                res.insert(one_diag.begin(),one_diag.end());
+            }
+            return res;
+        }
+        else
+        {
+            return (m_subpools[this->find_position(pos,m_subpools.size())]).get_diagnostics(pos);
+        }
     }
     void clear_diagnostics()
     {
