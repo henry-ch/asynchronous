@@ -141,6 +141,7 @@ BOOST_AUTO_TEST_CASE( test_composite_io_log )
                 io_pool_task_called = true;
             }
         }
+        BOOST_CHECK_MESSAGE(io_pool_task_called,"io_pool_task should have been called.");
     }
     catch(...)
     {
