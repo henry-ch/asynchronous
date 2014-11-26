@@ -21,7 +21,7 @@ void generate(std::vector<int>& test_data)
 {
     test_data = std::vector<int>(10000000,1);
     std::mt19937 mt(static_cast<unsigned int>(std::time(nullptr)));
-    std::uniform_int_distribution<> dis(0, 1000000);
+    std::uniform_int_distribution<> dis(0, 100000);
     std::generate(test_data.begin(), test_data.end(), std::bind(dis, std::ref(mt)));
 }
 
@@ -51,7 +51,7 @@ std::tuple<std::size_t,std::vector<std::size_t>> find_best_cutoff(Scheduler s, F
         map_cutoff_to_elapsed[cutoff_min+((cutoff_max-cutoff_min)/steps)].reserve(retries);
         for (std::size_t j = 0; j< retries; ++j)
         {
-            std::size_t cutoff = cutoff_min+((cutoff_max-cutoff_min)/steps)*i;
+            std::size_t cutoff = cutoff_min+((double)(cutoff_max-cutoff_min)/steps)*i;
             std::size_t one_step = measure_cutoff(s, f, cutoff);
             map_cutoff_to_elapsed[cutoff].push_back(one_step);
             std::cout << "example_cutoff_sort took for cutoff "<< cutoff << " in us:" << one_step << std::endl;
