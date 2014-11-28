@@ -129,12 +129,12 @@ struct continuation
         if (!m_state)
         {
             // no interruptible requested
-            boost::asynchronous::post_future(sched,std::forward<Last>(l),n);
+            boost::asynchronous::post_future(sched,std::forward<Last>(l),n,boost::asynchronous::get_own_queue_index<>());
         }
         else if(!m_state->is_interrupted())
         {
             // interruptible requested
-            interruptibles.push_back(std::get<1>(boost::asynchronous::interruptible_post_future(sched,std::forward<Last>(l),n)));
+            interruptibles.push_back(std::get<1>(boost::asynchronous::interruptible_post_future(sched,std::forward<Last>(l),n,boost::asynchronous::get_own_queue_index<>())));
         }
     }
 
@@ -145,11 +145,11 @@ struct continuation
         if (!m_state)
         {
             // no interruptible requested
-            boost::asynchronous::post_future(sched,std::forward<Front>(front),n);
+            boost::asynchronous::post_future(sched,std::forward<Front>(front),n,boost::asynchronous::get_own_queue_index<>());
         }
         else
         {
-            interruptibles.push_back(std::get<1>(boost::asynchronous::interruptible_post_future(sched,std::forward<Front>(front),n)));
+            interruptibles.push_back(std::get<1>(boost::asynchronous::interruptible_post_future(sched,std::forward<Front>(front),n,boost::asynchronous::get_own_queue_index<>())));
         }
         continuation_ctor_helper(sched,interruptibles,std::forward<Tail>(tail)...);
     }
