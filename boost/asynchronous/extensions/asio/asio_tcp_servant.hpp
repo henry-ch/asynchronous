@@ -19,7 +19,7 @@ public:
     {
         std::function<void(const ::boost::system::error_code&,boost::asio::ip::tcp::resolver::iterator)> f = std::forward<F>(func);
         (static_cast<Derived*>(this))->call_callback(resolver.get_proxy(),
-                            resolver.unsafe_async_resolve(q,(static_cast<Derived*>(this))->make_safe_callback(f)),
+                            resolver.unsafe_async_resolve(q,(static_cast<Derived*>(this))->make_safe_callback(f,"",0)),
                             // ignore async_resolve callback functor, real callback is above
                             [](boost::asynchronous::expected<void> ){}
                            );

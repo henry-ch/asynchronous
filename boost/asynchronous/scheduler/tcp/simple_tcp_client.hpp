@@ -54,7 +54,7 @@ struct client_time_check_policy: boost::asynchronous::trackable_servant<boost::a
         std::function<void(const boost::system::error_code&)> checked =
                 [atimer,cb](const boost::system::error_code&){cb();};
 
-        atimer->async_wait(this->make_safe_callback(checked));
+        atimer->async_wait(this->make_safe_callback(checked,"",0));
     }
 
     long m_time_in_ms_between_requests;
@@ -105,7 +105,7 @@ struct queue_size_check_policy: boost::asynchronous::trackable_servant<boost::as
             }
         };
 
-        atimer->async_wait(this->make_safe_callback(checked));
+        atimer->async_wait(this->make_safe_callback(checked,"",0));
     }
 
     long m_time_in_ms_between_requests;
@@ -255,7 +255,7 @@ private:
                     std::function<void(boost::shared_ptr<boost::asynchronous::tcp::client_request>)> sending_fct =
                             this->make_safe_callback(std::function<void(boost::shared_ptr<boost::asynchronous::tcp::client_request>)>(
                                                          [this](boost::shared_ptr<boost::asynchronous::tcp::client_request> req)
-                                                         {this->send_task_result(req);}));
+                                                         {this->send_task_result(req);}),"",0);
                     this->get_worker().post(
                                 stealable_job(std::move(resp),m_executor,this->get_scheduler(),sending_fct)
                     );
@@ -287,7 +287,7 @@ private:
                       query,
                       this->make_safe_callback(std::function<void(const boost::system::error_code&,boost::asio::ip::tcp::tcp::resolver::iterator)>(
                                              [cb,this](const boost::system::error_code& err,boost::asio::ip::tcp::tcp::resolver::iterator endpoint_iterator)mutable
-                                             {this->handle_resolve(err,endpoint_iterator,std::move(cb)); })));
+                                             {this->handle_resolve(err,endpoint_iterator,std::move(cb)); }),"",0));
         }
 
     }
@@ -302,7 +302,7 @@ private:
             boost::asio::async_connect(
                         *m_socket, endpoint_iterator,
                         this->make_safe_callback(std::function<void(const boost::system::error_code&,boost::asio::ip::tcp::resolver::iterator)>(
-                                               [this,cb](const boost::system::error_code& err,boost::asio::ip::tcp::resolver::iterator){this->handle_connect(err,std::move(cb));})));
+                                               [this,cb](const boost::system::error_code& err,boost::asio::ip::tcp::resolver::iterator){this->handle_connect(err,std::move(cb));}),"",0));
         }
         // else bad luck, will try later
         else
@@ -362,7 +362,7 @@ private:
         boost::asio::async_write(*m_socket, buffers,
                                  this->make_safe_callback(std::function<void(const boost::system::error_code&,std::size_t)>(
                                                         [this,cb,outbound_buffer,outbound_header](const boost::system::error_code& err,std::size_t)mutable
-                                                        {this->m_is_writing = false;this->handle_write_request(err,cb);})));
+                                                        {this->m_is_writing = false;this->handle_write_request(err,cb);}),"",0));
     }
     void handle_write_request(const boost::system::error_code& err,std::function<void(std::string)> callback)
     {
@@ -410,14 +410,14 @@ private:
                                                     std::string archive_data(&(*inbound_buffer)[0], inbound_buffer->size());
                                                     callback(archive_data);
                                                 }
-                                            })));
+                                            }),"",0));
                 }
                 else
                 {
                     this->stop();
                     callback(std::string(""));
                 }
-            })));
+            }),"",0));
     }
     void send_task_result(boost::shared_ptr<boost::asynchronous::tcp::client_request> request)
     {
@@ -448,7 +448,7 @@ private:
         boost::asio::async_write(*m_socket, buffers,
                                  this->make_safe_callback(std::function<void(const boost::system::error_code&,std::size_t)>(
                                  [this,outbound_buffer,outbound_header](const boost::system::error_code&,std::size_t )
-                                 {this->m_is_writing=false; this->try_send_one_waiting_request();})));
+                                 {this->m_is_writing=false; this->try_send_one_waiting_request();}),"",0));
     }
     void try_send_one_waiting_request()
     {

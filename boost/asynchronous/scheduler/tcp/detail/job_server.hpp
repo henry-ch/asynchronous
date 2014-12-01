@@ -114,7 +114,7 @@ private:
         boost::weak_ptr<server_connection_type> wconnection(c);
         std::function<void(boost::asynchronous::tcp::client_request)> cb=
                 [this,wconnection](boost::asynchronous::tcp::client_request request){this->handleRequest(request, wconnection);};
-        c->start(this->make_safe_callback(cb));
+        c->start(this->make_safe_callback(cb,"",0));
     }
 
     void setup_connection()
@@ -123,7 +123,7 @@ private:
         std::function<void(boost::shared_ptr<boost::asio::ip::tcp::socket>)> f =
                 this->make_safe_callback(std::function<void(boost::shared_ptr<boost::asio::ip::tcp::socket>)>(
                                          [this](boost::shared_ptr<boost::asio::ip::tcp::socket> socket)
-                                         {this->handle_connect(socket);}));
+                                         {this->handle_connect(socket);}),"",0);
         m_asio_comm.push_back(boost::asynchronous::tcp::asio_comm_server_proxy(m_asioWorkers, m_address, m_port, f));
     }
 

@@ -108,13 +108,18 @@ public:
 
     // helper to make it easier using a timer service
     template <class Timer, class F>
-    void async_wait(Timer& t, F func)
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+    void async_wait(Timer& t, F func, std::string const& task_name,std::size_t post_prio, std::size_t cb_prio)
+#else
+    void async_wait(Timer& t, F func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
+#endif
     {
         std::function<void(const ::boost::system::error_code&)> f = std::move(func);
         call_callback(t.get_proxy(),
-                      t.unsafe_async_wait(make_safe_callback(std::move(f))),
+                      t.unsafe_async_wait(make_safe_callback(std::move(f),task_name,cb_prio)),
                       // ignore async_wait callback functor., real callback is above
-                      [](boost::asynchronous::expected<void> ){}
+                      [](boost::asynchronous::expected<void> ){},
+                      task_name, post_prio, cb_prio
                       );
     }
 
