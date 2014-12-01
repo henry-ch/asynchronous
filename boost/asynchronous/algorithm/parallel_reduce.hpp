@@ -99,7 +99,12 @@ struct parallel_reduce_helper: public boost::asynchronous::continuation_task<Ret
 }
 template <class Iterator, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 auto parallel_reduce(Iterator beg, Iterator end,Func func,long cutoff,
-             const std::string& task_name="", std::size_t prio=0) -> boost::asynchronous::detail::callback_continuation<decltype(func(std::declval<typename Iterator::value_type>(), std::declval<typename Iterator::value_type>())),Job>
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                     const std::string& task_name, std::size_t prio)
+#else
+                     const std::string& task_name="", std::size_t prio=0)
+#endif
+-> boost::asynchronous::detail::callback_continuation<decltype(func(std::declval<typename Iterator::value_type>(), std::declval<typename Iterator::value_type>())),Job>
 {
     typedef decltype(func(std::declval<typename Iterator::value_type>(), std::declval<typename Iterator::value_type>())) ReturnType;
     return boost::asynchronous::top_level_callback_continuation_job<ReturnType,Job>
@@ -166,7 +171,7 @@ struct parallel_reduce_range_move_helper<Range,Func,ReturnType,Job,typename ::bo
         , public boost::asynchronous::serializable_task
 {
     //default ctor only when deserialized immediately after
-    parallel_reduce_range_move_helper():boost::asynchronous::serializable_task("")
+    parallel_reduce_range_move_helper():boost::asynchronous::serializable_task("parallel_reduce_range_move_helper")
     {
     }
     template <class Iterator>
@@ -251,7 +256,12 @@ struct parallel_reduce_range_move_helper<Range,Func,ReturnType,Job,typename ::bo
 
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 auto parallel_reduce(Range&& range,Func func,long cutoff,
-             const std::string& task_name="", std::size_t prio=0) -> typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<decltype(func(*(range.begin()), *(range.end()))),Job> >::type
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                     const std::string& task_name, std::size_t prio)
+#else
+                     const std::string& task_name="", std::size_t prio=0)
+#endif
+-> typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<decltype(func(*(range.begin()), *(range.end()))),Job> >::type
 {
     typedef decltype(func(*(range.begin()), *(range.end()))) ReturnType;
     auto r = boost::make_shared<Range>(std::forward<Range>(range));
@@ -315,7 +325,12 @@ struct parallel_reduce_range_helper: public boost::asynchronous::continuation_ta
 }
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 auto parallel_reduce(Range const& range,Func func,long cutoff,
-             const std::string& task_name="", std::size_t prio=0) -> typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<decltype(func(*(range.begin()), *(range.end()))),Job> >::type
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                     const std::string& task_name, std::size_t prio)
+#else
+                     const std::string& task_name="", std::size_t prio=0)
+#endif
+-> typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<decltype(func(*(range.begin()), *(range.end()))),Job> >::type
 {
     typedef decltype(func(*(range.begin()), *(range.end()))) ReturnType;
     return boost::asynchronous::top_level_callback_continuation_job<ReturnType,Job>
@@ -412,7 +427,11 @@ struct parallel_reduce_continuation_range_helper<Continuation,Func,ReturnType,Jo
 
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 auto parallel_reduce(Range range,Func func,long cutoff,
-             const std::string& task_name="", std::size_t prio=0)
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                     const std::string& task_name, std::size_t prio)
+#else
+                     const std::string& task_name="", std::size_t prio=0)
+#endif
   -> typename boost::enable_if<has_is_continuation_task<Range>, boost::asynchronous::detail::callback_continuation<_FUNC_RETURN_TYPE, Job>>::type
 {
     typedef _FUNC_RETURN_TYPE ReturnType;

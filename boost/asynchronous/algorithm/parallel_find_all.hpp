@@ -123,7 +123,11 @@ template <class Iterator, class Func,
           class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<ReturnRange,Job>
 parallel_find_all(Iterator beg, Iterator end,Func func,long cutoff,
-             const std::string& task_name="", std::size_t prio=0)
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                  const std::string& task_name, std::size_t prio)
+#else
+                  const std::string& task_name="", std::size_t prio=0)
+#endif
 {
     return boost::asynchronous::top_level_callback_continuation_job<ReturnRange,Job>
             (boost::asynchronous::detail::parallel_find_all_helper<Iterator,Func,ReturnRange,Job>(beg,end,func,cutoff,task_name,prio));
@@ -186,7 +190,11 @@ struct parallel_find_all_range_helper: public boost::asynchronous::continuation_
 template <class Range, class Func, class ReturnRange=Range, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<ReturnRange,Job> >::type
 parallel_find_all(Range const& range,Func func,long cutoff,
-             const std::string& task_name="", std::size_t prio=0)
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                  const std::string& task_name, std::size_t prio)
+#else
+                  const std::string& task_name="", std::size_t prio=0)
+#endif
 {
     return boost::asynchronous::top_level_callback_continuation_job<ReturnRange,Job>
             (boost::asynchronous::detail::parallel_find_all_range_helper<Range,Func,ReturnRange,Job>(range,func,cutoff,task_name,prio));
@@ -252,7 +260,7 @@ struct parallel_find_all_range_move_helper<Range,Func,ReturnRange,Job,typename :
         , public boost::asynchronous::serializable_task
 {
     //default ctor only when deserialized immediately after
-    parallel_find_all_range_move_helper():boost::asynchronous::serializable_task("")
+    parallel_find_all_range_move_helper():boost::asynchronous::serializable_task("parallel_find_all_range_move_helper")
     {
     }
     template <class Iterator>
@@ -336,7 +344,11 @@ struct parallel_find_all_range_move_helper<Range,Func,ReturnRange,Job,typename :
 template <class Range, class Func, class ReturnRange=Range, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<ReturnRange,Job> >::type
 parallel_find_all(Range&& range,Func func,long cutoff,
-             const std::string& task_name="", std::size_t prio=0)
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                  const std::string& task_name, std::size_t prio)
+#else
+                  const std::string& task_name="", std::size_t prio=0)
+#endif
 {
     auto r = boost::make_shared<Range>(std::forward<Range>(range));
     auto beg = boost::begin(*r);
@@ -432,7 +444,11 @@ struct parallel_find_all_continuation_range_helper<Continuation,Func,ReturnRange
 template <class Range, class Func, class ReturnRange=typename Range::return_type, class Job=typename BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::enable_if<has_is_continuation_task<Range>, boost::asynchronous::detail::callback_continuation<ReturnRange, Job>>::type
 parallel_find_all(Range range,Func func,long cutoff,
-             const std::string& task_name="", std::size_t prio=0)
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                  const std::string& task_name, std::size_t prio)
+#else
+                  const std::string& task_name="", std::size_t prio=0)
+#endif
 {
     return boost::asynchronous::top_level_callback_continuation_job<ReturnRange,Job>
             (boost::asynchronous::detail::parallel_find_all_continuation_range_helper<Range,Func,ReturnRange,Job>(range,func,cutoff,task_name,prio));

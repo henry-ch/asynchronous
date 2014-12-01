@@ -401,8 +401,8 @@ public:
     // for derived to overwrite if needed
     static std::size_t get_ctor_prio() {return 0;}
     static std::size_t get_dtor_prio() {return 0;}
-    static const char* get_ctor_name() {return "";}
-    static const char* get_dtor_name() {return "";}
+    static const char* get_ctor_name() {return "ctor";}
+    static const char* get_dtor_name() {return "dtor";}
 
     scheduler_proxy_type m_proxy;
     boost::shared_ptr<servant_type> m_servant;
