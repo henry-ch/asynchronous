@@ -318,7 +318,11 @@ string s= f2.get();</programlisting>
                             <imagedata fileref="pics/Proactor.jpg"/>
                         </imageobject>
                     </inlinemediaobject></para>
-                <para>TODO</para>
+                <para>This is the design pattern behind Boost.Asio. See: <link
+                        xlink:href="http://www.boost.org/doc/libs/1_57_0/doc/html/boost_asio/overview/core/async.html"
+                        >Boost.Asio documentation</link> for a full explanation. Boost Asynchronous
+                    is very similar. It supports enqueueing asynchronous operations and waiting for
+                    callbacks, with extensions: safe callbacks, threadpools, proxies, etc.</para>
             </sect1>
         </chapter>
         <chapter>
@@ -376,19 +380,20 @@ private:
                 </para>
                 <para>This is called a thread-safe interface pattern. Public members lock, private
                     do not. Simple enough, right? Unfortunately, it doesn't fly.</para>
-                <para>First you have the risk of deadlock if a private member calls a public one
+                <para>First one has the risk of deadlock if a private member calls a public one
                     while being called from another public member. Forget to check one path of
-                    execution within your class implementation and you get a nice deadlock. You'll
-                    have to test every single path of execution to prove your code is correct. And
-                    this at every change. Hmmm, does not sound reassuring.</para>
+                    execution within a class implementation and we get a nice deadlock. You'll have
+                    to test every single path of execution to prove your code is correct. And this
+                    at every change.</para>
                 <para>Anyway, let's face it, for any complex class, where there's a mutex, there is
                     a race or a deadlock...</para>
                 <para>But even worse, the principle itself is not correct in C++. It supposes that a
-                    class can protect itself. Well, no, it can't. Why? You can't protect the
+                    class can protect itself. Well, no, it can't. Why? One cannot protect the
                     destructor. If the object (and the mutex) gets destroyed when a thread waits for
-                    it in foo(), we're toast. Ok, then we can use a shared_ptr, and all is good,
-                    right? Then you have no destructor called as someone keeps the object alive,
-                    right? Well, you still have a risk of a signal, callback, etc. </para>
+                    it in foo(), we get a crash or an exception. We can mitigate this with the use
+                    of a shared_ptr, then we have no destructor call while someone waits for the
+                    mutex. Unfortunately, we still have a risk of a signal, callback, etc. all those
+                    things mixing badly with threads.</para>
                 <para>What you need is protect your object with a shared_ptr and have no other way
                     to access the object. Asynchronous provides this.</para>
                 <para>There are more lifetime issues, even without mutexes. If you have ever used
@@ -398,15 +403,14 @@ private:
                         xlink:href="#trackable_servant">trackable_servant</command> which makes sure
                     that a callback is not called if the object which called the asynchronous
                     operation is gone. It also prevents a task posted in a threadpool to be called
-                    if this condition occurs, which improves performance. Some helper members even
-                    make sure you get no crash, even while facing a Boost.Asio callback.</para>
+                    if this condition occurs, which improves performance. It also provides a safe
+                    callback for use as Boost.Asio or similar.</para>
             </sect1>
             <sect1>
                 <title>Servant Proxies</title>
                 <para>Asynchronous offers <code>servant_proxy</code>, which make the outside world
                     call members of a servant as if it was not living in an ActiveObject. It looks
-                    like a thread-safe interface, but safe from deadlock and race conditions unles
-                    you really try hard. </para>
+                    like a thread-safe interface, but safe from deadlock and race conditions. </para>
             </sect1>
             <sect1>
                 <title>Interrupting</title>
@@ -435,21 +439,21 @@ private:
                     logging state changes will allow a better understanding of your system and make
                     visible potential for concurrency. Even for non-parallel algorithms, finding
                     out, using a state machine, the earliest point a task can be thrown to a
-                    threadpool will give some easy concurrency. Throw enough tasks to the threadpool
-                    and manage this with a state machine and you might use your cores with little
-                    effort. Parallelization can then be used later on by logging which tasks are
-                    long enough to be parallelized.</para>
+                    threadpool will give some sort of low-hanging-fruit concurrency. Throw enough
+                    tasks to the threadpool and manage this with a state machine and you might use
+                    your cores with little effort. Parallelization can then be used later on by
+                    logging which tasks are worth parallelized.</para>
             </sect1>
             <sect1>
                 <title>Continuations</title>
-                <para>Callback are great when you have a complex flow of operations which require a
+                <para>Callbacks are great when you have a complex flow of operations which require a
                     state machine for management, however there are cases where callbacks are not an
                     ideal solution. Either because your application requires a constant switching of
                     context between single-threaded and parallel parts, or because the
                     single-threaded part might be busy, which would delay completion of the
                     algorithm. A known example of this is a parallel fibonacci. In this case, one
-                    can register a <command xlink:href="#continuations">continuation</command>, which is to be executed upon completion of one or
-                    several tasks. </para>
+                    can register a <command xlink:href="#continuations">continuation</command>,
+                    which is to be executed upon completion of one or several tasks. </para>
                 <para>This mechanism is flexible so that you can use it with futures coming from
                     another library, thus removing any need for a
                         <code>wait_for_all(futures...)</code> or a
@@ -476,7 +480,7 @@ private:
                     well in the asynchronous system, with more to come. If you want to contribute
                     some more, be welcome. At the moment, the library offers:<itemizedlist>
                         <listitem>
-                            <para>parallel_for:</para>
+                            <para>parallel_for</para>
                         </listitem>
                         <listitem>
                             <para>parallel_reduce</para>
@@ -492,6 +496,9 @@ private:
                         </listitem>
                         <listitem>
                             <para>parallel_invoke</para>
+                        </listitem>
+                        <listitem>
+                            <para>parallel_sort</para>
                         </listitem>
                     </itemizedlist></para>
             </sect1>
@@ -634,10 +641,10 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                             new boost::asynchronous::threadpool_scheduler&lt;
                                 boost::asynchronous::lockfree_queue&lt;> >(3));
 // post a simple task and wait for execution to complete
-boost::shared_future&lt;void> fuv = boost::asynchronous::post_future(scheduler, void_task());
+boost::future&lt;void> fuv = boost::asynchronous::post_future(scheduler, void_task());
 fuv.get();
 // post a simple task and wait for result
-boost::shared_future&lt;int> fui = boost::asynchronous::post_future(scheduler, int_task());
+boost::future&lt;int> fui = boost::asynchronous::post_future(scheduler, int_task());
 int res = fui.get();
   </programlisting>
                 <para>Of course this works with C++11 lambdas:</para>
@@ -645,12 +652,10 @@ int res = fui.get();
                             new boost::asynchronous::threadpool_scheduler&lt;
                                 boost::asynchronous::lockfree_queue&lt;> >(3));
 // post a simple task and wait for execution to complete
-boost::shared_future&lt;void> fuv =
-                boost::asynchronous::post_future(scheduler, [](){std::cout &lt;&lt; "void lambda" &lt;&lt; std::endl;});
+boost::future&lt;void> fuv = boost::asynchronous::post_future(scheduler, [](){std::cout &lt;&lt; "void lambda" &lt;&lt; std::endl;});
 fuv.get();
 // post a simple task and wait for result
-boost::shared_future&lt;int> fui =
-                boost::asynchronous::post_future(scheduler, [](){std::cout &lt;&lt; "int lambda" &lt;&lt; std::endl;return 42;});
+boost::future&lt;int> fui = boost::asynchronous::post_future(scheduler, [](){std::cout &lt;&lt; "int lambda" &lt;&lt; std::endl;return 42;});
 int res = fui.get();   </programlisting>
                 <para>boost::asynchronous::post_future posts a piece of work to a threadpool
                     scheduler with 3 threads and using a lockfree_queue. We get a
@@ -703,7 +708,6 @@ public:
                 <para>Let's use our newly defined proxy:</para>
                 <programlisting>int something = 3;
 {
-    // with c++11
     auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                     new boost::asynchronous::single_thread_scheduler&lt;
                           boost::asynchronous::lockfree_queue&lt;> >);
@@ -716,7 +720,7 @@ public:
         // post a call to foo. To avoid races, the reference is ignored.
         proxy.foo(something);
         // post and get a future because we're interested in the result.
-        boost::shared_future&lt;int> fu = proxy.doIt();
+        boost::future&lt;int> fu = proxy.doIt();
         std::cout&lt;&lt; "future:" &lt;&lt; fu.get() &lt;&lt; std::endl;
     }// here, Servant's destructor is posted
 }// scheduler is gone, its thread has been joined
@@ -787,7 +791,7 @@ std::cout&lt;&lt; "something:" &lt;&lt; something &lt;&lt; std::endl; // somethi
        //ok, let's post some work and wait for an answer
        <emphasis role="bold">post_callback</emphasis>(
                     [](){std::cout &lt;&lt; "Long Work" &lt;&lt; std::endl;}, //work, do not use "this" here
-                    [/*this*/](boost::future&lt;void>){...}// callback. Safe to use "this" as callback is only called if Servant is alive
+                    [/*this*/](boost::asynchronous::expected&lt;void>){...}// callback. Safe to use "this" as callback is only called if Servant is alive
         );
     }
 };</programlisting>
@@ -804,13 +808,12 @@ std::cout&lt;&lt; "something:" &lt;&lt; something &lt;&lt; std::endl; // somethi
                 <title>A servant using another servant proxy</title>
                 <para>Often, in a layered design, you'll need that a servant in a single-threaded
                     scheduler calls a member of a servant living in another one. And you'll want to
-                    get a callback, not a future like in our previous example, because you
-                    absolutely refuse to block waiting for a future (and you'll be very right of
-                    course!). Ideally, except for main(), you won't want any of your objects to wait
-                    for a future. There is another servant_proxy macro for this,
-                        <code>BOOST_ASYNC_UNSAFE_MEMBER</code>(unsafe because you get no
-                    thread-safety from if and you'll take care of this yourself, or better,
-                        <code>trackable_servant</code> will take care of it for you, as
+                    get a callback, not a future, because you absolutely refuse to block waiting for
+                    a future (and you'll be very right of course!). Ideally, except for main(), you
+                    won't want any of your objects to wait for a future. There is another
+                    servant_proxy macro for this, <code>BOOST_ASYNC_UNSAFE_MEMBER</code>(unsafe
+                    because you get no thread-safety from if and you'll take care of this yourself,
+                    or better, <code>trackable_servant</code> will take care of it for you, as
                     follows):</para>
                 <para>
                     <programlisting>// Proxy for a basic servant 
@@ -830,12 +833,12 @@ struct Servant2 : boost::asynchronous::trackable_servant&lt;>
     Servant2(boost::asynchronous::any_weak_scheduler&lt;> scheduler,ServantProxy worker)
         :boost::asynchronous::trackable_servant&lt;>(scheduler)
         ,m_worker(worker) // the proxy allowing access to Servant
-    boost::shared_future&lt;void> doIt    
+    void doIt()    
     {                 
          call_callback(m_worker.get_proxy(), // Servant's outer proxy, for posting tasks
                        m_worker.foo(), // what we want to call on Servant
                       // callback functor, when done.
-                      [](boost::future&lt;int> result){...} );// future&lt;return type of foo> 
+                      [](boost::asynchronous::expected&lt;int> result){...} );// expected&lt;return type of foo> 
     }
 };</programlisting>
                 </para>
@@ -877,7 +880,7 @@ struct Servant2 : boost::asynchronous::trackable_servant&lt;>
                     std::cout &lt;&lt; "Long Work" &lt;&lt; std::endl;
                     boost::this_thread::sleep(boost::posix_time::milliseconds(1000));}, // sleep is an interrupting point
                // callback functor.
-               [](boost::future&lt;void> ){std::cout &lt;&lt; "Callback will most likely not be called" &lt;&lt; std::endl;}
+               [](boost::asynchronous::expected&lt;void> ){std::cout &lt;&lt; "Callback will most likely not be called" &lt;&lt; std::endl;}
         );
         // let the task start (not sure but likely)
         // if it had no time to start, well, then it will never.
@@ -920,7 +923,7 @@ struct Servant : boost::asynchronous::trackable_servant&lt;<emphasis role="bold"
          post_callback(
                // task posted to threadpool
                [](){...}, // will return an int
-               [](boost::future&lt;int> res){...},// callback functor.
+               [](boost::asynchronous::expected&lt;int> res){...},// callback functor.
                // the task / callback name for logging
                <emphasis role="bold">"int_async_work"</emphasis>
         );
@@ -1067,7 +1070,7 @@ boost::future&lt;boost::future&lt;int>> fu = proxy.start_async_work();</programl
                     servant posting work to a threadpool:</para>
                 <programlisting>post_callback(
        [](){return 42;},// work
-       [this](boost::future&lt;int> res){}// callback functor.
+       [this](boost::asynchronous::expected&lt;int> res){}// callback functor.
        ,"",
        <emphasis role="bold">2,2</emphasis>
 );</programlisting>
@@ -1097,7 +1100,14 @@ boost::future&lt;boost::future&lt;int>> fu = proxy.start_async_work();</programl
             </sect1>
             <sect1>
                 <title>Multiqueue Schedulers' priority</title>
-                <para>TODO</para>
+                <para>A multiqueue_... threadpool scheduler has a queue for each thread. This
+                    reduces contention, making these faster than single queue schedulers, like
+                    threadpool_scheduler. Furthermore, these schedulers support priority: the
+                    priority given in post_future or post_callback is the (1-based) position of the
+                    queue we want to post to. 0 means "any queue". A queue of priority 1 has a
+                    higher priority than a queue qith priority 2, etc. </para>
+                <para>Each queue is serving one thread, but threads steal from each other's queue,
+                    according to the priority.</para>
             </sect1>
             <sect1>
                 <title>Threadpool Schedulers with several queues</title>
@@ -1128,6 +1138,9 @@ boost::future&lt;boost::future&lt;int>> fu = proxy.start_async_work();</programl
             </sect1>
             <sect1>
                 <title>Composite Threadpool Scheduler</title>
+                <sect2>
+                    <title>Usage</title>
+                
                 <para>When a project becomes more complex, having a single threadpool for the whole
                     application does not offer enough flexibility in load planning. It is pretty
                     hard to avoid either oversubscription (more busy threads than available hardware
@@ -1194,8 +1207,8 @@ boost::asynchronous::any_shared_scheduler_proxy&lt;> tp_worker =
                 <para>A good example of why to use this pool is if you have a threadpool for an
                     asio-based communication. Using such a pool inside the composite pool will allow
                     the threads of this pool to help (steal) other pools if they have nothing to do. </para>
-                <para>Stealing is done with priority. A stealing poll first tries to steal from the
-                    first pool, then from the second, etc.</para>
+                <para>Stealing is done with priority. A stealing pool first tries to steal from the
+                        first pool, then from the second, etc.</para>
                 <para>The <link xlink:href="examples/example_composite_threadpool.cpp">following
                         example</link> shows a complete servant implementation, and the <command
                         xlink:href="#asio_scheduler">ASIO section</command> will show how an ASIO
@@ -1227,12 +1240,32 @@ boost::asynchronous::any_shared_scheduler_proxy&lt;> tp_worker =
                     with 1 thread. An <code>asio_scheduler</code> also offers no queue to steal from
                     although it can steal from other queues because Boost.Asio does not offer this
                     in its interface. Future extensions will overcome this.</para>
-                <para>TODO priority posting</para>
                 <para>Another interesting usage will be when planning for extra machines to help a
                     threadpool by processing some of the work: jobs can be stolen from a threadpool
                     by a <command xlink:href="#distributing">tcp_server_scheduler</command> from which other machines can
                     get them. Just pack both pools in a <code>composite_threadpool_scheduler</code>
                     and you're ready to go.</para>
+                </sect2>
+                <sect2>
+                    <title>Priority</title>
+                    <para>Like a multiqueue threadpool scheduler, a composite supports priority. The
+                        first pool passed in the constructor of the composite pool has priority 1,
+                        the second 2, etc. 0 means "any pool" and n where n > number of pools will
+                        me modulo-ed.</para>
+                    <para>Posting to this scheduler using post_future or post_callback using a given
+                        priority will post to the according pool. If a pool supports stealing from
+                        other pools (stealing_... pools), it will try to steal from other pools,
+                        starting with the highest priority, but only if the to be stolen from pools
+                        supports it. For example, we try to post to the first pool, callback to any
+                        queue.</para>
+                    <programlisting>post_callback(
+               [](){},// work
+               [this](boost::asynchronous::expected&lt;int>){},// callback functor.
+               "", // task and callback name
+               1,  // work priority, highest
+               0   // callback anywhere
+);</programlisting>
+                </sect2>
             </sect1>
             <sect1>
                 <title><command xml:id="asio_scheduler"/>asio_scheduler</title>
@@ -1401,7 +1434,7 @@ public:
                        std::string s2 = this->m_requested_data[1];
                        std::string s3 = this->m_requested_data[2];
                        // this callback (executing in our thread) will be called after each comparison
-                       auto cb1 = [this,s1](boost::future&lt;bool> res)
+                       auto cb1 = [this,s1](boost::asynchronous::expected&lt;bool> res)
                        {
                           if (res.get())
                               ++this->m_check_string_count;
@@ -1513,7 +1546,7 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                 </sect2>
             </sect1>
             <sect1>
-                <title><command xml:id="continuations"/>Continuation tasks</title>
+                <title><command xml:id="callback_continuations"/>Continuation tasks</title>
                 <para>A common limitation of threadpools is support for recursive tasks: tasks start
                     other tasks, which start other tasks, until all threads in the threadpool are
                     busy waiting. At this point, one could add more threads, but threads are
@@ -1532,8 +1565,8 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                     fibers, which are not available in Boost at the time of this writing, and even
                     in fibers, tasks would block, which means interrupting them is not possible,
                     which we would want to avoid. In any case, blocking simply isn't part of the
-                    asynchronous philosophy of the library. Let's have a look how continuation tasks
-                    let us implement a parallel fibonacci.</para>
+                    asynchronous philosophy of the library. Let's have a look how callback
+                    continuation tasks let us implement a parallel fibonacci.</para>
                 <para>First of all, we need a serial fibonacci to use for the cutoff. This is a
                     classical one:</para>
                 <programlisting> long serial_fib( long n ) {
@@ -1560,9 +1593,9 @@ struct fib_task : public boost::asynchronous::continuation_task&lt;long>
         else
         {
             // n>= cutoff, create 2 new tasks and when both are done, set our result (res(task1) + res(task2))
-            boost::asynchronous::create_continuation(
+            boost::asynchronous::create_callback_continuation(
                         // called when subtasks are done, set our result
-                        [task_res](std::tuple&lt;boost::future&lt;long>,boost::future&lt;long> > res)
+                        [task_res](std::tuple&lt;boost::asynchronous::expected&lt;long>,boost::asynchronous::expected&lt;long> > res)
                         {
                             long r = std::get&lt;0>(res).get() + std::get&lt;1>(res).get();
                             task_res.set_value(r);
@@ -1608,11 +1641,10 @@ struct fib_task : public boost::asynchronous::continuation_task&lt;long>
             {
                 // a top-level continuation is the first one in a recursive serie.
                 // Its result will be passed to callback
-                return boost::asynchronous::top_level_continuation&lt;long>(fib_task(n,cutoff));
-            }// work
-            ,
+                return boost::asynchronous::top_level_callback_continuation&lt;long>(fib_task(n,cutoff));
+            },// work
             // callback with fibonacci result.
-            [](boost::future&lt;long> res){...}// callback functor.
+            [](boost::asynchronous::expected&lt;long> res){...}// callback functor.
         );                                 
    }  
 };          </programlisting>
@@ -1623,9 +1655,9 @@ struct fib_task : public boost::asynchronous::continuation_task&lt;long>
                     to create the first, top-level continuation, passing it a first fib_task. This
                     is non-blocking, a special version of <code>post_callback</code> recognizes a
                     continuation and will call its callback (with a
-                        <code>future&lt;task-return-type></code>) only when the calculation is
+                        <code>expected&lt;task-return-type></code>) only when the calculation is
                     finished.</para>
-                <para>As usual, calling get() on the future is non-blocking, one gets either the
+                <para>As usual, calling get() on the expected is non-blocking, one gets either the
                     result or an exception if thrown by a task.</para>
                 <para>Please have a look at the <link xlink:href="examples/example_fibonacci.cpp"
                         >complete example</link>.</para>
@@ -1640,8 +1672,8 @@ struct fib_task : public boost::asynchronous::continuation_task&lt;long>
         ,n_(n),cutoff_(cutoff){}                                                </programlisting>
                 <para>And call <code>boost::asynchronous::create_continuation_job</code> instead of
                         <code>boost::asynchronous::create_continuation</code>:</para>
-                <programlisting>boost::asynchronous::<emphasis role="bold">create_continuation_job</emphasis>&lt;servant_job>(
-                        [task_res](std::tuple&lt;boost::future&lt;long>,boost::future&lt;long> > res)
+                <programlisting>boost::asynchronous::<emphasis role="bold">create_callback_continuation_job</emphasis>&lt;servant_job>(
+                        [task_res](std::tuple&lt;boost::asynchronous::expected&lt;long>,boost::asynchronous::expected&lt;long> > res)
                         {
                             long r = std::get&lt;0>(res).get() + std::get&lt;1>(res).get();
                             task_res.set_value(r);
@@ -1655,11 +1687,10 @@ struct fib_task : public boost::asynchronous::continuation_task&lt;long>
                 <programlisting>post_callback(
               [n,cutoff]()
               {
-                   return boost::asynchronous::<emphasis role="bold">top_level_continuation_job</emphasis>&lt;long,servant_job>(fib_task(n,cutoff));
-              }// work
-              ,
+                   return boost::asynchronous::<emphasis role="bold">top_level_callback_continuation_job</emphasis>&lt;long,servant_job>(fib_task(n,cutoff));
+              },// work
               // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
-              [this](boost::future&lt;long> res){...},// callback functor.
+              [this](boost::asynchronous::expected&lt;long> res){...},// callback functor.
               <emphasis role="bold">"calc_fibonacci"</emphasis>
         );                             
                 </programlisting>
@@ -1670,6 +1701,162 @@ struct fib_task : public boost::asynchronous::continuation_task&lt;long>
                 <para>Limitation: in the current implementation, tasks are logged, but the
                     continuation callback is not. If it might take long, post a (loggable)
                     task.</para>
+                <para>Note: to improve performance, the last task passed to <emphasis role="bold"
+                        >create_callback_continuation(_job)</emphasis> is not posted but executed
+                    directly so it will execute under the name of the task calling <emphasis
+                        role="bold">create_callback_continuation(_job)</emphasis>.</para>
+                <para><emphasis role="bold"><emphasis role="underline">Important note about
+                            exception safety</emphasis></emphasis>. The passed <emphasis role="bold"
+                        >expected</emphasis> contains either a result or an exception. Calling get()
+                    will throw contained exceptions. You should catch it, in the continuation
+                    callback and in the task itself. Asynchronous will handle the exception, but it
+                    cannot set the <emphasis role="bold">continuation_result</emphasis>, which will
+                    never be set and the callback part of post_callback never called. This simple
+                    example does not throw, so we save ourselves the cost, but more complicated
+                    algorithms should take care of this.</para>
+            </sect1>
+            <sect1>
+                <title><command xml:id="continuations"/>Future-based continuations</title>
+                <para>The continuations shown above are the fastest offered by Asynchronous but they
+                    are slightly harder to implement because one has to divide its work in tasks.
+                    Asynchronous also offers "simple" continuations, which are future-based, which
+                    makes them easy to use and at the same time allow simple adaptation to libraries
+                    offering only futures in their interface. Consider the following trivial
+                    example. We consider we have a task, called sub_task doing whatever we want. We
+                    want to divide our work between sub_task instances, getting a callback when
+                    done. We can write continuation task:</para>
+                <programlisting>// our main algo task. Needs to inherit continuation_task&lt;value type returned by this task>
+struct main_task : public boost::asynchronous::continuation_task&lt;long>
+{
+    void operator()()const
+    {
+        // the result of this task
+       <emphasis role="bold"> boost::asynchronous::continuation_result&lt;long> task_res = this_task_result();</emphasis>
+
+        // we start calculation, then while doing this we see new tasks which can be posted and done concurrently to us
+        // when all are done, we will set the result
+        // to post tasks, we need a scheduler
+        boost::asynchronous::any_weak_scheduler&lt;> weak_scheduler = boost::asynchronous::get_thread_scheduler&lt;>();
+        boost::asynchronous::any_shared_scheduler&lt;> locked_scheduler = weak_scheduler.lock();
+        if (!locked_scheduler.is_valid())
+            // ok, we are shutting down, ok give up
+            return;
+        // simulate algo work
+        boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+        // let's say we just found a subtask
+        boost::future&lt;int> fu1 = boost::asynchronous::post_future(locked_scheduler,sub_task());
+        // simulate more algo work
+        boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+        // let's say we just found a subtask
+        boost::future&lt;int> fu2 = boost::asynchronous::post_future(locked_scheduler,sub_task());
+        // simulate algo work
+        boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+        // let's say we just found a subtask
+        boost::future&lt;int> fu3 = boost::asynchronous::post_future(locked_scheduler,sub_task());
+
+        // our algo is now done, wrap all and return
+        boost::asynchronous::<emphasis role="bold">create_continuation</emphasis>(
+                    // called when subtasks are done, set our result
+                    [task_res](std::tuple&lt;boost::future&lt;int>,boost::future&lt;int>,boost::future&lt;int> > res)
+                    {
+                        try
+                        {
+                            long r = std::get&lt;0>(res).get() + std::get&lt;1>(res).get()+ std::get&lt;2>(res).get();
+                            <emphasis role="bold">task_res.set_value(r);</emphasis>
+                        }
+                        catch(std::exception&amp; e)
+                        {
+                            <emphasis role="bold">task_res.set_exception(boost::copy_exception(e));</emphasis>
+                        }
+                    },
+                    // future results of recursive tasks
+                    <emphasis role="bold">std::move(fu1),std::move(fu2),std::move(fu3)</emphasis>);
+    }
+    };                                               </programlisting>
+                <para>Please have a look at <link xlink:href="examples/example_continuation_algo.cpp">the complete
+                    example</link></para>
+                <para>Our tasks starts by posting 3 instances of sub_task, each time getting a
+                    future. We then call <emphasis role="bold">create_continuation(_job)</emphasis>,
+                    passing it the futures. When all futures are ready (have a value or an
+                    exception), the callback is called, with 3 futures containing the result.</para>
+                <para>Advantages:<itemizedlist>
+                        <listitem>
+                            <para>simple to use</para>
+                        </listitem>
+                        <listitem>
+                            <para>can be used with any library returning a boost::future</para>
+                        </listitem>
+                </itemizedlist></para>
+                <para>Drawbacks:<itemizedlist>
+                        <listitem>
+                            <para>lesser performance</para>
+                        </listitem>
+                        <listitem>
+                            <para>the thread calling <emphasis role="bold"
+                                    >create_continuation(_job)</emphasis> polls until all futures
+                                are set. If this thread is busy, the callback is delayed.</para>
+                        </listitem>
+                </itemizedlist></para>
+                <para><emphasis role="bold"><emphasis role="underline">Important
+                        note</emphasis></emphasis>: Like for the previous callback continuations,
+                    tasks and continuation callbacks should catch exceptions.</para>
+                <para><emphasis role="bold">create_continuation(_job)</emphasis> has a wider
+                    interface. It can also take a vector of futures instead of a variadic
+                    version, for example:</para>
+                <programlisting>// our main algo task. Needs to inherit continuation_task&lt;value type returned by this task>
+struct main_task : public boost::asynchronous::continuation_task&lt;long>
+{
+    void operator()()const
+    {
+        // the result of this task
+        boost::asynchronous::continuation_result&lt;long> task_res = this_task_result();
+
+        // we start calculation, then while doing this we see new tasks which can be posted and done concurrently to us
+        // when all are done, we will set the result
+        // to post tasks, we need a scheduler
+        boost::asynchronous::any_weak_scheduler&lt;> weak_scheduler = boost::asynchronous::get_thread_scheduler&lt;>();
+        boost::asynchronous::any_shared_scheduler&lt;> locked_scheduler = weak_scheduler.lock();
+        if (!locked_scheduler.is_valid())
+            // ok, we are shutting down, ok give up
+            return;
+        // simulate algo work
+        std::vector&lt;boost::future&lt;int> > fus;
+        boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+        // let's say we just found a subtask
+        boost::future&lt;int> fu1 = boost::asynchronous::post_future(locked_scheduler,sub_task());
+        fus.emplace_back(std::move(fu1));
+        // simulate more algo work
+        boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+        // let's say we just found a subtask
+        boost::future&lt;int> fu2 = boost::asynchronous::post_future(locked_scheduler,sub_task());
+        fus.emplace_back(std::move(fu2));
+        // simulate algo work
+        boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+        // let's say we just found a subtask
+        boost::future&lt;int> fu3 = boost::asynchronous::post_future(locked_scheduler,sub_task());
+        fus.emplace_back(std::move(fu3));
+
+        // our algo is now done, wrap all and return
+        boost::asynchronous::<emphasis role="bold">create_continuation</emphasis>(
+                    // called when subtasks are done, set our result
+                    [task_res](std::vector&lt;boost::future&lt;int>> res)
+                    {
+                        try
+                        {
+                            long r = res[0].get() + res[1].get() + res[2].get();
+                            task_res.set_value(r);
+                        }
+                        catch(std::exception&amp; e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
+                    },
+                    // future results of recursive tasks
+                    <emphasis role="bold">std::move(fus)</emphasis>);
+    }
+    };                                            </programlisting>
+                <para>Please have a look at <link xlink:href="examples/example_continuation_algo2.cpp">the complete
+                    example</link></para>
             </sect1>
             <sect1>
                 <title><command xml:id="distributing"/>Distributing work among machines</title>
@@ -1751,7 +1938,7 @@ for (int i =0 ;i &lt; 10 ; ++i)
     post_callback(
            dummy_tcp_task(i),
            // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
-           [this](boost::future&lt;int> res){
+           [this](boost::asynchronous::expected&lt;int> res){
                   try{
                         this->on_callback(res.get());
                   }
@@ -1765,7 +1952,7 @@ for (int i =0 ;i &lt; 10 ; ++i)
 }</programlisting>
                 <para>We post 10 tasks to the pool. For each task we will get, at some later
                     undefined point (provided some clients are around), a result in form of a
-                    (ready) future, possibly an exception if one was thrown by the task.</para>
+                    (ready) expected, possibly an exception if one was thrown by the task.</para>
                 <para>Notice it is safe to use <code>this</code> in the callback lambda as it will
                     be only called if the servant still exists.</para>
                 <para>We still need a client to execute the task, this is pretty straightforward (we
@@ -1929,7 +2116,7 @@ struct fib_task : public boost::asynchronous::continuation_task&lt;long>
         else
         {
             // n>= cutoff, create 2 new tasks and when both are done, set our result (res(task1) + res(task2))
-            boost::asynchronous::create_continuation_log&lt;boost::asynchronous::any_serializable>(
+            boost::asynchronous::create_callback_continuation_job&lt;boost::asynchronous::any_serializable>(
                         // called when subtasks are done, set our result
                         [task_res](std::tuple&lt;boost::future&lt;long>,boost::future&lt;long> > res)
                         {
@@ -1975,12 +2162,12 @@ std::function&lt;void(std::string const&amp;,boost::asynchronous::tcp::server_re
             if (task_name=="serializable_sub_fib_task")
             {
                 tcp_example::fib_task fib(0,0);
-                boost::asynchronous::tcp::<emphasis role="bold">deserialize_and_call_continuation_task</emphasis>(fib,resp,when_done);
+                boost::asynchronous::tcp::<emphasis role="bold">deserialize_and_call_callback_continuation_task</emphasis>(fib,resp,when_done);
             }
             else if (task_name=="serializable_fib_task")
             {
                 tcp_example::serializable_fib_task fib(0,0);
-                boost::asynchronous::tcp::<emphasis role="bold">deserialize_and_call_top_level_continuation_task</emphasis>(fib,resp,when_done);
+                boost::asynchronous::tcp::<emphasis role="bold">deserialize_and_call_top_level_callback_continuation_task</emphasis>(fib,resp,when_done);
             }
             // else whatever functor we support
             else
@@ -1997,10 +2184,10 @@ boost::asynchronous::tcp::simple_tcp_client_proxy client_proxy(cscheduler,pool,s
                             boost::asynchronous::tcp::<emphasis role="bold"
                             >deserialize_and_call_task</emphasis> was used for normal tasks, we now
                         have boost::asynchronous::tcp::<emphasis role="bold"
-                            >deserialize_and_call_top_level_continuation_task</emphasis> for our
-                        top-level continuation task, and boost::asynchronous::tcp::<emphasis
-                            role="bold">deserialize_and_call_continuation_task</emphasis> for the
-                        continuation-sub-task.</para>
+                            >deserialize_and_call_top_level_callback_0ontinuation_task</emphasis>
+                        for our top-level continuation task, and boost::asynchronous::tcp::<emphasis
+                            role="bold">deserialize_and_call_callback_continuation_task</emphasis>
+                        for the continuation-sub-task.</para>
                     <para>We now need to build our TCP server, which we decide will get only one
                         thread for task serialization. This ought to be enough, Fibonacci tasks have
                         little data (2 long).</para>
@@ -2035,8 +2222,8 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
       ServantProxy proxy(scheduler,<emphasis role="bold">pool</emphasis>);
       // result of BOOST_ASYNC_FUTURE_MEMBER is a shared_future,
       // so we have a shared_future of a shared_future(result of start_async_work)
-      boost::shared_future&lt;boost::shared_future&lt;long> > fu = proxy.calc_fibonacci(fibo_val,cutoff);
-      boost::shared_future&lt;long> resfu = fu.get();
+      boost::future&lt;boost::future&lt;long> > fu = proxy.calc_fibonacci(fibo_val,cutoff);
+      boost::future&lt;long> resfu = fu.get();
       long res = resfu.get();
 }</programlisting>                    
                 <para>Notice how we give only the worker "pool" to the servant. This means, the
@@ -2078,12 +2265,12 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
             if (task_name=="serializable_fib_task")
             {
                 tcp_example::serializable_fib_task fib(0,0);
-                boost::asynchronous::tcp::deserialize_and_call_top_level_continuation_task(fib,resp,when_done);
+                boost::asynchronous::tcp::deserialize_and_call_top_level_callback_continuation_task(fib,resp,when_done);
             }
             else if (task_name=="serializable_sub_fib_task")
             {
                 tcp_example::fib_task fib(0,0);
-                boost::asynchronous::tcp::deserialize_and_call_continuation_task(fib,resp,when_done);
+                boost::asynchronous::tcp::deserialize_and_call_callback_continuation_task(fib,resp,when_done);
             }
             else
             {
@@ -2185,12 +2372,12 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
             if (task_name=="serializable_fib_task")
             {
                 tcp_example::serializable_fib_task fib(0,0);
-                boost::asynchronous::tcp::deserialize_and_call_top_level_continuation_task(fib,resp,when_done);
+                boost::asynchronous::tcp::deserialize_and_call_top_level_callback_continuation_task(fib,resp,when_done);
             }
             else if (task_name=="serializable_sub_fib_task")
             {
                 tcp_example::fib_task fib(0,0);
-                boost::asynchronous::tcp::deserialize_and_call_continuation_task(fib,resp,when_done);
+                boost::asynchronous::tcp::deserialize_and_call_callback_continuation_task(fib,resp,when_done);
             }
             // else whatever functor we support
             else
@@ -2275,8 +2462,8 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                 <sect2>
                     <title>parallel_for</title>
                     <para>There are four versions of this algorithm:</para>
-                    <programlisting>template &lt;class Iterator, class Func, class Job=boost::asynchronous::any_callable>
-boost::asynchronous::detail::continuation&lt;<emphasis role="bold">void</emphasis>,Job>
+                    <programlisting>template &lt;class Iterator, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">void</emphasis>,Job>
 parallel_for(Iterator beg, Iterator end,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</programlisting>
                     <para>The parallel_for version taking iterators requires that the iterators stay
                         valid until completion. It is the programmer's job to ensure this.</para>
@@ -2306,7 +2493,7 @@ parallel_for(Iterator beg, Iterator end,Func func,long cutoff,const std::string&
                                                                  },1500);
                       },// work
                // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
-               [](boost::future&lt;<emphasis role="bold">void</emphasis>> /*res*/){
+               [](boost::asynchronous::expected&lt;<emphasis role="bold">void</emphasis>> /*res*/){
                             ...
                }// callback functor.
         );
@@ -2331,24 +2518,24 @@ parallel_for(Iterator beg, Iterator end,Func func,long cutoff,const std::string&
                             </listitem>
                             <listitem>
                                 <para>Execute the callback lambda when all tasks complete. The
-                                    future will be either set or contain an exception</para>
+                                    expected will be either set or contain an exception</para>
                             </listitem>
                     </itemizedlist></para>
                     <para>Please have a look at <link xlink:href="examples/example_parallel_for.cpp">the complete example</link>.</para>
                     <para>The second version is very similar and takes a range per reference. Again,
                         the range has to stay valid during the call. As previously, the return value
                         is a void continuation.</para>
-                    <programlisting>template &lt;class Range, class Func, class Job=boost::asynchronous::any_callable>
-boost::asynchronous::detail::continuation&lt;<emphasis role="bold">void</emphasis>,Job>
+                    <programlisting>template &lt;class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">void</emphasis>,Job>
 parallel_for(Range const&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</programlisting>
                 <para>The third version takes a range per rvalue reference. This is signal given to
                         Asynchronous that it must take ownership of the range. The return value is
                         then a continuation of the given range type:</para>
-                <programlisting>template &lt;class Range, class Func, class Job=boost::asynchronous::any_callable>
-boost::asynchronous::detail::continuation&lt;<emphasis role="bold">Range</emphasis>,Job>
+                <programlisting>template &lt;class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Range</emphasis>,Job>
 parallel_for(Range&amp;&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</programlisting>
-                <para>A <code>post_callback</code> will therefore get a future&lt;new range>, for
-                example:</para>
+                <para>A <code>post_callback</code> will therefore get a expected&lt;new range>, for
+                        example:</para>
                     <programlisting>post_callback(
     []()
     {
@@ -2359,7 +2546,7 @@ parallel_for(Range&amp;&amp; range,Func func,long cutoff,const std::string&amp; 
                                                         const_cast&lt;int&amp;>(i) += 2;
                                                       },1500);
     },
-    ](<emphasis role="bold">boost::future&lt;std::vector&lt;int>></emphasis> ){}
+    ](<emphasis role="bold">boost::asynchronous::expected&lt;std::vector&lt;int>></emphasis> ){}
 );</programlisting>
                 <para>In this case, the programmer does not need to ensure the container stays
                         valid, Asynchronous takes care of it.</para>
@@ -2367,8 +2554,8 @@ parallel_for(Range&amp;&amp; range,Func func,long cutoff,const std::string&amp; 
                         a range as argument and will be invoked after the continuation is
                         ready.</para>
                     <programlisting>// version taking a continuation of a range as first argument
-template &lt;class Range, class Func, class Job=boost::asynchronous::any_callable>
-boost::asynchronous::detail::continuation&lt;<emphasis role="bold">typename Range::return_type</emphasis>,Job>
+template &lt;class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">typename Range::return_type</emphasis>,Job>
 parallel_for(Range range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</programlisting>
                 <para>This version allows chaining parallel calls. For example, it is now possible
                 to write:</para>
@@ -2394,7 +2581,7 @@ parallel_for(Range range,Func func,long cutoff,const std::string&amp; task_name=
                                       const_cast&lt;int&amp;>(i) += 2;
                                  },1500);
     },
-    ](<emphasis role="bold">boost::future&lt;std::vector&lt;int>></emphasis> ){} // callback
+    ](<emphasis role="bold">boost::asynchronous::expected&lt;std::vector&lt;int>></emphasis> ){} // callback
 );</programlisting>
                 <para>This code will be executed as follows:<itemizedlist>
                             <listitem>
@@ -2471,7 +2658,7 @@ parallel_for(Range range,Func func,long cutoff,const std::string&amp; task_name=
                     <programlisting>post_callback(
                dummy_parallel_for_task(),
                // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
-               [this](boost::future&lt;std::vector&lt;int>> res){
+               [this](boost::asynchronous::expected&lt;std::vector&lt;int>> res){
                  try
                  {
                     // do something
@@ -2489,21 +2676,21 @@ parallel_for(Range range,Func func,long cutoff,const std::string&amp; task_name=
                     <para>Like parallel_for, there are four versions of this algorithm, with the
                         same lifetime behaviour. parallel_reduce applies a predicate to all elements
                         of a range, accumulating the result.</para>
-                    <programlisting>template &lt;class Iterator, class Func, class Job=boost::asynchronous::any_callable>
-boost::asynchronous::detail::continuation&lt;<emphasis role="bold">decltype(func(std::declval&lt;typename Iterator::value_type>(), std::declval&lt;typename Iterator::value_type>()))</emphasis>,Job>
+                    <programlisting>template &lt;class Iterator, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">decltype(func(std::declval&lt;typename Iterator::value_type>(), std::declval&lt;typename Iterator::value_type>()))</emphasis>,Job>
 <emphasis role="bold">parallel_reduce</emphasis>(Iterator beg, Iterator end,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
 
-template &lt;class Range, class Func, class Job=boost::asynchronous::any_callable>
-boost::asynchronous::detail::continuation&lt;<emphasis role="bold">decltype(func(*(range.begin()), *(range.end())))</emphasis>,Job>
+template &lt;class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">decltype(func(*(range.begin()), *(range.end())))</emphasis>,Job>
 <emphasis role="bold">parallel_reduce</emphasis>(Range const&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
 
-template &lt;class Range, class Func, class Job=boost::asynchronous::any_callable>
-boost::asynchronous::detail::continuation&lt;<emphasis role="bold">decltype(func(*(range.begin()), *(range.end())))</emphasis>,Job>
+template &lt;class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">decltype(func(*(range.begin()), *(range.end())))</emphasis>,Job>
 <emphasis role="bold">parallel_reduce</emphasis>(Range&amp;&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
 
 // version taking a continuation of a range as first argument
-template &lt;class Range, class Func, class Job=boost::asynchronous::any_callable>
-boost::asynchronous::detail::continuation&lt;<emphasis role="bold">decltype(func(std::declval&lt;typename Range::return_type::value_type>(), std::declval&lt;typename Range::return_type::value_type>()))</emphasis>,Job>
+template &lt;class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">decltype(func(std::declval&lt;typename Range::return_type::value_type>(), std::declval&lt;typename Range::return_type::value_type>()))</emphasis>,Job>
 <emphasis role="bold">parallel_reduce</emphasis>(Range range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</programlisting>
                 <para>Don't be worried about the return type. To keep it short, what we get is a
                         continuation of the type returned by the given predicate, for example, using
@@ -2520,7 +2707,7 @@ post_callback(
                                                      },
                                                      1500);
     },
-    ](<emphasis role="bold">boost::future&lt;int></emphasis> ){} // callback gets an int
+    ](<emphasis role="bold">boost::asynchronous::expected&lt;int></emphasis> ){} // callback gets an int
 );</programlisting>
                     </para>
                     <para>We also have a <link xlink:href="examples/example_parallel_reduce_tcp.cpp">distributed version</link> as an example, which strictly looks like the parallel_for version.</para>
@@ -2531,7 +2718,7 @@ post_callback(
                         returns a (continuation of) tuple of futures containing the result of all of
                         them.</para>
                     <programlisting>template &lt;class Job, typename... Args>
-boost::asynchronous::detail::<emphasis role="bold">continuation</emphasis>&lt;typename decltype(boost::asynchronous::detail::make_future_tuple(args...))::element_type,Job>
+boost::asynchronous::detail::<emphasis role="bold">callback_continuation</emphasis>&lt;typename decltype(boost::asynchronous::detail::make_expected_tuple(args...))::element_type,Job>
 <emphasis role="bold">parallel_invoke</emphasis>(Args&amp;&amp;... args);</programlisting>
                     <para>Of course, the futures can have exceptions if exceptions are thrown, as in
                         the following example:</para>
@@ -2543,7 +2730,7 @@ boost::asynchronous::detail::<emphasis role="bold">continuation</emphasis>&lt;ty
                                      boost::asynchronous::<emphasis role="bold">to_continuation_task</emphasis>([](){return 42.0;}));         // double lambda
                 },// work
                 // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
-                [this](boost::<emphasis role="bold">future</emphasis>&lt;std::<emphasis role="bold">tuple</emphasis>&lt;<emphasis role="bold">boost::future&lt;void>,boost::future&lt;double></emphasis>>> res)
+                [this](boost::<emphasis role="bold">asynchronous::expected</emphasis>&lt;std::<emphasis role="bold">tuple</emphasis>&lt;<emphasis role="bold">asynchronous::expected&lt;void>,asynchronous::expected&lt;double></emphasis>>> res)
                 {
                    try
                    {
@@ -2572,21 +2759,21 @@ boost::asynchronous::detail::<emphasis role="bold">continuation</emphasis>&lt;ty
                         versions of the algorithm.</para>
                     <programlisting>template &lt;class Iterator, class Func,
           class ReturnRange=std::vector&lt;typename std::iterator_traits&lt;Iterator>::value_type>,
-          class Job=boost::asynchronous::any_callable>
-boost::asynchronous::detail::continuation&lt;ReturnRange,Job>
+          class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;ReturnRange,Job>
 <emphasis role="bold">parallel_find_all</emphasis>(Iterator beg, Iterator end,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
 
-template &lt;class Range, class Func, class ReturnRange=Range, class Job=boost::asynchronous::any_callable>
-boost::asynchronous::detail::continuation&lt;ReturnRange,Job>
+template &lt;class Range, class Func, class ReturnRange=Range, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;ReturnRange,Job>
 <emphasis role="bold">parallel_find_all</emphasis>(Range const&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
 
-template &lt;class Range, class Func, class ReturnRange=Range, class Job=boost::asynchronous::any_callable>
-boost::asynchronous::detail::continuation&lt;ReturnRange,Job>
+template &lt;class Range, class Func, class ReturnRange=Range, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;ReturnRange,Job>
 <emphasis role="bold">parallel_find_all</emphasis>(Range&amp;&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
 
 // version taking a continuation of a range as first argument
-template &lt;class Range, class Func, class ReturnRange=typename Range::return_type, class Job=boost::asynchronous::any_callable>
-boost::asynchronous::detail::continuation&lt;ReturnRange,Job>
+template &lt;class Range, class Func, class ReturnRange=typename Range::return_type, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;ReturnRange,Job>
 <emphasis role="bold">parallel_find_all</emphasis>(Range range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</programlisting>
                     <para>The algorithm will find elements matching the search criteria in parallel
                         and copy all into a new container, by default of the type given as
@@ -2603,7 +2790,7 @@ post_callback(
                                                      },
                                                      1500);
     },
-    ](<emphasis role="bold">boost::future&lt;std::vector&lt;int>></emphasis> ){} // callback gets an int
+    ](<emphasis role="bold">boost::asynchronous::expected&lt;std::vector&lt;int>></emphasis> ){} // callback gets an int
 );</programlisting>
                     </para>
                     <para>Please have a look at the <link xlink:href="examples/example_parallel_find_all.cpp">complete example</link>.</para>
@@ -2614,20 +2801,20 @@ post_callback(
                         predicate. It is a good example of using a prallel_reduce for writing new
                         algorithms. We have, as usual, four versions of the algorithm:.</para>
                     <para>
-                        <programlisting>template &lt;class Iterator, class Func,class Job=boost::asynchronous::any_callable>
-boost::asynchronous::detail::continuation&lt;typename std::iterator_traits&lt;Iterator>::value_type,Job>
+                        <programlisting>template &lt;class Iterator, class Func,class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;typename std::iterator_traits&lt;Iterator>::value_type,Job>
 <emphasis role="bold">parallel_extremum</emphasis>(Iterator beg, Iterator end,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
 
-template &lt;class Iterator, class Func,class Job=boost::asynchronous::any_callable>
+template &lt;class Iterator, class Func,class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 decltype(boost::asynchronous::parallel_reduce(...))
 <emphasis role="bold">parallel_extremum</emphasis>(Range const&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
 
-template &lt;class Iterator, class Func,class Job=boost::asynchronous::any_callable>
+template &lt;class Iterator, class Func,class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 decltype(boost::asynchronous::parallel_reduce(...))
 <emphasis role="bold">parallel_extremum</emphasis>(Range&amp;&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
 
 // version taking a continuation of a range as first argument
-template &lt;class Iterator, class Func,class Job=boost::asynchronous::any_callable>
+template &lt;class Iterator, class Func,class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 decltype(boost::asynchronous::parallel_reduce(...))
 <emphasis role="bold">parallel_extremum</emphasis>(Range range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</programlisting>
                     </para>
@@ -2637,22 +2824,50 @@ decltype(boost::asynchronous::parallel_reduce(...))
                     <title>parallel_count</title>
                     <para>parallel_count counts the elements of a range satisfying a predicate. As
                         usual, we have four versions of the algorithm.</para>
-                    <programlisting>template &lt;class Iterator, class Func,class Job=boost::asynchronous::any_callable>
-boost::asynchronous::detail::continuation&lt;long,Job>
+                    <programlisting>template &lt;class Iterator, class Func,class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;long,Job>
 <emphasis role="bold">parallel_count</emphasis>(Iterator beg, Iterator end,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
 
-template &lt;class Iterator, class Func,class Job=boost::asynchronous::any_callable>
-boost::asynchronous::detail::continuation&lt;long,Job>
+template &lt;class Iterator, class Func,class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;long,Job>
 <emphasis role="bold">parallel_count</emphasis>(Range const&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
 
-template &lt;class Iterator, class Func,class Job=boost::asynchronous::any_callable>
-boost::asynchronous::detail::continuation&lt;long,Job>
+template &lt;class Iterator, class Func,class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;long,Job>
 <emphasis role="bold">parallel_count</emphasis>(Range&amp;&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
 
 // version taking a continuation of a range as first argument
-template &lt;class Iterator, class Func,class Job=boost::asynchronous::any_callable>
-boost::asynchronous::detail::continuation&lt;long,Job>
+template &lt;class Iterator, class Func,class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;long,Job>
 <emphasis role="bold">parallel_count</emphasis>(Range range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</programlisting>
+                    <para>Please have a look at the <link xlink:href="examples/example_parallel_count.cpp">complete example</link>.</para>
+                </sect2>
+                <sect2>
+                    <title>parallel_sort / parallel_stable_sort</title>
+                    <para>parallel_sort / parallel_stable_sort implement a parallel mergesort. As
+                        usual, we have four versions of the algorithm. Func is a binary functor used
+                        for sorting, like std::sort.</para>
+                    <programlisting>template &lt;class Iterator, class Func,class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;long,Job>
+<emphasis role="bold">parallel_sort</emphasis>(Iterator beg, Iterator end,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+<emphasis role="bold">parallel_stable_sort</emphasis>(Iterator beg, Iterator end,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+
+template &lt;class Iterator, class Func,class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;long,Job>
+<emphasis role="bold">parallel_sort</emphasis>(Range&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+<emphasis role="bold">parallel_stable_sort</emphasis>(Range&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+
+// version taking ownership of the container to be sorted
+template &lt;class Iterator, class Func,class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;long,Job>
+<emphasis role="bold">parallel_sort_move</emphasis>(Range&amp;&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+<emphasis role="bold">parallel_stable_sort_move</emphasis>(Range&amp;&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+
+// version taking a continuation of a range as first argument
+template &lt;class Iterator, class Func,class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;long,Job>
+<emphasis role="bold">parallel_sort</emphasis>(Range range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+<emphasis role="bold">parallel_stable_sort</emphasis>(Range range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</programlisting>
                     <para>Please have a look at the <link xlink:href="examples/example_parallel_count.cpp">complete example</link>.</para>
                 </sect2>
             </sect1>

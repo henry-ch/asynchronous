@@ -1,0 +1,20 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>N3558 / N3650</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch01.html" title="Chapter&nbsp;1.&nbsp;Related designs: std::async, Active Object, Proactor"><link rel="prev" href="ch01.html" title="Chapter&nbsp;1.&nbsp;Related designs: std::async, Active Object, Proactor"><link rel="next" href="ch01s03.html" title="Active Object"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">N3558 / N3650</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch01.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;1.&nbsp;Related designs: std::async, Active Object, Proactor</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch01s03.html">Next</a></td></tr></table><hr></div><div class="sect1" title="N3558 / N3650"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e184"></a>N3558 / N3650</h2></div></div></div><p>Of course it did not go unnoticed that std::async has some limitations. And so
+                    do we see some tries to save it instead of giving it up. Usually, it goes around
+                    the lines of blocking, but later.</p><p>
+                    </p><pre class="programlisting">future&lt;int&gt; f1 = async([]() { return 123; }); 
+future&lt;string&gt; f2 = f1.then([](future&lt;int&gt; f) 
+{ 
+  return f.get().to_string(); // here .get() won&#8217;t block 
+});
+// and here?
+string s= f2.get();</pre><p>
+                </p><p>The idea is to make std::async more asynchronous (oh my, this already just
+                    sounds bad) by adding something (.then) to be called when the asynchronous
+                    action finishes. It still does not fly:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>at some point, we will have to block, thus ending our asynchronous
+                                behavior</p></li><li class="listitem"><p>This works only for very small programs. Do we imagine a 500k
+                                lines program built that way?</p></li></ul></div><p>And what about the suggestion of adding new keywords, async and await, as in
+                    N3650? Nope. First because, as await suggests, someone will need, at some point,
+                    to block waiting. Second because as we have no future, we also lose our polling
+                    option.</p></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch01.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="ch01.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ch01s03.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Chapter&nbsp;1.&nbsp;Related designs: std::async, Active Object, Proactor&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Active Object</td></tr></table></div></body></html>
