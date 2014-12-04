@@ -292,10 +292,17 @@ namespace detail
 
         void operator()()
         {
-            auto cont = m_func();
-            cont.on_done(promise_move_helper(std::move(m_promise)));
-            boost::asynchronous::any_continuation ac(std::move(cont));
-            boost::asynchronous::get_continuations().emplace_front(std::move(ac));
+            try
+            {
+                auto cont = m_func();
+                cont.on_done(promise_move_helper(std::move(m_promise)));
+                boost::asynchronous::any_continuation ac(std::move(cont));
+                boost::asynchronous::get_continuations().emplace_front(std::move(ac));
+            }
+            catch(std::exception& e)
+            {
+                m_promise.set_exception(boost::copy_exception(e));
+            }
         }
         boost::promise<R> m_promise;
         F m_func;
@@ -370,10 +377,17 @@ namespace detail
 
         void operator()()
         {
-            auto cont = m_func();
-            cont.on_done(promise_move_helper(std::move(m_promise)));
-            boost::asynchronous::any_continuation ac(std::move(cont));
-            boost::asynchronous::get_continuations().emplace_front(std::move(ac));
+            try
+            {
+                auto cont = m_func();
+                cont.on_done(promise_move_helper(std::move(m_promise)));
+                boost::asynchronous::any_continuation ac(std::move(cont));
+                boost::asynchronous::get_continuations().emplace_front(std::move(ac));
+            }
+            catch(std::exception& e)
+            {
+                m_promise.set_exception(boost::copy_exception(e));
+            }
         }
         boost::promise<R> m_promise;
         F m_func;
@@ -449,10 +463,17 @@ namespace detail
 
         void operator()()
         {
-            auto cont = m_func();
-            cont.on_done(promise_move_helper(std::move(m_promise)));
-            boost::asynchronous::any_continuation ac(std::move(cont));
-            boost::asynchronous::get_continuations().emplace_front(std::move(ac));
+            try
+            {
+                auto cont = m_func();
+                cont.on_done(promise_move_helper(std::move(m_promise)));
+                boost::asynchronous::any_continuation ac(std::move(cont));
+                boost::asynchronous::get_continuations().emplace_front(std::move(ac));
+            }
+            catch(std::exception& e)
+            {
+                m_promise.set_exception(boost::copy_exception(e));
+            }
         }
         template <class Archive>
         void save(Archive & ar, const unsigned int /*version*/)const
@@ -494,7 +515,11 @@ auto post_future(S const& scheduler, F func,
 #else
 auto post_future(S const& scheduler, F const& func,
 #endif
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                 const std::string& task_name, std::size_t prio)
+#else
                  const std::string& task_name="", std::size_t prio=0)
+#endif
     -> typename boost::disable_if< boost::mpl::or_<
                                         boost::is_same<void,decltype(func())>,
                                         has_is_continuation_task<decltype(func())>>,
@@ -536,7 +561,11 @@ auto post_future(S const& scheduler, F func,
 #else
 auto post_future(S const& scheduler, F const& func,
 #endif
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                 const std::string& task_name, std::size_t prio)
+#else
                  const std::string& task_name="", std::size_t prio=0)
+#endif
     -> typename boost::enable_if< boost::mpl::and_<
                                     boost::is_same<void,decltype(func())>,
                                     boost::mpl::not_<has_is_continuation_task<decltype(func())>>>,
@@ -580,7 +609,11 @@ auto post_future(S const& scheduler, F func,
 #else
 auto post_future(S const& scheduler, F const& func,
 #endif
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                 const std::string& task_name, std::size_t prio)
+#else
                  const std::string& task_name="", std::size_t prio=0)
+#endif
     -> typename boost::enable_if< has_is_continuation_task<decltype(func())>,boost::future<typename decltype(func())::return_type> >::type
 {
     boost::promise<typename decltype(func())::return_type> p;
@@ -601,7 +634,11 @@ auto interruptible_post_future(S const& scheduler, F func,
 #else
 auto interruptible_post_future(S const& scheduler, F const& func,
 #endif
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                 const std::string& task_name, std::size_t prio)
+#else
                  const std::string& task_name="", std::size_t prio=0)
+#endif
     -> typename boost::disable_if< boost::is_same<void,decltype(func())>,
                                    std::tuple<boost::future<decltype(func())>,boost::asynchronous::any_interruptible > >::type
 {
@@ -633,7 +670,11 @@ auto interruptible_post_future(S const& scheduler, F func,
 #else
 auto interruptible_post_future(S const& scheduler, F const& func,
 #endif
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                 const std::string& task_name, std::size_t prio)
+#else
                  const std::string& task_name="", std::size_t prio=0)
+#endif
     -> typename boost::enable_if< boost::is_same<void,decltype(func())>,
                                   std::tuple<boost::future<void>,boost::asynchronous::any_interruptible > >::type
 {
@@ -1181,7 +1222,11 @@ auto post_callback(S1 const& scheduler,F1 func,S2 const& weak_cb_scheduler,F2 cb
 #else
 auto post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_scheduler,F2 const& cb_func,
 #endif
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                   const std::string& task_name, std::size_t post_prio, std::size_t cb_prio)
+#else
                    const std::string& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
+#endif
     -> typename boost::enable_if< boost::is_same<void,decltype(func())>,void >::type
 {
     // abstract away the return value of work functor
@@ -1207,7 +1252,11 @@ auto post_callback(S1 const& scheduler,F1 func,S2 const& weak_cb_scheduler,F2 cb
 #else
 auto post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_scheduler,F2 const& cb_func,
 #endif
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                   const std::string& task_name, std::size_t post_prio, std::size_t cb_prio)
+#else
                    const std::string& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
+#endif
     -> typename boost::enable_if< boost::mpl::and_<
                                      boost::mpl::not_<boost::is_same<void,decltype(func())> >,
                                      boost::mpl::not_< has_is_continuation_task<decltype(func())> >
@@ -1238,7 +1287,11 @@ auto post_callback(S1 const& scheduler,F1 func,S2 const& weak_cb_scheduler,F2 cb
 #else
 auto post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_scheduler,F2 const& cb_func,
 #endif
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                   const std::string& task_name, std::size_t post_prio, std::size_t cb_prio)
+#else
                    const std::string& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
+#endif
     -> typename boost::enable_if< has_is_continuation_task<decltype(func())>,void >::type
 {
     move_task_helper<typename decltype(func())::return_type,F1,F2> moved_work(std::move(func),std::move(cb_func));
@@ -1257,7 +1310,11 @@ auto interruptible_post_callback(S1 const& scheduler,F1 func,S2 const& weak_cb_s
 #else
 auto interruptible_post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_scheduler,F2 const& cb_func,
 #endif
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                                 const std::string& task_name, std::size_t post_prio, std::size_t cb_prio)
+#else
                                  const std::string& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
+#endif
     -> typename boost::enable_if< boost::is_same<void,decltype(func())>,boost::asynchronous::any_interruptible >::type
 {
     // abstract away the return value of work functor
@@ -1283,7 +1340,11 @@ auto interruptible_post_callback(S1 const& scheduler,F1 func,S2 const& weak_cb_s
 #else
 auto interruptible_post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_scheduler,F2 const& cb_func,
 #endif
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                                 const std::string& task_name, std::size_t post_prio, std::size_t cb_prio)
+#else
                                  const std::string& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
+#endif
         -> typename boost::enable_if< boost::mpl::and_<
                                          boost::mpl::not_<boost::is_same<void,decltype(func())> >,
                                          boost::mpl::not_< has_is_continuation_task<decltype(func())> >
@@ -1315,7 +1376,11 @@ auto interruptible_post_callback(S1 const& scheduler,F1 func,S2 const& weak_cb_s
 #else
 auto interruptible_post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_scheduler,F2 const& cb_func,
 #endif
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                    const std::string& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
+#else
+                   const std::string& task_name, std::size_t post_prio, std::size_t cb_prio)
+#endif
     -> typename boost::enable_if< has_is_continuation_task<decltype(func())>,boost::asynchronous::any_interruptible >::type
 {
     move_task_helper<typename decltype(func())::return_type,F1,F2> moved_work(std::move(func),std::move(cb_func));

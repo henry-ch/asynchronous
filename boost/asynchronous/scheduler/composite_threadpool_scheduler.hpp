@@ -95,14 +95,19 @@ public:
     }
     void post(job_type job,std::size_t priority) const
     {
-        (m_subpools[this->find_position(priority,m_subpools.size())]).post(std::move(job),priority);
+        if (!m_subpools.empty())
+            (m_subpools[this->find_position(priority,m_subpools.size())]).post(std::move(job),priority);
     }
     boost::asynchronous::any_interruptible interruptible_post(job_type job) const
     {
+        if (m_subpools.empty())
+            return boost::asynchronous::any_interruptible();
         return (m_subpools[this->find_position(0,m_subpools.size())]).interruptible_post(std::move(job));
     }
     boost::asynchronous::any_interruptible interruptible_post(job_type job,std::size_t priority) const
     {
+        if (m_subpools.empty())
+            return boost::asynchronous::any_interruptible();
         return (m_subpools[this->find_position(priority,m_subpools.size())]).interruptible_post(std::move(job));
     }
 #else
@@ -110,6 +115,8 @@ public:
 #endif
     bool is_valid()const
     {
+        if (m_subpools.empty())
+            return false;
         for (typename std::vector<subpool_type>::const_iterator it = m_subpools.begin(); it != m_subpools.end();++it)
         {
             if( !(*it).is_valid())
@@ -141,7 +148,21 @@ public:
              std::list<typename boost::asynchronous::job_traits<job_type>::diagnostic_item_type > >
     get_diagnostics(std::size_t pos=0)const
     {
-        return (m_subpools[this->find_position(pos,m_subpools.size())]).get_diagnostics(pos);
+        if (pos==0)
+        {
+            std::map<std::string,
+                     std::list<typename boost::asynchronous::job_traits<job_type>::diagnostic_item_type > > res;
+            for (typename std::vector<subpool_type>::const_iterator it = m_subpools.begin(); it != m_subpools.end();++it)
+            {
+                auto one_diag = (*it).get_diagnostics();
+                res.insert(one_diag.begin(),one_diag.end());
+            }
+            return res;
+        }
+        else
+        {
+            return (m_subpools[this->find_position(pos,m_subpools.size())]).get_diagnostics(pos);
+        }
     }
     void clear_diagnostics()
     {
@@ -342,7 +363,22 @@ private:
             if (m_schedulers.empty())
                 return std::map<std::string,
                         std::list<typename boost::asynchronous::job_traits<job_type>::diagnostic_item_type > >();
-            return (m_schedulers[this->find_position(pos,m_schedulers.size())]).get_diagnostics(pos);
+            if (pos==0)
+            {
+                std::map<std::string,
+                         std::list<typename boost::asynchronous::job_traits<job_type>::diagnostic_item_type > > res;
+                for (typename std::vector<boost::asynchronous::any_shared_scheduler<job_type> >::const_iterator it = m_schedulers.begin();
+                     it != m_schedulers.end();++it)
+                {
+                    auto one_diag = (*it).get_diagnostics();
+                    res.insert(one_diag.begin(),one_diag.end());
+                }
+                return res;
+            }
+            else
+            {
+                return (m_schedulers[this->find_position(pos,m_schedulers.size())]).get_diagnostics(pos);
+            }
         }
         void clear_diagnostics()
         {

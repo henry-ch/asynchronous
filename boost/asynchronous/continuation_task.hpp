@@ -50,28 +50,16 @@ public:
         m_done_func = rhs.m_done_func;
         return *this;
     }
-    void set_value(Return const& val)const
+    void set_value(Return val)const
     {       
         // inform caller if any
         if (m_done_func)
         {
-            (m_done_func)(boost::asynchronous::expected<Return>(val));
+            (m_done_func)(boost::asynchronous::expected<Return>(std::move(val)));
         }
         else
         {
-            m_promise->set_value(val);
-        }
-    }
-    void emplace_value(Return&& val)const
-    {        
-        // inform caller if any
-        if (m_done_func)
-        {
-            (m_done_func)(boost::asynchronous::expected<Return>(std::forward<Return>(val)));
-        }
-        else
-        {
-           m_promise->set_value(std::forward<Return>(val));
+            m_promise->set_value(std::move(val));
         }
     }
     void set_exception(boost::exception_ptr p)const
@@ -129,18 +117,6 @@ public:
             m_promise->set_value();
         }
     }
-    void emplace_value()const
-    {
-        // inform caller if any
-        if (m_done_func)
-        {
-            (m_done_func)(boost::asynchronous::expected<void>());
-        }
-        else
-        {
-            m_promise->set_value();
-        }
-    }
     void set_exception(boost::exception_ptr p)const
     {
 
@@ -165,7 +141,7 @@ template <class Return>
 struct continuation_task
 {
 public:
-    typedef Return res_type;
+    typedef Return return_type;
 
     continuation_task(const std::string& name=""):m_promise(),m_name(name){}
     continuation_task(continuation_task&& rhs)noexcept
@@ -256,7 +232,7 @@ template <>
 struct continuation_task<void>
 {
 public:
-    typedef void res_type;
+    typedef void return_type;
 
     continuation_task(continuation_task&& rhs)noexcept
         : m_promise(std::move(rhs.m_promise))
@@ -554,67 +530,61 @@ boost::asynchronous::detail::continuation<Return,Job> top_level_continuation_job
 
 // callback continuations
 template <class OnDone, typename... Args>
-void create_callback_continuation(OnDone&& on_done, Args&&... args)
+void create_callback_continuation(OnDone on_done, Args&&... args)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
     typedef decltype(boost::asynchronous::detail::make_expected_tuple(args...)) future_type;
     boost::asynchronous::detail::callback_continuation<void,BOOST_ASYNCHRONOUS_DEFAULT_JOB,future_type> c (
                 state,boost::asynchronous::detail::make_expected_tuple(args...), boost::chrono::milliseconds(0),
-                std::forward<Args>(args)...);
-    c.on_done(std::forward<OnDone>(on_done));
+                std::move(on_done),std::forward<Args>(args)...);
     // no need of registration as no timeout checking
 }
 template <class OnDone, typename FutureType, typename... Args>
-void create_callback_continuation(OnDone&& on_done, FutureType expected_tuple, std::tuple<Args...> args)
+void create_callback_continuation(OnDone on_done, FutureType expected_tuple, std::tuple<Args...> args)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
     boost::asynchronous::detail::callback_continuation<void,BOOST_ASYNCHRONOUS_DEFAULT_JOB,FutureType> c (
                 state,std::move(expected_tuple), boost::chrono::milliseconds(0),
-                std::move(args));
-    c.on_done(std::forward<OnDone>(on_done));
+                std::move(on_done),std::move(args));
     // no need of registration as no timeout checking
 }
 template <typename Job, class OnDone, typename... Args>
-void create_callback_continuation_job(OnDone&& on_done, Args&&... args)
+void create_callback_continuation_job(OnDone on_done, Args&&... args)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
 
     typedef decltype(boost::asynchronous::detail::make_expected_tuple(args...)) future_type;
     boost::asynchronous::detail::callback_continuation<void,Job,future_type> c (
                 state,boost::asynchronous::detail::make_expected_tuple(args...), boost::chrono::milliseconds(0),
-                std::forward<Args>(args)...);
-    c.on_done(std::forward<OnDone>(on_done));
+                std::move(on_done),std::forward<Args>(args)...);
     // no need of registration as no timeout checking
 }
 template <typename Job, class OnDone, typename FutureType, typename... Args>
-void create_callback_continuation_job(OnDone&& on_done, FutureType expected_tuple, std::tuple<Args...> args)
+void create_callback_continuation_job(OnDone on_done, FutureType expected_tuple, std::tuple<Args...> args)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
     boost::asynchronous::detail::callback_continuation<void,Job,FutureType> c (
                 state,std::move(expected_tuple), boost::chrono::milliseconds(0),
-                std::move(args));
-    c.on_done(std::forward<OnDone>(on_done));
+                std::move(on_done),std::move(args));
     // no need of registration as no timeout checking
 }
 template <typename Job, class OnDone, class Duration, typename... Args>
-void create_callback_continuation_job_timeout(OnDone&& on_done, Duration const& d, Args&&... args)
+void create_callback_continuation_job_timeout(OnDone on_done, Duration const& d, Args&&... args)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
 
     typedef decltype(boost::asynchronous::detail::make_expected_tuple(args...)) future_type;
     boost::asynchronous::detail::callback_continuation<void,Job,future_type,Duration> c (
-                state,boost::asynchronous::detail::make_expected_tuple(args...), d, std::forward<Args>(args)...);
-    c.on_done(std::forward<OnDone>(on_done));
+                state,boost::asynchronous::detail::make_expected_tuple(args...), d, std::move(on_done),std::forward<Args>(args)...);
     boost::asynchronous::any_continuation a(std::move(c));
     boost::asynchronous::get_continuations().emplace_front(std::move(a));
 }
 template <typename Job, class OnDone, class Duration, typename FutureType, typename... Args>
-void create_callback_continuation_job_timeout(OnDone&& on_done, Duration const& d, FutureType expected_tuple, std::tuple<Args...> args)
+void create_callback_continuation_job_timeout(OnDone on_done, Duration const& d, FutureType expected_tuple, std::tuple<Args...> args)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
     boost::asynchronous::detail::callback_continuation<void,Job,FutureType,Duration> c (
-                state,std::move(expected_tuple), d, std::move(args));
-    c.on_done(std::forward<OnDone>(on_done));
+                state,std::move(expected_tuple), d, std::move(on_done),std::move(args));
     boost::asynchronous::any_continuation a(std::move(c));
     boost::asynchronous::get_continuations().emplace_front(std::move(a));
 }
@@ -623,18 +593,19 @@ template <class Return, class FirstTask>
 boost::asynchronous::detail::callback_continuation<Return,BOOST_ASYNCHRONOUS_DEFAULT_JOB> top_level_callback_continuation(FirstTask&& t)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
+    typedef typename boost::asynchronous::detail::callback_continuation<Return,BOOST_ASYNCHRONOUS_DEFAULT_JOB>::tuple_type Tuple;
     return boost::asynchronous::detail::callback_continuation<Return,BOOST_ASYNCHRONOUS_DEFAULT_JOB> (
                 state,boost::asynchronous::detail::make_expected_tuple(t), boost::chrono::milliseconds(0),
-                std::forward<FirstTask>(t));
+                true,std::forward<FirstTask>(t));
 }
 template <class Return, typename Job, class FirstTask>
 boost::asynchronous::detail::callback_continuation<Return,Job> top_level_callback_continuation_job(FirstTask&& t)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
-
+    typedef typename boost::asynchronous::detail::callback_continuation<Return,Job>::tuple_type Tuple;
     return boost::asynchronous::detail::callback_continuation<Return,Job>(
                 state,boost::asynchronous::detail::make_expected_tuple(t), boost::chrono::milliseconds(0),
-                std::forward<FirstTask>(t));
+                true,std::forward<FirstTask>(t));
 }
 }}
 

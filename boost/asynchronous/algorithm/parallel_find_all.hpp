@@ -73,7 +73,8 @@ struct parallel_find_all_helper: public boost::asynchronous::continuation_task<R
 {
     parallel_find_all_helper(Iterator beg, Iterator end,Func func,long cutoff,
                              std::string task_name, std::size_t prio)
-        : beg_(beg),end_(end),func_(std::move(func)),cutoff_(cutoff),task_name_(std::move(task_name)),prio_(prio)
+        : boost::asynchronous::continuation_task<ReturnRange>(task_name)
+        , beg_(beg),end_(end),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
     {}
     void operator()()const
     {
@@ -85,7 +86,7 @@ struct parallel_find_all_helper: public boost::asynchronous::continuation_task<R
         {
             ReturnRange ret(beg_,it);
             boost::asynchronous::detail::find_all(ret,func_);
-            task_res.emplace_value(std::move(ret));
+            task_res.set_value(std::move(ret));
         }
         else
         {
@@ -97,7 +98,7 @@ struct parallel_find_all_helper: public boost::asynchronous::continuation_task<R
                     {
                         ReturnRange rt = std::move(std::get<0>(res).get());
                         boost::range::push_back(rt, std::move(std::get<1>(res).get()));
-                        task_res.emplace_value(std::move(rt));
+                        task_res.set_value(std::move(rt));
                     }
                     catch(std::exception& e)
                     {
@@ -105,8 +106,8 @@ struct parallel_find_all_helper: public boost::asynchronous::continuation_task<R
                     }
                 },
                 // recursive tasks
-                parallel_find_all_helper<Iterator,Func,ReturnRange,Job>(beg_,it,func_,cutoff_,task_name_,prio_),
-                parallel_find_all_helper<Iterator,Func,ReturnRange,Job>(it,end_,func_,cutoff_,task_name_,prio_)
+                parallel_find_all_helper<Iterator,Func,ReturnRange,Job>(beg_,it,func_,cutoff_,this->get_name(),prio_),
+                parallel_find_all_helper<Iterator,Func,ReturnRange,Job>(it,end_,func_,cutoff_,this->get_name(),prio_)
             );
         }
     }
@@ -114,7 +115,6 @@ struct parallel_find_all_helper: public boost::asynchronous::continuation_task<R
     Iterator end_;
     Func func_;
     long cutoff_;
-    std::string task_name_;
     std::size_t prio_;
 };
 }
@@ -123,7 +123,11 @@ template <class Iterator, class Func,
           class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<ReturnRange,Job>
 parallel_find_all(Iterator beg, Iterator end,Func func,long cutoff,
-             const std::string& task_name="", std::size_t prio=0)
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                  const std::string& task_name, std::size_t prio)
+#else
+                  const std::string& task_name="", std::size_t prio=0)
+#endif
 {
     return boost::asynchronous::top_level_callback_continuation_job<ReturnRange,Job>
             (boost::asynchronous::detail::parallel_find_all_helper<Iterator,Func,ReturnRange,Job>(beg,end,func,cutoff,task_name,prio));
@@ -137,7 +141,8 @@ struct parallel_find_all_range_helper: public boost::asynchronous::continuation_
 {
     parallel_find_all_range_helper(Range const& range,Func func,long cutoff,
                         const std::string& task_name, std::size_t prio)
-        :range_(range),func_(std::move(func)),cutoff_(cutoff),task_name_(std::move(task_name)),prio_(prio)
+        :boost::asynchronous::continuation_task<ReturnRange>(task_name)
+        ,range_(range),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
     {}
     void operator()()const
     {
@@ -149,7 +154,7 @@ struct parallel_find_all_range_helper: public boost::asynchronous::continuation_
         {
             ReturnRange ret(boost::begin(range_),it);
             boost::asynchronous::detail::find_all(ret,func_);
-            task_res.emplace_value(std::move(ret));
+            task_res.set_value(std::move(ret));
         }
         else
         {
@@ -161,7 +166,7 @@ struct parallel_find_all_range_helper: public boost::asynchronous::continuation_
                             {
                                 ReturnRange rt = std::move(std::get<0>(res).get());
                                 boost::range::push_back(rt, std::move(std::get<1>(res).get()));
-                                task_res.emplace_value(std::move(rt));
+                                task_res.set_value(std::move(rt));
                             }
                             catch(std::exception& e)
                             {
@@ -170,23 +175,26 @@ struct parallel_find_all_range_helper: public boost::asynchronous::continuation_
                         },
                         // recursive tasks
                         parallel_find_all_helper<decltype(boost::begin(range_)),Func,ReturnRange,Job>(
-                                    boost::begin(range_),it,func_,cutoff_,task_name_,prio_),
+                                    boost::begin(range_),it,func_,cutoff_,this->get_name(),prio_),
                         parallel_find_all_helper<decltype(boost::begin(range_)),Func,ReturnRange,Job>(
-                                    it,boost::end(range_),func_,cutoff_,task_name_,prio_)
+                                    it,boost::end(range_),func_,cutoff_,this->get_name(),prio_)
                     );
         }
     }
     Range const& range_;
     Func func_;
     long cutoff_;
-    std::string task_name_;
     std::size_t prio_;
 };
 }
 template <class Range, class Func, class ReturnRange=Range, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<ReturnRange,Job> >::type
 parallel_find_all(Range const& range,Func func,long cutoff,
-             const std::string& task_name="", std::size_t prio=0)
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                  const std::string& task_name, std::size_t prio)
+#else
+                  const std::string& task_name="", std::size_t prio=0)
+#endif
 {
     return boost::asynchronous::top_level_callback_continuation_job<ReturnRange,Job>
             (boost::asynchronous::detail::parallel_find_all_range_helper<Range,Func,ReturnRange,Job>(range,func,cutoff,task_name,prio));
@@ -199,7 +207,8 @@ struct parallel_find_all_range_move_helper: public boost::asynchronous::continua
     template <class Iterator>
     parallel_find_all_range_move_helper(boost::shared_ptr<Range> range,Iterator , Iterator ,Func func,long cutoff,
                         const std::string& task_name, std::size_t prio)
-        :range_(range),func_(std::move(func)),cutoff_(cutoff),task_name_(std::move(task_name)),prio_(prio)
+        :boost::asynchronous::continuation_task<ReturnRange>(task_name)
+        ,range_(range),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
     {}
     void operator()()const
     {
@@ -212,7 +221,7 @@ struct parallel_find_all_range_move_helper: public boost::asynchronous::continua
         {
             ReturnRange ret(boost::begin(*range),it);
             boost::asynchronous::detail::find_all(ret,func_);
-            task_res.emplace_value(std::move(ret));
+            task_res.set_value(std::move(ret));
         }
         else
         {
@@ -224,7 +233,7 @@ struct parallel_find_all_range_move_helper: public boost::asynchronous::continua
                     {
                         ReturnRange rt = std::move(std::get<0>(res).get());
                         boost::range::push_back(rt, std::move(std::get<1>(res).get()));
-                        task_res.emplace_value(std::move(rt));
+                        task_res.set_value(std::move(rt));
                     }
                     catch(std::exception& e)
                     {
@@ -233,16 +242,15 @@ struct parallel_find_all_range_move_helper: public boost::asynchronous::continua
                 },
                 // recursive tasks
                 boost::asynchronous::detail::parallel_find_all_helper<decltype(boost::begin(*range)),Func,ReturnRange,Job>(
-                            boost::begin(*range),it,func_,cutoff_,task_name_,prio_),
+                            boost::begin(*range),it,func_,cutoff_,this->get_name(),prio_),
                 boost::asynchronous::detail::parallel_find_all_helper<decltype(boost::begin(*range)),Func,ReturnRange,Job>(
-                            it,boost::end(*range),func_,cutoff_,task_name_,prio_)
+                            it,boost::end(*range),func_,cutoff_,this->get_name(),prio_)
             );
         }
     }
     boost::shared_ptr<Range> range_;
     Func func_;
     long cutoff_;
-    std::string task_name_;
     std::size_t prio_;
 };
 
@@ -252,15 +260,15 @@ struct parallel_find_all_range_move_helper<Range,Func,ReturnRange,Job,typename :
         , public boost::asynchronous::serializable_task
 {
     //default ctor only when deserialized immediately after
-    parallel_find_all_range_move_helper():boost::asynchronous::serializable_task("")
+    parallel_find_all_range_move_helper():boost::asynchronous::serializable_task("parallel_find_all_range_move_helper")
     {
     }
     template <class Iterator>
     parallel_find_all_range_move_helper(boost::shared_ptr<Range> range,Iterator beg, Iterator end,Func func,long cutoff,
                         const std::string& task_name, std::size_t prio)
-        : boost::asynchronous::continuation_task<ReturnRange>()
+        : boost::asynchronous::continuation_task<ReturnRange>(task_name)
         , boost::asynchronous::serializable_task(func.get_task_name())
-        , range_(range),func_(std::move(func)),cutoff_(cutoff),task_name_(std::move(task_name)),prio_(prio), begin_(beg), end_(end)
+        , range_(range),func_(std::move(func)),cutoff_(cutoff),task_name_(task_name),prio_(prio), begin_(beg), end_(end)
     {}
     void operator()()const
     {
@@ -272,7 +280,7 @@ struct parallel_find_all_range_move_helper<Range,Func,ReturnRange,Job,typename :
         {
             ReturnRange ret(begin_,it);
             boost::asynchronous::detail::find_all(ret,func_);
-            task_res.emplace_value(std::move(ret));
+            task_res.set_value(std::move(ret));
         }
         else
         {
@@ -284,7 +292,7 @@ struct parallel_find_all_range_move_helper<Range,Func,ReturnRange,Job,typename :
                     {
                         ReturnRange rt = std::move(std::get<0>(res).get());
                         boost::range::push_back(rt, std::move(std::get<1>(res).get()));
-                        task_res.emplace_value(std::move(rt));
+                        task_res.set_value(std::move(rt));
                     }
                     catch(std::exception& e)
                     {
@@ -336,7 +344,11 @@ struct parallel_find_all_range_move_helper<Range,Func,ReturnRange,Job,typename :
 template <class Range, class Func, class ReturnRange=Range, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<ReturnRange,Job> >::type
 parallel_find_all(Range&& range,Func func,long cutoff,
-             const std::string& task_name="", std::size_t prio=0)
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                  const std::string& task_name, std::size_t prio)
+#else
+                  const std::string& task_name="", std::size_t prio=0)
+#endif
 {
     auto r = boost::make_shared<Range>(std::forward<Range>(range));
     auto beg = boost::begin(*r);
@@ -354,14 +366,15 @@ struct parallel_find_all_continuation_range_helper: public boost::asynchronous::
 {
     parallel_find_all_continuation_range_helper(Continuation const& c,Func func,long cutoff,
                         const std::string& task_name, std::size_t prio)
-        :cont_(c),func_(std::move(func)),cutoff_(cutoff),task_name_(std::move(task_name)),prio_(prio)
+        :boost::asynchronous::continuation_task<ReturnRange>(task_name)
+        ,cont_(c),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
     {}
     void operator()()
     {
         boost::asynchronous::continuation_result<ReturnRange> task_res = this->this_task_result();
         auto func(std::move(func_));
         auto cutoff = cutoff_;
-        auto task_name = task_name_;
+        auto task_name = this->get_name();
         auto prio = prio_;
         cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res)
         {
@@ -370,7 +383,7 @@ struct parallel_find_all_continuation_range_helper: public boost::asynchronous::
                 auto new_continuation = boost::asynchronous::parallel_find_all<typename Continuation::return_type, Func, ReturnRange, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
                 new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<ReturnRange> >&& new_continuation_res)
                 {
-                    task_res.emplace_value(std::move(std::get<0>(new_continuation_res).get()));
+                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                 });
             }
             catch(std::exception& e)
@@ -385,7 +398,6 @@ struct parallel_find_all_continuation_range_helper: public boost::asynchronous::
     Continuation cont_;
     Func func_;
     long cutoff_;
-    std::string task_name_;
     std::size_t prio_;
 };
 // Continuation is a callback continuation
@@ -395,14 +407,15 @@ struct parallel_find_all_continuation_range_helper<Continuation,Func,ReturnRange
 {
     parallel_find_all_continuation_range_helper(Continuation const& c,Func func,long cutoff,
                         const std::string& task_name, std::size_t prio)
-        :cont_(c),func_(std::move(func)),cutoff_(cutoff),task_name_(std::move(task_name)),prio_(prio)
+        :boost::asynchronous::continuation_task<ReturnRange>(task_name)
+        ,cont_(c),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
     {}
     void operator()()
     {
         boost::asynchronous::continuation_result<ReturnRange> task_res = this->this_task_result();
         auto func(std::move(func_));
         auto cutoff = cutoff_;
-        auto task_name = task_name_;
+        auto task_name = this->get_name();
         auto prio = prio_;
         cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
         {
@@ -411,7 +424,7 @@ struct parallel_find_all_continuation_range_helper<Continuation,Func,ReturnRange
                 auto new_continuation = boost::asynchronous::parallel_find_all<typename Continuation::return_type, Func, ReturnRange, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
                 new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<ReturnRange> >&& new_continuation_res)
                 {
-                    task_res.emplace_value(std::move(std::get<0>(new_continuation_res).get()));
+                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                 });
             }
             catch(std::exception& e)
@@ -424,7 +437,6 @@ struct parallel_find_all_continuation_range_helper<Continuation,Func,ReturnRange
     Continuation cont_;
     Func func_;
     long cutoff_;
-    std::string task_name_;
     std::size_t prio_;
 };
 }
@@ -432,7 +444,11 @@ struct parallel_find_all_continuation_range_helper<Continuation,Func,ReturnRange
 template <class Range, class Func, class ReturnRange=typename Range::return_type, class Job=typename BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::enable_if<has_is_continuation_task<Range>, boost::asynchronous::detail::callback_continuation<ReturnRange, Job>>::type
 parallel_find_all(Range range,Func func,long cutoff,
-             const std::string& task_name="", std::size_t prio=0)
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                  const std::string& task_name, std::size_t prio)
+#else
+                  const std::string& task_name="", std::size_t prio=0)
+#endif
 {
     return boost::asynchronous::top_level_callback_continuation_job<ReturnRange,Job>
             (boost::asynchronous::detail::parallel_find_all_continuation_range_helper<Range,Func,ReturnRange,Job>(range,func,cutoff,task_name,prio));

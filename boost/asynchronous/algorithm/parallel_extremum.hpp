@@ -35,7 +35,12 @@ struct selector {
 
 // Moved Ranges
 template <class Range, class Comparison, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-auto parallel_extremum(Range&& range, Comparison c, long cutoff, const std::string& task_name="", std::size_t prio=0)
+auto parallel_extremum(Range&& range, Comparison c, long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                       const std::string& task_name, std::size_t prio)
+#else
+                       const std::string& task_name="", std::size_t prio=0)
+#endif
     -> typename boost::disable_if<
             has_is_continuation_task<Range>,
             decltype(boost::asynchronous::parallel_reduce(std::forward<Range>(range), detail::selector<Comparison>(c), cutoff, task_name, prio))>::type
@@ -46,7 +51,12 @@ auto parallel_extremum(Range&& range, Comparison c, long cutoff, const std::stri
 
 // Range references
 template <class Range, class Comparison, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-auto parallel_extremum(Range const& range, Comparison c,long cutoff, const std::string& task_name="", std::size_t prio=0)
+auto parallel_extremum(Range const& range, Comparison c,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                       const std::string& task_name, std::size_t prio)
+#else
+                       const std::string& task_name="", std::size_t prio=0)
+#endif
     -> typename boost::disable_if<has_is_continuation_task<Range>,
                                   decltype(boost::asynchronous::parallel_reduce(range, detail::selector<Comparison>(c), cutoff, task_name, prio)) >::type
 {
@@ -56,7 +66,12 @@ auto parallel_extremum(Range const& range, Comparison c,long cutoff, const std::
 
 // Continuations
 template <class Range, class Comparison, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-auto parallel_extremum(Range range, Comparison c, long cutoff, const std::string& task_name="", std::size_t prio=0)
+auto parallel_extremum(Range range, Comparison c, long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                       const std::string& task_name, std::size_t prio)
+#else
+                       const std::string& task_name="", std::size_t prio=0)
+#endif
     -> typename boost::enable_if<
                 has_is_continuation_task<Range>,
                 decltype(boost::asynchronous::parallel_reduce(range, detail::selector<Comparison>(c), cutoff, task_name, prio))>::type
@@ -66,7 +81,12 @@ auto parallel_extremum(Range range, Comparison c, long cutoff, const std::string
 
 // Iterators
 template <class Iterator, class Comparison, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-auto parallel_extremum(Iterator beg, Iterator end, Comparison c, long cutoff, const std::string& task_name="", std::size_t prio=0)
+auto parallel_extremum(Iterator beg, Iterator end, Comparison c, long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                       const std::string& task_name, std::size_t prio)
+#else
+                       const std::string& task_name="", std::size_t prio=0)
+#endif
     -> boost::asynchronous::detail::callback_continuation<typename std::iterator_traits<Iterator>::value_type, Job>
 {
     return boost::asynchronous::parallel_reduce(beg, end, detail::selector<Comparison>(c), cutoff, task_name, prio);

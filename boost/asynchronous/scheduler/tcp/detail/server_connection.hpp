@@ -87,13 +87,13 @@ public:
                                                         callback(boost::asynchronous::tcp::client_request(BOOST_ASYNCHRONOUS_TCP_CLIENT_COM_ERROR));
                                                     }
                                                 }
-                                            })));
+                                            }),"",0));
                 }
                 else
                 {
                     callback(boost::asynchronous::tcp::client_request(BOOST_ASYNCHRONOUS_TCP_CLIENT_COM_ERROR));
                 }
-            })));
+            }),"",0));
     }
 
     // callback will be called only if failed, otherwise wait for result
@@ -131,7 +131,7 @@ public:
                                     {
                                         cb_if_failed(error_response);
                                     }
-                                 })));
+                                 }),"",0));
     }
 
 private:

@@ -46,7 +46,7 @@ struct invoke_helper: public boost::asynchronous::continuation_task<Return>
         {
             try
             {
-                task_res.emplace_value(func(std::move(std::get<0>(continuation_res).get())));
+                task_res.set_value(std::move(func(std::move(std::get<0>(continuation_res).get()))));
             }
             catch(std::exception& e)
             {
@@ -79,7 +79,7 @@ struct invoke_helper<Continuation,Func,Job,Return,typename ::boost::enable_if<bo
         {
             try
             {
-                task_res.emplace_value(func(std::move(std::get<0>(continuation_res).get())));
+                task_res.set_value(std::move(func(std::move(std::get<0>(continuation_res).get()))));
             }
             catch(std::exception& e)
             {

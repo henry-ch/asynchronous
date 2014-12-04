@@ -45,7 +45,7 @@ struct parallel_invoke_helper: public boost::asynchronous::continuation_task<Ret
                     // called when subtasks are done, set our result
                     [task_res](ReturnType res)
                     {
-                        task_res.emplace_value(std::move(res));
+                        task_res.set_value(std::move(res));
                     },
                     std::move(m_expected_tuple),
                     // recursive tasks
@@ -74,7 +74,7 @@ struct parallel_invoke_helper_timeout: public boost::asynchronous::continuation_
                     // called when subtasks are done, set our result
                     [task_res](ReturnType res)
                     {
-                        task_res.emplace_value(std::move(res));
+                        task_res.set_value(std::move(res));
                     },
                     m_duration,
                     std::move(m_expected_tuple),
@@ -99,7 +99,7 @@ struct continuation_task_wrapper : public boost::asynchronous::continuation_task
         boost::asynchronous::continuation_result<Return> task_res = this->this_task_result();
         try
         {
-            task_res.emplace_value(std::move(func_()));
+            task_res.set_value(std::move(func_()));
         }
         catch(std::exception& e)
         {
@@ -123,7 +123,7 @@ struct continuation_task_wrapper<void,Func> : public boost::asynchronous::contin
         try
         {
             func_();
-            task_res.emplace_value();
+            task_res.set_value();
         }
         catch(std::exception& e)
         {

@@ -40,6 +40,7 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(requires_weak_scheduler)
 
 namespace boost { namespace asynchronous
 {        
+#ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
 #define BOOST_ASYNC_POST_MEMBER_1(funcname)                                                                                 \
     template <typename... Args>                                                                                             \
     void funcname(Args... args)const                                                                                        \
@@ -48,6 +49,7 @@ namespace boost { namespace asynchronous
         this->post(typename boost::asynchronous::job_traits<callable_type>::wrapper_type(boost::asynchronous::any_callable  \
         (boost::asynchronous::move_bind([servant](Args... as){servant->funcname(std::move(as)...);},std::move(args)...))));  \
     }
+#endif
 
 #define BOOST_ASYNC_POST_MEMBER_2(funcname,prio)                                                                                \
     template <typename... Args>                                                                                                 \
@@ -61,6 +63,7 @@ namespace boost { namespace asynchronous
 #define BOOST_ASYNC_POST_MEMBER(...)                                                                            \
     BOOST_PP_OVERLOAD(BOOST_ASYNC_POST_MEMBER_,__VA_ARGS__)(__VA_ARGS__)
 
+#ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
 #define BOOST_ASYNC_POST_MEMBER_LOG_2(funcname,taskname)                                                                                    \
     template <typename... Args>                                                                                                             \
     void funcname(Args... args)const                                                                                                        \
@@ -71,6 +74,7 @@ namespace boost { namespace asynchronous
         a.set_name(taskname);                                                                                                               \
         this->post(std::move(a));                                                                                                           \
     }
+#endif
 
 #define BOOST_ASYNC_POST_MEMBER_LOG_3(funcname,taskname,prio)                                                                               \
     template <typename... Args>                                                                                                             \
@@ -88,6 +92,7 @@ namespace boost { namespace asynchronous
 
 // with this, will not compile with gcc 4.7 :(
 // ,typename boost::disable_if< boost::is_same<void,decltype(m_servant->funcname(args...))> >::type* dummy = 0
+#ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
 #define BOOST_ASYNC_FUTURE_MEMBER_LOG_2(funcname,taskname)                                                                                                  \
     template <typename... Args>                                                                                                                             \
     auto funcname(Args... args)const                                                                                                                        \
@@ -113,6 +118,7 @@ namespace boost { namespace asynchronous
                                 },args...),taskname);                                                                                                       \
         return std::move(fu);                                                                                                                               \
     }
+#endif
 
 #define BOOST_ASYNC_FUTURE_MEMBER_LOG_3(funcname,taskname,prio)                                                                                         \
     template <typename... Args>                                                                                                                         \
@@ -143,7 +149,7 @@ namespace boost { namespace asynchronous
 #define BOOST_ASYNC_FUTURE_MEMBER_LOG(...)                                                                      \
     BOOST_PP_OVERLOAD(BOOST_ASYNC_FUTURE_MEMBER_LOG_,__VA_ARGS__)(__VA_ARGS__)
 
-
+#ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
 #define BOOST_ASYNC_FUTURE_MEMBER_1(funcname)                                                                                                           \
     template <typename... Args>                                                                                                                         \
     auto funcname(Args... args)const                                                                                                                    \
@@ -169,6 +175,7 @@ namespace boost { namespace asynchronous
                                 },std::move(args)...));                                                                                                 \
         return std::move(fu);                                                                                                                           \
     }
+#endif
 
 #define BOOST_ASYNC_FUTURE_MEMBER_2(funcname,prio)                                                                                                      \
     template <typename... Args>                                                                                                                         \
@@ -199,6 +206,7 @@ namespace boost { namespace asynchronous
 #define BOOST_ASYNC_FUTURE_MEMBER(...)                                                                          \
     BOOST_PP_OVERLOAD(BOOST_ASYNC_FUTURE_MEMBER_,__VA_ARGS__)(__VA_ARGS__)
     
+#ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
 #define BOOST_ASYNC_POST_CALLBACK_MEMBER_1(funcname)                                                                                                \
     template <typename F, typename S,typename... Args>                                                                                              \
     void funcname(F&& cb_func,S const& weak_cb_scheduler,std::size_t cb_prio, Args... args)const                                                    \
@@ -209,6 +217,7 @@ namespace boost { namespace asynchronous
                                     {return servant->funcname(std::move(as)...);                                                                    \
                                     },std::move(args)...),weak_cb_scheduler,std::forward<F>(cb_func),"",0,cb_prio);                                 \
     }
+#endif
 
 #define BOOST_ASYNC_POST_CALLBACK_MEMBER_2(funcname,prio)                                                                                           \
     template <typename F, typename S,typename... Args>                                                                                              \
@@ -242,8 +251,10 @@ namespace boost { namespace asynchronous
         return boost::asynchronous::move_bind([servant](Args... as){return servant->funcname(std::move(as)...);},std::move(args)...);               \
     }    
     
+#ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
 #define BOOST_ASYNC_SERVANT_POST_CTOR_0()                                                                       \
     static std::size_t get_ctor_prio() {return 0;}
+#endif
 
 #define BOOST_ASYNC_SERVANT_POST_CTOR_1(priority)                                                               \
     static std::size_t get_ctor_prio() {return priority;}
@@ -251,8 +262,10 @@ namespace boost { namespace asynchronous
 #define BOOST_ASYNC_SERVANT_POST_CTOR(...)                                                                      \
     BOOST_PP_OVERLOAD(BOOST_ASYNC_SERVANT_POST_CTOR_,__VA_ARGS__)(__VA_ARGS__)
 
+#ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
 #define BOOST_ASYNC_SERVANT_POST_CTOR_LOG_1(taskname)                                                           \
     static const char* get_ctor_name() {return taskname;}
+#endif
 
 #define BOOST_ASYNC_SERVANT_POST_CTOR_LOG_2(taskname,priority)                                                  \
     static std::size_t get_ctor_prio() {return priority;}                                                       \
@@ -261,8 +274,10 @@ namespace boost { namespace asynchronous
 #define BOOST_ASYNC_SERVANT_POST_CTOR_LOG(...)                                                                  \
     BOOST_PP_OVERLOAD(BOOST_ASYNC_SERVANT_POST_CTOR_LOG_,__VA_ARGS__)(__VA_ARGS__)
 
+#ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
 #define BOOST_ASYNC_SERVANT_POST_DTOR_0()                                                                       \
     static std::size_t get_dtor_prio() {return 0;}
+#endif
 
 #define BOOST_ASYNC_SERVANT_POST_DTOR_1(priority)                                                               \
     static std::size_t get_dtor_prio() {return priority;}
@@ -270,8 +285,10 @@ namespace boost { namespace asynchronous
 #define BOOST_ASYNC_SERVANT_POST_DTOR(...)                                                                      \
     BOOST_PP_OVERLOAD(BOOST_ASYNC_SERVANT_POST_DTOR_,__VA_ARGS__)(__VA_ARGS__)
 
+#ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
 #define BOOST_ASYNC_SERVANT_POST_DTOR_LOG_1(taskname)                                                           \
     static const char* get_dtor_name() {return taskname;}
+#endif
 
 #define BOOST_ASYNC_SERVANT_POST_DTOR_LOG_2(taskname,priority)                                                  \
     static std::size_t get_dtor_prio() {return priority;}                                                       \
@@ -369,30 +386,23 @@ public:
         m_servant.reset();
         m_proxy.reset();
     }
-#ifndef BOOST_NO_RVALUE_REFERENCES
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+    void post(callable_type job, std::size_t prio) const
+#else
     void post(callable_type job, std::size_t prio=0) const
+#endif
     {
         m_proxy.post(std::move(job),prio);
     }
-#else
-    void post(callable_type job, std::size_t prio=0) const
-    {
-        m_proxy.post(job,prio);
-    }
-#endif
     scheduler_proxy_type get_proxy()const
     {
         return m_proxy;
     }
-// g++ 4.5 is uncooperative
-#if defined __GNUC__ == 4 && __GNUC_MINOR__ < 6
-protected:
-#endif
     // for derived to overwrite if needed
     static std::size_t get_ctor_prio() {return 0;}
     static std::size_t get_dtor_prio() {return 0;}
-    static const char* get_ctor_name() {return "";}
-    static const char* get_dtor_name() {return "";}
+    static const char* get_ctor_name() {return "ctor";}
+    static const char* get_dtor_name() {return "dtor";}
 
     scheduler_proxy_type m_proxy;
     boost::shared_ptr<servant_type> m_servant;
@@ -556,10 +566,16 @@ private:
             return *this;
         }
 #endif
+        ~servant_deleter()
+        {
+            // this has to be done whatever happens
+            if(done_promise)
+                done_promise->set_value();
+        }
+
         void operator()()
         {
-            data.reset();
-            done_promise->set_value();
+            data.reset();            
         }
         boost::shared_ptr<servant_type> data;
         boost::shared_ptr<boost::promise<void>> done_promise;

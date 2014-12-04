@@ -65,7 +65,12 @@ public:
     // make a callback, which posts if not the correct thread, and call directly otherwise
     // in any case, check if this object is still alive
     template<typename... Args>
-    std::function<void(Args... )> make_safe_callback(std::function<void(Args... )> func,const std::string& task_name="", std::size_t prio=0)
+    std::function<void(Args... )> make_safe_callback(std::function<void(Args... )> func,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                                                     const std::string& task_name, std::size_t prio)
+#else
+                                                     const std::string& task_name="", std::size_t prio=0)
+#endif
     {
         boost::weak_ptr<track> tracking (m_tracking);
         boost::asynchronous::any_weak_scheduler<JOB> wscheduler = get_scheduler();
@@ -103,19 +108,27 @@ public:
 
     // helper to make it easier using a timer service
     template <class Timer, class F>
-    void async_wait(Timer& t, F func)
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+    void async_wait(Timer& t, F func, std::string const& task_name,std::size_t post_prio, std::size_t cb_prio)
+#else
+    void async_wait(Timer& t, F func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
+#endif
     {
         std::function<void(const ::boost::system::error_code&)> f = std::move(func);
         call_callback(t.get_proxy(),
-                      t.unsafe_async_wait(make_safe_callback(std::move(f))),
+                      t.unsafe_async_wait(make_safe_callback(std::move(f),task_name,cb_prio)),
                       // ignore async_wait callback functor., real callback is above
-                      [](boost::asynchronous::expected<void> ){}
+                      [](boost::asynchronous::expected<void> ){},
+                      task_name, post_prio, cb_prio
                       );
     }
-                
-#ifndef BOOST_NO_RVALUE_REFERENCES
+
     template <class F1, class F2>
-    void post_callback(F1 func,F2 cb_func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0) const
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+    void post_callback(F1 func,F2 cb_func, std::string const& task_name, std::size_t post_prio, std::size_t cb_prio) const
+#else
+    void post_callback(F1 func,F2 cb_func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0) const    
+#endif
     {
         // we want to log if possible
         boost::asynchronous::post_callback(m_worker,
@@ -127,8 +140,13 @@ public:
                                         cb_prio);
     }
     template <class F1, class F2>
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+    boost::asynchronous::any_interruptible interruptible_post_callback(F1 func,F2 cb_func, std::string const& task_name,
+                                                                    std::size_t post_prio, std::size_t cb_prio)
+#else
     boost::asynchronous::any_interruptible interruptible_post_callback(F1 func,F2 cb_func, std::string const& task_name="",
-                                                                    std::size_t post_prio=0, std::size_t cb_prio=0)
+                                                                    std::size_t post_prio=0, std::size_t cb_prio=0)    
+#endif
     {
         return boost::asynchronous::interruptible_post_callback(
                                         m_worker,
@@ -140,7 +158,11 @@ public:
                                         cb_prio);
     }
     template <class Worker,class F1, class F2>
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+    void post_callback(Worker& wscheduler,F1 func,F2 cb_func, std::string const& task_name, std::size_t post_prio, std::size_t cb_prio) const
+#else
     void post_callback(Worker& wscheduler,F1 func,F2 cb_func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0) const
+#endif
     {
         // we want to log if possible
         boost::asynchronous::post_callback(wscheduler,
@@ -152,8 +174,13 @@ public:
                                         cb_prio);
     }
     template <class Worker,class F1, class F2>
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+    boost::asynchronous::any_interruptible interruptible_post_callback(Worker& wscheduler,F1 func,F2 cb_func, std::string const& task_name,
+                                                                    std::size_t post_prio, std::size_t cb_prio)
+#else
     boost::asynchronous::any_interruptible interruptible_post_callback(Worker& wscheduler,F1 func,F2 cb_func, std::string const& task_name="",
                                                                     std::size_t post_prio=0, std::size_t cb_prio=0)
+#endif
     {
         return boost::asynchronous::interruptible_post_callback(
                                         wscheduler,
@@ -165,7 +192,11 @@ public:
                                         cb_prio);
     }
     template <class F1>
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+    auto post_self(F1 func, std::string const& task_name, std::size_t post_prio)
+#else
     auto post_self(F1 func, std::string const& task_name="", std::size_t post_prio=0)
+#endif
         -> boost::future<decltype(func())>
     {
         // we want to log if possible
@@ -175,7 +206,11 @@ public:
                                                 post_prio);
     }
     template <class F1>
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+    auto interruptible_post_self(F1 func, std::string const& task_name,std::size_t post_prio)
+#else
     auto interruptible_post_self(F1 func, std::string const& task_name="",std::size_t post_prio=0)
+#endif
     -> std::tuple<boost::future<decltype(func())>,boost::asynchronous::any_interruptible >
     {
         // we want to log if possible
@@ -186,7 +221,11 @@ public:
                                         post_prio));
     }
     template <class F1>
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+    auto post_future(F1 func, std::string const& task_name, std::size_t post_prio)
+#else
     auto post_future(F1 func, std::string const& task_name="", std::size_t post_prio=0)
+#endif
         -> boost::future<decltype(func())>
     {
         // we want to log if possible
@@ -197,7 +236,12 @@ public:
                                         post_prio);
     }
     template <class F1>
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+    auto interruptible_post_future(F1 func, std::string const& task_name,std::size_t post_prio)
+
+#else
     auto interruptible_post_future(F1 func, std::string const& task_name="",std::size_t post_prio=0)
+#endif
      -> std::tuple<boost::future<decltype(func())>,boost::asynchronous::any_interruptible >
     {
         // we want to log if possible
@@ -208,7 +252,11 @@ public:
                                         post_prio));
     }
     template <class Worker,class F1>
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+    auto post_future(Worker& wscheduler,F1 func, std::string const& task_name, std::size_t post_prio)
+#else
     auto post_future(Worker& wscheduler,F1 func, std::string const& task_name="", std::size_t post_prio=0)
+#endif
         -> boost::future<decltype(func())>
     {
         // we want to log if possible
@@ -219,7 +267,11 @@ public:
                                         post_prio);
     }
     template <class Worker,class F1>
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+    auto interruptible_post_future(Worker& wscheduler,F1 func, std::string const& task_name,std::size_t post_prio)
+#else
     auto interruptible_post_future(Worker& wscheduler,F1 func, std::string const& task_name="",std::size_t post_prio=0)
+#endif
      -> std::tuple<boost::future<decltype(func())>,boost::asynchronous::any_interruptible >
     {
         // we want to log if possible
@@ -230,7 +282,11 @@ public:
                                         post_prio));
     }
     template <class CallerSched,class F1, class F2>
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+    void call_callback(CallerSched s, F1 func,F2 cb_func, std::string const& task_name, std::size_t post_prio, std::size_t cb_prio)
+#else
     void call_callback(CallerSched s, F1 func,F2 cb_func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
+#endif
     {
         // we want to log if possible
         boost::asynchronous::post_callback(s,
@@ -242,8 +298,13 @@ public:
                                         cb_prio);
     }
     template <class CallerSched,class F1, class F2>
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+    boost::asynchronous::any_interruptible interruptible_call_callback(CallerSched s, F1 func,F2 cb_func, std::string const& task_name,
+                                                                    std::size_t post_prio, std::size_t cb_prio)
+#else
     boost::asynchronous::any_interruptible interruptible_call_callback(CallerSched s, F1 func,F2 cb_func, std::string const& task_name="",
                                                                     std::size_t post_prio=0, std::size_t cb_prio=0)
+#endif
     {
         return boost::asynchronous::interruptible_post_callback(
                                         s,
@@ -254,34 +315,7 @@ public:
                                         post_prio,
                                         cb_prio);
     }
-#else
-    template <class F1, class F2>
-    void post_callback(F1 const& func,F2 const& cb_func, std::string const& task_name="",
-                       std::size_t post_prio=0, std::size_t cb_prio=0)
-    {
-        boost::asynchronous::post_callback(
-                                        m_worker,
-                                        boost::asynchronous::check_alive_before_exec(func,m_tracking),
-                                        m_scheduler,
-                                        boost::asynchronous::check_alive(cb_func,m_tracking),
-                                        task_name,
-                                        post_prio,
-                                        cb_prio);
-    }
-    template <class F1, class F2>
-    boost::asynchronous::any_interruptible interruptible_post_callback(F1 const& func,F2 const& cb_func, std::string const& task_name="",
-                                                                    std::size_t post_prio=0, std::size_t cb_prio=0)
-    {
-        return boost::asynchronous::interruptible_post_callback(
-                                        m_worker,
-                                        boost::asynchronous::check_alive_before_exec(func,m_tracking),
-                                        m_scheduler,
-                                        boost::asynchronous::check_alive(cb_func,m_tracking),
-                                        task_name,
-                                        post_prio,
-                                        cb_prio);
-    }
-#endif
+
 protected:
     boost::asynchronous::any_shared_scheduler_proxy<WJOB> const& get_worker()const
     {
