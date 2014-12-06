@@ -55,16 +55,18 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
         boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
         boost::shared_future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<servant_job> tp =get_worker();
-        std::function<void()> f =
-        [aPromise,tp]()
-        {
-            f_called = true;
-            BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
-            std::vector<boost::thread::id> ids = tp.thread_ids();
-            BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread");
-            aPromise->set_value();
-        };
-        auto cb = make_safe_callback(f,"safe_callback");
+
+        auto cb = make_safe_callback(
+                    [aPromise,tp]()
+                    {
+                        f_called = true;
+                        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
+                        std::vector<boost::thread::id> ids = tp.thread_ids();
+                        BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread");
+                        aPromise->set_value();
+                    },
+                    "safe_callback");
+
         post_callback(
            [cb]()
            {

@@ -12,6 +12,7 @@
 
 #include <cstddef>
 
+#include <boost/asynchronous/detail/function_traits.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/post.hpp>
@@ -64,8 +65,19 @@ public:
 
     // make a callback, which posts if not the correct thread, and call directly otherwise
     // in any case, check if this object is still alive
+    template<class T>
+    auto make_safe_callback(T func,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                                                     const std::string& task_name, std::size_t prio)
+#else
+                                                     const std::string& task_name="", std::size_t prio=0)
+#endif
+    -> decltype(boost::asynchronous::make_function(std::move(func)))
+    {
+        return make_safe_callback_helper(boost::asynchronous::make_function(std::move(func)),task_name,prio);
+    }
     template<typename... Args>
-    std::function<void(Args... )> make_safe_callback(std::function<void(Args... )> func,
+    std::function<void(Args... )> make_safe_callback_helper(std::function<void(Args... )> func,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                                                      const std::string& task_name, std::size_t prio)
 #else

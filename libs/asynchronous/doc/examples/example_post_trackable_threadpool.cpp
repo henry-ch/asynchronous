@@ -2,7 +2,7 @@
 #include <boost/enable_shared_from_this.hpp>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
-#include <boost/asynchronous/queue/threadsafe_list.hpp>
+#include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/scheduler/threadpool_scheduler.hpp>
 #include <boost/asynchronous/servant_proxy.hpp>
@@ -100,7 +100,7 @@ void example_post_trackable_not_alive()
         // a single-threaded world, where Servant will live.
         auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                                 new boost::asynchronous::single_thread_scheduler<
-                                     boost::asynchronous::threadsafe_list<> >);
+                                     boost::asynchronous::lockfree_queue<> >);
         {
             ServantProxy proxy(scheduler);
             // call task but not callback, should not crash...
