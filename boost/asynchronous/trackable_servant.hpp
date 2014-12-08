@@ -76,41 +76,7 @@ public:
     {
         return make_safe_callback_helper(boost::asynchronous::make_function(std::move(func)),task_name,prio);
     }
-    template<typename... Args>
-    std::function<void(Args... )> make_safe_callback_helper(std::function<void(Args... )> func,
-#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                                                     const std::string& task_name, std::size_t prio)
-#else
-                                                     const std::string& task_name="", std::size_t prio=0)
-#endif
-    {
-        boost::weak_ptr<track> tracking (m_tracking);
-        boost::asynchronous::any_weak_scheduler<JOB> wscheduler = get_scheduler();
-        //TODO functor with move
-        boost::shared_ptr<std::function<void(Args... )>> func_ptr =
-                boost::make_shared<std::function<void(Args... )>>(std::move(func));
-        std::function<void(Args...)> res = [func_ptr,tracking,wscheduler,task_name,prio](Args... as)mutable
-        {
-            boost::asynchronous::any_shared_scheduler<JOB> sched = wscheduler.lock();
-            if (sched.is_valid())
-            {
-                std::vector<boost::thread::id> ids = sched.thread_ids();
-                if ((std::find(ids.begin(),ids.end(),boost::this_thread::get_id()) != ids.end()))
-                {
-                    // our thread, call if servant alive
-                    //TODO move_bind
-                   std::bind( boost::asynchronous::check_alive([func_ptr](Args... args){(*func_ptr)(std::move(args)...);},tracking),std::move(as)...)();
-                }
-                else
-                {
-                    // not in our thread, post
-                    boost::asynchronous::post_future(sched,std::bind( boost::asynchronous::check_alive([func_ptr](Args... args){(*func_ptr)(std::move(args)...);},tracking),std::move(as)...),
-                                                     std::move(task_name),prio);
-                }
-            }
-        };
-        return res;
-    }
+
     // returns a functor checking if servant is still alive
     std::function<bool()> make_check_alive_functor()const
     {
@@ -326,6 +292,42 @@ public:
                                         task_name,
                                         post_prio,
                                         cb_prio);
+    }
+private:
+    template<typename... Args>
+    std::function<void(Args... )> make_safe_callback_helper(std::function<void(Args... )> func,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                                                     const std::string& task_name, std::size_t prio)
+#else
+                                                     const std::string& task_name="", std::size_t prio=0)
+#endif
+    {
+        boost::weak_ptr<track> tracking (m_tracking);
+        boost::asynchronous::any_weak_scheduler<JOB> wscheduler = get_scheduler();
+        //TODO functor with move
+        boost::shared_ptr<std::function<void(Args... )>> func_ptr =
+                boost::make_shared<std::function<void(Args... )>>(std::move(func));
+        std::function<void(Args...)> res = [func_ptr,tracking,wscheduler,task_name,prio](Args... as)mutable
+        {
+            boost::asynchronous::any_shared_scheduler<JOB> sched = wscheduler.lock();
+            if (sched.is_valid())
+            {
+                std::vector<boost::thread::id> ids = sched.thread_ids();
+                if ((std::find(ids.begin(),ids.end(),boost::this_thread::get_id()) != ids.end()))
+                {
+                    // our thread, call if servant alive
+                    //TODO move_bind
+                   std::bind( boost::asynchronous::check_alive([func_ptr](Args... args){(*func_ptr)(std::move(args)...);},tracking),std::move(as)...)();
+                }
+                else
+                {
+                    // not in our thread, post
+                    boost::asynchronous::post_future(sched,std::bind( boost::asynchronous::check_alive([func_ptr](Args... args){(*func_ptr)(std::move(args)...);},tracking),std::move(as)...),
+                                                     std::move(task_name),prio);
+                }
+            }
+        };
+        return res;
     }
 
 protected:
