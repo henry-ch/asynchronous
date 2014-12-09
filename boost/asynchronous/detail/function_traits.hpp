@@ -35,6 +35,21 @@ struct function_traits<ReturnType(ClassType::*)(Args...)const>
     template <std::size_t i>
     using arg = typename arg_<i>::type;
 };
+template <typename ClassType, typename ReturnType, typename... Args>
+struct function_traits<ReturnType(ClassType::*)(Args...)>
+{
+    enum {arity = sizeof...(Args)};
+    using result_type = ReturnType;
+    using function_type = std::function<ReturnType(Args...)>;
+
+    template <std::size_t i>
+    struct arg_
+    {
+        typedef typename std::tuple_element<i, std::tuple<Args...>>::type type;
+    };
+    template <std::size_t i>
+    using arg = typename arg_<i>::type;
+};
 template <class T>
 auto make_function(T t) -> typename boost::asynchronous::function_traits<T>::function_type
 {
