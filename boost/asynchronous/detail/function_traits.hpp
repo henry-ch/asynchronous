@@ -13,7 +13,6 @@
 
 #include <functional>
 #include <tuple>
-#include <typeinfo>
 
 namespace boost { namespace asynchronous
 {
