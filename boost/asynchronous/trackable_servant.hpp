@@ -18,6 +18,7 @@
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/checks.hpp>
 #include <boost/asynchronous/scheduler/tss_scheduler.hpp>
+#include <boost/asynchronous/detail/move_bind.hpp>
 #include <boost/system/error_code.hpp>
 
 namespace boost { namespace asynchronous
@@ -316,13 +317,15 @@ private:
                 if ((std::find(ids.begin(),ids.end(),boost::this_thread::get_id()) != ids.end()))
                 {
                     // our thread, call if servant alive
-                    //TODO move_bind
-                   std::bind( boost::asynchronous::check_alive([func_ptr](Args... args){(*func_ptr)(std::move(args)...);},tracking),std::move(as)...)();
+                   boost::asynchronous::move_bind( boost::asynchronous::check_alive([func_ptr](Args... args){(*func_ptr)(std::move(args)...);},tracking),
+                                                   std::move(as)...)();
                 }
                 else
                 {
                     // not in our thread, post
-                    boost::asynchronous::post_future(sched,std::bind( boost::asynchronous::check_alive([func_ptr](Args... args){(*func_ptr)(std::move(args)...);},tracking),std::move(as)...),
+                    boost::asynchronous::post_future(sched,
+                                                     boost::asynchronous::move_bind( boost::asynchronous::check_alive([func_ptr](Args... args){(*func_ptr)(std::move(args)...);},tracking),
+                                                                                     std::move(as)...),
                                                      std::move(task_name),prio);
                 }
             }
