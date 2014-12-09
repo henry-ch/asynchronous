@@ -75,7 +75,7 @@ public:
 #endif
     -> decltype(boost::asynchronous::make_function(std::move(func)))
     {
-        return make_safe_callback_helper(boost::asynchronous::make_function(std::move(func)),task_name,prio);
+        return this->make_safe_callback_helper(boost::asynchronous::make_function(std::move(func)),task_name,prio);
     }
 
     // returns a functor checking if servant is still alive

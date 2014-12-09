@@ -40,7 +40,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         boost::shared_ptr<boost::promise<int> > aPromise(new boost::promise<int>);
         boost::future<int> fu = aPromise->get_future();
         auto cb = make_safe_callback(
-                    [aPromise](boost::future<int> fu)
+                    [aPromise](int i,boost::future<int> fu)mutable
                     {
                         aPromise->set_value(fu.get());
                     });
@@ -49,7 +49,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
            [cb]()
            {
             boost::future<int> fu (boost::make_ready_future(42));
-            cb(std::move(fu));
+            int i = 5;
+            cb(i,std::move(fu));
            },
            [](boost::asynchronous::expected<void>){}
         );
