@@ -18,7 +18,7 @@ namespace boost { namespace asynchronous
 {
 template <class To, class From>
 class queue_converter:
-        #ifdef BOOST_ASYNCHRONOUS_NO_TYPE_ERASURE
+        #ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
                 public boost::asynchronous::any_queue_concept<To>,
         #endif
                 public boost::asynchronous::queue_base<To>, private boost::noncopyable

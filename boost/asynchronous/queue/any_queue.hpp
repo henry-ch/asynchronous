@@ -26,7 +26,7 @@
 
 namespace boost { namespace asynchronous
 {
-#ifndef BOOST_ASYNCHRONOUS_NO_TYPE_ERASURE
+#ifdef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
 template <class JOB>
 struct any_queue_ptr_concept:
   ::boost::mpl::vector<

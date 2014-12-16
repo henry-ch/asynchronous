@@ -34,7 +34,7 @@
 
 namespace boost { namespace asynchronous
 {
-#ifndef BOOST_ASYNCHRONOUS_NO_TYPE_ERASURE
+#ifdef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
 // for implementation use only
 template <class JOB>
 struct internal_scheduler_aspect_concept:

@@ -46,14 +46,14 @@ namespace boost { namespace asynchronous
 
 template<class FindPosition=boost::asynchronous::default_find_position<boost::asynchronous::sequential_push_policy > ,
          class CPULoad =
-#ifndef BOOST_ASYNCHRONOUS_SAVE_CPU_LOAD
+#ifdef BOOST_ASYNCHRONOUS_NO_SAVING_CPU_LOAD
          boost::asynchronous::no_cpu_load_saving
 #else
          boost::asynchronous::default_save_cpu_load<>
 #endif
          >
 class asio_scheduler : 
-#ifdef BOOST_ASYNCHRONOUS_NO_TYPE_ERASURE
+#ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
         public any_shared_scheduler_concept<boost::asynchronous::any_callable>,
 #endif          
         public FindPosition

@@ -25,7 +25,7 @@ namespace boost { namespace asynchronous { namespace detail
 {
 template<class Q>
 class single_queue_scheduler_policy: 
-#ifdef BOOST_ASYNCHRONOUS_NO_TYPE_ERASURE
+#ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
         public any_shared_scheduler_concept<typename Q::job_type>,
 #endif          
         private boost::noncopyable
