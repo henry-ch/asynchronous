@@ -9,6 +9,12 @@
 
 #ifndef BOOST_ASYNCHRONOUS_HELPERS_HPP
 #define BOOST_ASYNCHRONOUS_HELPERS_HPP
+
+#include <vector>
+#include <tuple>
+#include <boost/chrono/chrono.hpp>
+#include <boost/asynchronous/post.hpp>
+
 namespace boost { namespace asynchronous
 {
 // calls f(cutoff) on the given scheduler and measures elapsed time
@@ -64,6 +70,37 @@ std::tuple<std::size_t,std::vector<std::size_t>> find_best_cutoff(Scheduler s, F
         }
     }
     return std::make_tuple(best_cutoff,std::move(map_cutoff_to_elapsed[best_cutoff]));
+}
+
+template <class T>
+struct force_move_t
+{
+    force_move_t(T data): m_data(std::move(data)){}
+    force_move_t(force_move_t&& rhs)noexcept
+        : m_data(std::move(rhs.m_data)){}
+    force_move_t(force_move_t const& rhs)noexcept
+        : m_data(std::move(const_cast<force_move_t&>(rhs).m_data)){}
+
+    force_move_t& operator= (force_move_t&& rhs) noexcept
+    {
+        std::swap(m_data,rhs.m_data);
+        return *this;
+    }
+    force_move_t& operator= (force_move_t const& rhs) noexcept
+    {
+        std::swap(m_data,const_cast<force_move_t&>(rhs).m_data);
+        return *this;
+    }
+
+    operator T() {return std::move(m_data);}
+private:
+    T m_data;
+};
+
+template <class T>
+force_move_t<T> force_move(T t)
+{
+    return force_move_t<T>(std::move(t));
 }
 }}
 #endif // BOOST_ASYNCHRONOUS_HELPERS_HPP

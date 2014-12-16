@@ -49,7 +49,7 @@ template<class Job = BOOST_ASYNCHRONOUS_DEFAULT_JOB,
          class FindPosition=boost::asynchronous::default_find_position< >,
          class Clock = boost::chrono::high_resolution_clock >
 class composite_threadpool_scheduler: 
-#ifdef BOOST_ASYNCHRONOUS_NO_TYPE_ERASURE
+#ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
         public any_shared_scheduler_proxy_concept<Job>, public internal_scheduler_aspect_concept<Job>,
 #endif        
         public FindPosition, public boost::enable_shared_from_this<composite_threadpool_scheduler<Job,FindPosition,Clock> >
@@ -267,7 +267,7 @@ private:
     // shared scheduler for use in the servant context
     // implements any_shared_scheduler_concept
     struct lockable_shared_scheduler : 
-#ifdef BOOST_ASYNCHRONOUS_NO_TYPE_ERASURE
+#ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
             public any_shared_scheduler_concept<job_type>,
 #endif       
             public FindPosition
@@ -428,7 +428,7 @@ template<class Job, class FindPosition,class Clock>
 boost::asynchronous::any_shared_scheduler_proxy<Job>
 create_shared_scheduler_proxy(composite_threadpool_scheduler<Job,FindPosition,Clock>* scheduler)
 {
-#ifdef BOOST_ASYNCHRONOUS_NO_TYPE_ERASURE
+#ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
     boost::asynchronous::any_shared_scheduler_proxy<Job> pcomposite(scheduler);
 #else
     boost::shared_ptr<boost::asynchronous::composite_threadpool_scheduler<Job> > sp(scheduler);

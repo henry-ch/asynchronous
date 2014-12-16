@@ -354,7 +354,9 @@ public:
             throw servant_proxy_timeout();
         }
     }
-    servant_proxy(scheduler_proxy_type p, boost::future<servant_type> s)
+    // templatize to avoid gcc complaining in case servant is pure virtual
+    template <class CServant>
+    servant_proxy(scheduler_proxy_type p, boost::future<CServant> s)
         : m_proxy(p)
         , m_servant()
     {

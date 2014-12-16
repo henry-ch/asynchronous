@@ -46,7 +46,7 @@ namespace boost { namespace asynchronous
 
 //TODO boost.parameter
 template<class Q, class CPULoad =
-#ifndef BOOST_ASYNCHRONOUS_SAVE_CPU_LOAD
+#ifdef BOOST_ASYNCHRONOUS_NO_SAVING_CPU_LOAD
          boost::asynchronous::no_cpu_load_saving
 #else
          boost::asynchronous::default_save_cpu_load<>

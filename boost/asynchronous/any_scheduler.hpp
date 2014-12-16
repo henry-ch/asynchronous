@@ -38,7 +38,7 @@
 
 namespace boost { namespace asynchronous
 {
-#ifndef BOOST_ASYNCHRONOUS_NO_TYPE_ERASURE
+#ifdef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
 template <class JOB,class Clock>
 struct any_shared_scheduler_concept :
  ::boost::mpl::vector<
@@ -128,7 +128,7 @@ public:
     }
     bool is_valid()const
     {
-#ifdef BOOST_ASYNCHRONOUS_NO_TYPE_ERASURE
+#ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
         return !!my_ptr;
 #else
         return my_ptr.is_valid();

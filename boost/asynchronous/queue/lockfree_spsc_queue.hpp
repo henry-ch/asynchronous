@@ -21,7 +21,7 @@ namespace boost { namespace asynchronous
 {
 template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB >
 class lockfree_spsc_queue: 
-#ifdef BOOST_ASYNCHRONOUS_NO_TYPE_ERASURE
+#ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
         public boost::asynchronous::any_queue_concept<JOB>,
 #endif           
         public boost::asynchronous::queue_base<JOB>, private boost::noncopyable

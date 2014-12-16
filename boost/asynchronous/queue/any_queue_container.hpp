@@ -50,7 +50,7 @@ private:
 template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB,
           class PushPolicy = boost::asynchronous::default_find_position< > >
 class any_queue_container: 
-#ifdef BOOST_ASYNCHRONOUS_NO_TYPE_ERASURE
+#ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
                            public boost::asynchronous::any_queue_concept<JOB>,
 #endif          
                            public boost::asynchronous::queue_base<JOB>,
