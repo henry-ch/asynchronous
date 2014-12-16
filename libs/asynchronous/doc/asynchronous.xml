@@ -322,7 +322,8 @@ string s= f2.get();</programlisting>
                         xlink:href="http://www.boost.org/doc/libs/1_57_0/doc/html/boost_asio/overview/core/async.html"
                         >Boost.Asio documentation</link> for a full explanation. Boost Asynchronous
                     is very similar. It supports enqueueing asynchronous operations and waiting for
-                    callbacks, with extensions: safe callbacks, threadpools, proxies, etc.</para>
+                    callbacks, offering extensions: safe callbacks, threadpools, proxies,
+                    etc.</para>
             </sect1>
         </chapter>
         <chapter>
@@ -959,7 +960,7 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
 ServantProxy proxy(scheduler); 
 ...
 // let's ask the single-threaded scheduler what it did.
-diag_type single_thread_sched_diag = (*scheduler).get_diagnostics(); 
+diag_type single_thread_sched_diag = scheduler.get_diagnostics(); 
 for (auto mit = single_thread_sched_diag.begin(); mit != single_thread_sched_diag.end() ; ++mit)
 {
      std::cout &lt;&lt; "job type: " &lt;&lt; (*mit).first &lt;&lt; std::endl;
