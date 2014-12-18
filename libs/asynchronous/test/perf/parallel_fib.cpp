@@ -97,6 +97,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                [this](boost::asynchronous::expected<long> res){
                             this->on_callback(res.get());
                }// callback functor.
+        ,"",0,0
         );
         return fu;
     }
@@ -112,7 +113,7 @@ public:
         boost::asynchronous::servant_proxy<ServantProxy,Servant>(s,threads)
     {}
     // caller will get a future
-    BOOST_ASYNC_FUTURE_MEMBER(calc_fibonacci)
+    BOOST_ASYNC_FUTURE_MEMBER(calc_fibonacci,0)
 };
 
 }

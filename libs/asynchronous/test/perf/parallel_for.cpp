@@ -111,12 +111,13 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                                  [](float const& i)
                                                                  {
                                                                     const_cast<float&>(i) = Foo(i);
-                                                                 },tasksize);
+                                                                 },tasksize,"",0);
                       },// work
                // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
                [this](boost::asynchronous::expected<void> /*res*/){
                             this->on_callback();
                }// callback functor.
+               ,"",0,0
         );
         return fu;
     }
@@ -131,7 +132,7 @@ public:
     ServantProxy(Scheduler s):
         boost::asynchronous::servant_proxy<ServantProxy,Servant>(s)
     {}
-    BOOST_ASYNC_FUTURE_MEMBER(start_async_work)
+    BOOST_ASYNC_FUTURE_MEMBER(start_async_work,0)
 };
 void ParallelAsyncPostCb(float a[], size_t n)
 {
@@ -167,6 +168,6 @@ int main( int argc, const char *argv[] )
     {     
         test(ParallelAsyncPostCb);
     }
-    printf ("%24s: time = %.1f msec\n","parallel async cb intern", servant_intern);
+    printf ("%24s: time = %.1f usec\n","parallel async cb intern", servant_intern);
     return 0;
 }

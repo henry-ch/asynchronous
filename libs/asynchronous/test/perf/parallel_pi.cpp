@@ -61,7 +61,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                    [cutoff]()
                    {
                         auto sum = [](double a, double b) { return a + b; };
-                        return boost::asynchronous::parallel_reduce(boost::asynchronous::lazy_irange(0L, COUNT, pi()), sum, cutoff);
+                        return boost::asynchronous::parallel_reduce(boost::asynchronous::lazy_irange(0L, COUNT, pi()), sum, cutoff,"",0);
                    },// work
                    get_scheduler(),
                    [aPromise,this](boost::asynchronous::expected<double> res){
@@ -71,6 +71,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                   <<  (boost::chrono::nanoseconds(stop_ - start_).count() / 1000) <<"\n" <<std::endl;
                         aPromise->set_value(p*4.0);
                    }// callback functor.
+                   ,"",0,0
         );
         return fu;
     }
@@ -91,7 +92,7 @@ public:
         boost::asynchronous::servant_proxy<ServantProxy,Servant>(s,threads,cutoff)
     {}
     // caller will get a future
-    BOOST_ASYNC_FUTURE_MEMBER(calc_pi)
+    BOOST_ASYNC_FUTURE_MEMBER(calc_pi,0)
 };
 
 int main(int argc, char* argv[])
