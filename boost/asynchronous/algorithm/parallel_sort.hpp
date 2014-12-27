@@ -28,6 +28,7 @@
 #include <boost/asynchronous/detail/metafunctions.hpp>
 #include <boost/asynchronous/algorithm/parallel_merge.hpp>
 #include <boost/asynchronous/algorithm/parallel_is_sorted.hpp>
+#include <boost/asynchronous/algorithm/parallel_reverse.hpp>
 #ifdef BOOST_ASYNCHRONOUS_USE_BOOST_SPREADSORT
 #include <boost/sort/spreadsort/spreadsort.hpp>
 #endif
@@ -672,7 +673,7 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
             auto func = func_;
             auto cutoff = cutoff_;
             auto task_name = this->get_name();
-            auto cont = boost::asynchronous::parallel_is_sorted(beg_,end_,func_,cutoff_,task_name+"is_sorted",prio_);
+            auto cont = boost::asynchronous::parallel_is_sorted(beg_,end_,func_,cutoff_,task_name+"_is_sorted",prio_);
             auto prio = prio_;
             cont.on_done([beg,end,depth,merge_memory,merge_beg,merge_end,func,cutoff,task_name,prio,task_res]
                          (std::tuple<boost::asynchronous::expected<bool> >&& res)
@@ -685,19 +686,37 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
                         task_res.set_value();
                         return;
                     }
-                    auto cont2 = boost::asynchronous::parallel_is_reverse_sorted(beg,end,func,cutoff,task_name+"is_reverse_sorted",prio);
+                    auto cont2 = boost::asynchronous::parallel_is_reverse_sorted(beg,end,func,cutoff,task_name+"_is_reverse_sorted",prio);
                     cont2.on_done([beg,end,depth,merge_memory,merge_beg,merge_end,func,cutoff,task_name,prio,task_res]
                                   (std::tuple<boost::asynchronous::expected<bool> >&& res)
                     {
-                        bool sorted = std::get<0>(res).get();
-                        if (sorted)
+                        try
                         {
-                            // reverse sorted
-                            std::reverse(beg,end);
-                            task_res.set_value();
-                            return;
+                            bool sorted = std::get<0>(res).get();
+                            if (sorted)
+                            {
+                                // reverse sorted
+                                auto cont3 = boost::asynchronous::parallel_reverse(beg,end,cutoff,task_name+"_reverse",prio);
+                                cont3.on_done([task_res](std::tuple<boost::asynchronous::expected<void> >&& res)
+                                {
+                                    try
+                                    {
+                                        std::get<0>(res).get();
+                                        task_res.set_value();
+                                    }
+                                    catch(std::exception& e)
+                                    {
+                                        task_res.set_exception(boost::copy_exception(e));
+                                    }
+                                });
+                                return;
+                            }
+                            helper(beg,end,depth,merge_memory,merge_beg,merge_end,func,cutoff,task_name,prio,task_res);
                         }
-                        helper(beg,end,depth,merge_memory,merge_beg,merge_end,func,cutoff,task_name,prio,task_res);
+                        catch(std::exception& e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
                     });
                 }
                 catch(std::exception& e)
