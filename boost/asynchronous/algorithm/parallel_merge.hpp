@@ -38,11 +38,6 @@ struct parallel_merge_helper: public boost::asynchronous::continuation_task<void
         boost::asynchronous::continuation_result<void> task_res = this_task_result();
         auto length1 = std::distance(beg1_,end1_);
         auto length2 = std::distance(beg2_,end2_);
-//        if (length1 == 0)
-//        {
-//            task_res.set_value();
-//            return;
-//        }
         // if not at end, recurse, otherwise execute here
         if ((length1+length2) <= cutoff_)
         {
@@ -53,37 +48,20 @@ struct parallel_merge_helper: public boost::asynchronous::continuation_task<void
         {
             if (length1 >= length2)
             {
+                if (length1 == 0)
+                {
+                    task_res.set_value();
+                    return;
+                }
                 helper(beg1_,end1_,beg2_,end2_,out_,std::move(task_res));
-//                auto it1 = (beg1_+ (end1_ - beg1_)/2);
-//                auto it2 = std::lower_bound(beg2_,end2_, *it1);
-//                auto it3 = out_ + ((it1 - beg1_) + (it2 - beg2_));
-//                // TODO move?
-//                *it3 = *it1;
-//                boost::asynchronous::create_callback_continuation_job<Job>(
-//                            // called when subtasks are done, set our result
-//                            [task_res](std::tuple<boost::asynchronous::expected<void>,boost::asynchronous::expected<void> > res)
-//                            {
-//                                try
-//                                {
-//                                    // get to check that no exception
-//                                    std::get<0>(res).get();
-//                                    std::get<1>(res).get();
-//                                    task_res.set_value();
-//                                }
-//                                catch(std::exception& e)
-//                                {
-//                                    task_res.set_exception(boost::copy_exception(e));
-//                                }
-//                            },
-//                            // recursive tasks
-//                            parallel_merge_helper<Iterator1,Iterator2,OutIterator,Func,Job>
-//                                (beg1_,it1,beg2_,it2,out_,func_,cutoff_,this->get_name(),prio_),
-//                            parallel_merge_helper<Iterator1,Iterator2,OutIterator,Func,Job>
-//                                (it1+1,end1_,it2,end2_,it3+1,func_,cutoff_,this->get_name(),prio_)
-//                );
             }
             else
             {
+                if (length2 == 0)
+                {
+                    task_res.set_value();
+                    return;
+                }
                 helper(beg2_,end2_,beg1_,end1_,out_,std::move(task_res));
             }
         }

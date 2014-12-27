@@ -44,7 +44,9 @@ struct my_exception : virtual boost::exception, virtual std::exception
 void generate(std::vector<int>& data, unsigned elements, unsigned dist)
 {
     data = std::vector<int>(elements,1);
-    std::mt19937 mt(static_cast<unsigned int>(std::time(nullptr)));
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    //std::mt19937 mt(static_cast<unsigned int>(std::time(nullptr)));
     std::uniform_int_distribution<> dis(0, dist);
     std::generate(data.begin(), data.end(), std::bind(dis, std::ref(mt)));
 }
@@ -244,25 +246,25 @@ BOOST_AUTO_TEST_CASE( test_parallel_merge_1000_1000 )
     BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
 }
 // for performance tests
-//BOOST_AUTO_TEST_CASE( test_parallel_merge_100000000_80000000 )
-//{
-//    servant_dtor=false;
-//    {
-//        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-//                                                                            boost::asynchronous::lockfree_queue<> >);
+BOOST_AUTO_TEST_CASE( test_parallel_merge_100000000_80000000 )
+{
+    servant_dtor=false;
+    {
+        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<> >);
 
-//        main_thread_id = boost::this_thread::get_id();
-//        ServantProxy proxy(scheduler);
-//        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_parallel_merge_100000000_80000000();
-//        try
-//        {
-//            boost::shared_future<void> resfuv = fuv.get();
-//            resfuv.get();
-//        }
-//        catch(...)
-//        {
-//            BOOST_FAIL( "unexpected exception" );
-//        }
-//    }
-//    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
-//}
+        main_thread_id = boost::this_thread::get_id();
+        ServantProxy proxy(scheduler);
+        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_parallel_merge_100000000_80000000();
+        try
+        {
+            boost::shared_future<void> resfuv = fuv.get();
+            resfuv.get();
+        }
+        catch(...)
+        {
+            BOOST_FAIL( "unexpected exception" );
+        }
+    }
+    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
+}

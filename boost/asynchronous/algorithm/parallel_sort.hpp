@@ -26,6 +26,7 @@
 #include <boost/asynchronous/scheduler/serializable_task.hpp>
 #include <boost/asynchronous/algorithm/detail/safe_advance.hpp>
 #include <boost/asynchronous/detail/metafunctions.hpp>
+#include <boost/asynchronous/algorithm/parallel_merge.hpp>
 #ifdef BOOST_ASYNCHRONOUS_USE_BOOST_SPREADSORT
 #include <boost/sort/spreadsort/spreadsort.hpp>
 #endif
@@ -607,9 +608,13 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
             auto end2 = merge_end_;
             auto depth = depth_;
             auto it2 = merge_beg_+std::distance(beg_,it);
+            auto cutoff = cutoff_;
+            auto task_name = this->get_name()+ "_merge";
+            auto prio = prio_;
+            auto merge_memory = merge_memory_;
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [task_res,func,beg,end,it,beg2,end2,it2,depth]
+                        [task_res,func,beg,end,it,beg2,end2,it2,depth,cutoff,task_name,prio,merge_memory]
                         (std::tuple<boost::asynchronous::expected<void>,boost::asynchronous::expected<void> > res)
                         {
                             try
@@ -618,17 +623,31 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
                                 std::get<0>(res).get();
                                 std::get<1>(res).get();
                                 // merge both sorted sub-ranges
+                                auto on_done_fct = [task_res,depth,merge_memory](std::tuple<boost::asynchronous::expected<void> >&& merge_res)
+                                {
+                                    try
+                                    {
+                                        // get to check that no exception
+                                        std::get<0>(merge_res).get();
+                                        task_res.set_value();
+                                    }
+                                    catch(std::exception& e)
+                                    {
+                                        task_res.set_exception(boost::copy_exception(e));
+                                    }
+                                };
                                 if (depth%2 == 0)
                                 {
                                     // merge into first range
-                                    std::merge(beg2,it2,it2,end2,beg,func);
+                                    auto c = boost::asynchronous::parallel_merge(beg2,it2,it2,end2,beg,func,cutoff,task_name,prio);
+                                    c.on_done(std::move(on_done_fct));
                                 }
                                 else
                                 {
                                     // merge into second range
-                                    std::merge(beg,it,it,end,beg2,func);
+                                    auto c = boost::asynchronous::parallel_merge(beg,it,it,end,beg2,func,cutoff,task_name,prio);
+                                    c.on_done(std::move(on_done_fct));
                                 }
-                                task_res.set_value();
                             }
                             catch(std::exception& e)
                             {
