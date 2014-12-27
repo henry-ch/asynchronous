@@ -27,6 +27,7 @@
 #include <boost/asynchronous/algorithm/detail/safe_advance.hpp>
 #include <boost/asynchronous/detail/metafunctions.hpp>
 #include <boost/asynchronous/algorithm/parallel_merge.hpp>
+#include <boost/asynchronous/algorithm/parallel_is_sorted.hpp>
 #ifdef BOOST_ASYNCHRONOUS_USE_BOOST_SPREADSORT
 #include <boost/sort/spreadsort/spreadsort.hpp>
 #endif
@@ -588,33 +589,26 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
         , merge_beg_( beg2), merge_end_(end2)
     {
     }
-    void operator()()const
+    static void helper(Iterator beg, Iterator end,unsigned int depth,boost::shared_array<value_type> merge_memory,
+                       value_type* beg2, value_type* end2,
+                       Func func,long cutoff,const std::string& task_name, std::size_t prio,
+                       boost::asynchronous::continuation_result<void> task_res)
     {
-        boost::asynchronous::continuation_result<void> task_res = this_task_result();
         // advance up to cutoff
-        Iterator it = boost::asynchronous::detail::find_cutoff(beg_,cutoff_,end_);
+        Iterator it = boost::asynchronous::detail::find_cutoff(beg,cutoff,end);
         // if not at end, recurse, otherwise execute here
-        if ((it == end_)&&(depth_ %2 == 0))
+        if ((it == end)&&(depth %2 == 0))
         {
-            Sort()(beg_,it,func_);
+            Sort()(beg,it,func);
             task_res.set_value();
         }
         else
         {
-            auto beg = beg_;
-            auto end = end_;
-            auto func = func_;
-            auto beg2 = merge_beg_;
-            auto end2 = merge_end_;
-            auto depth = depth_;
-            auto it2 = merge_beg_+std::distance(beg_,it);
-            auto cutoff = cutoff_;
-            auto task_name = this->get_name()+ "_merge";
-            auto prio = prio_;
-            auto merge_memory = merge_memory_;
+            auto it2 = beg2+std::distance(beg,it);
+            auto merge_task_name = task_name + "_merge";
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [task_res,func,beg,end,it,beg2,end2,it2,depth,cutoff,task_name,prio,merge_memory]
+                        [task_res,func,beg,end,it,beg2,end2,it2,depth,cutoff,merge_task_name,prio,merge_memory]
                         (std::tuple<boost::asynchronous::expected<void>,boost::asynchronous::expected<void> > res)
                         {
                             try
@@ -639,13 +633,13 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
                                 if (depth%2 == 0)
                                 {
                                     // merge into first range
-                                    auto c = boost::asynchronous::parallel_merge(beg2,it2,it2,end2,beg,func,cutoff,task_name,prio);
+                                    auto c = boost::asynchronous::parallel_merge(beg2,it2,it2,end2,beg,func,cutoff,merge_task_name,prio);
                                     c.on_done(std::move(on_done_fct));
                                 }
                                 else
                                 {
                                     // merge into second range
-                                    auto c = boost::asynchronous::parallel_merge(beg,it,it,end,beg2,func,cutoff,task_name,prio);
+                                    auto c = boost::asynchronous::parallel_merge(beg,it,it,end,beg2,func,cutoff,merge_task_name,prio);
                                     c.on_done(std::move(on_done_fct));
                                 }
                             }
@@ -656,11 +650,51 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
                         },
                         // recursive tasks
                         parallel_sort_fast_helper<Iterator,Func,Job,Sort>
-                            (beg_,it,depth_+1,merge_memory_,merge_beg_,it2,func_,cutoff_,this->get_name(),prio_),
+                            (beg,it,depth+1,merge_memory,beg2,it2,func,cutoff,task_name,prio),
                         parallel_sort_fast_helper<Iterator,Func,Job,Sort>
-                            (it,end_,depth_+1,merge_memory_,it2,merge_end_,func_,cutoff_,this->get_name(),prio_)
+                            (it,end,depth+1,merge_memory,it2,end2,func,cutoff,task_name,prio)
                );
         }
+    }
+
+    void operator()()const
+    {
+        boost::asynchronous::continuation_result<void> task_res = this_task_result();
+        if (depth_ == 0)
+        {
+            // optimization for cases where we are already sorted
+            auto beg = beg_;
+            auto end = end_;
+            auto depth = depth_;
+            auto merge_memory = merge_memory_;
+            auto merge_beg = merge_beg_;
+            auto merge_end = merge_end_;
+            auto func = func_;
+            auto cutoff = cutoff_;
+            auto task_name = this->get_name();
+            auto cont = boost::asynchronous::parallel_is_sorted(beg_,end_,func_,cutoff_,task_name+"is_sorted",prio_);
+            auto prio = prio_;
+            cont.on_done([beg,end,depth,merge_memory,merge_beg,merge_end,func,cutoff,task_name,prio,task_res]
+                         (std::tuple<boost::asynchronous::expected<bool> >&& res)
+            {
+                try
+                {
+                    bool sorted = std::get<0>(res).get();
+                    if (sorted)
+                    {
+                        task_res.set_value();
+                        return;
+                    }
+                    helper(beg,end,depth,merge_memory,merge_beg,merge_end,func,cutoff,task_name,prio,task_res);
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
+            });
+            return;
+        }
+        helper(beg_,end_,depth_,merge_memory_,merge_beg_,merge_end_,func_,cutoff_,this->get_name(),prio_,std::move(task_res));
     }
     Iterator beg_;
     Iterator end_;
