@@ -685,7 +685,20 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
                         task_res.set_value();
                         return;
                     }
-                    helper(beg,end,depth,merge_memory,merge_beg,merge_end,func,cutoff,task_name,prio,task_res);
+                    auto cont2 = boost::asynchronous::parallel_is_reverse_sorted(beg,end,func,cutoff,task_name+"is_reverse_sorted",prio);
+                    cont2.on_done([beg,end,depth,merge_memory,merge_beg,merge_end,func,cutoff,task_name,prio,task_res]
+                                  (std::tuple<boost::asynchronous::expected<bool> >&& res)
+                    {
+                        bool sorted = std::get<0>(res).get();
+                        if (sorted)
+                        {
+                            // reverse sorted
+                            std::reverse(beg,end);
+                            task_res.set_value();
+                            return;
+                        }
+                        helper(beg,end,depth,merge_memory,merge_beg,merge_end,func,cutoff,task_name,prio,task_res);
+                    });
                 }
                 catch(std::exception& e)
                 {

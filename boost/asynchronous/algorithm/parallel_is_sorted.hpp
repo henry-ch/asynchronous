@@ -98,5 +98,35 @@ parallel_is_sorted(Iterator beg, Iterator end, Func func,long cutoff,
 
 }
 
+namespace detail
+{
+    template <class Func>
+    struct reverse_sorted
+    {
+        reverse_sorted(Func f):func_(std::move(f)){}
+        template <class T>
+        bool operator ()(T const& lhs, T const& rhs)const
+        {
+            return func_(rhs,lhs);
+        }
+        Func func_;
+    };
+}
+
+template <class Iterator, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation<bool,Job>
+parallel_is_reverse_sorted(Iterator beg, Iterator end, Func func,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                    const std::string& task_name, std::size_t prio)
+#else
+                    const std::string& task_name="", std::size_t prio=0)
+#endif
+{
+    return boost::asynchronous::top_level_callback_continuation_job<bool,Job>
+            (boost::asynchronous::detail::parallel_is_sorted_helper<Iterator,boost::asynchronous::detail::reverse_sorted<Func>,Job>
+                (beg,end,boost::asynchronous::detail::reverse_sorted<Func>(std::move(func)),cutoff,task_name,prio));
+
+}
+
 }}
 #endif // BOOST_ASYNCHRONOUS_PARALLEL_IS_SORTED_HPP
