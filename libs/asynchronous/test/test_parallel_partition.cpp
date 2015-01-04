@@ -70,8 +70,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
     boost::shared_future<void> test_parallel_partition()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant async work not posted.");
-        generate(m_data1,100,70);
-        m_data2 = std::vector<int>(100,-1);
+        generate(m_data1,1000,700);
+        m_data2 = std::vector<int>(1000,-1);
         auto data_copy = m_data1;
         // we need a promise to inform caller when we're done
         boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
@@ -84,7 +84,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     std::vector<boost::thread::id> ids = tp.thread_ids();
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
                     return boost::asynchronous::parallel_partition(m_data1.begin(),m_data1.end(),m_data2.begin(),
-                                                                   [](int i){return i < 30;},10);
+                                                                   [](int i){return i < 300;},100);
                     },// work
            [aPromise,tp,data_copy,this](boost::asynchronous::expected<std::vector<int>::iterator> res) mutable{
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
@@ -92,56 +92,45 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         std::vector<boost::thread::id> ids = tp.thread_ids();
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
-                        auto it = std::partition(data_copy.begin(),data_copy.end(),[](int i){return i < 30;});
+
+                        auto it = std::partition(data_copy.begin(),data_copy.end(),[](int i){return i < 300;});
                         std::size_t dist2 = it - data_copy.begin();                                                                       
                         auto it2 = res.get();
 
-                        //try comparison
+                        // check if the iterator is at the same position
+                        std::size_t dist1 = it2 - m_data2.begin();
+                        BOOST_CHECK_MESSAGE(dist1 == dist2,"parallel_partition gave the wrong iterator.");
+
+                        bool ok = true;
+                        for (auto it3 = m_data2.begin() ; it3 != it2 ; ++it3)
+                        {
+                            if (*it3 >= 300 || *it3 == -1)
+                                ok = false;
+                        }
+                        BOOST_CHECK_MESSAGE(ok,"parallel_partition has false elements at wrong place.");
+                        ok = true;
+                        for (auto it3 = it2 ; it3 != m_data2.end() ; ++it3)
+                        {
+                           if (*it3 < 300)
+                               ok = false;
+                        }
+                        BOOST_CHECK_MESSAGE(ok,"parallel_partition has true elements at wrong place.");
+
+                        // to compare we need to sort because while sequential and parallel algorithm are both correct
+                        // and stable, they do not return the same results
                         std::sort(data_copy.begin(), it, std::less<int>());
                         std::sort(m_data2.begin(), it2, std::less<int>());
                         std::sort(it, data_copy.end(), std::less<int>());
                         std::sort(it2, m_data2.end(), std::less<int>());
 
                         BOOST_CHECK_MESSAGE(m_data2 == data_copy,"parallel_partition did not partition correctly.");
-
-                        std::size_t dist1 = it2 - m_data2.begin();
-                        std::cout << "found: " << dist1 << " true elements" << std::endl;
-                        BOOST_CHECK_MESSAGE(dist1 == dist2,"parallel_partition gave the wrong iterator.");
                         std::vector<int> true_part_1(m_data2.begin(),it2);
                         std::vector<int> true_part_2(data_copy.begin(),it);
                         BOOST_CHECK_MESSAGE(true_part_1 == true_part_2,"parallel_partition partitioned first part wrong.");
-                        std::cout << "seq true" << std::endl;
-                        for (auto it3 = data_copy.begin() ; it3 != it ; ++it3)
-                        {
-                            std::cout << *it3 <<" ";
-                        }
-                        std::cout << std::endl;std::cout << std::endl;
-                        bool ok = true;
-                        std::cout << "parallel true" << std::endl;
-                        for (auto it3 = m_data2.begin() ; it3 != it2 ; ++it3)
-                        {
-                            std::cout << *it3 <<" ";
-                            if (*it3 >= 30 || *it3 == -1)
-                                ok = false;
-                        }
-                        std::cout << std::endl;std::cout << std::endl;
-                        BOOST_CHECK_MESSAGE(ok,"parallel_partition has false elements at wrong place.");
-                        std::cout << "seq false" << std::endl;
-                        for (auto it3 = it ; it3 != data_copy.end() ; ++it3)
-                        {
-                            std::cout << *it3 <<" ";
-                        }
-                        std::cout << std::endl;std::cout << std::endl;
-                        ok = true;
-                        std::cout << "parallel false" << std::endl;
-                        for (auto it3 = it2 ; it3 != m_data2.end() ; ++it3)
-                        {
-                          std::cout << *it3 <<" " ;
-                           if (*it3 < 30)
-                               ok = false;
-                        }
-                        std::cout << std::endl;
-                        BOOST_CHECK_MESSAGE(ok,"parallel_partition has true elements at wrong place.");
+                        std::vector<int> true_part_1b(it2,m_data2.end());
+                        std::vector<int> true_part_2b(it,data_copy.end());
+                        BOOST_CHECK_MESSAGE(true_part_1b == true_part_2b,"parallel_partition partitioned second part wrong.");
+
                         aPromise->set_value();
            }// callback functor.
         );

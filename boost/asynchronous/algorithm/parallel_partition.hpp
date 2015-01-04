@@ -171,12 +171,12 @@ struct parallel_partition_part2_helper: public boost::asynchronous::continuation
                         parallel_partition_part2_helper<Iterator,Iterator2,Job>
                                 (beg_,it,out_,start_false_,
                                  offset_true_,
-                                 /*start_false_ + */offset_false_,
+                                 offset_false_,
                                  data_.data_[0],cutoff_,this->get_name(),prio_),
                         parallel_partition_part2_helper<Iterator,Iterator2,Job>
                                 (it,end_,out_,start_false_,
-                                 offset_true_ + /*data_.partition_true_ - */data_.data_[0].partition_true_,
-                                 /*start_false_ +*/ offset_false_ + /*data_.partition_false_ - */data_.data_[0].partition_false_,
+                                 offset_true_ + data_.data_[0].partition_true_,
+                                 offset_false_ + data_.data_[0].partition_false_,
                                  data_.data_[1],cutoff_,this->get_name(),prio_)
             );
         }
@@ -240,6 +240,8 @@ struct parallel_partition_helper: public boost::asynchronous::continuation_task<
                 {
                     try
                     {
+                        // get to check that no exception
+                        std::get<0>(res).get();
                         task_res.set_value(ret);
                     }
                     catch(std::exception& e)
