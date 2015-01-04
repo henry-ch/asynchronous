@@ -133,7 +133,7 @@ struct parallel_partition_part2_helper: public boost::asynchronous::continuation
             std::advance(out,offset_true_);
             for (auto i = 0 ; i < data_.partition_true_ ; ++i)
             {
-                *out = *beg;
+                *out = std::move(*beg);
                 ++beg;
                 ++out;
             }
@@ -142,7 +142,7 @@ struct parallel_partition_part2_helper: public boost::asynchronous::continuation
             std::advance(out2,offset_false_ + start_false_);
             for (auto i = 0 ; i < data_.partition_false_ ; ++i)
             {
-                *out2 = *beg;
+                *out2 = std::move(*beg);
                 ++beg;
                 ++out2;
             }
