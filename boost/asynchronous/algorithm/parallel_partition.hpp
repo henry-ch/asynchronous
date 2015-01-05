@@ -131,7 +131,7 @@ struct parallel_partition_part2_helper: public boost::asynchronous::continuation
             auto out = out_;
             auto beg = beg_;
             std::advance(out,offset_true_);
-            for (auto i = 0 ; i < data_.partition_true_ ; ++i)
+            for (std::size_t i = 0 ; i < data_.partition_true_ ; ++i)
             {
                 *out = std::move(*beg);
                 ++beg;
@@ -140,7 +140,7 @@ struct parallel_partition_part2_helper: public boost::asynchronous::continuation
             // write false part
             auto out2 = out_;
             std::advance(out2,offset_false_ + start_false_);
-            for (auto i = 0 ; i < data_.partition_false_ ; ++i)
+            for (std::size_t i = 0 ; i < data_.partition_false_ ; ++i)
             {
                 *out2 = std::move(*beg);
                 ++beg;
@@ -219,13 +219,14 @@ struct parallel_partition_helper: public boost::asynchronous::continuation_task<
     void operator()()const
     {
         boost::asynchronous::continuation_result<Iterator2> task_res = this->this_task_result();
-        auto cont = boost::asynchronous::detail::parallel_partition_part1(beg_,end_,func_,cutoff_);
+        auto cont = boost::asynchronous::detail::parallel_partition_part1(beg_,end_,func_,cutoff_,this->get_name(),prio_);
         auto beg = beg_;
         auto end = end_;
         auto out = out_;
         auto cutoff = cutoff_;
         auto task_name = this->get_name();
-        cont.on_done([task_res,beg,end,out,cutoff,task_name]
+        auto prio = prio_;
+        cont.on_done([task_res,beg,end,out,cutoff,task_name,prio]
                      (std::tuple<boost::asynchronous::expected<boost::asynchronous::detail::partition_data> >&& res)
         {
             try
@@ -233,7 +234,7 @@ struct parallel_partition_helper: public boost::asynchronous::continuation_task<
                 boost::asynchronous::detail::partition_data data = std::move(std::get<0>(res).get());
                 std::size_t start_false = data.partition_true_;
                 auto cont =
-                        boost::asynchronous::detail::parallel_partition_part2(beg,end,out,start_false,0,0,std::move(data),cutoff,task_name);
+                        boost::asynchronous::detail::parallel_partition_part2(beg,end,out,start_false,0,0,std::move(data),cutoff,task_name,prio);
                 Iterator2 ret = out;
                 std::advance(ret,start_false);
                 cont.on_done([task_res,ret](std::tuple<boost::asynchronous::expected<void> >&& res)
