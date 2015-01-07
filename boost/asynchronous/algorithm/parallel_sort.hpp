@@ -898,47 +898,59 @@ struct parallel_sort_range_move_helper_serializable
     {
     }
     template <class Iterator>
-    parallel_sort_range_move_helper_serializable(boost::shared_ptr<Range> range,Iterator beg, Iterator end,Func func,long cutoff,
+    parallel_sort_range_move_helper_serializable(boost::shared_ptr<Range> range,Iterator beg, Iterator end,Func func,unsigned int depth, long cutoff,
                         const std::string& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<Range>(task_name)
         , boost::asynchronous::serializable_task(func.get_task_name())
         , range_(range),func_(std::move(func))
-        , cutoff_(cutoff),task_name_(task_name),prio_(prio)
+        , cutoff_(cutoff),task_name_(task_name),prio_(prio),depth_(depth)
         , begin_(beg)
         , end_(end)
     {
     }
-    void operator()()const
+    static void helper(boost::shared_ptr<Range> full_range,decltype(boost::begin(*full_range)) beg, decltype(boost::begin(*full_range)) end,unsigned int depth,
+                       Func func,long cutoff,const std::string& task_name, std::size_t prio,
+                       boost::asynchronous::continuation_result<Range> task_res)
     {
-        boost::asynchronous::continuation_result<Range> task_res = this->this_task_result();
         // advance up to cutoff
-        auto it = boost::asynchronous::detail::find_cutoff(begin_,cutoff_,end_);
+        auto it = boost::asynchronous::detail::find_cutoff(beg,cutoff,end);
         // if not at end, recurse, otherwise execute here
-        if (it == end_)
+        if (it == end)
         {
-            Sort()(begin_,it,func_);
-            // TODO reserve if possible
-            Range res;
-            std::move(begin_,it,std::back_inserter(res));
+            Sort()(beg,it,func);
+            Range res (std::distance(beg,end));
+            std::move(beg,it,boost::begin(res));
             task_res.set_value(std::move(res));
         }
         else
         {
-            auto func = func_;
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [task_res,it,func](std::tuple<boost::asynchronous::expected<Range>,boost::asynchronous::expected<Range> > res)
+                        [full_range,task_res,it,cutoff,func,task_name,prio](std::tuple<boost::asynchronous::expected<Range>,boost::asynchronous::expected<Range> > res)
                         {                            
                             try
                             {
-
-                                // TODO move possible?
-                                auto r1 = std::move(std::get<0>(res).get());
-                                auto r2 = std::move(std::get<1>(res).get());
-                                Range range(r1.size()+r2.size());
+                                boost::shared_ptr<Range> r1 =  boost::make_shared<Range>(std::move(std::get<0>(res).get()));
+                                boost::shared_ptr<Range> r2 =  boost::make_shared<Range>(std::move(std::get<1>(res).get()));
+                                boost::shared_ptr<Range> range = boost::make_shared<Range>(r1->size()+r2->size());
+                                
                                 // merge both sorted sub-ranges
-                                std::merge(boost::begin(r1),boost::end(r1),boost::begin(r2),boost::end(r2), boost::begin(range),func);
-                                task_res.set_value(std::move(range));
+                                auto on_done_fct = [full_range,task_res,r1,r2,range](std::tuple<boost::asynchronous::expected<void> >&& merge_res)
+                                {
+                                    try
+                                    {
+                                        // get to check that no exception
+                                        std::get<0>(merge_res).get();
+                                        task_res.set_value(std::move(*range));
+                                    }
+                                    catch(std::exception& e)
+                                    {
+                                        task_res.set_exception(boost::copy_exception(e));
+                                    }
+                                };                                
+                                auto c = boost::asynchronous::parallel_merge(boost::begin(*r1),boost::end(*r1),boost::begin(*r2),boost::end(*r2), boost::begin(*range),func,
+                                                                             cutoff,task_name+"_merge",prio);
+                                c.on_done(std::move(on_done_fct));
                             }
                             catch(std::exception& e)
                             {
@@ -947,14 +959,84 @@ struct parallel_sort_range_move_helper_serializable
                         },
                         // recursive tasks
                         parallel_sort_range_move_helper_serializable<Range,Func,Job,Sort>(
-                                    range_,begin_,it,
-                                    func_,cutoff_,task_name_,prio_),
+                                    full_range,beg,it,
+                                    func,depth+1,cutoff,task_name,prio),
                         parallel_sort_range_move_helper_serializable<Range,Func,Job,Sort>(
-                                    range_,it,end_,
-                                    func_,cutoff_,task_name_,prio_)
+                                    full_range,it,end,
+                                    func,depth+ 1,cutoff,task_name,prio)
             );
         }
     }
+
+    void operator()()const
+    {
+        auto task_res = this->this_task_result();
+        if (depth_ == 0)
+        {
+            // optimization for cases where we are already sorted
+            auto range = range_;
+            auto beg = begin_;
+            auto end = end_;
+            auto depth = depth_;
+            auto func = func_;
+            auto cutoff = cutoff_;
+            auto task_name = this->get_name();
+            auto cont = boost::asynchronous::parallel_is_sorted(begin_,end_,func_,cutoff_,task_name+"_is_sorted",prio_);
+            auto prio = prio_;
+            cont.on_done([range,beg,end,depth,func,cutoff,task_name,prio,task_res]
+                         (std::tuple<boost::asynchronous::expected<bool> >&& res)
+            {
+                try
+                {
+                    bool sorted = std::get<0>(res).get();
+                    if (sorted)
+                    {
+                        task_res.set_value(std::move(*range));
+                        return;
+                    }
+                    auto cont2 = boost::asynchronous::parallel_is_reverse_sorted(beg,end,func,cutoff,task_name+"_is_reverse_sorted",prio);
+                    cont2.on_done([range,beg,end,depth,func,cutoff,task_name,prio,task_res]
+                                  (std::tuple<boost::asynchronous::expected<bool> >&& res)
+                    {
+                        try
+                        {
+                            bool sorted = std::get<0>(res).get();
+                            if (sorted)
+                            {
+                                // reverse sorted
+                                auto cont3 = boost::asynchronous::parallel_reverse(beg,end,cutoff,task_name+"_reverse",prio);
+                                cont3.on_done([range,task_res](std::tuple<boost::asynchronous::expected<void> >&& res)
+                                {
+                                    try
+                                    {
+                                        std::get<0>(res).get();
+                                        task_res.set_value(std::move(*range));
+                                    }
+                                    catch(std::exception& e)
+                                    {
+                                        task_res.set_exception(boost::copy_exception(e));
+                                    }
+                                });
+                                return;
+                            }
+                            helper(range,beg,end,depth,std::move(func),cutoff,task_name,prio,task_res);
+                        }
+                        catch(std::exception& e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
+                    });
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
+            });
+            return;
+        }
+        helper(range_,begin_,end_,depth_,std::move(func_),cutoff_,task_name_,prio_,task_res);
+    }    
+
     template <class Archive>
     void save(Archive & ar, const unsigned int /*version*/)const
     {
@@ -966,6 +1048,7 @@ struct parallel_sort_range_move_helper_serializable
         ar & cutoff_;
         ar & task_name_;
         ar & prio_;
+        ar & depth_;
     }
     template <class Archive>
     void load(Archive & ar, const unsigned int /*version*/)
@@ -976,6 +1059,7 @@ struct parallel_sort_range_move_helper_serializable
         ar & cutoff_;
         ar & task_name_;
         ar & prio_;
+        ar & depth_;
         begin_ = boost::begin(*range_);
         end_ = boost::end(*range_);
     }
@@ -986,6 +1070,7 @@ struct parallel_sort_range_move_helper_serializable
     long cutoff_;
     std::string task_name_;
     std::size_t prio_;
+    unsigned int depth_;
     decltype(boost::begin(*range_)) begin_;
     decltype(boost::end(*range_)) end_;
 };
@@ -1004,7 +1089,7 @@ parallel_sort_move(Range&& range,Func func,long cutoff,
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
             (boost::asynchronous::parallel_sort_range_move_helper_serializable<Range,Func,Job,boost::asynchronous::std_sort>
-                (r,beg,end,std::move(func),cutoff,task_name,prio));
+                (r,beg,end,std::move(func),0,cutoff,task_name,prio));
 }
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::enable_if<boost::asynchronous::detail::is_serializable<Func>,boost::asynchronous::detail::callback_continuation<Range,Job> >::type
@@ -1020,7 +1105,7 @@ parallel_stable_sort_move(Range&& range,Func func,long cutoff,
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
             (boost::asynchronous::parallel_sort_range_move_helper_serializable<Range,Func,Job,boost::asynchronous::std_stable_sort>
-                (r,beg,end,std::move(func),cutoff,task_name,prio));
+                (r,beg,end,std::move(func),0,cutoff,task_name,prio));
 }
 #ifdef BOOST_ASYNCHRONOUS_USE_BOOST_SPREADSORT
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
@@ -1037,7 +1122,7 @@ parallel_spreadsort_move(Range&& range,Func func,long cutoff,
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
             (boost::asynchronous::parallel_sort_range_move_helper_serializable<Range,Func,Job,boost::asynchronous::boost_spreadsort>
-                (r,beg,end,std::move(func),cutoff,task_name,prio));
+                (r,beg,end,std::move(func),0,cutoff,task_name,prio));
 }
 #endif
 
