@@ -67,11 +67,11 @@ using namespace std;
 //#define NELEM 200000000
 //#define SORTED_TYPE uint32_t
 
-//#define NELEM 10000000
-//#define SORTED_TYPE std::string
+#define NELEM 10000000
+#define SORTED_TYPE std::string
 
-#define NELEM 200000000
-#define SORTED_TYPE double
+//#define NELEM 200000000
+//#define SORTED_TYPE double
 
 typename boost::chrono::high_resolution_clock::time_point servant_time;
 double servant_intern=0.0;
@@ -91,7 +91,7 @@ test_cast(T const& t)
     return t;
 }
 
-#define USE_SERIALIZABLE 
+//#define USE_SERIALIZABLE 
 // we pretend to be serializable to use a different version of the sort algorithm
 #ifdef USE_SERIALIZABLE
 struct increasing_sort_subtask
