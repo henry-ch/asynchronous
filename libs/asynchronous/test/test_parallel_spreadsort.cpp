@@ -75,4 +75,44 @@ BOOST_AUTO_TEST_CASE( test_parallel_spreadsort_int_post_future )
         BOOST_FAIL( "unexpected exception" );
     }
 }
+BOOST_AUTO_TEST_CASE( test_parallel_spreadsort_int_post_future_2 )
+{
+    struct increasing_sort_subtask
+    {
+        increasing_sort_subtask(){}
+        template <class Archive>
+        void serialize(Archive & /*ar*/, const unsigned int /*version*/)
+        {
+        }
+        template <class T>
+        bool operator()(T const& i, T const& j)const
+        {
+            return i < j;
+        }
+        typedef int serializable_type;
+        std::string get_task_name()const
+        {
+            return "";
+        }
+    };
 
+    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::threadpool_scheduler<
+                                                                                boost::asynchronous::lockfree_queue<> >(6));
+    std::vector<int> data;
+    generate(data);
+    // make a copy and execute in pool
+    boost::future<std::vector<int>> fu = boost::asynchronous::post_future(
+                scheduler,
+                [data]() mutable {return boost::asynchronous::parallel_spreadsort_move(std::move(data),increasing_sort_subtask(),1500);});
+    try
+    {
+        std::vector<int> res = std::move(fu.get());
+        std::sort(data.begin(),data.end(),std::less<int>());
+        BOOST_CHECK_MESSAGE(std::is_sorted(res.begin(),res.end(),std::less<int>()),"parallel_sort did not sort.");
+        BOOST_CHECK_MESSAGE(res == data,"parallel_sort gave a wrong value.");
+    }
+    catch(...)
+    {
+        BOOST_FAIL( "unexpected exception" );
+    }
+}
