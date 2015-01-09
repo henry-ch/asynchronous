@@ -23,6 +23,7 @@
 #include <boost/asynchronous/trackable_servant.hpp>
 #include <boost/asynchronous/algorithm/parallel_sort.hpp>
 #include <boost/asynchronous/algorithm/parallel_for.hpp>
+#include <boost/asynchronous/algorithm/parallel_sort_inplace.hpp>
 
 #include "test_common.hpp"
 

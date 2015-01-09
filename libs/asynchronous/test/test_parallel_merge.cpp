@@ -161,12 +161,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         // single-threaded
         std::vector<int> merged;
         merged.resize(200000000);
-        auto start = boost::chrono::high_resolution_clock::now();
         std::merge(m_data1.begin(),m_data1.end(),m_data2.begin(),m_data2.end(),merged.begin(),std::less<int>());
-        double elapsed = (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000);
-        std::cout << "single-threaded merge took in ms: " << elapsed << std::endl;
-        // parallel
-        start = boost::chrono::high_resolution_clock::now();
         // start long tasks
         post_callback(
            [this](){
@@ -175,10 +170,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                                m_res.begin(),
                                                                std::less<int>(),10000000);
                     },// work
-           [aPromise,start,this](boost::asynchronous::expected<void>) mutable{
-                        double elapsed = (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000);
+           [aPromise,this](boost::asynchronous::expected<void>) mutable{
                         aPromise->set_value();
-                        std::cout << "multi-threaded merge took in ms: " << elapsed << std::endl;
            }// callback functor.
         );
         return fu;
