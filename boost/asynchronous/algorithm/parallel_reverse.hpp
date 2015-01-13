@@ -18,6 +18,7 @@
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/algorithm/detail/safe_advance.hpp>
 #include <boost/asynchronous/detail/metafunctions.hpp>
+#include <boost/asynchronous/algorithm/detail/parallel_sort_helper.hpp>
 
 namespace boost { namespace asynchronous
 {
@@ -99,5 +100,117 @@ parallel_reverse(Iterator beg, Iterator end, long cutoff,
                 (beg,end,beg,end_reverse,cutoff,task_name,prio));
 
 }
+
+template <class Range, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation<Range,Job>
+parallel_reverse_move(Range&& range,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                   const std::string& task_name, std::size_t prio)
+#else
+                   const std::string& task_name="", std::size_t prio=0)
+#endif
+{
+    auto r = boost::make_shared<Range>(std::forward<Range>(range));
+    auto beg = boost::begin(*r);
+    auto end = boost::end(*r);
+    return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
+            (boost::asynchronous::detail::parallel_sort_range_move_helper<boost::asynchronous::detail::callback_continuation<void,Job>,Range>
+             (boost::asynchronous::parallel_reverse(beg,end,cutoff,task_name,prio),std::move(r),task_name));
+}
+
+// version for ranges given as continuation => will return the range as continuation
+namespace detail
+{
+// adapter to non-callback continuations
+template <class Continuation, class Job,class Enable=void>
+struct parallel_reverse_continuation_range_helper: public boost::asynchronous::continuation_task<typename Continuation::return_type>
+{
+    parallel_reverse_continuation_range_helper(Continuation const& c,long cutoff,
+                        const std::string& task_name, std::size_t prio)
+        :boost::asynchronous::continuation_task<typename Continuation::return_type>(task_name)
+        ,cont_(c),cutoff_(cutoff),prio_(prio)
+    {}
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<typename Continuation::return_type> task_res = this->this_task_result();
+        auto cutoff = cutoff_;
+        auto task_name = this->get_name();
+        auto prio = prio_;
+        cont_.on_done([task_res,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res)
+        {
+            try
+            {
+                auto new_continuation =
+                   boost::asynchronous::parallel_reverse<typename Continuation::return_type, Job>(std::move(std::get<0>(continuation_res).get()),cutoff,task_name,prio);
+                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                {
+                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
+                });
+            }
+            catch(std::exception& e)
+            {
+                task_res.set_exception(boost::copy_exception(e));
+            }
+        }
+        );
+        boost::asynchronous::any_continuation ac(std::move(cont_));
+        boost::asynchronous::get_continuations().emplace_front(std::move(ac));
+    }
+    Continuation cont_;
+    long cutoff_;
+    std::size_t prio_;
+};
+// Continuation is a callback continuation
+template <class Continuation, class Job>
+struct parallel_reverse_continuation_range_helper<Continuation,Job,typename ::boost::enable_if< has_is_callback_continuation_task<Continuation> >::type>:
+        public boost::asynchronous::continuation_task<typename Continuation::return_type>
+{
+    parallel_reverse_continuation_range_helper(Continuation const& c,long cutoff,
+                        const std::string& task_name, std::size_t prio)
+        :boost::asynchronous::continuation_task<typename Continuation::return_type>(task_name)
+        ,cont_(c),cutoff_(cutoff),prio_(prio)
+    {}
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<typename Continuation::return_type> task_res = this->this_task_result();
+        auto cutoff = cutoff_;
+        auto task_name = this->get_name();
+        auto prio = prio_;
+        cont_.on_done([task_res,cutoff,task_name,prio](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
+        {
+            try
+            {
+                auto new_continuation =
+                   boost::asynchronous::parallel_reverse_move<typename Continuation::return_type, Job>(std::move(std::get<0>(continuation_res).get()),cutoff,task_name,prio);
+                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                {
+                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
+                });
+            }
+            catch(std::exception& e)
+            {
+                task_res.set_exception(boost::copy_exception(e));
+            }
+        }
+        );
+    }
+    Continuation cont_;
+    long cutoff_;
+    std::size_t prio_;
+};
+}
+template <class Range, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+typename boost::enable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
+parallel_reverse(Range range,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+              const std::string& task_name, std::size_t prio)
+#else
+              const std::string& task_name="", std::size_t prio=0)
+#endif
+{
+    return boost::asynchronous::top_level_callback_continuation_job<typename Range::return_type,Job>
+            (boost::asynchronous::detail::parallel_reverse_continuation_range_helper<Range,Job>(range,cutoff,task_name,prio));
+}
+
 }}
 #endif // BOOST_ASYNCHRONOUS_PARALLEL_REVERSE_HPP
