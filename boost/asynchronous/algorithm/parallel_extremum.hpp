@@ -43,9 +43,13 @@ auto parallel_extremum(Range&& range, Comparison c, long cutoff,
 #endif
     -> typename boost::disable_if<
             has_is_continuation_task<Range>,
-            decltype(boost::asynchronous::parallel_reduce(std::forward<Range>(range), detail::selector<Comparison>(c), cutoff, task_name, prio))>::type
+            decltype(boost::asynchronous::parallel_reduce<Range,
+                                                          decltype(detail::selector<Comparison>(c)),
+                                                          Job>(std::forward<Range>(range), detail::selector<Comparison>(c), cutoff, task_name, prio))>::type
 {
-    return boost::asynchronous::parallel_reduce(std::forward<Range>(range), detail::selector<Comparison>(c), cutoff, task_name, prio);
+    return boost::asynchronous::parallel_reduce<Range,
+                                                decltype(detail::selector<Comparison>(c)),
+                                                Job>(std::forward<Range>(range), detail::selector<Comparison>(c), cutoff, task_name, prio);
 }
 
 
@@ -58,9 +62,13 @@ auto parallel_extremum(Range const& range, Comparison c,long cutoff,
                        const std::string& task_name="", std::size_t prio=0)
 #endif
     -> typename boost::disable_if<has_is_continuation_task<Range>,
-                                  decltype(boost::asynchronous::parallel_reduce(range, detail::selector<Comparison>(c), cutoff, task_name, prio)) >::type
+                                  decltype(boost::asynchronous::parallel_reduce<Range,
+                                                                                decltype(detail::selector<Comparison>(c)),
+                                                                                Job>(range, detail::selector<Comparison>(c), cutoff, task_name, prio)) >::type
 {
-    return boost::asynchronous::parallel_reduce(range, detail::selector<Comparison>(c), cutoff, task_name, prio);
+    return boost::asynchronous::parallel_reduce<Range,
+                                                decltype(detail::selector<Comparison>(c)),
+                                                Job>(range, detail::selector<Comparison>(c), cutoff, task_name, prio);
 }
 
 
@@ -74,9 +82,13 @@ auto parallel_extremum(Range range, Comparison c, long cutoff,
 #endif
     -> typename boost::enable_if<
                 has_is_continuation_task<Range>,
-                decltype(boost::asynchronous::parallel_reduce(range, detail::selector<Comparison>(c), cutoff, task_name, prio))>::type
+                decltype(boost::asynchronous::parallel_reduce<decltype(range),
+                                                              decltype(detail::selector<Comparison>(c)),
+                                                              Job>(range, detail::selector<Comparison>(c), cutoff, task_name, prio))>::type
 {
-    return boost::asynchronous::parallel_reduce(range, detail::selector<Comparison>(c), cutoff, task_name, prio);
+    return boost::asynchronous::parallel_reduce<decltype(range),
+                                                decltype(detail::selector<Comparison>(c)),
+                                                Job>(range, detail::selector<Comparison>(c), cutoff, task_name, prio);
 }
 
 // Iterators
@@ -89,7 +101,9 @@ auto parallel_extremum(Iterator beg, Iterator end, Comparison c, long cutoff,
 #endif
     -> boost::asynchronous::detail::callback_continuation<typename std::iterator_traits<Iterator>::value_type, Job>
 {
-    return boost::asynchronous::parallel_reduce(beg, end, detail::selector<Comparison>(c), cutoff, task_name, prio);
+    return boost::asynchronous::parallel_reduce<Iterator,
+                                                decltype(detail::selector<Comparison>(c)),
+                                                Job>(beg, end, detail::selector<Comparison>(c), cutoff, task_name, prio);
 }
 
 
