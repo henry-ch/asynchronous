@@ -36,6 +36,9 @@ namespace detail {
     
 template <class Iterator, class Func, class ReturnType>
 ReturnType reduce(Iterator begin, Iterator end, Func fn) {
+    // if range is empty, return a default-constructed element
+    if (begin == end)
+        return ReturnType();
     ReturnType t = *(begin++);
     for (; begin != end; ++begin) {
         t = fn(t, *begin);

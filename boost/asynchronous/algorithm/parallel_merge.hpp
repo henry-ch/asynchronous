@@ -70,7 +70,7 @@ struct parallel_merge_helper: public boost::asynchronous::continuation_task<void
     void helper(It1 beg1, It1 end1, It2 beg2, It2 end2, OutIt out,boost::asynchronous::continuation_result<void> task_res)const
     {
         auto it1 = (beg1+ (end1 - beg1)/2);
-        auto it2 = std::lower_bound(beg2,end2, *it1);
+        auto it2 = std::lower_bound(beg2,end2, *it1,func_);
         auto it3 = out + ((it1 - beg1) + (it2 - beg2));
         // TODO move?
         *it3 = *it1;

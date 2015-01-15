@@ -13,6 +13,9 @@
 #include <algorithm>
 
 #include <boost/utility/enable_if.hpp>
+#include <boost/range/begin.hpp>
+#include <boost/range/end.hpp>
+
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/continuation_task.hpp>
 #include <boost/asynchronous/post.hpp>
@@ -115,7 +118,7 @@ parallel_reverse_move(Range&& range,long cutoff,
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
             (boost::asynchronous::detail::parallel_sort_range_move_helper<boost::asynchronous::detail::callback_continuation<void,Job>,Range>
-             (boost::asynchronous::parallel_reverse(beg,end,cutoff,task_name,prio),std::move(r),task_name));
+             (boost::asynchronous::parallel_reverse<decltype(beg),Job>(beg,end,cutoff,task_name,prio),std::move(r),task_name));
 }
 
 // version for ranges given as continuation => will return the range as continuation

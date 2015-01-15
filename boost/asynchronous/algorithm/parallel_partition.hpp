@@ -211,7 +211,7 @@ struct parallel_partition_helper: public boost::asynchronous::continuation_task<
     {
         boost::asynchronous::continuation_result<Iterator2> task_res = this->this_task_result();
         //auto p1_start = boost::chrono::high_resolution_clock::now();
-        auto cont = boost::asynchronous::detail::parallel_partition_part1(beg_,end_,func_,cutoff_,this->get_name(),prio_);
+        auto cont = boost::asynchronous::detail::parallel_partition_part1<Iterator,Func,Job>(beg_,end_,func_,cutoff_,this->get_name(),prio_);
         auto beg = beg_;
         auto end = end_;
         auto out = out_;
@@ -230,7 +230,8 @@ struct parallel_partition_helper: public boost::asynchronous::continuation_task<
                 std::size_t start_false = data.partition_true_;
 //                auto p2_start = boost::chrono::high_resolution_clock::now();
                 auto cont =
-                        boost::asynchronous::detail::parallel_partition_part2(beg,end,out,start_false,0,0,std::move(data),cutoff,task_name,prio);
+                        boost::asynchronous::detail::parallel_partition_part2<Iterator,Iterator2,Job>
+                        (beg,end,out,start_false,0,0,std::move(data),cutoff,task_name,prio);
                 Iterator2 ret = out;
                 std::advance(ret,start_false);
                 cont.on_done([task_res,ret/*,p2_start*/](std::tuple<boost::asynchronous::expected<void> >&& res)
