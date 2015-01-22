@@ -62,7 +62,16 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
         // if not at end, recurse, otherwise execute here
         if ((it == end)&&(depth %2 == 0))
         {
-            Sort()(beg,it,func);
+            // if already reverse sorted, only reverse
+            if (std::is_sorted(beg,it,boost::asynchronous::detail::reverse_sorted<Func>(func)))
+            {
+                std::reverse(beg,end);
+            }
+            // if already sorted, done
+            else if (!std::is_sorted(beg,it,func))
+            {
+                Sort()(beg,it,func);
+            }
             task_res.set_value();
         }
         else
@@ -386,7 +395,16 @@ struct parallel_sort_range_move_helper_serializable
         // if not at end, recurse, otherwise execute here
         if (it == end)
         {
-            Sort()(beg,it,func);
+            // if already reverse sorted, only reverse
+            if (std::is_sorted(beg,it,boost::asynchronous::detail::reverse_sorted<Func>(func)))
+            {
+                std::reverse(beg,end);
+            }
+            // if already sorted, done
+            else if (!std::is_sorted(beg,it,func))
+            {
+                Sort()(beg,it,func);
+            }
             Range res (std::distance(beg,end));
             std::move(beg,it,boost::begin(res));
             task_res.set_value(std::move(res));
