@@ -60,7 +60,7 @@ struct union_insert: boost::geometry::not_implemented<TagIn1, TagIn2, TagOut>
 // If reversal is needed, perform it first
 
 template
-<
+< 
     typename Geometry1, typename Geometry2, typename GeometryOut,
     typename TagIn1, typename TagIn2, typename TagOut,
     bool Areal1, bool Areal2, bool ArealOut,
@@ -75,17 +75,18 @@ struct union_insert
         true
     >: union_insert<Geometry2, Geometry1, GeometryOut>
 {
-    template <typename RobustPolicy, typename OutputIterator, typename Strategy>
-    static inline OutputIterator apply(Geometry1 const& g1,
-            Geometry2 const& g2,
-            RobustPolicy const& robust_policy,
-            OutputIterator out,
-            Strategy const& strategy)
+    template </*typename TaskRes,*/typename RobustPolicy, typename OutputIterator, typename Strategy>
+    static inline OutputIterator apply(/*TaskRes task_res,*/
+                                       Geometry1 const& g1,
+                                       Geometry2 const& g2,
+                                       RobustPolicy const& robust_policy,
+                                       OutputIterator out,
+                                       Strategy const& strategy)
     {
         return union_insert
             <
                 Geometry2, Geometry1, GeometryOut
-            >::apply(g2, g1, robust_policy, out, strategy);
+            >::apply(/*task_res,*/g2, g1, robust_policy, out, strategy);
     }
 };
 
@@ -197,15 +198,17 @@ namespace detail { namespace union_
 \return \return_out
 */
 template
-<
+<    
     typename GeometryOut,
     typename Geometry1,
     typename Geometry2,
-    typename OutputIterator
+    typename OutputIterator,
+    typename TaskRes
 >
-inline OutputIterator union_insert(Geometry1 const& geometry1,
-            Geometry2 const& geometry2,
-            OutputIterator out)
+inline OutputIterator union_insert(TaskRes task_res,
+                                   Geometry1 const& geometry1,
+                                   Geometry2 const& geometry2,
+                                   OutputIterator out)
 {
     boost::geometry::concept::check<Geometry1 const>();
     boost::geometry::concept::check<Geometry2 const>();
@@ -232,7 +235,7 @@ inline OutputIterator union_insert(Geometry1 const& geometry1,
     return dispatch::union_insert
            <
                Geometry1, Geometry2, GeometryOut
-           >::apply(geometry1, geometry2, robust_policy, out, strategy());
+           >::apply(/*task_res,*/geometry1, geometry2, robust_policy, out, strategy());
 }
 
 
@@ -259,13 +262,15 @@ inline OutputIterator union_insert(Geometry1 const& geometry1,
 */
 template
 <
+    typename TaskRes,
     typename Geometry1,
     typename Geometry2,
     typename Collection
 >
-inline void union_(Geometry1 const& geometry1,
-            Geometry2 const& geometry2,
-            Collection& output_collection)
+inline void union_(TaskRes task_res,
+                   Geometry1 const& geometry1,
+                   Geometry2 const& geometry2,
+                   Collection& output_collection)
 {
     boost::geometry::concept::check<Geometry1 const>();
     boost::geometry::concept::check<Geometry2 const>();
@@ -273,7 +278,7 @@ inline void union_(Geometry1 const& geometry1,
     typedef typename boost::range_value<Collection>::type geometry_out;
     boost::geometry::concept::check<geometry_out>();
 
-    detail::union_::union_insert<geometry_out>(geometry1, geometry2,
+    detail::union_::union_insert<geometry_out>(task_res,geometry1, geometry2,
                 std::back_inserter(output_collection));
 }
 
@@ -292,7 +297,7 @@ struct parallel_union_helper: public boost::asynchronous::continuation_task<Coll
     {
         boost::asynchronous::continuation_result<Collection> task_res = this->this_task_result();
         Collection one_union;
-        boost::asynchronous::geometry::union_(geometry1_,geometry2_,one_union);
+        boost::asynchronous::geometry::union_(task_res,geometry1_,geometry2_,one_union);
         task_res.set_value(std::move(one_union));
     }
     Geometry1 geometry1_;
