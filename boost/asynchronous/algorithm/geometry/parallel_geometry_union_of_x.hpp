@@ -20,6 +20,7 @@
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/algorithm/detail/safe_advance.hpp>
 #include <boost/asynchronous/detail/metafunctions.hpp>
+#include <boost/asynchronous/algorithm/geometry/parallel_union.hpp>
 
 namespace boost { namespace asynchronous
 {
@@ -52,9 +53,9 @@ template <class Iterator,class Range,class Job>
 struct parallel_geometry_union_of_x_helper: public boost::asynchronous::continuation_task<Range>
 {
     parallel_geometry_union_of_x_helper(Iterator beg, Iterator end,
-                            long cutoff, const std::string& task_name, std::size_t prio)
+                            long cutoff,long union_cutoff, const std::string& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<Range>(task_name),
-          beg_(beg),end_(end),cutoff_(cutoff),prio_(prio)
+          beg_(beg),end_(end),cutoff_(cutoff),union_cutoff_(union_cutoff),prio_(prio)
     {}    
 
     void operator()()
@@ -73,43 +74,34 @@ struct parallel_geometry_union_of_x_helper: public boost::asynchronous::continua
         }
         else
         {
+            auto task_name = this->get_name();
+            auto prio = prio_;
+            auto cutoff = cutoff_;
+            auto union_cutoff = union_cutoff_;
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [task_res](std::tuple<boost::asynchronous::expected<Range>,boost::asynchronous::expected<Range> > res)
+                        [task_res,task_name,prio,cutoff,union_cutoff](std::tuple<boost::asynchronous::expected<Range>,boost::asynchronous::expected<Range> > res)
                         {
                             try
                             {
-                                // make a new collection containing both sub-collections
-                                Range output_collection;
+                                // start parallel union
                                 auto sub1 = std::move(std::get<0>(res).get());
                                 auto sub2 = std::move(std::get<1>(res).get());
-                                // TODO reserve if vector
-                                auto it1 = sub1.begin();
-                                auto it2 = sub2.begin();
-                                auto end1 = sub1.end();
-                                auto end2 = sub2.end();
-                                // merge elements in turn to union one from each container next
-                                while (it1 != end1 && it2 != end2)
+                                typedef typename boost::range_value<Range>::type Element;
+                                auto cont = boost::asynchronous::geometry::parallel_union<Element,Element,Element,Job>(*(sub1.begin()),*(sub2.begin()),union_cutoff,task_name,prio);
+                                cont.on_done([task_res](std::tuple<boost::asynchronous::expected<Element> >&& res_p_union)
                                 {
-                                    output_collection.push_back(std::move(*it1));
-                                    output_collection.push_back(std::move(*it2));
-                                    ++it1;++it2;
-                                }
-                                if (it1 != end1)
-                                {
-                                    output_collection.push_back(std::move(*it1));
-                                }
-                                if (it2 != end2)
-                                {
-                                    output_collection.push_back(std::move(*it2));
-                                }
-                                Range res = std::move(boost::asynchronous::detail::pairwise_union<Iterator,Range>(
-                                                          output_collection.begin(),output_collection.end()));
-                                while(res.size() > 1)
-                                {
-                                    res = std::move(boost::asynchronous::detail::pairwise_union<Iterator,Range>(res.begin(),res.end()));
-                                }
-                                task_res.set_value(std::move(res));
+                                    try
+                                    {
+                                        Range merge_res;
+                                        merge_res.emplace_back(std::move(std::get<0>(res_p_union).get()));
+                                        task_res.set_value(std::move(merge_res));
+                                    }
+                                    catch(std::exception& e)
+                                    {
+                                        task_res.set_exception(boost::copy_exception(e));
+                                    }
+                                });
                             }
                             catch(std::exception& e)
                             {
@@ -118,22 +110,23 @@ struct parallel_geometry_union_of_x_helper: public boost::asynchronous::continua
                         },
                         // recursive tasks
                         parallel_geometry_union_of_x_helper<Iterator,Range,Job>
-                            (beg_,it,cutoff_,this->get_name(),prio_),
+                            (beg_,it,cutoff_,union_cutoff_,this->get_name(),prio_),
                         parallel_geometry_union_of_x_helper<Iterator,Range,Job>
-                            (it,end_,cutoff_,this->get_name(),prio_)
+                            (it,end_,cutoff_,union_cutoff_,this->get_name(),prio_)
             );
         }
     }
     Iterator beg_;
     Iterator end_;
     long cutoff_;
+    long union_cutoff_;
     std::size_t prio_;
 };
 }
 
 template <class Iterator, class Range, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<Range,Job>
-parallel_geometry_union_of_x(Iterator beg, Iterator end, long cutoff,
+parallel_geometry_union_of_x(Iterator beg, Iterator end, long cutoff, long union_cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                     const std::string& task_name, std::size_t prio)
 #else
@@ -142,7 +135,7 @@ parallel_geometry_union_of_x(Iterator beg, Iterator end, long cutoff,
 {
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
             (boost::asynchronous::detail::parallel_geometry_union_of_x_helper<Iterator,Range,Job>
-                (beg,end,cutoff,task_name,prio));
+                (beg,end,cutoff,union_cutoff,task_name,prio));
 
 }
 
