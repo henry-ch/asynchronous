@@ -33,7 +33,6 @@ namespace
 {
 // main thread id
 boost::thread::id main_thread_id;
-bool servant_dtor=false;
 
 struct my_exception : virtual boost::exception, virtual std::exception
 {
@@ -52,6 +51,24 @@ void generate(std::vector<int>& data)
     std::uniform_int_distribution<> dis(0, 1000);
     std::generate(data.begin(), data.end(), std::bind(dis, std::ref(mt)));
 }
+struct increasing_sort_subtask
+{
+    increasing_sort_subtask(){}
+    template <class Archive>
+    void serialize(Archive & /*ar*/, const unsigned int /*version*/)
+    {
+    }
+    template <class T>
+    bool operator()(T const& i, T const& j)const
+    {
+        return i < j;
+    }
+    typedef int serializable_type;
+    std::string get_task_name()const
+    {
+        return "";
+    }
+};
 }
 BOOST_AUTO_TEST_CASE( test_parallel_spreadsort_int_post_future )
 {
@@ -77,25 +94,6 @@ BOOST_AUTO_TEST_CASE( test_parallel_spreadsort_int_post_future )
 }
 BOOST_AUTO_TEST_CASE( test_parallel_spreadsort_int_post_future_2 )
 {
-    struct increasing_sort_subtask
-    {
-        increasing_sort_subtask(){}
-        template <class Archive>
-        void serialize(Archive & /*ar*/, const unsigned int /*version*/)
-        {
-        }
-        template <class T>
-        bool operator()(T const& i, T const& j)const
-        {
-            return i < j;
-        }
-        typedef int serializable_type;
-        std::string get_task_name()const
-        {
-            return "";
-        }
-    };
-
     auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::threadpool_scheduler<
                                                                                 boost::asynchronous::lockfree_queue<> >(6));
     std::vector<int> data;

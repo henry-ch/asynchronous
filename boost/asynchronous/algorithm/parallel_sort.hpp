@@ -148,7 +148,13 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
             auto task_name = this->get_name();
             auto cont = boost::asynchronous::parallel_is_sorted<Iterator,Func,Job>(beg_,end_,func_,cutoff_,task_name+"_is_sorted",prio_);
             auto prio = prio_;
+// GCC 4.7 imagines needing "this"
+#if BOOST_GCC_VERSION < 40800
+            cont.on_done([this,beg,end,depth,merge_memory,merge_beg,merge_end,func,cutoff,task_name,prio,task_res]
+#else
             cont.on_done([beg,end,depth,merge_memory,merge_beg,merge_end,func,cutoff,task_name,prio,task_res]
+#endif
+
                          (std::tuple<boost::asynchronous::expected<bool> >&& res)
             {
                 try
@@ -161,7 +167,11 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
                     }
                     auto cont2 = boost::asynchronous::parallel_is_reverse_sorted<Iterator,Func,Job>
                             (beg,end,func,cutoff,task_name+"_is_reverse_sorted",prio);
+#if BOOST_GCC_VERSION < 40800
+                    cont2.on_done([this,beg,end,depth,merge_memory,merge_beg,merge_end,func,cutoff,task_name,prio,task_res]
+#else
                     cont2.on_done([beg,end,depth,merge_memory,merge_beg,merge_end,func,cutoff,task_name,prio,task_res]
+#endif
                                   (std::tuple<boost::asynchronous::expected<bool> >&& res)
                     {
                         try
@@ -473,7 +483,11 @@ struct parallel_sort_range_move_helper_serializable
             auto cont = boost::asynchronous::parallel_is_sorted<decltype(boost::begin(*range_)),Func,Job>
                     (begin_,end_,func_,cutoff_,task_name+"_is_sorted",prio_);
             auto prio = prio_;
+#if BOOST_GCC_VERSION < 40800
+            cont.on_done([this,range,beg,end,depth,func,cutoff,task_name,prio,task_res]
+#else
             cont.on_done([range,beg,end,depth,func,cutoff,task_name,prio,task_res]
+#endif
                          (std::tuple<boost::asynchronous::expected<bool> >&& res)
             {
                 try
@@ -486,7 +500,11 @@ struct parallel_sort_range_move_helper_serializable
                     }
                     auto cont2 = boost::asynchronous::parallel_is_reverse_sorted<decltype(boost::begin(*range_)),Func,Job>
                             (beg,end,func,cutoff,task_name+"_is_reverse_sorted",prio);
+#if BOOST_GCC_VERSION < 40800
+                    cont2.on_done([this,range,beg,end,depth,func,cutoff,task_name,prio,task_res]
+#else
                     cont2.on_done([range,beg,end,depth,func,cutoff,task_name,prio,task_res]
+#endif
                                   (std::tuple<boost::asynchronous::expected<bool> >&& res)
                     {
                         try

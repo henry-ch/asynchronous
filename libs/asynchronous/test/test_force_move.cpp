@@ -40,7 +40,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         boost::shared_ptr<boost::promise<int> > aPromise(new boost::promise<int>);
         boost::future<int> fu = aPromise->get_future();
         auto cb = make_safe_callback(
-                    [aPromise](int i,boost::future<int> fu)mutable
+                    [aPromise](int,boost::future<int> fu)mutable
                     {
                         aPromise->set_value(fu.get());
                     });
