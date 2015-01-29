@@ -23,7 +23,7 @@ struct boost_spreadsort
     template <class Iterator, class Func>
     void operator()(Iterator beg, Iterator end, Func&)
     {
-        boost::sort::spreadsort(beg,end);
+        boost::sort::spreadsort::spreadsort(beg,end);
     }
 };
 #endif
