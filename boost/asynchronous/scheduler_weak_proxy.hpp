@@ -11,7 +11,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/async/any_shared_scheduler.hpp>
 
-namespace boost { namespace async
+namespace boost { namespace asynchronous
 {
 
 // scheduler proxy for use in the "inside" of the active object world
@@ -32,7 +32,7 @@ private:
     boost::weak_ptr<scheduler_type> m_scheduler;
 };
 
-}} // boost::async
+}} // boost::asynchronous
 
 
 #endif /* BOOST_ASYNC_SCHEDULER_WEAK_PROXY_HPP */
