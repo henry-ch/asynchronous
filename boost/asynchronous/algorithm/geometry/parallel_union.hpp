@@ -22,7 +22,7 @@
 #include <boost/geometry/core/reverse_dispatch.hpp>
 #include <boost/geometry/geometries/concepts/check.hpp>
 #include <boost/geometry/algorithms/not_implemented.hpp>
-#include <boost/geometry/algorithms/detail/overlay/overlay.hpp>
+#include <boost/asynchronous/algorithm/geometry/detail/overlay.hpp>
 #include <boost/geometry/policies/robustness/get_rescale_policy.hpp>
 
 #include <boost/geometry/algorithms/detail/overlay/linear_linear.hpp>
