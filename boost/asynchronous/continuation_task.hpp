@@ -28,6 +28,7 @@ template <class Return>
 struct continuation_result
 {
 public:
+    typedef Return return_type;
     continuation_result(boost::shared_ptr<boost::promise<Return> > p,std::function<void(boost::asynchronous::expected<Return>)> f)
         : m_promise(p),m_done_func(f){}
     continuation_result(continuation_result&& rhs)noexcept
@@ -83,6 +84,7 @@ template <>
 struct continuation_result<void>
 {
 public:
+    typedef void return_type;
     continuation_result(boost::shared_ptr<boost::promise<void> > p,std::function<void(boost::asynchronous::expected<void>)> f)
         :m_promise(p),m_done_func(f){}
     continuation_result(continuation_result&& rhs)noexcept
