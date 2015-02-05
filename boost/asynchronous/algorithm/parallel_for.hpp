@@ -432,7 +432,7 @@ parallel_for(Range range,Func func,long cutoff,
 #endif
 {
     return boost::asynchronous::top_level_callback_continuation_job<typename Range::return_type,Job>
-            (boost::asynchronous::detail::parallel_for_continuation_range_helper<Range,Func,Job>(range,func,cutoff,task_name,prio));
+            (boost::asynchronous::detail::parallel_for_continuation_range_helper<Range,Func,Job>(range,std::move(func),cutoff,task_name,prio));
 }
 
 }}
