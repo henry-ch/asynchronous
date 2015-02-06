@@ -41,6 +41,7 @@ namespace dispatch
 
 template
 <
+    typename Job,
     typename Geometry1, typename Geometry2, typename GeometryOut,
     typename TagIn1 = typename boost::geometry::tag<Geometry1>::type,
     typename TagIn2 = typename boost::geometry::tag<Geometry2>::type,
@@ -61,6 +62,7 @@ struct union_insert: boost::geometry::not_implemented<TagIn1, TagIn2, TagOut>
 
 template
 < 
+    typename Job,
     typename Geometry1, typename Geometry2, typename GeometryOut,
     typename TagIn1, typename TagIn2, typename TagOut,
     bool Areal1, bool Areal2, bool ArealOut,
@@ -68,24 +70,25 @@ template
 >
 struct union_insert
     <
-        Geometry1, Geometry2, GeometryOut,
+        Job,Geometry1, Geometry2, GeometryOut,
         TagIn1, TagIn2, TagOut,
         Areal1, Areal2, ArealOut,
         Reverse1, Reverse2, ReverseOut,
         true
-    >: union_insert<Geometry2, Geometry1, GeometryOut>
+    >: union_insert<Job,Geometry2, Geometry1, GeometryOut>
 {
     template <typename TaskRes,typename RobustPolicy, typename Strategy>
     static inline void apply(TaskRes task_res,
-                             Geometry1 const& g1,
-                             Geometry2 const& g2,
-                             RobustPolicy const& robust_policy,
-                             Strategy const& strategy)
+                             Geometry1& g1,
+                             Geometry2& g2,
+                             RobustPolicy& robust_policy,
+                             Strategy const& strategy,
+                             long)
     {
         typename TaskRes::return_type output_collection;
         union_insert
             <
-                Geometry2, Geometry1, GeometryOut
+                Job,Geometry2, Geometry1, GeometryOut
             >::apply(task_res,g2, g1, robust_policy, std::back_inserter(output_collection), strategy);
         task_res.set_value(std::move(output_collection));
     }
@@ -94,34 +97,36 @@ struct union_insert
 
 template
 <
+    typename Job,
     typename Geometry1, typename Geometry2, typename GeometryOut,
     typename TagIn1, typename TagIn2, typename TagOut,
     bool Reverse1, bool Reverse2, bool ReverseOut
 >
 struct union_insert
     <
-        Geometry1, Geometry2, GeometryOut,
+        Job,Geometry1, Geometry2, GeometryOut,
         TagIn1, TagIn2, TagOut,
         true, true, true,
         Reverse1, Reverse2, ReverseOut,
         false
-    > : boost::geometry::detail::overlay::overlay
-        <Geometry1, Geometry2, Reverse1, Reverse2, ReverseOut, GeometryOut, boost::geometry::overlay_union>
+    > : boost::geometry::detail::overlay::parallel_overlay
+        <Job,Geometry1, Geometry2, Reverse1, Reverse2, ReverseOut, GeometryOut, boost::geometry::overlay_union>
 {
     template <typename TaskRes,typename RobustPolicy, typename Strategy>
     static inline void apply(TaskRes task_res,
-                             Geometry1 const& g1,
-                             Geometry2 const& g2,
-                             RobustPolicy const& robust_policy,
-                             Strategy const& strategy)
+                             Geometry1& g1,
+                             Geometry2& g2,
+                             RobustPolicy& robust_policy,
+                             Strategy const& strategy,
+                             long cutoff)
     {
         // TODO we will start with this one for parallelization
-        typename TaskRes::return_type output_collection;
-        boost::geometry::detail::overlay::overlay
+        //typename TaskRes::return_type output_collection;
+        boost::geometry::detail::overlay::parallel_overlay
             <
-                Geometry1, Geometry2, Reverse1, Reverse2, ReverseOut, GeometryOut, boost::geometry::overlay_union
-            >::apply(g1, g2, robust_policy, std::back_inserter(output_collection), strategy);
-        task_res.set_value(std::move(output_collection));
+                Job,Geometry1, Geometry2, Reverse1, Reverse2, ReverseOut,GeometryOut, boost::geometry::overlay_union
+            >::apply(std::move(task_res),g1, g2, robust_policy, strategy,cutoff);
+        //task_res.set_value(std::move(output_collection));
     }
 };
 
@@ -129,20 +134,21 @@ struct union_insert
 // dispatch for union of non-areal geometries
 template
 <
+    typename Job,
     typename Geometry1, typename Geometry2, typename GeometryOut,
     typename TagIn1, typename TagIn2, typename TagOut,
     bool Reverse1, bool Reverse2, bool ReverseOut
 >
 struct union_insert
     <
-        Geometry1, Geometry2, GeometryOut,
+        Job,Geometry1, Geometry2, GeometryOut,
         TagIn1, TagIn2, TagOut,
         false, false, false,
         Reverse1, Reverse2, ReverseOut,
         false
     > : union_insert
         <
-            Geometry1, Geometry2, GeometryOut,
+            Job,Geometry1, Geometry2, GeometryOut,
             typename boost::geometry::tag_cast<TagIn1, boost::geometry::pointlike_tag, boost::geometry::linear_tag>::type,
             typename boost::geometry::tag_cast<TagIn2, boost::geometry::pointlike_tag, boost::geometry::linear_tag>::type,
             TagOut,
@@ -153,15 +159,16 @@ struct union_insert
 {
     template <typename TaskRes,typename RobustPolicy, typename Strategy>
     static inline void apply(TaskRes task_res,
-                             Geometry1 const& g1,
-                             Geometry2 const& g2,
-                             RobustPolicy const& robust_policy,
-                             Strategy const& strategy)
+                             Geometry1& g1,
+                             Geometry2& g2,
+                             RobustPolicy& robust_policy,
+                             Strategy const& strategy,
+                             long)
     {
         typename TaskRes::return_type output_collection;
         union_insert
                 <
-                    Geometry1, Geometry2, GeometryOut,
+                    Job,Geometry1, Geometry2, GeometryOut,
                     typename boost::geometry::tag_cast<TagIn1, boost::geometry::pointlike_tag, boost::geometry::linear_tag>::type,
                     typename boost::geometry::tag_cast<TagIn2, boost::geometry::pointlike_tag, boost::geometry::linear_tag>::type,
                     TagOut,
@@ -177,12 +184,13 @@ struct union_insert
 // dispatch for union of linear geometries
 template
 <
+    typename Job,
     typename Linear1, typename Linear2, typename LineStringOut,
     bool Reverse1, bool Reverse2, bool ReverseOut
 >
 struct union_insert
     <
-        Linear1, Linear2, LineStringOut,
+        Job,Linear1, Linear2, LineStringOut,
         boost::geometry::linear_tag, boost::geometry::linear_tag, boost::geometry::linestring_tag,
         false, false, false,
         Reverse1, Reverse2, ReverseOut,
@@ -194,10 +202,11 @@ struct union_insert
 {
     template <typename TaskRes,typename RobustPolicy, typename Strategy>
     static inline void apply(TaskRes task_res,
-                             Linear1 const& g1,
-                             Linear2 const& g2,
-                             RobustPolicy const& robust_policy,
-                             Strategy const& strategy)
+                             Linear1& g1,
+                             Linear2& g2,
+                             RobustPolicy& robust_policy,
+                             Strategy const& strategy,
+                             long)
     {
         typename TaskRes::return_type output_collection;
         boost::geometry::detail::overlay::linear_linear_linestring
@@ -212,12 +221,13 @@ struct union_insert
 // dispatch for point-like geometries
 template
 <
+    typename Job,
     typename PointLike1, typename PointLike2, typename PointOut,
     bool Reverse1, bool Reverse2, bool ReverseOut
 >
 struct union_insert
     <
-        PointLike1, PointLike2, PointOut,
+        Job,PointLike1, PointLike2, PointOut,
         boost::geometry::pointlike_tag, boost::geometry::pointlike_tag, boost::geometry::point_tag,
         false, false, false,
         Reverse1, Reverse2, ReverseOut,
@@ -229,10 +239,11 @@ struct union_insert
 {
     template <typename TaskRes,typename RobustPolicy, typename Strategy>
     static inline void apply(TaskRes task_res,
-                             PointLike1 const& g1,
-                             PointLike2 const& g2,
-                             RobustPolicy const& robust_policy,
-                             Strategy const& strategy)
+                             PointLike1& g1,
+                             PointLike2& g2,
+                             RobustPolicy& robust_policy,
+                             Strategy const& strategy,
+                             long)
     {
         typename TaskRes::return_type output_collection;
         boost::geometry::detail::overlay::union_pointlike_pointlike_point
@@ -267,13 +278,15 @@ namespace detail { namespace union_
 template
 <    
     typename GeometryOut,
+    typename Job,
     typename Geometry1,
     typename Geometry2,
     typename TaskRes
 >
 inline void union_insert(TaskRes task_res,
-                         Geometry1 const& geometry1,
-                         Geometry2 const& geometry2)
+                         Geometry1& geometry1,
+                         Geometry2& geometry2,
+                         long cutoff)
 {
     boost::geometry::concept::check<Geometry1 const>();
     boost::geometry::concept::check<Geometry2 const>();
@@ -299,8 +312,8 @@ inline void union_insert(TaskRes task_res,
 
     dispatch::union_insert
            <
-               Geometry1, Geometry2, GeometryOut
-           >::apply(task_res,geometry1, geometry2, robust_policy, strategy());
+               Job,Geometry1, Geometry2, GeometryOut
+           >::apply(task_res,geometry1, geometry2, robust_policy, strategy(),cutoff);
 }
 
 
@@ -330,11 +343,13 @@ template
     typename TaskRes,
     typename Geometry1,
     typename Geometry2,
-    typename Collection
+    typename Collection,
+    typename Job
 >
 inline void union_(TaskRes task_res,
-                   Geometry1 const& geometry1,
-                   Geometry2 const& geometry2)
+                   Geometry1& geometry1,
+                   Geometry2& geometry2,
+                   long cutoff)
 {
     boost::geometry::concept::check<Geometry1 const>();
     boost::geometry::concept::check<Geometry2 const>();
@@ -342,7 +357,7 @@ inline void union_(TaskRes task_res,
     typedef typename boost::range_value<Collection>::type geometry_out;
     boost::geometry::concept::check<geometry_out>();
 
-    detail::union_::union_insert<geometry_out>(task_res,geometry1, geometry2);
+    detail::union_::union_insert<geometry_out,Job>(task_res,geometry1, geometry2,cutoff);
 }
 
 namespace detail
@@ -359,8 +374,8 @@ struct parallel_union_helper: public boost::asynchronous::continuation_task<Coll
     void operator()()
     {
         boost::asynchronous::continuation_result<Collection> task_res = this->this_task_result();
-        boost::asynchronous::geometry::union_<boost::asynchronous::continuation_result<Collection>,Geometry1,Geometry2,Collection>
-                (task_res,geometry1_,geometry2_);
+        boost::asynchronous::geometry::union_<boost::asynchronous::continuation_result<Collection>,Geometry1,Geometry2,Collection,Job>
+                (task_res,geometry1_,geometry2_,cutoff_);
     }
     Geometry1 geometry1_;
     Geometry2 geometry2_;
