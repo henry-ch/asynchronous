@@ -44,7 +44,7 @@
 #  include <boost/geometry/io/dsv/write.hpp>
 #endif
 
-#ifdef BOOST_GEOMETRY_TIME_OVERLAY
+#ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
 # include <boost/timer.hpp>
 #endif
 
@@ -56,96 +56,6 @@ namespace boost { namespace geometry
 #ifndef DOXYGEN_NO_DETAIL
 namespace detail { namespace overlay
 {
-
-// Skip for assemble process
-/*template <typename TurnInfo>
-inline bool skip(TurnInfo const& turn_info)
-{
-    return (turn_info.discarded || turn_info.both(operation_union))
-        && ! turn_info.any_blocked()
-        && ! turn_info.both(operation_intersection)
-        ;
-}
-
-
-template <typename TurnPoints, typename Map>
-inline void map_turns(Map& map, TurnPoints const& turn_points)
-{
-    typedef typename boost::range_value<TurnPoints>::type turn_point_type;
-    typedef typename turn_point_type::container_type container_type;
-
-    for (typename boost::range_iterator<TurnPoints const>::type
-            it = boost::begin(turn_points);
-         it != boost::end(turn_points);
-         ++it)
-    {
-        if (! skip(*it))
-        {
-            for (typename boost::range_iterator<container_type const>::type
-                    op_it = boost::begin(it->operations);
-                op_it != boost::end(it->operations);
-                ++op_it)
-            {
-                ring_identifier ring_id
-                    (
-                        op_it->seg_id.source_index,
-                        op_it->seg_id.multi_index,
-                        op_it->seg_id.ring_index
-                    );
-                map[ring_id]++;
-            }
-        }
-    }
-}*/
-
-
-/*template
-<
-    typename GeometryOut, overlay_type Direction, bool ReverseOut,
-    typename Geometry1, typename Geometry2,
-    typename OutputIterator
->
-inline OutputIterator return_if_one_input_is_empty(Geometry1 const& geometry1,
-            Geometry2 const& geometry2,
-            OutputIterator out)
-{
-    typedef std::deque
-        <
-            typename geometry::ring_type<GeometryOut>::type
-        > ring_container_type;
-
-    typedef ring_properties<typename geometry::point_type<Geometry1>::type> properties;
-
-// Silence warning C4127: conditional expression is constant
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable : 4127)
-#endif
-
-    // Union: return either of them
-    // Intersection: return nothing
-    // Difference: return first of them
-    if (Direction == overlay_intersection
-        || (Direction == overlay_difference
-            && geometry::num_points(geometry1) == 0))
-    {
-        return out;
-    }
-
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
-
-
-    std::map<ring_identifier, int> empty;
-    std::map<ring_identifier, properties> all_of_one_of_them;
-
-    select_rings<Direction>(geometry1, geometry2, empty, all_of_one_of_them, false);
-    ring_container_type rings;
-    assign_parents(geometry1, geometry2, rings, all_of_one_of_them);
-    return add_rings<GeometryOut>(all_of_one_of_them, geometry1, geometry2, rings, out);
-}
-*/
 
 template
 <
@@ -165,7 +75,40 @@ struct update_selection_map_fct
         , intersection_map_(boost::make_shared<IntersectionMap>(std::move(intersection_map)))
         , map_with_all_(map_with_all)
     {}
-
+    update_selection_map_fct(update_selection_map_fct&& rhs)noexcept
+        : geometry1_(std::move(rhs.geometry1_))
+        , geometry2_(std::move(rhs.geometry2_))
+        , intersection_map_(std::move(rhs.intersection_map_))
+        , map_with_all_(std::move(rhs.map_with_all_))
+        , selection_map_(std::move(rhs.selection_map_))
+    {
+    }
+    update_selection_map_fct& operator=(update_selection_map_fct&& rhs)noexcept
+    {
+        geometry1_ = std::move(rhs.geometry1_);
+        geometry2_ = std::move(rhs.geometry2_);
+        intersection_map_ = std::move(rhs.intersection_map_);
+        map_with_all_ = std::move(rhs.map_with_all_);
+        selection_map_ = std::move(rhs.selection_map_);
+        return *this;
+    }
+    update_selection_map_fct(update_selection_map_fct const& rhs)noexcept
+        : geometry1_(rhs.geometry1_)
+        , geometry2_(rhs.geometry2_)
+        , intersection_map_(rhs.intersection_map_)
+        , map_with_all_(rhs.map_with_all_)
+        , selection_map_(rhs.selection_map_)
+    {
+    }
+    update_selection_map_fct& operator=(update_selection_map_fct const& rhs)noexcept
+    {
+        geometry1_ = rhs.geometry1_;
+        geometry2_ = rhs.geometry2_;
+        intersection_map_ = rhs.intersection_map_;
+        map_with_all_ = rhs.map_with_all_;
+        selection_map_ = rhs.selection_map_;
+        return *this;
+    }
     template <class T>
     void operator()(/*SelectionMap*/T const& i)
     {
@@ -263,9 +206,8 @@ struct parallel_overlay
             > ring_container_type;
 
         container_type turn_points;
-
-#ifdef BOOST_GEOMETRY_TIME_OVERLAY
-        boost::timer timer;
+#ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
+        auto start = boost::chrono::high_resolution_clock::now();
 #endif
 #ifdef BOOST_GEOMETRY_DEBUG_ASSEMBLE
 std::cout << "get turns" << std::endl;
@@ -277,8 +219,10 @@ std::cout << "get turns" << std::endl;
                 detail::overlay::assign_null_policy
             >(geometry1, geometry2, robust_policy, turn_points, policy);
 
-#ifdef BOOST_GEOMETRY_TIME_OVERLAY
-        std::cout << "get_turns: " << timer.elapsed() << std::endl;
+#ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
+        double elapsed = (double)(boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
+        std::cout << "get_turns ms: " << elapsed <<std::endl;
+        start = boost::chrono::high_resolution_clock::now();
 #endif
 
 #ifdef BOOST_GEOMETRY_DEBUG_ASSEMBLE
@@ -293,8 +237,10 @@ std::cout << "enrich" << std::endl;
                     robust_policy,
                     side_strategy);
 
-#ifdef BOOST_GEOMETRY_TIME_OVERLAY
-        std::cout << "enrich_intersection_points: " << timer.elapsed() << std::endl;
+#ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
+        elapsed = (double)(boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
+        std::cout << "enrich_intersection_points ms: " << elapsed <<std::endl;
+        start = boost::chrono::high_resolution_clock::now();
 #endif
 
 #ifdef BOOST_GEOMETRY_DEBUG_ASSEMBLE
@@ -314,16 +260,20 @@ std::cout << "traverse" << std::endl;
                     turn_points, *rings
                 );
 
-#ifdef BOOST_GEOMETRY_TIME_OVERLAY
-        std::cout << "traverse: " << timer.elapsed() << std::endl;
+#ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
+        elapsed = (double)(boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
+        std::cout << "traverse ms: " << elapsed <<std::endl;
+        start = boost::chrono::high_resolution_clock::now();
 #endif
 
         std::map<ring_identifier, int> map;
         map_turns(map, turn_points);
 
-#ifdef BOOST_GEOMETRY_TIME_OVERLAY
-        std::cout << "map_turns: " << timer.elapsed() << std::endl;
-#endif
+#ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
+        elapsed = (double)(boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
+        std::cout << "map_turns ms: " << elapsed <<std::endl;
+        start = boost::chrono::high_resolution_clock::now();
+#endif        
 
         typedef ring_properties<typename geometry::point_type<GeometryOut>::type> properties;
 
@@ -332,11 +282,15 @@ std::cout << "traverse" << std::endl;
                                          std::map<ring_identifier, int>,
                                          std::map<ring_identifier, properties>> select_ring_fct;
 
-        auto cont = pselect_rings<Direction,std::map<ring_identifier, properties>,select_ring_fct,Job>(
+        auto cont = parallel_select_rings<Direction,std::map<ring_identifier, properties>,select_ring_fct,Job>(
                     geometry1, geometry2, map, ! turn_points.empty(),cutoff);
 
         cont.on_done(
+#ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
+        [start,task_res,rings,output_collection](std::tuple<boost::asynchronous::expected<select_ring_fct> >&& res)
+#else
         [task_res,rings,output_collection](std::tuple<boost::asynchronous::expected<select_ring_fct> >&& res)
+#endif
         {
             try
             {
@@ -359,6 +313,10 @@ std::cout << "traverse" << std::endl;
 
                 add_rings<GeometryOut>(all_fct.selection_map_, *all_fct.geometry1_, *all_fct.geometry2_,
                                        *rings, std::back_inserter(*output_collection));
+#ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
+                double elapsed = (double)(boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
+                std::cout << "select_rings ms: " << elapsed <<std::endl;
+#endif
                 task_res.set_value(std::move(*output_collection));
             }
             catch(std::exception& e)

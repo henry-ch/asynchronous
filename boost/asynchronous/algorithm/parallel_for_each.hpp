@@ -53,7 +53,7 @@ struct parallel_for_each_helper: public boost::asynchronous::continuation_task<F
         // if not at end, recurse, otherwise execute here
         if (it == end_)
         {
-            task_res.set_value(std::move(std::for_each(beg_,it,func_)));
+            task_res.set_value(std::move(std::for_each(beg_,it,std::move(func_))));
         }
         else
         {
