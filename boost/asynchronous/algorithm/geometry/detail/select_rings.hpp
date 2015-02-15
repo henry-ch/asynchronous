@@ -46,16 +46,15 @@ template
 inline boost::asynchronous::detail::callback_continuation<Fct,Job>
 update_selection_map(Geometry1& geometry1,
                      Geometry2& geometry2,
-                     IntersectionMap& intersection_map,
-                     SelectionMap& map_with_all, long cutoff)
+                     IntersectionMap intersection_map,
+                     boost::shared_ptr<SelectionMap> map_with_all, long cutoff)
 {
-    typedef decltype(boost::begin(map_with_all)) Iterator;
-
-    boost::shared_ptr<SelectionMap> pmap_with_all(boost::make_shared<SelectionMap>(std::move(map_with_all)));
+    typedef decltype(boost::begin(*map_with_all)) Iterator;
+    //TODO name + prio
     return boost::asynchronous::parallel_for_each<Iterator,Fct,Job>
-            (boost::begin(*pmap_with_all),boost::end(*pmap_with_all),
-             Fct(geometry1,geometry2,intersection_map,pmap_with_all),
-             cutoff);
+            (boost::begin(*map_with_all),boost::end(*map_with_all),
+             Fct(geometry1,geometry2,std::move(intersection_map),map_with_all),
+             cutoff,"geometry::update_selection_map",0);
 }
 
 
@@ -73,17 +72,17 @@ template
 >
 inline boost::asynchronous::detail::callback_continuation<Fct,Job>
 parallel_select_rings(Geometry1& geometry1, Geometry2& geometry2,
-             IntersectionMap& intersection_map,
+             IntersectionMap intersection_map,
              bool midpoint, long cutoff)
 {
     typedef typename geometry::tag<Geometry1>::type tag1;
     typedef typename geometry::tag<Geometry2>::type tag2;
-    SelectionMap map_with_all;
+    boost::shared_ptr<SelectionMap> map_with_all(boost::make_shared<SelectionMap>());
     dispatch::select_rings<tag1, Geometry1>::apply(geometry1, geometry2,
-                ring_identifier(0, -1, -1), map_with_all, midpoint);
+                ring_identifier(0, -1, -1), *map_with_all, midpoint);
     dispatch::select_rings<tag2, Geometry2>::apply(geometry2, geometry1,
-                ring_identifier(1, -1, -1), map_with_all, midpoint);
-    return update_selection_map<OverlayType,Fct,Job>(geometry1, geometry2, intersection_map,map_with_all,cutoff);
+                ring_identifier(1, -1, -1), *map_with_all, midpoint);
+    return update_selection_map<OverlayType,Fct,Job>(geometry1, geometry2, std::move(intersection_map),map_with_all,cutoff);
 }
 
 template
@@ -97,16 +96,16 @@ template
 >
 inline boost::asynchronous::detail::callback_continuation<Fct,Job>
 parallel_select_rings(Geometry& geometry,
-             IntersectionMap& intersection_map,
+             IntersectionMap intersection_map,
              bool midpoint, long cutoff)
 {
     typedef typename geometry::tag<Geometry>::type tag;
 
-    SelectionMap map_with_all;
+    boost::shared_ptr<SelectionMap> map_with_all(boost::make_shared<SelectionMap>());
     dispatch::select_rings<tag, Geometry>::apply(geometry,
-                ring_identifier(0, -1, -1), map_with_all, midpoint);
+                ring_identifier(0, -1, -1), *map_with_all, midpoint);
 
-    return update_selection_map<OverlayType,Fct,Job>(geometry, geometry, intersection_map,map_with_all,cutoff);
+    return update_selection_map<OverlayType,Fct,Job>(geometry, geometry, std::move(intersection_map),map_with_all,cutoff);
 }
 
 
