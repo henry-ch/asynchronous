@@ -221,8 +221,11 @@ std::cout << "get turns" << std::endl;
                 Reverse1, Reverse2,
                 detail::overlay::assign_null_policy,Job
             >(geometry1, geometry2, robust_policy, turn_points, policy);
-
+#ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
+        cont.on_done([start,task_res,geometry1, geometry2, robust_policy,cutoff,output_collection]
+#else
         cont.on_done([task_res,geometry1, geometry2, robust_policy,cutoff,output_collection]
+#endif
                      (std::tuple<boost::asynchronous::expected<container_type> >&& continuation_res)mutable
         {
             //std::cout << "overlay. after get_turns" << std::endl;

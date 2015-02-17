@@ -216,41 +216,7 @@ public :
                         policy, box_policy);
     }
 };
-/*
-template
-<
-    typename InputCollection1,
-    typename InputCollection2,
-    typename VisitBoxPolicy,
-    typename IndexVectorType,
-    typename Policy
->
-void next_level_(Box const& box,
-        InputCollection1 const& collection1,
-        IndexVectorType const& input1,
-        InputCollection2 const& collection2,
-        IndexVectorType const& input2,
-        int level, std::size_t min_elements,
-        Policy& policy, VisitBoxPolicy& box_policy)
-{
-    if (boost::size(input1) > 0 && boost::size(input2) > 0)
-    {
-        if (std::size_t(boost::size(input1)) > min_elements
-            && std::size_t(boost::size(input2)) > min_elements
-            && level < 100)
-        {
-            sub_divide::apply(box, collection1, input1, collection2,
-                            input2, level + 1, min_elements,
-                            policy, box_policy);
-        }
-        else
-        {
-            box_policy.apply(box, level + 1);
-            handle_two(collection1, input1, collection2, input2, policy);
-        }
-    }
-}
-*/
+
 template
 <
     int Dimension,
@@ -346,10 +312,6 @@ class parallel_partition_two_collections
                                     index_vector_type exceeding2(std::move(std::get<2>(sub2)));
 
                                     // merge results
-                                    //std::cout << "divide_into_subsets_task. Reserve for lower1: " << lower1.size()+lower2.size() << std::endl;
-                                    //std::cout << "divide_into_subsets_task. Reserve for upper1: " << upper1.size()+upper2.size() << std::endl;
-                                    //std::cout << "divide_into_subsets_task. Reserve for exceeding1: " << exceeding1.size()+exceeding2.size() << std::endl;
-
                                     lower1.reserve(lower1.size()+lower2.size());
                                     upper1.reserve(upper1.size()+upper2.size());
                                     exceeding1.reserve(exceeding1.size()+exceeding2.size());
@@ -359,15 +321,8 @@ class parallel_partition_two_collections
                                     std::move(lower2.begin(),lower2.end(),std::back_inserter(lower1));
                                     std::move(upper2.begin(),upper2.end(),std::back_inserter(upper1));
                                     std::move(exceeding2.begin(),exceeding2.end(),std::back_inserter(exceeding1));
-
-                                    //std::cout << "divide_into_subsets_task. After move size lower1: " << lower1.size()<< std::endl;
-                                    //std::cout << "divide_into_subsets_task. After move size upper1: " << upper1.size()<< std::endl;
-                                    //std::cout << "divide_into_subsets_task. After move size exceeding1: " << exceeding1.size() << std::endl;
-
-
                                     task_res.set_value(std::make_tuple(std::move(lower1),std::move(upper1),std::move(exceeding1)));
 
-                                    //std::cout << "divide_into_subsets_task. After set_value" << std::endl;
                                 }
                                 catch(std::exception& e)
                                 {
@@ -426,86 +381,7 @@ class parallel_partition_two_collections
             }
         }
     }
-    template
-    <
-        typename InputCollection1,
-        typename InputCollection2,
-        typename Policy,
-        typename Owner
-    >
-    struct dummy_partition_task : public boost::asynchronous::continuation_task<Policy>
-    {
-        dummy_partition_task(Box const& box,
-                                boost::shared_ptr<InputCollection1> collection1,boost::shared_ptr<index_vector_type> input1,
-                                boost::shared_ptr<InputCollection2> collection2,boost::shared_ptr<index_vector_type> input2,
-                                int level,
-                                std::size_t min_elements,
-                                boost::shared_ptr<Policy> policy, VisitBoxPolicy& box_policy,
-                                long cutoff,const std::string& task_name, std::size_t prio)
-            : boost::asynchronous::continuation_task<Policy>(task_name)
-            // TODO move
-            , box_(box)
-            , collection1_(collection1), collection2_(collection2)
-            , input1_(input1), input2_(input2)
-            , level_(level)
-            , min_elements_(min_elements),policy_(policy),box_policy_(box_policy)
-            , cutoff_(cutoff), prio_(prio)
-        {}
 
-        void operator()()
-        {
-            // the result of this task, will be either set when both subtasks are ready
-            // subtasks will be ready when their subtasks are ready, etc.
-            boost::asynchronous::continuation_result<Policy> task_res = this->this_task_result();
-            box_policy_.apply(box_, level_);
-
-            Box lower_box, upper_box;
-            divide_box<Dimension>(box_, lower_box, upper_box);
-
-            index_vector_type lower1, upper1, exceeding1;
-            index_vector_type lower2, upper2, exceeding2;
-            divide_into_subsets<OverlapsPolicy1>(lower_box, upper_box, *collection1_,
-                        *input1_, lower1, upper1, exceeding1);
-            divide_into_subsets<OverlapsPolicy2>(lower_box, upper_box, *collection2_,
-                        *input2_, lower2, upper2, exceeding2);
-
-            if (boost::size(exceeding1) > 0)
-            {
-                // All exceeding from 1 with 2:
-                handle_two(*collection1_, exceeding1, *collection2_, exceeding2,
-                            *policy_);
-
-                // All exceeding from 1 with lower and upper of 2:
-                handle_two(*collection1_, exceeding1, *collection2_, lower2, *policy_);
-                handle_two(*collection1_, exceeding1, *collection2_, upper2, *policy_);
-            }
-            if (boost::size(exceeding2) > 0)
-            {
-                // All exceeding from 2 with lower and upper of 1:
-                handle_two(*collection1_, lower1, *collection2_, exceeding2, *policy_);
-                handle_two(*collection1_, upper1, *collection2_, exceeding2, *policy_);
-            }
-
-            Owner::next_level(lower_box, *collection1_, lower1, *collection2_, lower2, level_,
-                            min_elements_, *policy_, box_policy_);
-            Owner::next_level(upper_box, *collection1_, upper1, *collection2_, upper2, level_,
-                            min_elements_, *policy_, box_policy_);
-
-            task_res.set_value(std::move(*policy_));
-        }
-
-        Box box_;
-        boost::shared_ptr<InputCollection1> collection1_;
-        boost::shared_ptr<InputCollection2> collection2_;
-        boost::shared_ptr<index_vector_type> input1_;
-        boost::shared_ptr<index_vector_type> input2_;
-        int level_;
-        std::size_t min_elements_;
-        boost::shared_ptr<Policy> policy_;
-        VisitBoxPolicy box_policy_;
-        long cutoff_;
-        std::size_t prio_;
-    };
     template
     <
         typename InputCollection1,
@@ -532,93 +408,95 @@ class parallel_partition_two_collections
             , cutoff_(cutoff), prio_(prio)
         {}
 
-        void operator()()const
+        void operator()()
         {
-            box_policy_.apply(box_, level_);
+            if ((*input1_).size() +  (*input2_).size() < cutoff_)
+            {
+                // no need to pay for tasks if only few elements
+                boost::asynchronous::continuation_result<Policy> task_res = this->this_task_result();
+                Owner::apply(box_,*collection1_,*input1_,*collection2_,*input2_,level_,min_elements_,*policy_,box_policy_);
+                task_res.set_value(std::move(*policy_));
+            }
+            else
+            {
+                box_policy_.apply(box_, level_);
 
-            Box lower_box, upper_box;
-            divide_box<Dimension>(box_, lower_box, upper_box);
-            // the result of this task, will be either set when both subtasks are ready
-            // subtasks will be ready when their subtasks are ready, etc.
-            boost::asynchronous::continuation_result<Policy> task_res = this->this_task_result();
+                Box lower_box, upper_box;
+                divide_box<Dimension>(box_, lower_box, upper_box);
+                // the result of this task, will be either set when both subtasks are ready
+                // subtasks will be ready when their subtasks are ready, etc.
+                boost::asynchronous::continuation_result<Policy> task_res = this->this_task_result();
 
-            auto policy = policy_;
-            auto collection1 = collection1_;
-            auto collection2 = collection2_;
-            auto level = level_;
-            auto box_policy = box_policy_;
-            auto min_elements = min_elements_;
+                auto policy = policy_;
+                auto collection1 = collection1_;
+                auto collection2 = collection2_;
+                auto level = level_;
+                auto box_policy = box_policy_;
+                auto min_elements = min_elements_;
 
-            //std::cout << "parallel_partition_task. Elements 1: " << input1_->size() << std::endl;
-            //std::cout << "parallel_partition_task. Elements 2: " << input2_->size() << std::endl;
+                //std::cout << "parallel_partition_task. Elements 1: " << input1_->size() << std::endl;
+                //std::cout << "parallel_partition_task. Elements 2: " << input2_->size() << std::endl;
 
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                        // called when subtasks are done, set our result
-                        [task_res,policy,collection1,collection2,level,box_policy,lower_box, upper_box,min_elements]
-                        (std::tuple<boost::asynchronous::expected<subsets_task_result_type>,
-                                    boost::asynchronous::expected<subsets_task_result_type> > res) mutable
-                        {
-                            try
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                            // called when subtasks are done, set our result
+                            [task_res,policy,collection1,collection2,level,box_policy,lower_box, upper_box,min_elements]
+                            (std::tuple<boost::asynchronous::expected<subsets_task_result_type>,
+                                        boost::asynchronous::expected<subsets_task_result_type> > res) mutable
                             {
-                                // get results
-                                subsets_task_result_type sub1 (std::move(std::get<0>(res).get()));
-                                index_vector_type lower1(std::move(std::get<0>(sub1)));
-                                index_vector_type upper1(std::move(std::get<1>(sub1)));
-                                index_vector_type exceeding1(std::move(std::get<2>(sub1)));
-
-                                subsets_task_result_type sub2 (std::move(std::get<1>(res).get()));
-                                index_vector_type lower2(std::move(std::get<0>(sub2)));
-                                index_vector_type upper2(std::move(std::get<1>(sub2)));
-                                index_vector_type exceeding2(std::move(std::get<2>(sub2)));
-
-                                //std::cout << "parallel_partition_task. size lower1: " << lower1.size()<< std::endl;
-                                //std::cout << "parallel_partition_task. size upper1: " << upper1.size()<< std::endl;
-                                //std::cout << "parallel_partition_task. size exceeding1: " << exceeding1.size() << std::endl;
-                                //std::cout << "parallel_partition_task. size lower2: " << lower2.size()<< std::endl;
-                                //std::cout << "parallel_partition_task. size upper2: " << upper2.size()<< std::endl;
-                                //std::cout << "parallel_partition_task. size exceeding2: " << exceeding2.size() << std::endl;
-
-
-                                if (boost::size(exceeding1) > 0)
+                                try
                                 {
-                                    // All exceeding from 1 with 2:
-                                    handle_two(*collection1, exceeding1, *collection2, exceeding2,
-                                                *policy);
+                                    // get results
+                                    subsets_task_result_type sub1 (std::move(std::get<0>(res).get()));
+                                    index_vector_type lower1(std::move(std::get<0>(sub1)));
+                                    index_vector_type upper1(std::move(std::get<1>(sub1)));
+                                    index_vector_type exceeding1(std::move(std::get<2>(sub1)));
 
-                                    // All exceeding from 1 with lower and upper of 2:
-                                    handle_two(*collection1, exceeding1, *collection2, lower2, *policy);
-                                    handle_two(*collection1, exceeding1, *collection2, upper2, *policy);
+                                    subsets_task_result_type sub2 (std::move(std::get<1>(res).get()));
+                                    index_vector_type lower2(std::move(std::get<0>(sub2)));
+                                    index_vector_type upper2(std::move(std::get<1>(sub2)));
+                                    index_vector_type exceeding2(std::move(std::get<2>(sub2)));
+
+                                    if (boost::size(exceeding1) > 0)
+                                    {
+                                        // All exceeding from 1 with 2:
+                                        handle_two(*collection1, exceeding1, *collection2, exceeding2,
+                                                    *policy);
+
+                                        // All exceeding from 1 with lower and upper of 2:
+                                        handle_two(*collection1, exceeding1, *collection2, lower2, *policy);
+                                        handle_two(*collection1, exceeding1, *collection2, upper2, *policy);
+                                    }
+                                    if (boost::size(exceeding2) > 0)
+                                    {
+                                        // All exceeding from 2 with lower and upper of 1:
+                                        handle_two(*collection1, lower1, *collection2, exceeding2, *policy);
+                                        handle_two(*collection1, upper1, *collection2, exceeding2, *policy);
+                                    }
+                                    //std::cout << "parallel_partition_task. before next_level" << std::endl;
+                                    Owner::next_level(lower_box, *collection1, lower1, *collection2, lower2, level,
+                                                    min_elements, *policy, box_policy);
+                                    Owner::next_level(upper_box, *collection1, upper1, *collection2, upper2, level,
+                                                    min_elements, *policy, box_policy);
+
+                                    //std::cout << "parallel_partition_task. after next_level" << std::endl;
+                                    task_res.set_value(std::move(*policy));
+                                    //std::cout << "parallel_partition_task. after set_value" << std::endl;
                                 }
-                                if (boost::size(exceeding2) > 0)
+                                catch(std::exception& e)
                                 {
-                                    // All exceeding from 2 with lower and upper of 1:
-                                    handle_two(*collection1, lower1, *collection2, exceeding2, *policy);
-                                    handle_two(*collection1, upper1, *collection2, exceeding2, *policy);
+                                    std::cout << "parallel_partition_task. Exception" << std::endl;
+                                    task_res.set_exception(boost::copy_exception(e));
                                 }
-                                //std::cout << "parallel_partition_task. before next_level" << std::endl;
-                                Owner::next_level(lower_box, *collection1, lower1, *collection2, lower2, level,
-                                                min_elements, *policy, box_policy);
-                                Owner::next_level(upper_box, *collection1, upper1, *collection2, upper2, level,
-                                                min_elements, *policy, box_policy);
-
-                                //std::cout << "parallel_partition_task. after next_level" << std::endl;
-                                task_res.set_value(std::move(*policy));
-                                //std::cout << "parallel_partition_task. after set_value" << std::endl;
-                            }
-                            catch(std::exception& e)
-                            {
-                                std::cout << "parallel_partition_task. Exception" << std::endl;
-                                task_res.set_exception(boost::copy_exception(e));
-                            }
-                        },
-                        // recursive tasks
-                        divide_into_subsets_task<InputCollection1,OverlapsPolicy1>(lower_box,upper_box,collection1_,input1_,
-                                                                                         boost::begin(*input1_),boost::end(*input1_),
-                                                                                         cutoff_,this->get_name(),prio_),
-                        divide_into_subsets_task<InputCollection2,OverlapsPolicy2>(lower_box,upper_box,collection2_,input2_,
-                                                                                         boost::begin(*input2_),boost::end(*input2_),
-                                                                                         cutoff_,this->get_name(),prio_)
-               );
+                            },
+                            // recursive tasks
+                            divide_into_subsets_task<InputCollection1,OverlapsPolicy1>(lower_box,upper_box,collection1_,input1_,
+                                                                                             boost::begin(*input1_),boost::end(*input1_),
+                                                                                             cutoff_,this->get_name(),prio_),
+                            divide_into_subsets_task<InputCollection2,OverlapsPolicy2>(lower_box,upper_box,collection2_,input2_,
+                                                                                             boost::begin(*input2_),boost::end(*input2_),
+                                                                                             cutoff_,this->get_name(),prio_)
+                   );
+            }
         }
 
         Box box_;
