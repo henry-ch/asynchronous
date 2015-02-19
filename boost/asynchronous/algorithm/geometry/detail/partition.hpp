@@ -142,6 +142,52 @@ inline void handle_two(
     }
 }
 */
+
+// Divide collection into three subsets: lower, upper and oversized
+// (not-fitting)
+// (lower == left or bottom, upper == right or top)
+template <typename OverlapsPolicy, typename InputCollection, typename Box, typename Iterator>
+inline void divide_into_subsets_iterators(Box const& lower_box,
+        Box const& upper_box,
+        InputCollection const& collection,
+        Iterator beg,
+        Iterator end,
+        index_vector_type& lower,
+        index_vector_type& upper,
+        index_vector_type& exceeding)
+{
+    typedef boost::range_iterator
+        <
+            index_vector_type const
+        >::type index_iterator_type;
+
+    for(index_iterator_type it = beg;it != end;++it)
+    {
+        bool const lower_overlapping = OverlapsPolicy::apply(lower_box,
+                    collection[*it]);
+        bool const upper_overlapping = OverlapsPolicy::apply(upper_box,
+                    collection[*it]);
+
+        if (lower_overlapping && upper_overlapping)
+        {
+            exceeding.push_back(*it);
+        }
+        else if (lower_overlapping)
+        {
+            lower.push_back(*it);
+        }
+        else if (upper_overlapping)
+        {
+            upper.push_back(*it);
+        }
+        else
+        {
+            // Is nowhere! Should not occur!
+            BOOST_ASSERT(false);
+        }
+    }
+}
+
 template
 <
     int Dimension,
@@ -276,7 +322,6 @@ class parallel_partition_two_collections
         {}
         void operator()()const
         {
-            //std::cout << "divide_into_subsets_task. Elements: " << input_->size() << ": " << std::boolalpha << (input_->size() < 400000) << std::endl;
             // the result of this task, will be either set directly if < cutoff, otherwise when taks is ready
             boost::asynchronous::continuation_result<subsets_task_result_type> task_res = this->this_task_result();
             // advance up to cutoff            
@@ -288,7 +333,7 @@ class parallel_partition_two_collections
                 index_vector_type upper;
                 index_vector_type exceeding;
 
-                divide_into_subsets<OverlapsPolicy>(lower_box_, upper_box_, *collection_,*input_, lower, upper, exceeding);
+                divide_into_subsets_iterators<OverlapsPolicy>(lower_box_, upper_box_, *collection_,beg_,end_, lower, upper, exceeding);
                 task_res.set_value(std::move(std::make_tuple(std::move(lower),std::move(upper),std::move(exceeding))));
             }
             else
@@ -296,7 +341,7 @@ class parallel_partition_two_collections
                 boost::asynchronous::create_callback_continuation_job<Job>(
                             // called when subtasks are done, set our result
                             [task_res](std::tuple<boost::asynchronous::expected<subsets_task_result_type>,
-                                                  boost::asynchronous::expected<subsets_task_result_type> > res)
+                                                  boost::asynchronous::expected<subsets_task_result_type> > res)mutable
                             {
                                 try
                                 {
@@ -316,11 +361,10 @@ class parallel_partition_two_collections
                                     upper1.reserve(upper1.size()+upper2.size());
                                     exceeding1.reserve(exceeding1.size()+exceeding2.size());
 
-                                    //std::cout << "divide_into_subsets_task. After reserve" << std::endl;
-
                                     std::move(lower2.begin(),lower2.end(),std::back_inserter(lower1));
                                     std::move(upper2.begin(),upper2.end(),std::back_inserter(upper1));
                                     std::move(exceeding2.begin(),exceeding2.end(),std::back_inserter(exceeding1));
+
                                     task_res.set_value(std::make_tuple(std::move(lower1),std::move(upper1),std::move(exceeding1)));
 
                                 }
@@ -490,11 +534,11 @@ class parallel_partition_two_collections
                             },
                             // recursive tasks
                             divide_into_subsets_task<InputCollection1,OverlapsPolicy1>(lower_box,upper_box,collection1_,input1_,
-                                                                                             boost::begin(*input1_),boost::end(*input1_),
-                                                                                             cutoff_,this->get_name(),prio_),
+                                                                                       boost::begin(*input1_),boost::end(*input1_),
+                                                                                       cutoff_,this->get_name(),prio_),
                             divide_into_subsets_task<InputCollection2,OverlapsPolicy2>(lower_box,upper_box,collection2_,input2_,
-                                                                                             boost::begin(*input2_),boost::end(*input2_),
-                                                                                             cutoff_,this->get_name(),prio_)
+                                                                                       boost::begin(*input2_),boost::end(*input2_),
+                                                                                       cutoff_,this->get_name(),prio_)
                    );
             }
         }
@@ -536,7 +580,7 @@ public :
                       boost::make_shared<InputCollection2>(collection2),boost::make_shared<index_vector_type>(input2),
                       level,min_elements,
                       boost::make_shared<Policy>(policy),box_policy,
-                      3000000,"geometry::parallel_partition",0));
+                      800,"geometry::parallel_partition",0));
     }
 
     template
