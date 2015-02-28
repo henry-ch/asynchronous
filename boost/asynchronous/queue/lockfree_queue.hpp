@@ -10,7 +10,7 @@
 #ifndef BOOST_ASYNC_QUEUE_LOCKFREE_QUEUE_HPP
 #define BOOST_ASYNC_QUEUE_LOCKFREE_QUEUE_HPP
 
-#include <boost/lockfree/queue.hpp>
+
 #include <boost/thread/thread.hpp>
 #include <boost/smart_ptr/scoped_ptr.hpp>
 
@@ -18,6 +18,16 @@
 #include <boost/asynchronous/queue/queue_base.hpp>
 #include <boost/asynchronous/queue/any_queue.hpp>
 
+#ifdef BOOST_ASYNCHRONOUS_NO_LOCKFREE
+#include <boost/asynchronous/queue/guarded_deque.hpp>
+namespace boost { namespace asynchronous
+{
+template <class Job = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+using lockfree_queue = boost::asynchronous::guarded_deque<Job>;
+}
+}
+#else
+#include <boost/lockfree/queue.hpp>
 namespace boost { namespace asynchronous
 {
 template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB >
@@ -124,7 +134,6 @@ public:
 private:
     boost::lockfree::queue<JOB*> m_queue;
 };
-
 }} // boost::async::queue
-
+#endif
 #endif // BOOST_ASYNC_QUEUE_LOCKFREE_QUEUE_HPP

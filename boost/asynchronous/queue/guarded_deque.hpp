@@ -34,7 +34,8 @@ public:
     typedef guarded_deque<JOB> this_type;
     typedef boost::mutex  mutex_type;
     typedef boost::unique_lock<mutex_type> lock_type;
-
+    template<typename... Args>
+    guarded_deque(Args... ){}
     std::size_t get_queue_size() const
     {
         return m_jobs.size();
