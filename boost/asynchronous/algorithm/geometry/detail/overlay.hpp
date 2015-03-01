@@ -170,7 +170,8 @@ struct parallel_overlay
                 Geometry1& geometry1, Geometry2& geometry2,
                 RobustPolicy& robust_policy,
                 Strategy const& ,
-                long cutoff)
+                long overlay_cutoff,
+                long partition_cutoff)
     {
         boost::shared_ptr<typename TaskRes::return_type> output_collection(boost::make_shared<typename TaskRes::return_type>());
         auto out = std::back_inserter(*output_collection);
@@ -220,11 +221,11 @@ std::cout << "get turns" << std::endl;
             <
                 Reverse1, Reverse2,
                 detail::overlay::assign_null_policy,Job
-            >(geometry1, geometry2, robust_policy, turn_points, policy);
+            >(geometry1, geometry2, robust_policy, turn_points, policy,partition_cutoff);
 #ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
-        cont.on_done([start,task_res,geometry1, geometry2, robust_policy,cutoff,output_collection]
+        cont.on_done([start,task_res,geometry1, geometry2, robust_policy,overlay_cutoff,output_collection]
 #else
-        cont.on_done([task_res,geometry1, geometry2, robust_policy,cutoff,output_collection]
+        cont.on_done([task_res,geometry1, geometry2, robust_policy,overlay_cutoff,output_collection]
 #endif
                      (std::tuple<boost::asynchronous::expected<container_type> >&& continuation_res)mutable
         {
@@ -295,7 +296,7 @@ std::cout << "traverse" << std::endl;
                                          std::map<ring_identifier, properties>> select_ring_fct;
 
             auto cont = parallel_select_rings<Direction,std::map<ring_identifier, properties>,select_ring_fct,Job>(
-                    geometry1, geometry2, std::move(map), ! turn_points.empty(),cutoff);
+                    geometry1, geometry2, std::move(map), ! turn_points.empty(),overlay_cutoff);
 
             cont.on_done(
 #ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY

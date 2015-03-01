@@ -550,7 +550,8 @@ public:
             int source_id2, Geometry2 const& geometry2,
             RobustPolicy const& robust_policy,
             Turns& turns,
-            InterruptPolicy& interrupt_policy)
+            InterruptPolicy& interrupt_policy,
+            long partition_cutoff)
     {
         // First create monotonic sections...
         typedef typename boost::range_value<Turns>::type ip_type;
@@ -584,7 +585,7 @@ public:
                     (geometry::parallel_partition
                      <
                          box_type, get_section_box, ovelaps_section_box
-                     >::apply(sec1, sec2, visitor)));
+                     >::apply(sec1, sec2, visitor,partition_cutoff)));
     }
 };
 
@@ -1050,7 +1051,8 @@ parallel_get_turns(Geometry1 const& geometry1,
             Geometry2 const& geometry2,
             RobustPolicy const& robust_policy,
             Turns& turns,
-            InterruptPolicy& interrupt_policy)
+            InterruptPolicy& interrupt_policy,
+            long partition_cutoff)
 {
     concept::check_concepts_and_equal_dimensions<Geometry1 const, Geometry2 const>();
 
@@ -1068,7 +1070,7 @@ parallel_get_turns(Geometry1 const& geometry1,
                 0, geometry1,
                 1, geometry2,
                 robust_policy,
-                turns, interrupt_policy);
+                turns, interrupt_policy,partition_cutoff);
 
   /*  boost::mpl::if_c
         <

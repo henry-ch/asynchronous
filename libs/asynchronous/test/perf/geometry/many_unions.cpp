@@ -81,7 +81,8 @@ void pairwise_unions(Collection const& input_collection, Collection& output_coll
     }
 }
 
-void test_many_unions(int count_x, int count_y, double distance, bool method1,int tpsize,long union_of_x_cutoff,long union_cutoff)
+void test_many_unions(int count_x, int count_y, double distance, bool method1,
+                      int tpsize,long union_of_x_cutoff,long overlay_cutoff,long partition_cutoff)
 {
     typedef bg::model::point<double, 2, bg::cs::cartesian> point;
     typedef bg::model::polygon<point> polygon_type;
@@ -193,12 +194,12 @@ void test_many_unions(int count_x, int count_y, double distance, bool method1,in
         auto end = many_polygons.end();
 
         boost::future<std::vector<multi_polygon_type>> fu = boost::asynchronous::post_future(pool,
-        [union_of_x_cutoff,beg,end,union_cutoff]()
+        [union_of_x_cutoff,beg,end,overlay_cutoff,partition_cutoff]()
         {
             return boost::asynchronous::parallel_geometry_union_of_x<decltype(beg),
                                                                     std::vector<multi_polygon_type>,
                                                                     BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-                    (beg,end,union_of_x_cutoff,union_cutoff,"",0);
+                    (beg,end,"",0,union_of_x_cutoff,overlay_cutoff,partition_cutoff);
         }
         ,"",0);
         std::vector<multi_polygon_type> final_output = std::move(fu.get());
@@ -221,14 +222,16 @@ int main(int argc, char** argv)
     double distance = argc > 3 ? atof(argv[3]) : 1.85; // Leaves many holes in union
     // for asynchronous
     int tpsize = argc > 4 ? atol(argv[4]) : 8;
-    long union_of_x_cutoff = argc > 5 ? atol(argv[5]) : 150;
-    long union_cutoff = argc > 6 ? atol(argv[6]) : 300;
+    long union_of_x_cutoff = argc > 5 ? atol(argv[5]) : 300;
+    long overlay_cutoff = argc > 6 ? atol(argv[6]) : 1500;
+    long partition_cutoff = argc > 7 ? atol(argv[7]) : 80000;
     std::cout << "tpsize=" << tpsize << std::endl;
     std::cout << "union_of_x_cutoff=" << union_of_x_cutoff << std::endl;
-    std::cout << "union_cutoff=" << union_cutoff << std::endl;
+    std::cout << "overlay_cutoff=" << overlay_cutoff << std::endl;
+    std::cout << "partition_cutoff=" << partition_cutoff << std::endl;
 
     std::cout << "Testing for " << count_x << " x " << count_y <<  " with " << distance << std::endl;
-    test_many_unions(count_x, count_y, distance, false,tpsize,union_of_x_cutoff,union_cutoff);
+    test_many_unions(count_x, count_y, distance, false,tpsize,union_of_x_cutoff,overlay_cutoff,partition_cutoff);
 
     return 0;
 }

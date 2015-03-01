@@ -370,9 +370,10 @@ public :
             InputCollection2 const& collection2, index_vector_type const& input2,
             int level,
             std::size_t min_elements,
-            Policy& policy, VisitBoxPolicy& box_policy)
+            Policy& policy, VisitBoxPolicy& box_policy,
+            long partition_cutoff)
     {
-        // TODO not hard-coded, +name +prio
+        // TODO name +prio
         auto input1_ = boost::make_shared<index_vector_type>(std::move(input1));
         auto input2_ = boost::make_shared<index_vector_type>(std::move(input2));
         return boost::asynchronous::top_level_callback_continuation_job<Policy,Job>
@@ -384,7 +385,7 @@ public :
                       boost::begin(*input2_),boost::end(*input2_),
                       level,min_elements,
                       boost::make_shared<Policy>(std::move(policy)),box_policy,
-                      80000,"geometry::parallel_partition",0));
+                      partition_cutoff,"geometry::parallel_partition",0));
     }
 
     template
@@ -574,6 +575,7 @@ public :
     apply(InputCollection1 const& collection1,
                 InputCollection2 const& collection2,
                 VisitPolicy& visitor,
+                long partition_cutoff,
                 std::size_t min_elements = 16,
                 VisitBoxPolicy box_visitor = visit_no_policy()
                 )
@@ -595,7 +597,7 @@ public :
                 >::apply2(total,
                     collection1, index_vector1,
                     collection2, index_vector2,
-                    0, min_elements, visitor, box_visitor);
+                    0, min_elements, visitor, box_visitor,partition_cutoff);
        // }
        /* else
         {

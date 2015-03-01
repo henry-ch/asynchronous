@@ -83,7 +83,7 @@ struct union_insert
                              Geometry2& g2,
                              RobustPolicy& robust_policy,
                              Strategy const& strategy,
-                             long)
+                             long,long)
     {
         typename TaskRes::return_type output_collection;
         union_insert
@@ -118,14 +118,15 @@ struct union_insert
                              Geometry2& g2,
                              RobustPolicy& robust_policy,
                              Strategy const& strategy,
-                             long cutoff)
+                             long overlay_cutoff,
+                             long partition_cutoff)
     {
         // TODO we will start with this one for parallelization
         //typename TaskRes::return_type output_collection;
         boost::geometry::detail::overlay::parallel_overlay
             <
                 Job,Geometry1, Geometry2, Reverse1, Reverse2, ReverseOut,GeometryOut, boost::geometry::overlay_union
-            >::apply(std::move(task_res),g1, g2, robust_policy, strategy,cutoff);
+            >::apply(std::move(task_res),g1, g2, robust_policy, strategy,overlay_cutoff,partition_cutoff);
         //task_res.set_value(std::move(output_collection));
     }
 };
@@ -163,7 +164,7 @@ struct union_insert
                              Geometry2& g2,
                              RobustPolicy& robust_policy,
                              Strategy const& strategy,
-                             long)
+                             long,long)
     {
         typename TaskRes::return_type output_collection;
         union_insert
@@ -206,7 +207,7 @@ struct union_insert
                              Linear2& g2,
                              RobustPolicy& robust_policy,
                              Strategy const& strategy,
-                             long)
+                             long,long)
     {
         typename TaskRes::return_type output_collection;
         boost::geometry::detail::overlay::linear_linear_linestring
@@ -243,7 +244,7 @@ struct union_insert
                              PointLike2& g2,
                              RobustPolicy& robust_policy,
                              Strategy const& strategy,
-                             long)
+                             long,long)
     {
         typename TaskRes::return_type output_collection;
         boost::geometry::detail::overlay::union_pointlike_pointlike_point
@@ -286,7 +287,8 @@ template
 inline void union_insert(TaskRes task_res,
                          Geometry1& geometry1,
                          Geometry2& geometry2,
-                         long cutoff)
+                         long overlay_cutoff,
+                         long partition_cutoff)
 {
     boost::geometry::concept::check<Geometry1 const>();
     boost::geometry::concept::check<Geometry2 const>();
@@ -313,7 +315,7 @@ inline void union_insert(TaskRes task_res,
     dispatch::union_insert
            <
                Job,Geometry1, Geometry2, GeometryOut
-           >::apply(task_res,geometry1, geometry2, robust_policy, strategy(),cutoff);
+           >::apply(task_res,geometry1, geometry2, robust_policy, strategy(),overlay_cutoff,partition_cutoff);
 }
 
 
@@ -349,7 +351,8 @@ template
 inline void union_(TaskRes task_res,
                    Geometry1& geometry1,
                    Geometry2& geometry2,
-                   long cutoff)
+                   long overlay_cutoff,
+                   long partition_cutoff)
 {
     boost::geometry::concept::check<Geometry1 const>();
     boost::geometry::concept::check<Geometry2 const>();
@@ -357,7 +360,7 @@ inline void union_(TaskRes task_res,
     typedef typename boost::range_value<Collection>::type geometry_out;
     boost::geometry::concept::check<geometry_out>();
 
-    detail::union_::union_insert<geometry_out,Job>(task_res,geometry1, geometry2,cutoff);
+    detail::union_::union_insert<geometry_out,Job>(task_res,geometry1, geometry2,overlay_cutoff,partition_cutoff);
 }
 
 namespace detail
@@ -366,20 +369,21 @@ template <class Geometry1, class Geometry2, class Collection,class Job>
 struct parallel_union_helper: public boost::asynchronous::continuation_task<Collection>
 {
     parallel_union_helper(Geometry1 geometry1,Geometry2 geometry2,
-                          long cutoff, const std::string& task_name, std::size_t prio)
+                          long overlay_cutoff,long partition_cutoff, const std::string& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<Collection>(task_name),
-          geometry1_(geometry1),geometry2_(geometry2),cutoff_(cutoff),prio_(prio)
+          geometry1_(geometry1),geometry2_(geometry2),overlay_cutoff_(overlay_cutoff),partition_cutoff_(partition_cutoff),prio_(prio)
     {}
 
     void operator()()
     {
         boost::asynchronous::continuation_result<Collection> task_res = this->this_task_result();
         boost::asynchronous::geometry::union_<boost::asynchronous::continuation_result<Collection>,Geometry1,Geometry2,Collection,Job>
-                (task_res,geometry1_,geometry2_,cutoff_);
+                (task_res,geometry1_,geometry2_,overlay_cutoff_,partition_cutoff_);
     }
     Geometry1 geometry1_;
     Geometry2 geometry2_;
-    long cutoff_;
+    long overlay_cutoff_;
+    long partition_cutoff_;
     std::size_t prio_;
 };
 }
@@ -388,7 +392,8 @@ template <class Geometry1, class Geometry2, class Collection, class Job=BOOST_AS
 boost::asynchronous::detail::callback_continuation<Collection,Job>
 parallel_union(Geometry1 geometry1,
                Geometry2 geometry2,
-               long cutoff,
+               long overlay_cutoff,
+               long partition_cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                const std::string& task_name, std::size_t prio)
 #else
@@ -397,7 +402,7 @@ parallel_union(Geometry1 geometry1,
 {
     return boost::asynchronous::top_level_callback_continuation_job<Collection,Job>
             (boost::asynchronous::geometry::detail::parallel_union_helper<Geometry1,Geometry2,Collection,Job>
-                (std::move(geometry1),std::move(geometry2),cutoff,task_name,prio));
+                (std::move(geometry1),std::move(geometry2),overlay_cutoff,partition_cutoff,task_name,prio));
 
 }
 
