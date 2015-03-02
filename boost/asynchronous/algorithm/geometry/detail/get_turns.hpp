@@ -53,7 +53,7 @@
 
 #include <boost/geometry/algorithms/detail/interior_iterator.hpp>
 #include <boost/geometry/algorithms/detail/recalculate.hpp>
-
+#include <boost/geometry/algorithms/detail/sections/section_box_policies.hpp>
 #include <boost/geometry/algorithms/detail/overlay/get_turn_info.hpp>
 #include <boost/geometry/algorithms/detail/overlay/get_turn_info_ll.hpp>
 #include <boost/geometry/algorithms/detail/overlay/get_turn_info_la.hpp>
@@ -584,7 +584,7 @@ public:
                     convert_visitor_to_turns<Turns,boost::asynchronous::detail::callback_continuation<Policy,Job>>
                     (geometry::parallel_partition
                      <
-                         box_type, get_section_box, ovelaps_section_box,Job
+                         box_type, detail::section::get_section_box, detail::section::overlaps_section_box,Job
                      >::apply(sec1, sec2, visitor,partition_cutoff)));
     }
 };
