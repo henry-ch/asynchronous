@@ -62,96 +62,107 @@ template
 <
     overlay_type OverlayType,
     typename Geometry1, typename Geometry2,
-    typename IntersectionMap, typename SelectionMap
+    typename TurnInfoMap, 
+    typename RingPropertyMap
 >
 struct update_selection_map_fct
 {
     update_selection_map_fct(){}
     update_selection_map_fct(Geometry1& geometry1,
                              Geometry2& geometry2,
-                             IntersectionMap intersection_map,
-                             boost::shared_ptr<SelectionMap> map_with_all)
+                             TurnInfoMap turn_info_map,
+                             boost::shared_ptr<RingPropertyMap> all_ring_properties)
         : geometry1_(boost::make_shared<Geometry1>(std::move(geometry1)))
         , geometry2_(boost::make_shared<Geometry2>(std::move(geometry2)))
-        , intersection_map_(boost::make_shared<IntersectionMap>(std::move(intersection_map)))
-        , map_with_all_(map_with_all)
+        , turn_info_map_(boost::make_shared<TurnInfoMap>(std::move(turn_info_map)))
+        , all_ring_properties_(all_ring_properties)
     {}
     update_selection_map_fct(update_selection_map_fct&& rhs)noexcept
         : geometry1_(std::move(rhs.geometry1_))
         , geometry2_(std::move(rhs.geometry2_))
-        , intersection_map_(std::move(rhs.intersection_map_))
-        , map_with_all_(std::move(rhs.map_with_all_))
-        , selection_map_(std::move(rhs.selection_map_))
+        , turn_info_map_(std::move(rhs.turn_info_map_))
+        , all_ring_properties_(std::move(rhs.all_ring_properties_))
+        , selected_ring_properties_(std::move(rhs.selected_ring_properties_))
     {
     }
     update_selection_map_fct& operator=(update_selection_map_fct&& rhs)noexcept
     {
         geometry1_ = std::move(rhs.geometry1_);
         geometry2_ = std::move(rhs.geometry2_);
-        intersection_map_ = std::move(rhs.intersection_map_);
-        map_with_all_ = std::move(rhs.map_with_all_);
-        selection_map_ = std::move(rhs.selection_map_);
+        turn_info_map_ = std::move(rhs.turn_info_map_);
+        all_ring_properties_ = std::move(rhs.all_ring_properties_);
+        selected_ring_properties_ = std::move(rhs.selected_ring_properties_);
         return *this;
     }
     update_selection_map_fct(update_selection_map_fct const& rhs)noexcept
         : geometry1_(rhs.geometry1_)
         , geometry2_(rhs.geometry2_)
-        , intersection_map_(rhs.intersection_map_)
-        , map_with_all_(rhs.map_with_all_)
-        , selection_map_(rhs.selection_map_)
+        , turn_info_map_(rhs.turn_info_map_)
+        , all_ring_properties_(rhs.all_ring_properties_)
+        , selected_ring_properties_(rhs.selected_ring_properties_)
     {
     }
     update_selection_map_fct& operator=(update_selection_map_fct const& rhs)noexcept
     {
         geometry1_ = rhs.geometry1_;
         geometry2_ = rhs.geometry2_;
-        intersection_map_ = rhs.intersection_map_;
-        map_with_all_ = rhs.map_with_all_;
-        selection_map_ = rhs.selection_map_;
+        turn_info_map_ = rhs.turn_info_map_;
+        all_ring_properties_ = rhs.all_ring_properties_;
+        selected_ring_properties_ = rhs.selected_ring_properties_;
         return *this;
     }
     template <class T>
-    void operator()(/*SelectionMap*/T const& i)
+    void operator()(T const& i)
     {
-        bool found = (*intersection_map_).find(i.first) != (*intersection_map_).end();
-        if (! found)
-        {
-            ring_identifier const id = i.first;
-            typename SelectionMap::mapped_type properties = i.second; // Copy by value
+        ring_identifier const& id = i.first;
 
-            // Calculate the "within code" (previously this was done earlier but is
-            // much efficienter here - it can be even more efficient doing it all at once,
-            // using partition, TODO)
-            // So though this is less elegant than before, it avoids many unused point-in-poly calculations
+        ring_turn_info info;
+
+        typename TurnInfoMap::const_iterator tcit = turn_info_map_->find(id);
+        if (tcit != turn_info_map_->end())
+        {
+            info = tcit->second; // Copy by value
+        }
+
+        if (info.has_normal_turn)
+        {
+            // There are normal turns on this ring. It should be traversed, we
+            // don't include the original ring
+            return;
+        }
+
+        if (! info.has_uu_turn)
+        {
+            // Check if the ring is within the other geometry, by taking
+            // a point lying on the ring
             switch(id.source_index)
             {
                 case 0 :
-                    properties.within_code
-                        = geometry::within(properties.point, *geometry2_) ? 1 : -1;
+                    info.within_other = geometry::within(i.second.point, *geometry2_);
                     break;
                 case 1 :
-                    properties.within_code
-                        = geometry::within(properties.point, *geometry1_) ? 1 : -1;
+                    info.within_other = geometry::within(i.second.point, *geometry1_);
                     break;
             }
+        }
 
-            if (decide<OverlayType>::include(id, properties))
-            {
-                properties.reversed = decide<OverlayType>::reversed(id, properties);
-                selection_map_[id] = properties;
-            }
+        if (decide<OverlayType>::include(id, info))
+        {
+            typename RingPropertyMap::mapped_type properties = i.second; // Copy by value
+            properties.reversed = decide<OverlayType>::reversed(id, info);
+            selected_ring_properties_[id] = properties;
         }
     }
     void merge(update_selection_map_fct const& rhs)
     {
         // TODO move possible?
-        selection_map_.insert(rhs.selection_map_.begin(),rhs.selection_map_.end());
+        selected_ring_properties_.insert(rhs.selected_ring_properties_.begin(),rhs.selected_ring_properties_.end());
     }
     boost::shared_ptr<Geometry1> geometry1_;
     boost::shared_ptr<Geometry2> geometry2_;
-    boost::shared_ptr<IntersectionMap> intersection_map_;
-    boost::shared_ptr<SelectionMap> map_with_all_;
-    SelectionMap selection_map_;
+    boost::shared_ptr<TurnInfoMap> turn_info_map_;
+    boost::shared_ptr<RingPropertyMap> all_ring_properties_;
+    RingPropertyMap selected_ring_properties_;
 };
 
 template
@@ -229,7 +240,6 @@ std::cout << "get turns" << std::endl;
 #endif
                      (std::tuple<boost::asynchronous::expected<container_type> >&& continuation_res)mutable
         {
-            //std::cout << "overlay. after get_turns" << std::endl;
             try
             {
             container_type turn_points( std::move(std::get<0>(continuation_res).get()));
@@ -279,8 +289,8 @@ std::cout << "traverse" << std::endl;
             start = boost::chrono::high_resolution_clock::now();
 #endif
 
-            std::map<ring_identifier, int> map;
-            map_turns(map, turn_points);
+            std::map<ring_identifier, ring_turn_info> turn_info_per_ring;
+            get_ring_turn_info(turn_info_per_ring, turn_points);
 
 #ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
             elapsed = (double)(boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
@@ -288,15 +298,18 @@ std::cout << "traverse" << std::endl;
             start = boost::chrono::high_resolution_clock::now();
 #endif
 
-            typedef ring_properties<typename geometry::point_type<GeometryOut>::type> properties;
-
-            //std::map<ring_identifier, properties> selected;
+            typedef ring_properties
+            <
+                typename geometry::point_type<GeometryOut>::type
+            > properties;
+    
+            // Select all rings which are NOT touched by any intersection point
             typedef update_selection_map_fct<Direction,Geometry1,Geometry2,
-                                         std::map<ring_identifier, int>,
+                                         std::map<ring_identifier, ring_turn_info>,
                                          std::map<ring_identifier, properties>> select_ring_fct;
 
             auto cont = parallel_select_rings<Direction,std::map<ring_identifier, properties>,select_ring_fct,Job>(
-                    geometry1, geometry2, std::move(map), ! turn_points.empty(),overlay_cutoff);
+                    geometry1, geometry2, std::move(turn_info_per_ring/*map*/),overlay_cutoff);
 
             cont.on_done(
 #ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
@@ -317,27 +330,23 @@ std::cout << "traverse" << std::endl;
                             it != boost::end(*rings);
                             ++it)
                         {
-                            (all_fct.selection_map_)[id] = properties(*it, true);
-                            (all_fct.selection_map_)[id].reversed = ReverseOut;
+                            (all_fct.selected_ring_properties_)[id] = properties(*it/*, true*/);
+                            (all_fct.selected_ring_properties_)[id].reversed = ReverseOut;
                             id.multi_index++;
                         }
                     }
 
-                    assign_parents(*all_fct.geometry1_, *all_fct.geometry2_, *rings, all_fct.selection_map_);
+                    assign_parents(*all_fct.geometry1_, *all_fct.geometry2_, *rings, all_fct.selected_ring_properties_);
 
-                    add_rings<GeometryOut>(all_fct.selection_map_, *all_fct.geometry1_, *all_fct.geometry2_,
+                    add_rings<GeometryOut>(all_fct.selected_ring_properties_, *all_fct.geometry1_, *all_fct.geometry2_,
                                        *rings, std::back_inserter(*output_collection));
                     }
 #ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
                     double elapsed = (double)(boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
                     std::cout << "select_rings ms: " << elapsed <<std::endl;
 #endif
-                    //std::cout << "overlay. before set_value" << std::endl;
-                    //std::cout << "overlay. before set_value. output size:" << output_collection->size() << std::endl;
                     auto copy_output =*output_collection;
-                    //std::cout << "overlay. after copy" << std::endl;
                     task_res.set_value(std::move(copy_output));
-                    //std::cout << "overlay. after set_value" << std::endl;
                 }
                 catch(std::exception& e)
                 {

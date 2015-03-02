@@ -499,10 +499,10 @@ template
     typename Box,
     typename ExpandPolicy1,
     typename OverlapsPolicy1,
+    typename Job,
     typename ExpandPolicy2 = ExpandPolicy1,
     typename OverlapsPolicy2 = OverlapsPolicy1,
-    typename VisitBoxPolicy = visit_no_policy,
-    typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB
+    typename VisitBoxPolicy = boost::geometry::detail::partition::visit_no_policy   
 >
 class parallel_partition
 {
@@ -528,7 +528,7 @@ public :
     static inline void apply(InputCollection const& collection,
             VisitPolicy& visitor,
             std::size_t min_elements = 16,
-            VisitBoxPolicy box_visitor = visit_no_policy()
+            VisitBoxPolicy box_visitor = boost::geometry::detail::partition::visit_no_policy()
             )
     {
         if (std::size_t(boost::size(collection)) > min_elements)
@@ -577,7 +577,7 @@ public :
                 VisitPolicy& visitor,
                 long partition_cutoff,
                 std::size_t min_elements = 16,
-                VisitBoxPolicy box_visitor = visit_no_policy()
+                VisitBoxPolicy box_visitor = boost::geometry::detail::partition::visit_no_policy()
                 )
     {
         //TODO

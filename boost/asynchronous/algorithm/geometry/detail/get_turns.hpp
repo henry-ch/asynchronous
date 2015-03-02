@@ -567,9 +567,9 @@ public:
         typedef typename geometry::sections<box_type, 2> sections_type;
 
         sections_type sec1, sec2;
-
-        geometry::sectionalize<Reverse1>(geometry1, robust_policy, true, sec1, 0);
-        geometry::sectionalize<Reverse2>(geometry2, robust_policy, true, sec2, 1);
+        typedef boost::mpl::vector_c<std::size_t, 0, 1> dimensions;
+        geometry::sectionalize<Reverse1, dimensions>(geometry1, robust_policy, sec1, 0);
+        geometry::sectionalize<Reverse2, dimensions>(geometry2, robust_policy, sec2, 1);
 
         // ... and then partition them, intersecting overlapping sections in visitor method
         typedef parallel_section_visitor
@@ -584,7 +584,7 @@ public:
                     convert_visitor_to_turns<Turns,boost::asynchronous::detail::callback_continuation<Policy,Job>>
                     (geometry::parallel_partition
                      <
-                         box_type, get_section_box, ovelaps_section_box
+                         box_type, get_section_box, ovelaps_section_box,Job
                      >::apply(sec1, sec2, visitor,partition_cutoff)));
     }
 };
