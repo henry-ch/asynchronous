@@ -190,7 +190,7 @@ void test_many_unions(int count_x, int count_y, double distance, bool method1,
     {
         auto start = boost::chrono::high_resolution_clock::now();
 
-        auto beg = many_polygons.begin();
+/*        auto beg = many_polygons.begin();
         auto end = many_polygons.end();
 
         boost::future<std::vector<multi_polygon_type>> fu = boost::asynchronous::post_future(pool,
@@ -200,6 +200,15 @@ void test_many_unions(int count_x, int count_y, double distance, bool method1,
                                                                     std::vector<multi_polygon_type>,
                                                                     BOOST_ASYNCHRONOUS_DEFAULT_JOB>
                     (beg,end,"",0,union_of_x_cutoff,overlay_cutoff,partition_cutoff);
+        }
+        ,"",0);*/
+
+        boost::future<std::vector<multi_polygon_type>> fu = boost::asynchronous::post_future(pool,
+        [union_of_x_cutoff,many_polygons=std::move(many_polygons),overlay_cutoff,partition_cutoff]()mutable
+        {
+            return boost::asynchronous::parallel_geometry_union_of_x<std::vector<multi_polygon_type>,
+                                                                     BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+                    (std::move(many_polygons),"",0,union_of_x_cutoff,overlay_cutoff,partition_cutoff);
         }
         ,"",0);
         std::vector<multi_polygon_type> final_output = std::move(fu.get());
