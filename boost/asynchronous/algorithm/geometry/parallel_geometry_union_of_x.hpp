@@ -232,7 +232,8 @@ struct parallel_geometry_union_of_x_range_helper: public boost::asynchronous::co
 }
 
 template <class Range, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-boost::asynchronous::detail::callback_continuation<Range,Job>
+typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<Range,Job> >::type
+
 parallel_geometry_union_of_x(Range&& range,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                     const std::string& task_name, std::size_t prio,
@@ -249,6 +250,112 @@ parallel_geometry_union_of_x(Range&& range,
             (boost::asynchronous::detail::parallel_geometry_union_of_x_range_helper<Range,Job>
                 (std::move(r),beg,end,cutoff,overlay_cutoff,partition_cutoff,task_name,prio));
 
+}
+
+// version for ranges given as continuation => will return the range as continuation
+namespace detail
+{
+template <class Continuation, class Job,class Enable=void>
+struct parallel_geometry_union_of_x_continuation_range_helper: public boost::asynchronous::continuation_task<typename Continuation::return_type>
+{
+    parallel_geometry_union_of_x_continuation_range_helper(Continuation c,long cutoff,long overlay_cutoff, long partition_cutoff,
+                        const std::string& task_name, std::size_t prio)
+        :boost::asynchronous::continuation_task<typename Continuation::return_type>(task_name)
+        ,cont_(std::move(c)),cutoff_(cutoff),overlay_cutoff_(overlay_cutoff),partition_cutoff_(partition_cutoff),prio_(prio)
+    {}
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<typename Continuation::return_type> task_res = this->this_task_result();
+        auto cutoff = cutoff_;
+        auto overlay_cutoff = overlay_cutoff_;
+        auto partition_cutoff = partition_cutoff_;
+        auto task_name = this->get_name();
+        auto prio = prio_;
+        cont_.on_done([task_res,cutoff,overlay_cutoff,partition_cutoff,task_name,prio]
+                      (std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res)
+        {
+            try
+            {
+                auto new_continuation = boost::asynchronous::parallel_geometry_union_of_x<typename Continuation::return_type,Job>
+                        (std::move(std::get<0>(continuation_res).get()),task_name,prio,cutoff,overlay_cutoff,partition_cutoff);
+                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                {
+                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
+                });
+            }
+            catch(std::exception& e)
+            {
+                task_res.set_exception(boost::copy_exception(e));
+            }
+        }
+        );
+        boost::asynchronous::any_continuation ac(std::move(cont_));
+        boost::asynchronous::get_continuations().emplace_front(std::move(ac));
+    }
+    Continuation cont_;
+    long cutoff_;
+    long overlay_cutoff_;
+    long partition_cutoff_;
+    std::size_t prio_;
+};
+// Continuation is a callback continuation
+template <class Continuation, class Job>
+struct parallel_geometry_union_of_x_continuation_range_helper<Continuation,Job,typename ::boost::enable_if< has_is_callback_continuation_task<Continuation> >::type>
+        : public boost::asynchronous::continuation_task<typename Continuation::return_type>
+{
+    parallel_geometry_union_of_x_continuation_range_helper(Continuation c,long cutoff,long overlay_cutoff, long partition_cutoff,
+                        const std::string& task_name, std::size_t prio)
+        :boost::asynchronous::continuation_task<typename Continuation::return_type>(task_name)
+        ,cont_(std::move(c)),cutoff_(cutoff),overlay_cutoff_(overlay_cutoff),partition_cutoff_(partition_cutoff),prio_(prio)
+    {}
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<typename Continuation::return_type> task_res = this->this_task_result();
+        auto cutoff = cutoff_;
+        auto overlay_cutoff = overlay_cutoff_;
+        auto partition_cutoff = partition_cutoff_;
+        auto task_name = this->get_name();
+        auto prio = prio_;
+        cont_.on_done([task_res,cutoff,overlay_cutoff,partition_cutoff,task_name,prio]
+                      (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
+        {
+            try
+            {
+                auto new_continuation = boost::asynchronous::parallel_geometry_union_of_x<typename Continuation::return_type,Job>
+                        (std::move(std::get<0>(continuation_res).get()),task_name,prio,cutoff,overlay_cutoff,partition_cutoff);
+                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                {
+                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
+                });
+            }
+            catch(std::exception& e)
+            {
+                task_res.set_exception(boost::copy_exception(e));
+            }
+        }
+        );
+    }
+    Continuation cont_;
+    long cutoff_;
+    long overlay_cutoff_;
+    long partition_cutoff_;
+    std::size_t prio_;
+};
+}
+// version for ranges given as continuation => will return the range as continuation
+template <class Range, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+typename boost::enable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
+parallel_geometry_union_of_x(Range range,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                     const std::string& task_name, std::size_t prio,
+#else
+                     const std::string& task_name="", std::size_t prio=0,
+                     long cutoff=300, long overlay_cutoff=1500, long partition_cutoff=80000)
+#endif
+{
+    return boost::asynchronous::top_level_callback_continuation_job<typename Range::return_type,Job>
+            (boost::asynchronous::detail::parallel_geometry_union_of_x_continuation_range_helper<Range,Job>(
+                 std::move(range),cutoff,overlay_cutoff,partition_cutoff,task_name,prio));
 }
 
 }}
