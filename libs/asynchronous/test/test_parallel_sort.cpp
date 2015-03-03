@@ -11,7 +11,6 @@
 #include <set>
 #include <functional>
 #include <random>
-#include <boost/lexical_cast.hpp>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>

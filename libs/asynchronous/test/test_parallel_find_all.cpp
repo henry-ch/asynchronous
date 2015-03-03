@@ -24,8 +24,6 @@
 #include <boost/asynchronous/algorithm/parallel_find_all.hpp>
 #include <boost/asynchronous/algorithm/parallel_for.hpp>
 
-#include <boost/lexical_cast.hpp>
-
 #include "test_common.hpp"
 
 #include <boost/test/unit_test.hpp>
@@ -96,9 +94,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         std::vector<int> r = res.get();
-                        BOOST_CHECK_MESSAGE((r.size() == 20), ("result of parallel_find_all had " + boost::lexical_cast<std::string, int>(r.size()) + " entries, should have been 20"));
+                        BOOST_CHECK_MESSAGE((r.size() == 20), ("result of parallel_find_all had " + std::to_string(r.size()) + " entries, should have been 20"));
                         for (int i : r) {
-                            BOOST_CHECK_MESSAGE((i < 40 && i >= 20), (boost::lexical_cast<std::string, int>(i) + " was returned by parallel_find_all, but is larger than or equal to 40 or smaller than 20"));
+                            BOOST_CHECK_MESSAGE((i < 40 && i >= 20), (std::to_string(i) + " was returned by parallel_find_all, but is larger than or equal to 40 or smaller than 20"));
                         }
                         // reset
                         m_data = mkdata();
@@ -133,9 +131,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         std::vector<int> r = res.get();
-                        BOOST_CHECK_MESSAGE((r.size() == 20), ("result of parallel_find_all had " + boost::lexical_cast<std::string, int>(r.size()) + " entries, should have been 20"));
+                        BOOST_CHECK_MESSAGE((r.size() == 20), ("result of parallel_find_all had " + std::to_string(r.size()) + " entries, should have been 20"));
                         for (int i : r) {
-                            BOOST_CHECK_MESSAGE((i < 40 && i >= 20), (boost::lexical_cast<std::string, int>(i) + " was returned by parallel_find_all, but is larger than or equal to 40 or smaller than 20"));
+                            BOOST_CHECK_MESSAGE((i < 40 && i >= 20), (std::to_string(i) + " was returned by parallel_find_all, but is larger than or equal to 40 or smaller than 20"));
                         }
                         // reset
                         m_data = mkdata();
@@ -170,9 +168,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         std::vector<int> r = res.get();
-                        BOOST_CHECK_MESSAGE((r.size() == 20), ("result of parallel_find_all had " + boost::lexical_cast<std::string, int>(r.size()) + " entries, should have been 20"));
+                        BOOST_CHECK_MESSAGE((r.size() == 20), ("result of parallel_find_all had " + std::to_string(r.size()) + " entries, should have been 20"));
                         for (int i : r) {
-                            BOOST_CHECK_MESSAGE((i < 40 && i >= 20), (boost::lexical_cast<std::string, int>(i) + " was returned by parallel_find_all, but is larger than or equal to 40 or smaller than 20"));
+                            BOOST_CHECK_MESSAGE((i < 40 && i >= 20), (std::to_string(i) + " was returned by parallel_find_all, but is larger than or equal to 40 or smaller than 20"));
                         }
                         // reset
                         m_data = mkdata();
@@ -212,9 +210,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         std::vector<int> r = res.get();
-                        BOOST_CHECK_MESSAGE((r.size() == 10), ("result of parallel_find_all had " + boost::lexical_cast<std::string, int>(r.size()) + " entries, should have been 20"));
+                        BOOST_CHECK_MESSAGE((r.size() == 10), ("result of parallel_find_all had " + std::to_string(r.size()) + " entries, should have been 20"));
                         for (int i : r) {
-                            BOOST_CHECK_MESSAGE((i < 40 && i >= 20), (boost::lexical_cast<std::string, int>(i) + " was returned by parallel_find_all, but is larger than or equal to 40 or smaller than 20"));
+                            BOOST_CHECK_MESSAGE((i < 40 && i >= 20), (std::to_string(i) + " was returned by parallel_find_all, but is larger than or equal to 40 or smaller than 20"));
                         }
                         // reset
                         m_data = mkdata();

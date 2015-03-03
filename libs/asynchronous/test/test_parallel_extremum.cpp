@@ -24,8 +24,6 @@
 #include <boost/asynchronous/algorithm/parallel_extremum.hpp>
 #include <boost/asynchronous/algorithm/parallel_for.hpp>
 
-#include <boost/lexical_cast.hpp>
-
 #include "test_common.hpp"
 
 #include <boost/test/unit_test.hpp>
@@ -92,7 +90,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         int r = res.get();
-                        BOOST_CHECK_MESSAGE((r == 1), ("result of parallel_extremum (minimum) was " + boost::lexical_cast<std::string>(r) + ", should have been 1"));
+                        BOOST_CHECK_MESSAGE((r == 1), ("result of parallel_extremum (minimum) was " + std::to_string(r) + ", should have been 1"));
                         // reset
                         m_data = mkdata();
                         aPromise->set_value();
@@ -122,7 +120,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         int r = res.get();
-                        BOOST_CHECK_MESSAGE((r == 100), ("result of parallel_extremum (maximum) was " + boost::lexical_cast<std::string>(r) + ", should have been 100"));
+                        BOOST_CHECK_MESSAGE((r == 100), ("result of parallel_extremum (maximum) was " + std::to_string(r) + ", should have been 100"));
                         // reset
                         m_data = mkdata();
                         aPromise->set_value();
@@ -152,7 +150,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         int r = res.get();
-                        BOOST_CHECK_MESSAGE((r == 1), ("result of parallel_extremum (minimum) was " + boost::lexical_cast<std::string>(r) + ", should have been 1"));
+                        BOOST_CHECK_MESSAGE((r == 1), ("result of parallel_extremum (minimum) was " + std::to_string(r) + ", should have been 1"));
                         // reset
                         m_data = mkdata();
                         aPromise->set_value();
@@ -187,7 +185,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         int r = res.get();
-                        BOOST_CHECK_MESSAGE((r == 200), ("result of parallel_extremum (maximum) was " + boost::lexical_cast<std::string>(r) + " entries, should have been 200"));
+                        BOOST_CHECK_MESSAGE((r == 200), ("result of parallel_extremum (maximum) was " + std::to_string(r) + " entries, should have been 200"));
                         // reset
                         m_data = mkdata();
                         aPromise->set_value();

@@ -2,8 +2,6 @@
 #include <tuple>
 #include <utility>
 
-#include <boost/lexical_cast.hpp>
-
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/threadsafe_list.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
@@ -31,7 +29,7 @@ struct fib_task : public boost::asynchronous::continuation_task<long>
 {
     // give each task a name for logging
     fib_task(long n,long cutoff)
-        : boost::asynchronous::continuation_task<long>("fib_task_" + boost::lexical_cast<std::string>(n))
+        : boost::asynchronous::continuation_task<long>("fib_task_" + std::to_string(n))
         ,n_(n),cutoff_(cutoff){}
     void operator()()const
     {

@@ -7,7 +7,6 @@
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/scheduler/multiqueue_threadpool_scheduler.hpp>
 #include <boost/asynchronous/scheduler/detail/any_continuation.hpp>
-#include <boost/lexical_cast.hpp>
 
 #include <boost/asynchronous/servant_proxy.hpp>
 #include <boost/asynchronous/post.hpp>
@@ -42,7 +41,7 @@ struct fib_task : public boost::asynchronous::continuation_task<long>
 {
     // task name is its fibonacci number
     fib_task(long n,long cutoff)
-        : boost::asynchronous::continuation_task<long>(boost::lexical_cast<std::string>(n))
+        : boost::asynchronous::continuation_task<long>(std::to_string(n))
         , n_(n),cutoff_(cutoff){}
 
 

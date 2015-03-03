@@ -24,8 +24,6 @@
 #include <boost/asynchronous/algorithm/parallel_reduce.hpp>
 #include <boost/asynchronous/algorithm/parallel_for.hpp>
 
-#include <boost/lexical_cast.hpp>
-
 #include "test_common.hpp"
 
 #include <boost/test/unit_test.hpp>
@@ -96,7 +94,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         int r = res.get();
-                        BOOST_CHECK_MESSAGE((r == 5050), ("result of parallel_reduce was " + boost::lexical_cast<std::string, int>(r) + ", should have been 5050"));
+                        BOOST_CHECK_MESSAGE((r == 5050), ("result of parallel_reduce was " + std::to_string(r) + ", should have been 5050"));
                         // reset
                         m_data = mkdata();
                         aPromise->set_value();
@@ -130,7 +128,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         int r = res.get();
-                        BOOST_CHECK_MESSAGE((r == 5050), ("result of parallel_reduce was " + boost::lexical_cast<std::string, int>(r) + ", should have been 5050"));
+                        BOOST_CHECK_MESSAGE((r == 5050), ("result of parallel_reduce was " + std::to_string(r) + ", should have been 5050"));
                         // reset
                         m_data = mkdata();
                         aPromise->set_value();
@@ -164,7 +162,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         int r = res.get();
-                        BOOST_CHECK_MESSAGE((r == 5050), ("result of parallel_reduce was " + boost::lexical_cast<std::string, int>(r) + ", should have been 5050"));
+                        BOOST_CHECK_MESSAGE((r == 5050), ("result of parallel_reduce was " + std::to_string(r) + ", should have been 5050"));
                         // reset
                         m_data = mkdata();
                         aPromise->set_value();
@@ -203,7 +201,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         int r = res.get();
-                        BOOST_CHECK_MESSAGE((r == 5150), ("result of parallel_reduce after parallel_for was " + boost::lexical_cast<std::string, int>(r) + ", should have been 5150"));
+                        BOOST_CHECK_MESSAGE((r == 5150), ("result of parallel_reduce after parallel_for was " + std::to_string(r) + ", should have been 5150"));
                         // reset
                         m_data = mkdata();
                         aPromise->set_value();
@@ -238,7 +236,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         int r = res.get();
-                        BOOST_CHECK_MESSAGE((r == 0), ("result of parallel_reduce was " + boost::lexical_cast<std::string, int>(r) + ", should have been 0"));
+                        BOOST_CHECK_MESSAGE((r == 0), ("result of parallel_reduce was " + std::to_string(r) + ", should have been 0"));
                         // reset
                         m_data = mkdata();
                         aPromise->set_value();
