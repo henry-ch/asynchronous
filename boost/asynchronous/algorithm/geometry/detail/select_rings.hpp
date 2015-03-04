@@ -45,8 +45,8 @@ template
     typename RingPropertyMap
 >
 inline boost::asynchronous::detail::callback_continuation<Fct,Job>
-update_selection_map(Geometry1& geometry1,
-                     Geometry2& geometry2,
+update_selection_map(Geometry1 geometry1,
+                     Geometry2 geometry2,
                      RingTurnInfoMap turn_info_per_ring,
                      boost::shared_ptr<RingPropertyMap> map_with_all,
                      long cutoff)
@@ -55,7 +55,7 @@ update_selection_map(Geometry1& geometry1,
     //TODO name + prio
     return boost::asynchronous::parallel_for_each<Iterator,Fct,Job>
             (boost::begin(*map_with_all),boost::end(*map_with_all),
-             Fct(geometry1,geometry2,std::move(turn_info_per_ring),map_with_all),
+             Fct(std::move(geometry1),std::move(geometry2),std::move(turn_info_per_ring),map_with_all),
              cutoff,"geometry::update_selection_map",0);
 }
 
@@ -74,7 +74,7 @@ template
     typename RingTurnInfoMap
 >
 inline boost::asynchronous::detail::callback_continuation<Fct,Job>
-parallel_select_rings(Geometry1& geometry1, Geometry2& geometry2,
+parallel_select_rings(Geometry1 geometry1, Geometry2 geometry2,
                       RingTurnInfoMap turn_info_per_ring,
                       long cutoff)
 {
@@ -85,7 +85,7 @@ parallel_select_rings(Geometry1& geometry1, Geometry2& geometry2,
                 ring_identifier(0, -1, -1), *map_with_all);
     dispatch::select_rings<tag2, Geometry2>::apply(geometry2, geometry1,
                 ring_identifier(1, -1, -1), *map_with_all);
-    return update_selection_map<OverlayType,Fct,Job>(geometry1, geometry2, std::move(turn_info_per_ring),map_with_all,cutoff);
+    return update_selection_map<OverlayType,Fct,Job>(std::move(geometry1), std::move(geometry2), std::move(turn_info_per_ring),map_with_all,cutoff);
 }
 
 template

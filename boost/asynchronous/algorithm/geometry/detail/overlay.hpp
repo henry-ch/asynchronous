@@ -68,8 +68,8 @@ template
 struct update_selection_map_fct
 {
     update_selection_map_fct(){}
-    update_selection_map_fct(Geometry1& geometry1,
-                             Geometry2& geometry2,
+    update_selection_map_fct(Geometry1 geometry1,
+                             Geometry2 geometry2,
                              TurnInfoMap turn_info_map,
                              boost::shared_ptr<RingPropertyMap> all_ring_properties)
         : geometry1_(boost::make_shared<Geometry1>(std::move(geometry1)))
@@ -118,10 +118,10 @@ struct update_selection_map_fct
 
         ring_turn_info info;
 
-        typename TurnInfoMap::const_iterator tcit = turn_info_map_->find(id);
+        typename TurnInfoMap::iterator tcit = turn_info_map_->find(id);
         if (tcit != turn_info_map_->end())
         {
-            info = tcit->second; // Copy by value
+            info = std::move(tcit->second);
         }
 
         if (info.has_normal_turn)
@@ -309,7 +309,7 @@ std::cout << "traverse" << std::endl;
                                          std::map<ring_identifier, properties>> select_ring_fct;
 
             auto cont = parallel_select_rings<Direction,std::map<ring_identifier, properties>,select_ring_fct,Job>(
-                    geometry1, geometry2, std::move(turn_info_per_ring/*map*/),overlay_cutoff);
+                    std::move(geometry1), std::move(geometry2), std::move(turn_info_per_ring/*map*/),overlay_cutoff);
 
             cont.on_done(
 #ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
