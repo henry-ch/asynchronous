@@ -152,6 +152,8 @@ template
     typename Box,
     typename OverlapsPolicy1,
     typename OverlapsPolicy2,
+    typename ExpandPolicy1,
+    typename ExpandPolicy2,
     typename VisitBoxPolicy,
     typename Job
 >
@@ -160,13 +162,15 @@ class parallel_partition_two_collections
     typedef parallel_partition_two_collections this_type;
 
     typedef std::vector<std::size_t> index_vector_type;
-    typedef typename coordinate_type<Box>::type ctype;
+    //typedef typename coordinate_type<Box>::type ctype;
     typedef parallel_partition_two_collections
             <
                 1 - Dimension,
                 Box,
                 OverlapsPolicy1,
                 OverlapsPolicy2,
+                ExpandPolicy1,
+                ExpandPolicy2,
                 VisitBoxPolicy,
                 Job
             > sub_divide;
@@ -176,7 +180,7 @@ class parallel_partition_two_collections
             index_vector_type const
         >::type index_iterator_type;
 
-    template<int, class,class,class,class,class> friend class parallel_partition_two_collections;
+    template<int, class,class,class,class,class,class,class> friend class parallel_partition_two_collections;
 
 
     template
@@ -193,22 +197,47 @@ class parallel_partition_two_collections
             int level, std::size_t min_elements,
             Policy& policy, VisitBoxPolicy& box_policy)
     {
-        if (boost::size(input1) > 0 && boost::size(input2) > 0)
-        {
-            if (std::size_t(boost::size(input1)) > min_elements
-                && std::size_t(boost::size(input2)) > min_elements
-                && level < 100)
-            {
-                sub_divide::apply(box, collection1, input1, collection2,
-                                input2, level + 1, min_elements,
-                                policy, box_policy);
-            }
-            else
-            {
-                box_policy.apply(box, level + 1);
-                handle_two(collection1, input1, collection2, input2, policy);
-            }
-        }
+        partition_two_collections
+        <
+            1 - Dimension,
+            Box,
+            OverlapsPolicy1,
+            OverlapsPolicy2,
+            ExpandPolicy1,
+            ExpandPolicy2,
+            VisitBoxPolicy
+        >::apply(box, collection1, input1, collection2, input2,
+                level + 1, min_elements,
+                policy, box_policy);
+    }
+
+    template
+    <
+        typename ExpandPolicy,
+        typename InputCollection
+    >
+    static inline Box get_new_box(InputCollection const& collection,
+                    index_vector_type const& input)
+    {
+        Box box;
+        geometry::assign_inverse(box);
+        expand_with_elements<ExpandPolicy>(box, collection, input);
+        return box;
+    }
+
+    template
+    <
+        typename InputCollection1,
+        typename InputCollection2
+    >
+    static inline Box get_new_box(InputCollection1 const& collection1,
+                    index_vector_type const& input1,
+                    InputCollection2 const& collection2,
+                    index_vector_type const& input2)
+    {
+        Box box = get_new_box<ExpandPolicy1>(collection1, input1);
+        expand_with_elements<ExpandPolicy2>(box, collection2, input2);
+        return box;
     }
 
     template
@@ -416,24 +445,79 @@ public :
         if (boost::size(exceeding1) > 0)
         {
             // All exceeding from 1 with 2:
-            handle_two(*collection1, exceeding1, *collection2, exceeding2,
-                        *policy);
+
+            if (recurse_ok(exceeding1, exceeding2, min_elements, level))
+            {
+                Box exceeding_box = get_new_box(*collection1, exceeding1,
+                            *collection2, exceeding2);
+                next_level(exceeding_box, *collection1, exceeding1,
+                                *collection2, exceeding2, level,
+                                min_elements, *policy, box_policy);
+            }
+            else
+            {
+                handle_two(*collection1, exceeding1, *collection2, exceeding2,
+                            *policy);
+            }
 
             // All exceeding from 1 with lower and upper of 2:
-            handle_two(*collection1, exceeding1, *collection2, lower2, *policy);
-            handle_two(*collection1, exceeding1, *collection2, upper2, *policy);
+
+            // (Check sizes of all three collections to avoid recurse into
+            // the same combinations again and again)
+            if (recurse_ok(lower2, upper2, exceeding1, min_elements, level))
+            {
+                Box exceeding_box
+                    = get_new_box<ExpandPolicy1>(*collection1, exceeding1);
+                next_level(exceeding_box, *collection1, exceeding1,
+                    *collection2, lower2, level, min_elements, *policy, box_policy);
+                next_level(exceeding_box, *collection1, exceeding1,
+                    *collection2, upper2, level, min_elements, *policy, box_policy);
+            }
+            else
+            {
+                handle_two(*collection1, exceeding1, *collection2, lower2, *policy);
+                handle_two(*collection1, exceeding1, *collection2, upper2, *policy);
+            }
         }
+
         if (boost::size(exceeding2) > 0)
         {
             // All exceeding from 2 with lower and upper of 1:
-            handle_two(*collection1, lower1, *collection2, exceeding2, *policy);
-            handle_two(*collection1, upper1, *collection2, exceeding2, *policy);
+            if (recurse_ok(lower1, upper1, exceeding2, min_elements, level))
+            {
+                Box exceeding_box
+                    = get_new_box<ExpandPolicy2>(*collection2, exceeding2);
+                next_level(exceeding_box, *collection1, lower1,
+                    *collection2, exceeding2, level, min_elements, *policy, box_policy);
+                next_level(exceeding_box, *collection1, upper1,
+                    *collection2, exceeding2, level, min_elements, *policy, box_policy);
+            }
+            else
+            {
+                handle_two(*collection1, lower1, *collection2, exceeding2, *policy);
+                handle_two(*collection1, upper1, *collection2, exceeding2, *policy);
+            }
         }
 
-        next_level(lower_box, *collection1, lower1, *collection2, lower2, level,
-                        min_elements, *policy, box_policy);
-        next_level(upper_box, *collection1, upper1, *collection2, upper2, level,
-                        min_elements, *policy, box_policy);
+        if (recurse_ok(lower1, lower2, min_elements, level))
+        {
+            next_level(lower_box, *collection1, lower1, *collection2, lower2, level,
+                            min_elements, *policy, box_policy);
+        }
+        else
+        {
+            handle_two(*collection1, lower1, *collection2, lower2, *policy);
+        }
+        if (recurse_ok(upper1, upper2, min_elements, level))
+        {
+            next_level(upper_box, *collection1, upper1, *collection2, upper2, level,
+                            min_elements, *policy, box_policy);
+        }
+        else
+        {
+            handle_two(*collection1, upper1, *collection2, upper2, *policy);
+        }
+
     }
 
     template
@@ -464,36 +548,83 @@ public :
         if (boost::size(exceeding1) > 0)
         {
             // All exceeding from 1 with 2:
-            handle_two(collection1, exceeding1, collection2, exceeding2,
-                        policy);
+
+            if (recurse_ok(exceeding1, exceeding2, min_elements, level))
+            {
+                Box exceeding_box = get_new_box(collection1, exceeding1,
+                            collection2, exceeding2);
+                next_level(exceeding_box, collection1, exceeding1,
+                                collection2, exceeding2, level,
+                                min_elements, policy, box_policy);
+            }
+            else
+            {
+                handle_two(collection1, exceeding1, collection2, exceeding2,
+                            policy);
+            }
 
             // All exceeding from 1 with lower and upper of 2:
-            handle_two(collection1, exceeding1, collection2, lower2, policy);
-            handle_two(collection1, exceeding1, collection2, upper2, policy);
+
+            // (Check sizes of all three collections to avoid recurse into
+            // the same combinations again and again)
+            if (recurse_ok(lower2, upper2, exceeding1, min_elements, level))
+            {
+                Box exceeding_box
+                    = get_new_box<ExpandPolicy1>(collection1, exceeding1);
+                next_level(exceeding_box, collection1, exceeding1,
+                    collection2, lower2, level, min_elements, policy, box_policy);
+                next_level(exceeding_box, collection1, exceeding1,
+                    collection2, upper2, level, min_elements, policy, box_policy);
+            }
+            else
+            {
+                handle_two(collection1, exceeding1, collection2, lower2, policy);
+                handle_two(collection1, exceeding1, collection2, upper2, policy);
+            }
         }
+
         if (boost::size(exceeding2) > 0)
         {
             // All exceeding from 2 with lower and upper of 1:
-            handle_two(collection1, lower1, collection2, exceeding2, policy);
-            handle_two(collection1, upper1, collection2, exceeding2, policy);
+            if (recurse_ok(lower1, upper1, exceeding2, min_elements, level))
+            {
+                Box exceeding_box
+                    = get_new_box<ExpandPolicy2>(collection2, exceeding2);
+                next_level(exceeding_box, collection1, lower1,
+                    collection2, exceeding2, level, min_elements, policy, box_policy);
+                next_level(exceeding_box, collection1, upper1,
+                    collection2, exceeding2, level, min_elements, policy, box_policy);
+            }
+            else
+            {
+                handle_two(collection1, lower1, collection2, exceeding2, policy);
+                handle_two(collection1, upper1, collection2, exceeding2, policy);
+            }
         }
 
-        next_level(lower_box, collection1, lower1, collection2, lower2, level,
-                        min_elements, policy, box_policy);
-        next_level(upper_box, collection1, upper1, collection2, upper2, level,
-                        min_elements, policy, box_policy);
+        if (recurse_ok(lower1, lower2, min_elements, level))
+        {
+            next_level(lower_box, collection1, lower1, collection2, lower2, level,
+                            min_elements, policy, box_policy);
+        }
+        else
+        {
+            handle_two(collection1, lower1, collection2, lower2, policy);
+        }
+        if (recurse_ok(upper1, upper2, min_elements, level))
+        {
+            next_level(upper_box, collection1, upper1, collection2, upper2, level,
+                            min_elements, policy, box_policy);
+        }
+        else
+        {
+            handle_two(collection1, upper1, collection2, upper2, policy);
+        }
     }
 };
 
 }} // namespace detail::partition
-/*
-struct visit_no_policy
-{
-    template <typename Box>
-    static inline void apply(Box const&, int )
-    {}
-};
-*/
+
 template
 <
     typename Box,
@@ -502,13 +633,15 @@ template
     typename Job,
     typename ExpandPolicy2 = ExpandPolicy1,
     typename OverlapsPolicy2 = OverlapsPolicy1,
+    typename IncludePolicy1 = detail::partition::include_all_policy,
+    typename IncludePolicy2 = detail::partition::include_all_policy,
     typename VisitBoxPolicy = boost::geometry::detail::partition::visit_no_policy   
 >
 class parallel_partition
 {
     typedef std::vector<std::size_t> index_vector_type;
 
-    template <typename ExpandPolicy, typename InputCollection>
+    template <typename ExpandPolicy, typename IncludePolicy, typename InputCollection>
     static inline void expand_to_collection(InputCollection const& collection,
                 Box& total, index_vector_type& index_vector)
     {
@@ -518,8 +651,11 @@ class parallel_partition
             it != boost::end(collection);
             ++it, ++index)
         {
-            ExpandPolicy::apply(total, *it);
-            index_vector.push_back(index);
+            if (IncludePolicy::apply(*it))
+            {
+                ExpandPolicy::apply(total, *it);
+                index_vector.push_back(index);
+            }
         }
     }
 
@@ -573,56 +709,32 @@ public :
     >
     static inline boost::asynchronous::detail::callback_continuation<VisitPolicy,Job>
     apply(InputCollection1 const& collection1,
-                InputCollection2 const& collection2,
-                VisitPolicy& visitor,
-                long partition_cutoff,
-                std::size_t min_elements = 16,
-                VisitBoxPolicy box_visitor = boost::geometry::detail::partition::visit_no_policy()
-                )
+          InputCollection2 const& collection2,
+          VisitPolicy& visitor,
+          long partition_cutoff,
+          std::size_t min_elements = 16,
+          VisitBoxPolicy box_visitor = detail::partition::visit_no_policy())
     {
-        //TODO
-      // // if (std::size_t(boost::size(collection1)) > min_elements
-     //       && std::size_t(boost::size(collection2)) > min_elements)
-       // {
-            index_vector_type index_vector1, index_vector2;
-            Box total;
-            assign_inverse(total);
-            expand_to_collection<ExpandPolicy1>(collection1, total, index_vector1);
-            expand_to_collection<ExpandPolicy2>(collection2, total, index_vector2);
+        index_vector_type index_vector1, index_vector2;
+        Box total;
+        assign_inverse(total);
+        expand_to_collection<ExpandPolicy1, IncludePolicy1>(collection1,
+                total, index_vector1);
+        expand_to_collection<ExpandPolicy2, IncludePolicy2>(collection2,
+                total, index_vector2);
 
-            return
-            detail::partition::parallel_partition_two_collections
-                <
-                    0, Box, OverlapsPolicy1, OverlapsPolicy2, VisitBoxPolicy,Job
-                >::apply2(total,
-                    collection1, index_vector1,
-                    collection2, index_vector2,
-                    0, min_elements, visitor, box_visitor,partition_cutoff);
-       // }
-       /* else
-        {
-            typedef typename boost::range_iterator
-                <
-                    InputCollection1 const
-                >::type iterator_type1;
-            typedef typename boost::range_iterator
-                <
-                    InputCollection2 const
-                >::type iterator_type2;
-            for(iterator_type1 it1 = boost::begin(collection1);
-                it1 != boost::end(collection1);
-                ++it1)
-            {
-                for(iterator_type2 it2 = boost::begin(collection2);
-                    it2 != boost::end(collection2);
-                    ++it2)
-                {
-                    visitor.apply(*it1, *it2);
-                }
-            }
-        }*/
+        return
+        detail::partition::parallel_partition_two_collections
+            <
+                0, Box, OverlapsPolicy1, OverlapsPolicy2,
+                ExpandPolicy1, ExpandPolicy2, VisitBoxPolicy,Job
+            >::apply2(total,
+                collection1, index_vector1,
+                collection2, index_vector2,
+                0, min_elements, visitor, box_visitor,partition_cutoff);
     }
 };
+
 
 
 }} // namespace boost::geometry

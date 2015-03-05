@@ -313,13 +313,18 @@ std::cout << "traverse" << std::endl;
 
             cont.on_done(
 #ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
-            [start,task_res,rings,output_collection](std::tuple<boost::asynchronous::expected<select_ring_fct> >&& res)
+            [start,task_res,rings,output_collection](std::tuple<boost::asynchronous::expected<select_ring_fct> >&& res)mutable
 #else
-            [task_res,rings,output_collection](std::tuple<boost::asynchronous::expected<select_ring_fct> >&& res)
+            [task_res,rings,output_collection](std::tuple<boost::asynchronous::expected<select_ring_fct> >&& res)mutable
 #endif
             {
                 try
                 {
+#ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
+                    double elapsed = (double)(boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
+                    std::cout << "select_rings ms: " << elapsed <<std::endl;
+                    start = boost::chrono::high_resolution_clock::now();
+#endif
                     {
                     select_ring_fct all_fct (std::move(std::get<0>(res).get()));
                     // Add rings created during traversal
@@ -338,15 +343,21 @@ std::cout << "traverse" << std::endl;
 
                     assign_parents(*all_fct.geometry1_, *all_fct.geometry2_, *rings, all_fct.selected_ring_properties_);
 
+#ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
+                    elapsed = (double)(boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
+                    std::cout << "assign_parents ms: " << elapsed <<std::endl;
+                    start = boost::chrono::high_resolution_clock::now();
+#endif
+
                     add_rings<GeometryOut>(all_fct.selected_ring_properties_, *all_fct.geometry1_, *all_fct.geometry2_,
                                        *rings, std::back_inserter(*output_collection));
-                    }
+
 #ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
-                    double elapsed = (double)(boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
-                    std::cout << "select_rings ms: " << elapsed <<std::endl;
+                    elapsed = (double)(boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
+                    std::cout << "add_rings ms: " << elapsed <<std::endl;
 #endif
-                    auto copy_output =*output_collection;
-                    task_res.set_value(std::move(copy_output));
+                    }
+                    task_res.set_value(std::move(*output_collection));
                 }
                 catch(std::exception& e)
                 {
