@@ -66,7 +66,7 @@ inline void divide_into_subsets_it(Box const& lower_box,
         else
         {
             // Is nowhere! Should not occur!
-            BOOST_ASSERT(false);
+            //BOOST_ASSERT(false);
         }
     }
 }
@@ -76,47 +76,260 @@ template
     int Dimension,
     typename Box,
     typename OverlapsPolicy,
-    typename VisitBoxPolicy
+    typename ExpandPolicy,
+    typename VisitBoxPolicy,
+    typename Job
 >
 class parallel_partition_one_collection
 {
     typedef std::vector<std::size_t> index_vector_type;
-    typedef typename coordinate_type<Box>::type ctype;
+    typedef parallel_partition_one_collection this_type;
+    template<int, class,class,class,class,class> friend class parallel_partition_one_collection;
+
+
+    template <typename InputCollection>
+    static inline Box get_new_box(InputCollection const& collection,
+                    index_vector_type const& input)
+    {
+        Box box;
+        geometry::assign_inverse(box);
+        expand_with_elements<ExpandPolicy>(box, collection, input);
+        return box;
+    }
+
     typedef parallel_partition_one_collection
             <
                 1 - Dimension,
                 Box,
                 OverlapsPolicy,
-                VisitBoxPolicy
+                ExpandPolicy,
+                VisitBoxPolicy,
+                Job
             > sub_divide;
+
+    typedef boost::range_iterator
+        <
+            index_vector_type const
+        >::type index_iterator_type;
 
     template <typename InputCollection, typename Policy>
     static inline void next_level(Box const& box,
             InputCollection const& collection,
             index_vector_type const& input,
-            int level, std::size_t min_elements,
+            std::size_t level, std::size_t min_elements,
             Policy& policy, VisitBoxPolicy& box_policy)
     {
-        if (boost::size(input) > 0)
+        if (recurse_ok(input, min_elements, level))
         {
-            if (std::size_t(boost::size(input)) > min_elements && level < 100)
-            {
-                sub_divide::apply(box, collection, input, level + 1,
-                            min_elements, policy, box_policy);
-            }
-            else
-            {
-                handle_one(collection, input, policy);
-            }
+            partition_one_collection
+            <
+                1 - Dimension,
+                Box,
+                OverlapsPolicy,
+                ExpandPolicy,
+                VisitBoxPolicy
+            >::apply(box, collection, input,
+                level + 1, min_elements, policy, box_policy);
+        }
+        else
+        {
+            handle_one(collection, input, policy);
+        }
+    }
+
+    // Function to switch to two collections if there are geometries exceeding
+    // the separation line
+    template <typename InputCollection, typename Policy>
+    static inline void next_level2(Box const& box,
+            InputCollection const& collection,
+            index_vector_type const& input1,
+            index_vector_type const& input2,
+            std::size_t level, std::size_t min_elements,
+            Policy& policy, VisitBoxPolicy& box_policy)
+    {
+
+        if (recurse_ok(input1, input2, min_elements, level))
+        {
+            partition_two_collections
+            <
+                1 - Dimension,
+                Box,
+                OverlapsPolicy, OverlapsPolicy,
+                ExpandPolicy, ExpandPolicy,
+                VisitBoxPolicy
+            >::apply(box, collection, input1, collection, input2,
+                level + 1, min_elements, policy, box_policy);
+        }
+        else
+        {
+            handle_two(collection, input1, collection, input2, policy);
         }
     }
 
 public :
+
+    template
+    <
+        typename InputCollection,
+        typename Policy,
+        typename Owner
+    >
+    struct simple_parallel_partition_task : public boost::asynchronous::continuation_task<Policy>
+    {
+        simple_parallel_partition_task(Box const& box,
+                                boost::shared_ptr<InputCollection> collection,boost::shared_ptr<index_vector_type> input,
+                                index_iterator_type beg,index_iterator_type end,
+                                int level,
+                                std::size_t min_elements,
+                                boost::shared_ptr<Policy> policy, VisitBoxPolicy& box_policy,
+                                long cutoff,const std::string& task_name, std::size_t prio)
+            : boost::asynchronous::continuation_task<Policy>(task_name)
+            // TODO move
+            , box_(box)
+            , collection_(collection)
+            , input_(input), beg_(beg), end_(end)
+            , level_(level)
+            , min_elements_(min_elements),policy_(policy),box_policy_(box_policy)
+            , cutoff_(5000/*cutoff*/), prio_(prio)
+        {}
+
+        void operator()()
+        {
+            boost::asynchronous::continuation_result<Policy> task_res = this->this_task_result();
+            // advance up to cutoff
+            //index_iterator_type it = boost::asynchronous::detail::find_cutoff(beg_,cutoff_,end_);
+            // if not at end, recurse, otherwise execute here
+            //if (it == end_)
+            {
+                //auto policy = boost::make_shared<Policy>(std::move(policy_->clone()));
+                auto policy = boost::make_shared<Policy>(*policy_);
+                Owner::apply3(box_,collection_,beg_,end_,level_,min_elements_,policy,box_policy_);
+                task_res.set_value(std::move(*policy));
+            }
+            /*else
+            {
+                auto level = level_;
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                            // called when subtasks are done, set our result
+                            [task_res,level]
+                            (std::tuple<boost::asynchronous::expected<Policy>,
+                                        boost::asynchronous::expected<Policy> >&& res) mutable
+                            {
+                                try
+                                {
+                                    auto nl1 = std::move(std::get<0>(res).get());
+                                    auto nl2 = std::move(std::get<1>(res).get());
+                                    (nl1).merge(nl2);
+                                    task_res.set_value(std::move(nl1));
+                                }
+                                catch(std::exception& e)
+                                {
+                                    task_res.set_exception(boost::copy_exception(e));
+                                }
+                            },
+                            // recursive tasks
+                            simple_parallel_partition_task<InputCollection,Policy,this_type>
+                                (box_,
+                                 collection_,input_,beg_,it,
+                                 level_+1,min_elements_,policy_,box_policy_,cutoff_,this->get_name(),prio_),
+                            simple_parallel_partition_task<InputCollection,Policy,this_type>
+                                (box_,
+                                 collection_,input_,it,end_,
+                                 level_+1,min_elements_,policy_,box_policy_,cutoff_,this->get_name(),prio_)
+                   );
+           }*/
+
+        }
+
+        Box box_;
+        boost::shared_ptr<InputCollection> collection_;
+        boost::shared_ptr<index_vector_type> input_;
+        index_iterator_type beg_;
+        index_iterator_type end_;
+        int level_;
+        std::size_t min_elements_;
+        boost::shared_ptr<Policy> policy_;
+        VisitBoxPolicy box_policy_;
+        long cutoff_;
+        std::size_t prio_;
+    };
+
+    template
+    <
+        typename InputCollection,
+        typename Policy
+    >
+    static inline
+    boost::asynchronous::detail::callback_continuation<Policy,Job>
+    apply2(Box const& box,
+            InputCollection const& collection, index_vector_type const& input,
+            int level,
+            std::size_t min_elements,
+            Policy& policy, VisitBoxPolicy& box_policy,
+            long partition_cutoff)
+    {
+        // TODO name +prio
+        auto input_ = boost::make_shared<index_vector_type>(std::move(input));
+        return boost::asynchronous::top_level_callback_continuation_job<Policy,Job>
+                 (simple_parallel_partition_task<InputCollection,Policy,this_type>(
+                      box,
+                      boost::make_shared<InputCollection>(collection),input_,
+                      boost::begin(*input_),boost::end(*input_),
+                      level,min_elements,
+                      boost::make_shared<Policy>(std::move(policy)),box_policy,
+                      partition_cutoff,"geometry::parallel_partition_one",0));
+    }
+
+    template
+    <
+        typename InputCollection,
+        typename Policy
+    >
+    static inline void apply3(Box const& box,
+            boost::shared_ptr<InputCollection> collection, index_iterator_type beg,index_iterator_type end,
+            int level,
+            std::size_t min_elements,
+            boost::shared_ptr<Policy> policy, VisitBoxPolicy& box_policy)
+    {
+        box_policy.apply(box, level);
+
+        Box lower_box, upper_box;
+        divide_box<Dimension>(box, lower_box, upper_box);
+
+        index_vector_type lower, upper, exceeding;
+        divide_into_subsets_it<OverlapsPolicy>(lower_box, upper_box, *collection,
+                    beg,end, lower, upper, exceeding);
+
+        if (boost::size(exceeding) > 0)
+        {
+            // Get the box of exceeding-only
+            Box exceeding_box = get_new_box(*collection, exceeding);
+
+            // Recursively do exceeding elements only, in next dimension they
+            // will probably be less exceeding within the new box
+            next_level(exceeding_box, *collection, exceeding, level,
+                min_elements, *policy, box_policy);
+
+            // Switch to two collections, combine exceeding with lower resp upper
+            // but not lower/lower, upper/upper
+            next_level2(exceeding_box, *collection, exceeding, lower, level,
+                min_elements, *policy, box_policy);
+            next_level2(exceeding_box, *collection, exceeding, upper, level,
+                min_elements, *policy, box_policy);
+        }
+
+        // Recursively call operation both parts
+        next_level(lower_box, *collection, lower, level, min_elements,
+                        *policy, box_policy);
+        next_level(upper_box, *collection, upper, level, min_elements,
+                        *policy, box_policy);
+    }
+
     template <typename InputCollection, typename Policy>
     static inline void apply(Box const& box,
             InputCollection const& collection,
             index_vector_type const& input,
-            int level,
+            std::size_t level,
             std::size_t min_elements,
             Policy& policy, VisitBoxPolicy& box_policy)
     {
@@ -131,11 +344,20 @@ public :
 
         if (boost::size(exceeding) > 0)
         {
-            // All what is not fitting a partition should be combined
-            // with each other, and with all which is fitting.
-            handle_one(collection, exceeding, policy);
-            handle_two(collection, exceeding, collection, lower, policy);
-            handle_two(collection, exceeding, collection, upper, policy);
+            // Get the box of exceeding-only
+            Box exceeding_box = get_new_box(collection, exceeding);
+
+            // Recursively do exceeding elements only, in next dimension they
+            // will probably be less exceeding within the new box
+            next_level(exceeding_box, collection, exceeding, level,
+                min_elements, policy, box_policy);
+
+            // Switch to two collections, combine exceeding with lower resp upper
+            // but not lower/lower, upper/upper
+            next_level2(exceeding_box, collection, exceeding, lower, level,
+                min_elements, policy, box_policy);
+            next_level2(exceeding_box, collection, exceeding, upper, level,
+                min_elements, policy, box_policy);
         }
 
         // Recursively call operation both parts
@@ -281,7 +503,7 @@ class parallel_partition_two_collections
                 // if not at end, recurse, otherwise execute here
                 if (it1 == end1_)
                 {
-                    auto policy = boost::make_shared<Policy>(std::move(policy_->clone_no_turns()));
+                    auto policy = boost::make_shared<Policy>(std::move(policy_->clone()));
                     Owner::apply3(box_,collection1_,beg1_,end1_,collection2_,beg2_,end2_,level_,min_elements_,policy,box_policy_);
                     task_res.set_value(std::move(*policy));
                 }
@@ -327,7 +549,7 @@ class parallel_partition_two_collections
                 // if not at end, recurse, otherwise execute here
                 if (it2 == end2_)
                 {
-                    auto policy = boost::make_shared<Policy>(std::move(policy_->clone_no_turns()));
+                    auto policy = boost::make_shared<Policy>(std::move(policy_->clone()));
 
                     Owner::apply3(box_,collection1_,beg1_,end1_,collection2_,beg2_,end2_,level_,min_elements_,policy,box_policy_);
                     task_res.set_value(std::move(*policy));
@@ -414,7 +636,7 @@ public :
                       boost::begin(*input2_),boost::end(*input2_),
                       level,min_elements,
                       boost::make_shared<Policy>(std::move(policy)),box_policy,
-                      partition_cutoff,"geometry::parallel_partition",0));
+                      partition_cutoff,"geometry::parallel_partition_two",0));
     }
 
     template
@@ -661,44 +883,29 @@ class parallel_partition
 
 public :
     template <typename InputCollection, typename VisitPolicy>
-    static inline void apply(InputCollection const& collection,
+    static inline boost::asynchronous::detail::callback_continuation<VisitPolicy,Job>
+    apply(InputCollection const& collection,
             VisitPolicy& visitor,
+            long partition_cutoff,
             std::size_t min_elements = 16,
             VisitBoxPolicy box_visitor = boost::geometry::detail::partition::visit_no_policy()
             )
     {
-        if (std::size_t(boost::size(collection)) > min_elements)
-        {
-            index_vector_type index_vector;
-            Box total;
-            assign_inverse(total);
-            expand_to_collection<ExpandPolicy1>(collection, total, index_vector);
+        index_vector_type index_vector;
+        Box total;
+        assign_inverse(total);
+        expand_to_collection<ExpandPolicy1, IncludePolicy1>(collection, total, index_vector);
 
-            detail::partition::parallel_partition_one_collection
-                <
-                    0, Box,
-                    OverlapsPolicy1,
-                    VisitBoxPolicy
-                >::apply(total, collection, index_vector, 0, min_elements,
-                                visitor, box_visitor);
-        }
-        else
-        {
-            typedef typename boost::range_iterator
-                <
-                    InputCollection const
-                >::type iterator_type;
-            for(iterator_type it1 = boost::begin(collection);
-                it1 != boost::end(collection);
-                ++it1)
-            {
-                iterator_type it2 = it1;
-                for(++it2; it2 != boost::end(collection); ++it2)
-                {
-                    visitor.apply(*it1, *it2);
-                }
-            }
-        }
+        return
+        detail::partition::parallel_partition_one_collection
+            <
+                0, Box,
+                OverlapsPolicy1,
+                ExpandPolicy1,
+                VisitBoxPolicy,
+                Job
+            >::apply2(total, collection, index_vector, 0, min_elements,
+                            visitor, box_visitor, partition_cutoff);
     }
 
     template
@@ -731,7 +938,7 @@ public :
             >::apply2(total,
                 collection1, index_vector1,
                 collection2, index_vector2,
-                0, min_elements, visitor, box_visitor,partition_cutoff);
+                0, min_elements, visitor, box_visitor, partition_cutoff);
     }
 };
 

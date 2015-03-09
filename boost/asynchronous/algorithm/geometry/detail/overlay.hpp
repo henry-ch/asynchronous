@@ -36,6 +36,7 @@
 #include <boost/geometry/algorithms/detail/overlay/ring_properties.hpp>
 #include <boost/asynchronous/algorithm/geometry/detail/select_rings.hpp>
 #include <boost/asynchronous/algorithm/geometry/detail/get_turns.hpp>
+#include <boost/asynchronous/algorithm/geometry/detail/assign_parents.hpp>
 #include <boost/geometry/algorithms/detail/overlay/do_reverse.hpp>
 
 #include <boost/geometry/policies/robustness/segment_ratio_type.hpp>
@@ -234,9 +235,9 @@ std::cout << "get turns" << std::endl;
                 detail::overlay::assign_null_policy,Job
             >(geometry1, geometry2, robust_policy, turn_points, policy,partition_cutoff);
 #ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
-        cont.on_done([start,task_res,geometry1, geometry2, robust_policy,overlay_cutoff,output_collection]
+        cont.on_done([start,task_res,geometry1, geometry2, robust_policy,overlay_cutoff,partition_cutoff,output_collection]
 #else
-        cont.on_done([task_res,geometry1, geometry2, robust_policy,overlay_cutoff,output_collection]
+        cont.on_done([task_res,geometry1, geometry2, robust_policy,overlay_cutoff,partition_cutoff,output_collection]
 #endif
                      (std::tuple<boost::asynchronous::expected<container_type> >&& continuation_res)mutable
         {
@@ -313,9 +314,9 @@ std::cout << "traverse" << std::endl;
 
             cont.on_done(
 #ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
-            [start,task_res,rings,output_collection](std::tuple<boost::asynchronous::expected<select_ring_fct> >&& res)mutable
+            [start,task_res,rings,partition_cutoff,output_collection](std::tuple<boost::asynchronous::expected<select_ring_fct> >&& res)mutable
 #else
-            [task_res,rings,output_collection](std::tuple<boost::asynchronous::expected<select_ring_fct> >&& res)mutable
+            [task_res,rings,partition_cutoff,output_collection](std::tuple<boost::asynchronous::expected<select_ring_fct> >&& res)mutable
 #endif
             {
                 try
@@ -325,7 +326,6 @@ std::cout << "traverse" << std::endl;
                     std::cout << "select_rings ms: " << elapsed <<std::endl;
                     start = boost::chrono::high_resolution_clock::now();
 #endif
-                    {
                     select_ring_fct all_fct (std::move(std::get<0>(res).get()));
                     // Add rings created during traversal
                     {
@@ -341,23 +341,50 @@ std::cout << "traverse" << std::endl;
                         }
                     }
 
-                    assign_parents(*all_fct.geometry1_, *all_fct.geometry2_, *rings, all_fct.selected_ring_properties_);
+                    auto geometry1 = all_fct.geometry1_;
+                    auto geometry2 = all_fct.geometry2_;
+                    auto cont = parallel_assign_parents<Job>(*all_fct.geometry1_, *all_fct.geometry2_, *rings,
+                                                              all_fct.selected_ring_properties_,partition_cutoff);
+                    cont.on_done(
+#ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
+                    [start,task_res,rings,output_collection,geometry1,geometry2]
+                    (std::tuple<boost::asynchronous::expected<std::map<ring_identifier, properties>> >&& res)mutable
+#else
+                    [task_res,rings,output_collection,geometry1,geometry2]
+                    (std::tuple<boost::asynchronous::expected<std::pair<std::map<ring_identifier, properties>,bool>>>&& res)mutable
+#endif
+                    {
+                        try
+                        {
+#ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
+                            double elapsed = (double)(boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
+                            std::cout << "assign_parents ms: " << elapsed <<std::endl;
+                            start = boost::chrono::high_resolution_clock::now();
+#endif
+                            auto res_parents = std::move(std::get<0>(res).get());
+                            auto ring_map = std::move(res_parents.first);
+                            if (res_parents.second)
+                            {
+                                parallel_assign_parents_handle_result<Job>(ring_map);
+                            }
+
+                            add_rings<GeometryOut>(ring_map, *geometry1, *geometry2,
+                                                  *rings, std::back_inserter(*output_collection));
 
 #ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
-                    elapsed = (double)(boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
-                    std::cout << "assign_parents ms: " << elapsed <<std::endl;
-                    start = boost::chrono::high_resolution_clock::now();
+                            elapsed = (double)(boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
+                            std::cout << "add_rings ms: " << elapsed <<std::endl;
 #endif
-
-                    add_rings<GeometryOut>(all_fct.selected_ring_properties_, *all_fct.geometry1_, *all_fct.geometry2_,
-                                       *rings, std::back_inserter(*output_collection));
-
-#ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
-                    elapsed = (double)(boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
-                    std::cout << "add_rings ms: " << elapsed <<std::endl;
-#endif
+                            task_res.set_value(std::move(*output_collection));
+                        }
+                        catch(std::exception& e)
+                        {
+                            std::cout << "overlay. exception 0" << std::endl;
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
                     }
-                    task_res.set_value(std::move(*output_collection));
+                    );
+
                 }
                 catch(std::exception& e)
                 {

@@ -475,11 +475,7 @@ struct parallel_section_visitor
         }
         return true;
     }
-    void reset_turns()
-    {
-        m_turns.clear();
-    }
-    parallel_section_visitor clone_no_turns()const
+    parallel_section_visitor clone()const
     {
         parallel_section_visitor clone;
         clone.m_source_id1 = m_source_id1;
@@ -488,6 +484,7 @@ struct parallel_section_visitor
         clone.m_geometry2 = m_geometry2;
         clone.m_rescale_policy = m_rescale_policy;
         clone.m_interrupt_policy = m_interrupt_policy;
+        // m_turns is not being cloned
         return std::move(clone);
     }
 
