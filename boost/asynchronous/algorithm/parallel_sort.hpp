@@ -30,6 +30,10 @@
 #include <boost/asynchronous/algorithm/parallel_reverse.hpp>
 #include <boost/asynchronous/algorithm/detail/parallel_sort_helper.hpp>
 
+#include <boost/mpl/or.hpp>
+#include <boost/mpl/and.hpp>
+#include <boost/mpl/not.hpp>
+
 #include <boost/range/begin.hpp>
 #include <boost/range/end.hpp>
 #include <boost/range/iterator_range.hpp>
@@ -281,51 +285,14 @@ parallel_spreadsort(Iterator beg, Iterator end,Func func,long cutoff,
 #endif
 
 
-
-// fast version for ranges held only by reference => will return nothing (void)
-template <class Range,class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<void,Job> >::type
-parallel_sort(Range& range, Func func,long cutoff,
-#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-              const std::string& task_name, std::size_t prio)
-#else
-              const std::string& task_name="", std::size_t prio=0)
-#endif
-{
-    return boost::asynchronous::parallel_sort<decltype(boost::begin(range)),Func,Job>
-            (boost::begin(range),boost::end(range),std::move(func),cutoff,task_name,prio);
-}
-template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<void,Job> >::type
-parallel_stable_sort(Range& range,Func func,long cutoff,
-#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                     const std::string& task_name, std::size_t prio)
-#else
-                     const std::string& task_name="", std::size_t prio=0)
-#endif
-{
-   return boost::asynchronous::parallel_stable_sort<decltype(boost::begin(range)),Func,Job>
-           (boost::begin(range),boost::end(range),std::move(func),cutoff,task_name,prio);
-}
-
-#ifdef BOOST_ASYNCHRONOUS_USE_BOOST_SPREADSORT
-template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<void,Job> >::type
-parallel_spreadsort(Range& range,Func func,long cutoff,
-#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-              const std::string& task_name, std::size_t prio)
-#else
-              const std::string& task_name="", std::size_t prio=0)
-#endif
-{
-   return boost::asynchronous::parallel_spreadsort<decltype(boost::begin(range)),Func,Job>(boost::begin(range),boost::end(range),std::move(func),cutoff,task_name,prio);
-}
-#endif
-
 // version for moved ranges => will return the range as continuation
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::disable_if<boost::asynchronous::detail::is_serializable<Func>,boost::asynchronous::detail::callback_continuation<Range,Job> >::type
-parallel_sort_move(Range&& range,Func func,long cutoff,
+typename boost::disable_if<boost::mpl::or_<
+                                boost::asynchronous::detail::is_serializable<Func>,
+                                has_is_continuation_task<Range>
+                           >,
+                           boost::asynchronous::detail::callback_continuation<Range,Job> >::type
+parallel_sort(Range&& range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                    const std::string& task_name, std::size_t prio)
 #else
@@ -340,9 +307,14 @@ parallel_sort_move(Range&& range,Func func,long cutoff,
              (boost::asynchronous::parallel_sort<decltype(boost::begin(*r)),Func,Job>
                                 (beg,end,std::move(func),cutoff,task_name,prio),r,task_name));
 }
+
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::disable_if<boost::asynchronous::detail::is_serializable<Func>,boost::asynchronous::detail::callback_continuation<Range,Job> >::type
-parallel_stable_sort_move(Range&& range,Func func,long cutoff,
+typename boost::disable_if<boost::mpl::or_<
+                                boost::asynchronous::detail::is_serializable<Func>,
+                                has_is_continuation_task<Range>
+                           >,
+                           boost::asynchronous::detail::callback_continuation<Range,Job> >::type
+parallel_stable_sort(Range&& range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                           const std::string& task_name, std::size_t prio)
 #else
@@ -359,8 +331,12 @@ parallel_stable_sort_move(Range&& range,Func func,long cutoff,
 }
 #ifdef BOOST_ASYNCHRONOUS_USE_BOOST_SPREADSORT
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::disable_if<boost::asynchronous::detail::is_serializable<Func>,boost::asynchronous::detail::callback_continuation<Range,Job> >::type
-parallel_spreadsort_move(Range&& range,Func func,long cutoff,
+typename boost::disable_if<boost::mpl::or_<
+                                boost::asynchronous::detail::is_serializable<Func>,
+                                has_is_continuation_task<Range>
+                           >,
+                           boost::asynchronous::detail::callback_continuation<Range,Job> >::type
+parallel_spreadsort(Range&& range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                    const std::string& task_name, std::size_t prio)
 #else
@@ -427,10 +403,16 @@ struct parallel_sort_range_move_helper_serializable
                         {                            
                             try
                             {
-                                boost::shared_ptr<Range> r1 =  boost::make_shared<Range>(std::move(std::get<0>(res).get()));
+                                auto r1 = std::move(std::get<0>(res).get());
+                                auto r2 = std::move(std::get<1>(res).get());
+                                Range range(r1.size()+r2.size());
+                                std::merge(r1.begin(),r1.end(),r2.begin(),r2.end(),range.begin(),func);
+                                task_res.set_value(std::move(range));
+                                //TODO reactivate parallel_merge when it supports serialization
+                                /*boost::shared_ptr<Range> r1 =  boost::make_shared<Range>(std::move(std::get<0>(res).get()));
                                 boost::shared_ptr<Range> r2 =  boost::make_shared<Range>(std::move(std::get<1>(res).get()));
                                 boost::shared_ptr<Range> range = boost::make_shared<Range>(r1->size()+r2->size());
-                                
+
                                 // merge both sorted sub-ranges
                                 auto on_done_fct = [full_range,task_res,r1,r2,range](std::tuple<boost::asynchronous::expected<void> >&& merge_res)
                                 {
@@ -444,7 +426,204 @@ struct parallel_sort_range_move_helper_serializable
                                     {
                                         task_res.set_exception(boost::copy_exception(e));
                                     }
-                                };                                
+                                };
+                                auto c = boost::asynchronous::parallel_merge<decltype(boost::begin(*r1)),decltype(boost::begin(*r1)),
+                                                                             decltype(boost::begin(*range)),Func,Job>
+                                        (boost::begin(*r1),boost::end(*r1),boost::begin(*r2),boost::end(*r2), boost::begin(*range),func,
+                                         cutoff,task_name+"_merge",prio);
+                                c.on_done(std::move(on_done_fct));*/
+                            }
+                            catch(std::exception& e)
+                            {
+                                task_res.set_exception(boost::copy_exception(e));
+                            }
+                        },
+                        // recursive tasks
+                        parallel_sort_range_move_helper_serializable<Range,Func,Job,Sort>(
+                                    full_range,beg,it,
+                                    func,depth+1,cutoff,task_name,prio),
+                        parallel_sort_range_move_helper_serializable<Range,Func,Job,Sort>(
+                                    full_range,it,end,
+                                    func,depth+ 1,cutoff,task_name,prio)
+            );
+        }
+    }
+
+    void operator()()const
+    {
+        auto task_res = this->this_task_result();
+        helper(range_,begin_,end_,depth_,std::move(func_),cutoff_,task_name_,prio_,task_res);
+    }    
+
+    template <class Archive>
+    void save(Archive & ar, const unsigned int /*version*/)const
+    {
+        // only part range
+        // TODO avoid copying
+        auto r = std::move(boost::copy_range< Range>(boost::make_iterator_range(begin_,end_)));
+        ar & r;
+        ar & func_;
+        ar & cutoff_;
+        ar & task_name_;
+        ar & prio_;
+        ar & depth_;
+    }
+    template <class Archive>
+    void load(Archive & ar, const unsigned int /*version*/)
+    {
+        range_ = boost::make_shared<Range>();
+        ar & (*range_);
+        ar & func_;
+        ar & cutoff_;
+        ar & task_name_;
+        ar & prio_;
+        ar & depth_;
+        begin_ = boost::begin(*range_);
+        end_ = boost::end(*range_);
+    }
+    BOOST_SERIALIZATION_SPLIT_MEMBER()
+
+    boost::shared_ptr<Range> range_;
+    Func func_;
+    long cutoff_;
+    std::string task_name_;
+    std::size_t prio_;
+    unsigned int depth_;
+    decltype(boost::begin(*range_)) begin_;
+    decltype(boost::end(*range_)) end_;
+};
+
+template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+typename boost::enable_if<boost::mpl::and_<
+                            boost::asynchronous::detail::is_serializable<Func>,
+                            boost::mpl::not_<has_is_continuation_task<Range>>
+                          >,
+                          boost::asynchronous::detail::callback_continuation<Range,Job> >::type
+parallel_sort(Range&& range,Func func,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                   const std::string& task_name, std::size_t prio)
+#else
+                   const std::string& task_name="", std::size_t prio=0)
+#endif
+{
+    auto r = boost::make_shared<Range>(std::forward<Range>(range));
+    auto beg = boost::begin(*r);
+    auto end = boost::end(*r);
+    return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
+            (boost::asynchronous::parallel_sort_range_move_helper_serializable<Range,Func,Job,boost::asynchronous::std_sort>
+                (r,beg,end,std::move(func),0,cutoff,task_name,prio));
+}
+template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+typename boost::enable_if<boost::mpl::and_<
+                            boost::asynchronous::detail::is_serializable<Func>,
+                            boost::mpl::not_<has_is_continuation_task<Range>>
+                          >,
+                          boost::asynchronous::detail::callback_continuation<Range,Job> >::type
+parallel_stable_sort(Range&& range,Func func,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                          const std::string& task_name, std::size_t prio)
+#else
+                          const std::string& task_name="", std::size_t prio=0)
+#endif
+{
+    auto r = boost::make_shared<Range>(std::forward<Range>(range));
+    auto beg = boost::begin(*r);
+    auto end = boost::end(*r);
+    return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
+            (boost::asynchronous::parallel_sort_range_move_helper_serializable<Range,Func,Job,boost::asynchronous::std_stable_sort>
+                (r,beg,end,std::move(func),0,cutoff,task_name,prio));
+}
+#ifdef BOOST_ASYNCHRONOUS_USE_BOOST_SPREADSORT
+template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+typename boost::enable_if<boost::mpl::and_<
+                            boost::asynchronous::detail::is_serializable<Func>,
+                            boost::mpl::not_<has_is_continuation_task<Range>>
+                          >,
+                          boost::asynchronous::detail::callback_continuation<Range,Job> >::type
+parallel_spreadsort(Range&& range,Func func,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                   const std::string& task_name, std::size_t prio)
+#else
+                   const std::string& task_name="", std::size_t prio=0)
+#endif
+{
+    auto r = boost::make_shared<Range>(std::forward<Range>(range));
+    auto beg = boost::begin(*r);
+    auto end = boost::end(*r);
+    return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
+            (boost::asynchronous::parallel_sort_range_move_helper_serializable<Range,Func,Job,boost::asynchronous::boost_spreadsort>
+                (r,beg,end,std::move(func),0,cutoff,task_name,prio));
+}
+#endif
+
+namespace detail
+{
+template <class Range, class Func, class Job, class Sort>
+struct parallel_sort_range_move_helper2 : public boost::asynchronous::continuation_task<Range>
+{
+    //default ctor only when deserialized immediately after
+    parallel_sort_range_move_helper2()
+    {
+    }
+    template <class Iterator>
+    parallel_sort_range_move_helper2(boost::shared_ptr<Range> range,Iterator beg, Iterator end,Func func,unsigned int depth, long cutoff,
+                        const std::string& task_name, std::size_t prio)
+        : boost::asynchronous::continuation_task<Range>(task_name)
+        , range_(range),func_(std::move(func))
+        , cutoff_(cutoff),task_name_(task_name),prio_(prio),depth_(depth)
+        , begin_(beg)
+        , end_(end)
+    {
+    }
+    static void helper(boost::shared_ptr<Range> full_range,decltype(boost::begin(*full_range)) beg, decltype(boost::begin(*full_range)) end,unsigned int depth,
+                       Func func,long cutoff,const std::string& task_name, std::size_t prio,
+                       boost::asynchronous::continuation_result<Range> task_res)
+    {
+        // advance up to cutoff
+        auto it = boost::asynchronous::detail::find_cutoff(beg,cutoff,end);
+        // if not at end, recurse, otherwise execute here
+        if (it == end)
+        {
+            // if already reverse sorted, only reverse
+            if (std::is_sorted(beg,it,boost::asynchronous::detail::reverse_sorted<Func>(func)))
+            {
+                std::reverse(beg,end);
+            }
+            // if already sorted, done
+            else if (!std::is_sorted(beg,it,func))
+            {
+                Sort()(beg,it,func);
+            }
+            Range res (std::distance(beg,end));
+            std::move(beg,it,boost::begin(res));
+            task_res.set_value(std::move(res));
+        }
+        else
+        {
+            boost::asynchronous::create_callback_continuation_job<Job>(
+                        // called when subtasks are done, set our result
+                        [full_range,task_res,it,cutoff,func,task_name,prio](std::tuple<boost::asynchronous::expected<Range>,boost::asynchronous::expected<Range> > res)
+                        {
+                            try
+                            {
+                                boost::shared_ptr<Range> r1 =  boost::make_shared<Range>(std::move(std::get<0>(res).get()));
+                                boost::shared_ptr<Range> r2 =  boost::make_shared<Range>(std::move(std::get<1>(res).get()));
+                                boost::shared_ptr<Range> range = boost::make_shared<Range>(r1->size()+r2->size());
+
+                                // merge both sorted sub-ranges
+                                auto on_done_fct = [full_range,task_res,r1,r2,range](std::tuple<boost::asynchronous::expected<void> >&& merge_res)
+                                {
+                                    try
+                                    {
+                                        // get to check that no exception
+                                        std::get<0>(merge_res).get();
+                                        task_res.set_value(std::move(*range));
+                                    }
+                                    catch(std::exception& e)
+                                    {
+                                        task_res.set_exception(boost::copy_exception(e));
+                                    }
+                                };
                                 auto c = boost::asynchronous::parallel_merge<decltype(boost::begin(*r1)),decltype(boost::begin(*r1)),
                                                                              decltype(boost::begin(*range)),Func,Job>
                                         (boost::begin(*r1),boost::end(*r1),boost::begin(*r2),boost::end(*r2), boost::begin(*range),func,
@@ -457,10 +636,10 @@ struct parallel_sort_range_move_helper_serializable
                             }
                         },
                         // recursive tasks
-                        parallel_sort_range_move_helper_serializable<Range,Func,Job,Sort>(
+                        parallel_sort_range_move_helper2<Range,Func,Job,Sort>(
                                     full_range,beg,it,
                                     func,depth+1,cutoff,task_name,prio),
-                        parallel_sort_range_move_helper_serializable<Range,Func,Job,Sort>(
+                        parallel_sort_range_move_helper2<Range,Func,Job,Sort>(
                                     full_range,it,end,
                                     func,depth+ 1,cutoff,task_name,prio)
             );
@@ -545,36 +724,7 @@ struct parallel_sort_range_move_helper_serializable
             return;
         }
         helper(range_,begin_,end_,depth_,std::move(func_),cutoff_,task_name_,prio_,task_res);
-    }    
-
-    template <class Archive>
-    void save(Archive & ar, const unsigned int /*version*/)const
-    {
-        // only part range
-        // TODO avoid copying
-        auto r = std::move(boost::copy_range< Range>(boost::make_iterator_range(begin_,end_)));
-        ar & r;
-        ar & func_;
-        ar & cutoff_;
-        ar & task_name_;
-        ar & prio_;
-        ar & depth_;
     }
-    template <class Archive>
-    void load(Archive & ar, const unsigned int /*version*/)
-    {
-        range_ = boost::make_shared<Range>();
-        ar & (*range_);
-        ar & func_;
-        ar & cutoff_;
-        ar & task_name_;
-        ar & prio_;
-        ar & depth_;
-        begin_ = boost::begin(*range_);
-        end_ = boost::end(*range_);
-    }
-    BOOST_SERIALIZATION_SPLIT_MEMBER()
-
     boost::shared_ptr<Range> range_;
     Func func_;
     long cutoff_;
@@ -584,10 +734,12 @@ struct parallel_sort_range_move_helper_serializable
     decltype(boost::begin(*range_)) begin_;
     decltype(boost::end(*range_)) end_;
 };
+}
 
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<boost::asynchronous::detail::is_serializable<Func>,boost::asynchronous::detail::callback_continuation<Range,Job> >::type
-parallel_sort_move(Range&& range,Func func,long cutoff,
+typename boost::disable_if<has_is_continuation_task<Range>,
+                          boost::asynchronous::detail::callback_continuation<Range,Job> >::type
+parallel_sort2(Range&& range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                    const std::string& task_name, std::size_t prio)
 #else
@@ -598,12 +750,13 @@ parallel_sort_move(Range&& range,Func func,long cutoff,
     auto beg = boost::begin(*r);
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
-            (boost::asynchronous::parallel_sort_range_move_helper_serializable<Range,Func,Job,boost::asynchronous::std_sort>
+            (boost::asynchronous::detail::parallel_sort_range_move_helper2<Range,Func,Job,boost::asynchronous::std_sort>
                 (r,beg,end,std::move(func),0,cutoff,task_name,prio));
 }
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<boost::asynchronous::detail::is_serializable<Func>,boost::asynchronous::detail::callback_continuation<Range,Job> >::type
-parallel_stable_sort_move(Range&& range,Func func,long cutoff,
+typename boost::disable_if<has_is_continuation_task<Range>,
+                          boost::asynchronous::detail::callback_continuation<Range,Job> >::type
+parallel_stable_sort2(Range&& range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                           const std::string& task_name, std::size_t prio)
 #else
@@ -614,13 +767,14 @@ parallel_stable_sort_move(Range&& range,Func func,long cutoff,
     auto beg = boost::begin(*r);
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
-            (boost::asynchronous::parallel_sort_range_move_helper_serializable<Range,Func,Job,boost::asynchronous::std_stable_sort>
+            (boost::asynchronous::detail::parallel_sort_range_move_helper2<Range,Func,Job,boost::asynchronous::std_stable_sort>
                 (r,beg,end,std::move(func),0,cutoff,task_name,prio));
 }
 #ifdef BOOST_ASYNCHRONOUS_USE_BOOST_SPREADSORT
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<boost::asynchronous::detail::is_serializable<Func>,boost::asynchronous::detail::callback_continuation<Range,Job> >::type
-parallel_spreadsort_move(Range&& range,Func func,long cutoff,
+typename boost::disable_if<has_is_continuation_task<Range>,
+                          boost::asynchronous::detail::callback_continuation<Range,Job> >::type
+parallel_spreadsort2(Range&& range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                    const std::string& task_name, std::size_t prio)
 #else
@@ -631,10 +785,11 @@ parallel_spreadsort_move(Range&& range,Func func,long cutoff,
     auto beg = boost::begin(*r);
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
-            (boost::asynchronous::parallel_sort_range_move_helper_serializable<Range,Func,Job,boost::asynchronous::boost_spreadsort>
+            (boost::asynchronous::detail::parallel_sort_range_move_helper2<Range,Func,Job,boost::asynchronous::boost_spreadsort>
                 (r,beg,end,std::move(func),0,cutoff,task_name,prio));
 }
 #endif
+
 
 // version for ranges given as continuation => will return the range as continuation
 namespace detail
@@ -659,7 +814,7 @@ struct parallel_sort_continuation_range_helper: public boost::asynchronous::cont
         {
             try
             {
-                auto new_continuation = boost::asynchronous::parallel_sort_move<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
+                auto new_continuation = boost::asynchronous::parallel_sort<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
                 new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
                 {
                     task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
@@ -700,7 +855,7 @@ struct parallel_sort_continuation_range_helper<Continuation,Func,Job,typename ::
         {
             try
             {
-                auto new_continuation = boost::asynchronous::parallel_sort_move<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
+                auto new_continuation = boost::asynchronous::parallel_sort<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
                 new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
                 {
                     task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
@@ -739,7 +894,7 @@ struct parallel_stable_sort_continuation_range_helper: public boost::asynchronou
         {
             try
             {
-                auto new_continuation = boost::asynchronous::parallel_stable_sort_move<typename Continuation::return_type,Func,Job>
+                auto new_continuation = boost::asynchronous::parallel_stable_sort<typename Continuation::return_type,Func,Job>
                         (std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
                 new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
                 {
@@ -781,7 +936,7 @@ struct parallel_stable_sort_continuation_range_helper<Continuation,Func,Job,type
         {
             try
             {
-                auto new_continuation = boost::asynchronous::parallel_stable_sort_move<typename Continuation::return_type,Func,Job>
+                auto new_continuation = boost::asynchronous::parallel_stable_sort<typename Continuation::return_type,Func,Job>
                         (std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
                 new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
                 {
@@ -821,7 +976,7 @@ struct parallel_spreadsort_continuation_range_helper: public boost::asynchronous
         {
             try
             {
-                auto new_continuation = boost::asynchronous::parallel_spreadsort_move<typename Continuation::return_type,Func,Job>
+                auto new_continuation = boost::asynchronous::parallel_spreadsort<typename Continuation::return_type,Func,Job>
                         (std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
                 new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
                 {
@@ -863,7 +1018,7 @@ struct parallel_spreadsort_continuation_range_helper<Continuation,Func,Job,typen
         {
             try
             {
-                auto new_continuation = boost::asynchronous::parallel_spreadsort_move<typename Continuation::return_type,Func,Job>
+                auto new_continuation = boost::asynchronous::parallel_spreadsort<typename Continuation::return_type,Func,Job>
                         (std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
                 new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
                 {
@@ -923,5 +1078,292 @@ parallel_spreadsort(Range range,Func func,long cutoff,
 }
 #endif
 
+
+// version for ranges given as continuation => will return the range as continuation
+namespace detail
+{
+// adapter to non-callback continuations
+template <class Continuation, class Func, class Job,class Enable=void>
+struct parallel_sort_continuation_range_helper2: public boost::asynchronous::continuation_task<typename Continuation::return_type>
+{
+    parallel_sort_continuation_range_helper2(Continuation const& c,Func func,long cutoff,
+                        const std::string& task_name, std::size_t prio)
+        :boost::asynchronous::continuation_task<typename Continuation::return_type>(task_name)
+        ,cont_(c),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
+    {}
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<typename Continuation::return_type> task_res = this->this_task_result();
+        auto func(std::move(func_));
+        auto cutoff = cutoff_;
+        auto task_name = this->get_name();
+        auto prio = prio_;
+        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res)
+        {
+            try
+            {
+                auto new_continuation = boost::asynchronous::parallel_sort2<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
+                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                {
+                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
+                });
+            }
+            catch(std::exception& e)
+            {
+                task_res.set_exception(boost::copy_exception(e));
+            }
+        }
+        );
+        boost::asynchronous::any_continuation ac(std::move(cont_));
+        boost::asynchronous::get_continuations().emplace_front(std::move(ac));
+    }
+    Continuation cont_;
+    Func func_;
+    long cutoff_;
+    std::size_t prio_;
+};
+// Continuation is a callback continuation
+template <class Continuation, class Func, class Job>
+struct parallel_sort_continuation_range_helper2<Continuation,Func,Job,typename ::boost::enable_if< has_is_callback_continuation_task<Continuation> >::type>:
+        public boost::asynchronous::continuation_task<typename Continuation::return_type>
+{
+    parallel_sort_continuation_range_helper2(Continuation const& c,Func func,long cutoff,
+                        const std::string& task_name, std::size_t prio)
+        :boost::asynchronous::continuation_task<typename Continuation::return_type>(task_name)
+        ,cont_(c),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
+    {}
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<typename Continuation::return_type> task_res = this->this_task_result();
+        auto func(std::move(func_));
+        auto cutoff = cutoff_;
+        auto task_name = this->get_name();
+        auto prio = prio_;
+        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
+        {
+            try
+            {
+                auto new_continuation = boost::asynchronous::parallel_sort2<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
+                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                {
+                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
+                });
+            }
+            catch(std::exception& e)
+            {
+                task_res.set_exception(boost::copy_exception(e));
+            }
+        }
+        );
+    }
+    Continuation cont_;
+    Func func_;
+    long cutoff_;
+    std::size_t prio_;
+};
+
+// adapter to non-callback continuations
+template <class Continuation, class Func, class Job,class Enable=void>
+struct parallel_stable_sort_continuation_range_helper2: public boost::asynchronous::continuation_task<typename Continuation::return_type>
+{
+    parallel_stable_sort_continuation_range_helper2(Continuation const& c,Func func,long cutoff,
+                        const std::string& task_name, std::size_t prio)
+        :boost::asynchronous::continuation_task<typename Continuation::return_type>(task_name)
+        ,cont_(c),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
+    {}
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<typename Continuation::return_type> task_res = this->this_task_result();
+        auto func(std::move(func_));
+        auto cutoff = cutoff_;
+        auto task_name = this->get_name();
+        auto prio = prio_;
+        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res)
+        {
+            try
+            {
+                auto new_continuation = boost::asynchronous::parallel_stable_sort2<typename Continuation::return_type,Func,Job>
+                        (std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
+                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                {
+                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
+                });
+            }
+            catch(std::exception& e)
+            {
+                task_res.set_exception(boost::copy_exception(e));
+            }
+        }
+        );
+        boost::asynchronous::any_continuation ac(std::move(cont_));
+        boost::asynchronous::get_continuations().emplace_front(std::move(ac));
+    }
+    Continuation cont_;
+    Func func_;
+    long cutoff_;
+    std::size_t prio_;
+};
+// Continuation is a callback continuation
+template <class Continuation, class Func, class Job>
+struct parallel_stable_sort_continuation_range_helper2<Continuation,Func,Job,typename ::boost::enable_if< has_is_callback_continuation_task<Continuation> >::type>
+        : public boost::asynchronous::continuation_task<typename Continuation::return_type>
+{
+    parallel_stable_sort_continuation_range_helper2(Continuation const& c,Func func,long cutoff,
+                        const std::string& task_name, std::size_t prio)
+        :boost::asynchronous::continuation_task<typename Continuation::return_type>(task_name)
+        ,cont_(c),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
+    {}
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<typename Continuation::return_type> task_res = this->this_task_result();
+        auto func(std::move(func_));
+        auto cutoff = cutoff_;
+        auto task_name = this->get_name();
+        auto prio = prio_;
+        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
+        {
+            try
+            {
+                auto new_continuation = boost::asynchronous::parallel_stable_sort2<typename Continuation::return_type,Func,Job>
+                        (std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
+                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                {
+                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
+                });
+            }
+            catch(std::exception& e)
+            {
+                task_res.set_exception(boost::copy_exception(e));
+            }
+        }
+        );
+    }
+    Continuation cont_;
+    Func func_;
+    long cutoff_;
+    std::size_t prio_;
+};
+#ifdef BOOST_ASYNCHRONOUS_USE_BOOST_SPREADSORT
+// adapter to non-callback continuations
+template <class Continuation, class Func, class Job,class Enable=void>
+struct parallel_spreadsort_continuation_range_helper2: public boost::asynchronous::continuation_task<typename Continuation::return_type>
+{
+    parallel_spreadsort_continuation_range_helper2(Continuation const& c,Func func,long cutoff,
+                        const std::string& task_name, std::size_t prio)
+        :boost::asynchronous::continuation_task<typename Continuation::return_type>(task_name)
+        ,cont_(c),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
+    {}
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<typename Continuation::return_type> task_res = this->this_task_result();
+        auto func(std::move(func_));
+        auto cutoff = cutoff_;
+        auto task_name = this->get_name();
+        auto prio = prio_;
+        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res)
+        {
+            try
+            {
+                auto new_continuation = boost::asynchronous::parallel_spreadsort2<typename Continuation::return_type,Func,Job>
+                        (std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
+                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                {
+                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
+                });
+            }
+            catch(std::exception& e)
+            {
+                task_res.set_exception(boost::copy_exception(e));
+            }
+        }
+        );
+        boost::asynchronous::any_continuation ac(std::move(cont_));
+        boost::asynchronous::get_continuations().emplace_front(std::move(ac));
+    }
+    Continuation cont_;
+    Func func_;
+    long cutoff_;
+    std::size_t prio_;
+};
+// Continuation is a callback continuation
+template <class Continuation, class Func, class Job>
+struct parallel_spreadsort_continuation_range_helper2<Continuation,Func,Job,typename ::boost::enable_if< has_is_callback_continuation_task<Continuation> >::type>
+        : public boost::asynchronous::continuation_task<typename Continuation::return_type>
+{
+    parallel_spreadsort_continuation_range_helper2(Continuation const& c,Func func,long cutoff,
+                        const std::string& task_name, std::size_t prio)
+        :boost::asynchronous::continuation_task<typename Continuation::return_type>(task_name)
+        ,cont_(c),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
+    {}
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<typename Continuation::return_type> task_res = this->this_task_result();
+        auto func(std::move(func_));
+        auto cutoff = cutoff_;
+        auto task_name = this->get_name();
+        auto prio = prio_;
+        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
+        {
+            try
+            {
+                auto new_continuation = boost::asynchronous::parallel_spreadsort2<typename Continuation::return_type,Func,Job>
+                        (std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
+                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                {
+                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
+                });
+            }
+            catch(std::exception& e)
+            {
+                task_res.set_exception(boost::copy_exception(e));
+            }
+        }
+        );
+    }
+    Continuation cont_;
+    Func func_;
+    long cutoff_;
+    std::size_t prio_;
+};
+#endif
+}
+template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+typename boost::enable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
+parallel_sort2(Range range,Func func,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+              const std::string& task_name, std::size_t prio)
+#else
+              const std::string& task_name="", std::size_t prio=0)
+#endif
+{
+    return boost::asynchronous::top_level_callback_continuation_job<typename Range::return_type,Job>
+            (boost::asynchronous::detail::parallel_sort_continuation_range_helper2<Range,Func,Job>(range,std::move(func),cutoff,task_name,prio));
+}
+template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+typename boost::enable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
+parallel_stable_sort2(Range range,Func func,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                     const std::string& task_name, std::size_t prio)
+#else
+                     const std::string& task_name="", std::size_t prio=0)
+#endif
+{
+    return boost::asynchronous::top_level_callback_continuation_job<typename Range::return_type,Job>
+            (boost::asynchronous::detail::parallel_stable_sort_continuation_range_helper2<Range,Func,Job>(range,std::move(func),cutoff,task_name,prio));
+}
+#ifdef BOOST_ASYNCHRONOUS_USE_BOOST_SPREADSORT
+template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+typename boost::enable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
+parallel_spreadsort2(Range range,Func func,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                     const std::string& task_name, std::size_t prio)
+#else
+                     const std::string& task_name="", std::size_t prio=0)
+#endif
+{
+    return boost::asynchronous::top_level_callback_continuation_job<typename Range::return_type,Job>
+            (boost::asynchronous::detail::parallel_spreadsort_continuation_range_helper2<Range,Func,Job>(range,std::move(func),cutoff,task_name,prio));
+}
+#endif
 }}
 #endif // BOOST_ASYNCHRONOUS_PARALLEL_SORT_HPP

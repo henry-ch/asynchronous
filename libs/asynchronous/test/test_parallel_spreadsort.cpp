@@ -78,7 +78,7 @@ BOOST_AUTO_TEST_CASE( test_parallel_spreadsort_int_post_future )
     // make a copy and execute in pool
     boost::future<std::vector<int>> fu = boost::asynchronous::post_future(
                 scheduler,
-                [data]() mutable {return boost::asynchronous::parallel_spreadsort_move(std::move(data),std::less<int>(),1500);});
+                [data]() mutable {return boost::asynchronous::parallel_spreadsort(std::move(data),std::less<int>(),1500);});
     try
     {
         std::vector<int> res = std::move(fu.get());
@@ -91,7 +91,7 @@ BOOST_AUTO_TEST_CASE( test_parallel_spreadsort_int_post_future )
         BOOST_FAIL( "unexpected exception" );
     }
 }
-BOOST_AUTO_TEST_CASE( test_parallel_spreadsort_int_post_future_2 )
+BOOST_AUTO_TEST_CASE( test_parallel_spreadsort_int_post_future2 )
 {
     auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::threadpool_scheduler<
                                                                                 boost::asynchronous::lockfree_queue<> >(6));
@@ -100,7 +100,29 @@ BOOST_AUTO_TEST_CASE( test_parallel_spreadsort_int_post_future_2 )
     // make a copy and execute in pool
     boost::future<std::vector<int>> fu = boost::asynchronous::post_future(
                 scheduler,
-                [data]() mutable {return boost::asynchronous::parallel_spreadsort_move(std::move(data),increasing_sort_subtask(),1500);});
+                [data]() mutable {return boost::asynchronous::parallel_spreadsort2(std::move(data),std::less<int>(),1500);});
+    try
+    {
+        std::vector<int> res = std::move(fu.get());
+        std::sort(data.begin(),data.end(),std::less<int>());
+        BOOST_CHECK_MESSAGE(std::is_sorted(res.begin(),res.end(),std::less<int>()),"parallel_sort did not sort.");
+        BOOST_CHECK_MESSAGE(res == data,"parallel_sort gave a wrong value.");
+    }
+    catch(...)
+    {
+        BOOST_FAIL( "unexpected exception" );
+    }
+}
+BOOST_AUTO_TEST_CASE( test_parallel_spreadsort_int_post_future_dist )
+{
+    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::threadpool_scheduler<
+                                                                                boost::asynchronous::lockfree_queue<> >(6));
+    std::vector<int> data;
+    generate(data);
+    // make a copy and execute in pool
+    boost::future<std::vector<int>> fu = boost::asynchronous::post_future(
+                scheduler,
+                [data]() mutable {return boost::asynchronous::parallel_spreadsort(std::move(data),increasing_sort_subtask(),1500);});
     try
     {
         std::vector<int> res = std::move(fu.get());

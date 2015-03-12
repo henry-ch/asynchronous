@@ -38,12 +38,12 @@ struct dummy_parallel_sort_task : public boost::asynchronous::serializable_task
     {
         ar & m_data;
     }
-    auto operator()() -> decltype(boost::asynchronous::parallel_sort_move<std::vector<int>,dummy_parallel_sort_subtask,boost::asynchronous::any_serializable>(
+    auto operator()() -> decltype(boost::asynchronous::parallel_sort<std::vector<int>,dummy_parallel_sort_subtask,boost::asynchronous::any_serializable>(
                                       std::move(std::vector<int>()),
                                       dummy_parallel_sort_subtask(),
                                       1000))
     {
-        return boost::asynchronous::parallel_sort_move
+        return boost::asynchronous::parallel_sort
                 <std::vector<int>,dummy_parallel_sort_subtask,boost::asynchronous::any_serializable>(
             std::move(m_data),
             dummy_parallel_sort_subtask(),
