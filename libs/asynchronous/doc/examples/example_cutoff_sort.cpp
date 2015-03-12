@@ -49,7 +49,7 @@ void example_cutoff_sort(std::size_t cutoff_begin,
         std::tuple<std::size_t,std::vector<std::size_t>> best_cutoff=
                 boost::asynchronous::find_best_cutoff(scheduler,
                     [test_data](std::size_t cutoff)mutable
-                    {return boost::asynchronous::parallel_sort_move(std::move(test_data),std::less<int>(),cutoff);},
+                    {return boost::asynchronous::parallel_sort(std::move(test_data),std::less<int>(),cutoff);},
                     cutoff_begin,cutoff_end,steps,retries
         );
         std::size_t acc = std::accumulate(std::get<1>(best_cutoff).begin(),std::get<1>(best_cutoff).end(),0,
