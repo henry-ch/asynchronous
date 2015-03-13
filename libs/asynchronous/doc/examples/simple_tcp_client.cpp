@@ -109,7 +109,7 @@ int main(int argc, char* argv[])
             }
             else if (task_name=="dummy_parallel_sort_subtask")
             {
-                boost::asynchronous::parallel_sort_range_move_helper<vector<int>,
+                boost::asynchronous::parallel_sort_range_move_helper_serializable<vector<int>,
                                                                        dummy_parallel_sort_subtask,
                                                                        boost::asynchronous::any_serializable,
                                                                        boost::asynchronous::std_sort> t;
