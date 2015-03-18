@@ -348,6 +348,7 @@ typename boost::enable_if<has_is_continuation_task<Range>,boost::asynchronous::d
 parallel_geometry_union_of_x(Range range,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                      const std::string& task_name, std::size_t prio,
+                     long cutoff=300, long overlay_cutoff=1500, long partition_cutoff=80000)
 #else
                      const std::string& task_name="", std::size_t prio=0,
                      long cutoff=300, long overlay_cutoff=1500, long partition_cutoff=80000)
