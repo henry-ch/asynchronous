@@ -154,8 +154,8 @@ void test_many_unions(int count_x, int count_y, double distance, bool method1,
     }
 
     // Method 2: add geometries pair-wise (much faster)
-    double elapsed2=0.0;
-    {
+   double elapsed2=0.0;
+    /* {
         auto start = boost::chrono::high_resolution_clock::now();
 
         std::vector<multi_polygon_type> final_output;
@@ -176,15 +176,15 @@ void test_many_unions(int count_x, int count_y, double distance, bool method1,
         #ifdef TEST_WITH_SVG
         create_svg("/tmp/many_polygons2.svg", many_polygons, final_output.front());
         #endif
-    }
+    }*/
 
     // Method 3: in parallel
     double elapsed3=0.0;
     auto pool = boost::asynchronous::create_shared_scheduler_proxy(
                 new boost::asynchronous::multiqueue_threadpool_scheduler<
-                        boost::asynchronous::lockfree_queue<>,
+                        boost::asynchronous::lockfree_queue<>/*,
                         boost::asynchronous::default_find_position< boost::asynchronous::sequential_push_policy>,
-                        boost::asynchronous::no_cpu_load_saving
+                        boost::asynchronous::no_cpu_load_saving*/
                     >(tpsize,64));
 
     {
@@ -196,7 +196,7 @@ void test_many_unions(int count_x, int count_y, double distance, bool method1,
         boost::future<std::vector<multi_polygon_type>> fu = boost::asynchronous::post_future(pool,
         [union_of_x_cutoff,beg,end,overlay_cutoff,partition_cutoff]()
         {
-            return boost::asynchronous::parallel_geometry_union_of_x<decltype(beg),
+            return boost::asynchronous::geometry::parallel_geometry_union_of_x<decltype(beg),
                                                                     std::vector<multi_polygon_type>,
                                                                     BOOST_ASYNCHRONOUS_DEFAULT_JOB>
                     (beg,end,"",0,union_of_x_cutoff,overlay_cutoff,partition_cutoff);
@@ -206,7 +206,7 @@ void test_many_unions(int count_x, int count_y, double distance, bool method1,
         boost::future<std::vector<multi_polygon_type>> fu = boost::asynchronous::post_future(pool,
         [union_of_x_cutoff,many_polygons=std::move(many_polygons),overlay_cutoff,partition_cutoff]()mutable
         {
-            return boost::asynchronous::parallel_geometry_union_of_x<std::vector<multi_polygon_type>,
+            return boost::asynchronous::geometry::parallel_geometry_union_of_x<std::vector<multi_polygon_type>,
                                                                      BOOST_ASYNCHRONOUS_DEFAULT_JOB>
                     (std::move(many_polygons),"",0,union_of_x_cutoff,overlay_cutoff,partition_cutoff);
         }

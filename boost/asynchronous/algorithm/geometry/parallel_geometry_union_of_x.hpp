@@ -22,7 +22,7 @@
 #include <boost/asynchronous/detail/metafunctions.hpp>
 #include <boost/asynchronous/algorithm/geometry/parallel_union.hpp>
 
-namespace boost { namespace asynchronous
+namespace boost { namespace asynchronous { namespace geometry
 {
 namespace detail
 {
@@ -65,10 +65,10 @@ struct parallel_geometry_union_of_x_helper: public boost::asynchronous::continua
         Iterator it = boost::asynchronous::detail::find_cutoff(beg_,cutoff_,end_);
         if (it == end_)
         {
-            Range temp = std::move(boost::asynchronous::detail::pairwise_union<Iterator,Range>(beg_,end_));
+            Range temp = std::move(boost::asynchronous::geometry::detail::pairwise_union<Iterator,Range>(beg_,end_));
             while(temp.size() > 1)
             {
-                temp = std::move(boost::asynchronous::detail::pairwise_union<Iterator,Range>(temp.begin(),temp.end()));
+                temp = std::move(boost::asynchronous::geometry::detail::pairwise_union<Iterator,Range>(temp.begin(),temp.end()));
             }
             task_res.set_value(std::move(temp));
         }
@@ -140,7 +140,7 @@ parallel_geometry_union_of_x(Iterator beg, Iterator end,
                     long cutoff=300, long overlay_cutoff=1500, long partition_cutoff=80000)
 {
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
-            (boost::asynchronous::detail::parallel_geometry_union_of_x_helper<Iterator,Range,Job>
+            (boost::asynchronous::geometry::detail::parallel_geometry_union_of_x_helper<Iterator,Range,Job>
                 (beg,end,cutoff,overlay_cutoff,partition_cutoff,task_name,prio));
 
 }
@@ -165,10 +165,10 @@ struct parallel_geometry_union_of_x_range_helper: public boost::asynchronous::co
         auto it = boost::asynchronous::detail::find_cutoff(begin_,cutoff_,end_);
         if (it == end_)
         {
-            Range temp = std::move(boost::asynchronous::detail::pairwise_union<Iterator,Range>(begin_,end_));
+            Range temp = std::move(boost::asynchronous::geometry::detail::pairwise_union<Iterator,Range>(begin_,end_));
             while(temp.size() > 1)
             {
-                temp = std::move(boost::asynchronous::detail::pairwise_union<Iterator,Range>(temp.begin(),temp.end()));
+                temp = std::move(boost::asynchronous::geometry::detail::pairwise_union<Iterator,Range>(temp.begin(),temp.end()));
             }
             task_res.set_value(std::move(temp));
         }
@@ -247,7 +247,7 @@ parallel_geometry_union_of_x(Range&& range,
     auto end = boost::end(*r);
 
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
-            (boost::asynchronous::detail::parallel_geometry_union_of_x_range_helper<Range,Job>
+            (boost::asynchronous::geometry::detail::parallel_geometry_union_of_x_range_helper<Range,Job>
                 (std::move(r),beg,end,cutoff,overlay_cutoff,partition_cutoff,task_name,prio));
 
 }
@@ -276,7 +276,7 @@ struct parallel_geometry_union_of_x_continuation_range_helper: public boost::asy
         {
             try
             {
-                auto new_continuation = boost::asynchronous::parallel_geometry_union_of_x<typename Continuation::return_type,Job>
+                auto new_continuation = boost::asynchronous::geometry::parallel_geometry_union_of_x<typename Continuation::return_type,Job>
                         (std::move(std::get<0>(continuation_res).get()),task_name,prio,cutoff,overlay_cutoff,partition_cutoff);
                 new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
                 {
@@ -321,7 +321,7 @@ struct parallel_geometry_union_of_x_continuation_range_helper<Continuation,Job,t
         {
             try
             {
-                auto new_continuation = boost::asynchronous::parallel_geometry_union_of_x<typename Continuation::return_type,Job>
+                auto new_continuation = boost::asynchronous::geometry::parallel_geometry_union_of_x<typename Continuation::return_type,Job>
                         (std::move(std::get<0>(continuation_res).get()),task_name,prio,cutoff,overlay_cutoff,partition_cutoff);
                 new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
                 {
@@ -354,9 +354,9 @@ parallel_geometry_union_of_x(Range range,
 #endif
 {
     return boost::asynchronous::top_level_callback_continuation_job<typename Range::return_type,Job>
-            (boost::asynchronous::detail::parallel_geometry_union_of_x_continuation_range_helper<Range,Job>(
+            (boost::asynchronous::geometry::detail::parallel_geometry_union_of_x_continuation_range_helper<Range,Job>(
                  std::move(range),cutoff,overlay_cutoff,partition_cutoff,task_name,prio));
 }
 
-}}
+}}}
 #endif // BOOST_ASYNCHRONOUS_PARALLEL_GEOMETRY_UNION_HPP
