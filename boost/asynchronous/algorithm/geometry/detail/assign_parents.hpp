@@ -88,6 +88,7 @@ struct parallel_assign_visitor
         clone.m_geometry2 = m_geometry2;
         clone.m_collection = m_collection;
         clone.m_check_for_orientation = m_check_for_orientation;
+        clone.m_ring_map = m_ring_map;
         // ring map is not being cloned
         return std::move(clone);
     }
