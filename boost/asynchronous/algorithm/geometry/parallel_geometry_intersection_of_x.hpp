@@ -20,7 +20,7 @@
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/algorithm/detail/safe_advance.hpp>
 #include <boost/asynchronous/detail/metafunctions.hpp>
-#include <boost/asynchronous/algorithm/geometry/parallel_union.hpp>
+#include <boost/asynchronous/algorithm/geometry/parallel_intersection.hpp>
 
 namespace boost { namespace asynchronous { namespace geometry
 {
@@ -64,15 +64,14 @@ struct parallel_geometry_intersection_of_x_helper:
         }
         else
         {
-            //auto task_name = this->get_name();
-            //auto prio = prio_;
-            //auto cutoff = cutoff_;
-            //auto overlay_cutoff = overlay_cutoff_;
-            //auto partition_cutoff = partition_cutoff_;
+            auto task_name = this->get_name();
+            auto prio = prio_;
+            auto overlay_cutoff = overlay_cutoff_;
+            auto partition_cutoff = partition_cutoff_;
 
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [task_res]
+                        [task_res,task_name,prio,overlay_cutoff,partition_cutoff]
                         (std::tuple<boost::asynchronous::expected<typename std::iterator_traits<Iterator>::value_type>,
                                     boost::asynchronous::expected<typename std::iterator_traits<Iterator>::value_type> > res)
                         {
@@ -80,10 +79,23 @@ struct parallel_geometry_intersection_of_x_helper:
                             {
                                 auto res0 = std::get<0>(res).get();
                                 auto res1 = std::get<1>(res).get();
-                                typename std::iterator_traits<Iterator>::value_type result;
-                                boost::geometry::intersection(res0, res1, result);
-                                task_res.set_value(std::move(result));
-
+                                //typename std::iterator_traits<Iterator>::value_type result;
+                                //boost::geometry::intersection(res0, res1, result);
+                                //task_res.set_value(std::move(result));
+                                typedef typename std::iterator_traits<Iterator>::value_type Return;
+                                auto cont = boost::asynchronous::geometry::parallel_intersection<Return,Return,Return,Job>
+                                        (std::move(res0),std::move(res1),overlay_cutoff,partition_cutoff);
+                                cont.on_done([task_res](std::tuple<boost::asynchronous::expected<Return> >&& res_p_intersect)
+                                {
+                                    try
+                                    {
+                                        task_res.set_value(std::move(std::get<0>(res_p_intersect).get()));
+                                    }
+                                    catch(std::exception& e)
+                                    {
+                                        task_res.set_exception(boost::copy_exception(e));
+                                    }
+                                });
                             }
                             catch(std::exception& e)
                             {
@@ -163,25 +175,36 @@ struct parallel_geometry_intersection_of_x_range_helper: public boost::asynchron
         }
         else
         {
-            //auto task_name = this->get_name();
-            //auto prio = prio_;
-            //auto cutoff = cutoff_;
-            //auto overlay_cutoff = overlay_cutoff_;
-            //auto partition_cutoff = partition_cutoff_;
+            auto task_name = this->get_name();
+            auto prio = prio_;
+            auto overlay_cutoff = overlay_cutoff_;
+            auto partition_cutoff = partition_cutoff_;
 
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [task_res/*,task_name,prio,cutoff,overlay_cutoff,partition_cutoff*/]
+                        [task_res,task_name,prio,overlay_cutoff,partition_cutoff]
                         (std::tuple<boost::asynchronous::expected<Return>,boost::asynchronous::expected<Return> > res)
                         {
                             try
                             {
                                 auto res0 = std::get<0>(res).get();
                                 auto res1 = std::get<1>(res).get();
-                                Return result;
-                                boost::geometry::intersection(res0, res1, result);
-                                task_res.set_value(std::move(result));
-
+                                //Return result;
+                                //boost::geometry::intersection(res0, res1, result);
+                                //task_res.set_value(std::move(result));
+                                auto cont = boost::asynchronous::geometry::parallel_intersection<Return,Return,Return,Job>
+                                        (std::move(res0),std::move(res1),overlay_cutoff,partition_cutoff);
+                                cont.on_done([task_res](std::tuple<boost::asynchronous::expected<Return> >&& res_p_intersect)
+                                {
+                                    try
+                                    {
+                                        task_res.set_value(std::move(std::get<0>(res_p_intersect).get()));
+                                    }
+                                    catch(std::exception& e)
+                                    {
+                                        task_res.set_exception(boost::copy_exception(e));
+                                    }
+                                });
                             }
                             catch(std::exception& e)
                             {
@@ -209,7 +232,7 @@ struct parallel_geometry_intersection_of_x_range_helper: public boost::asynchron
 
 template <class Range, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 auto
-parallel_geometry_intersection_of_x2(Range&& range,
+parallel_geometry_intersection_of_x(Range&& range,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                     const std::string& task_name, std::size_t prio,
 #else

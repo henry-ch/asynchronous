@@ -155,7 +155,7 @@ void test_many_unions(int count_x, int count_y, double distance, bool method1,
 
     // Method 2: add geometries pair-wise (much faster)
    double elapsed2=0.0;
-    /* {
+     {
         auto start = boost::chrono::high_resolution_clock::now();
 
         std::vector<multi_polygon_type> final_output;
@@ -176,7 +176,7 @@ void test_many_unions(int count_x, int count_y, double distance, bool method1,
         #ifdef TEST_WITH_SVG
         create_svg("/tmp/many_polygons2.svg", many_polygons, final_output.front());
         #endif
-    }*/
+    }
 
     // Method 3: in parallel
     double elapsed3=0.0;

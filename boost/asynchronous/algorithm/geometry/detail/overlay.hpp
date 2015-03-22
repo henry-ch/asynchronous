@@ -179,7 +179,7 @@ struct parallel_overlay
     template <typename TaskRes,typename RobustPolicy, typename Strategy>
     static inline void apply(
                 TaskRes task_res,
-                Geometry1& geometry1, Geometry2& geometry2,
+                Geometry1 const& geometry1, Geometry2 const& geometry2,
                 RobustPolicy& robust_policy,
                 Strategy const& ,
                 long overlay_cutoff,

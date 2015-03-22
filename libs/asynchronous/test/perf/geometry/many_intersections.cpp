@@ -227,7 +227,7 @@ void test_many_intersections(int count_x, int count_y, double distance, bool met
         boost::future<multi_polygon_type> fu = boost::asynchronous::post_future(pool,
         [intersection_of_x_cutoff,many_polygons=std::move(many_polygons)/*,overlay_cutoff,partition_cutoff*/]()mutable
         {
-            return boost::asynchronous::geometry::parallel_geometry_intersection_of_x2<std::vector<multi_polygon_type>,BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+            return boost::asynchronous::geometry::parallel_geometry_intersection_of_x<std::vector<multi_polygon_type>,BOOST_ASYNCHRONOUS_DEFAULT_JOB>
                     (std::move(many_polygons),"",0,intersection_of_x_cutoff/*,overlay_cutoff,partition_cutoff*/);
         }
         ,"",0);
