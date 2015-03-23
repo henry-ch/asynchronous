@@ -93,7 +93,7 @@ void pairwise_intersections(Collection const& input_collection, Collection& outp
 }
 
 void test_many_intersections(int count_x, int count_y, double distance, bool method1, bool method2,
-                             int tpsize,long intersection_of_x_cutoff)
+                             int tpsize,long intersection_of_x_cutoff,long overlay_cutoff,long partition_cutoff)
 {
     typedef bg::model::point<double, 2, bg::cs::cartesian> point;
     typedef bg::model::polygon<point> polygon_type;
@@ -225,10 +225,10 @@ void test_many_intersections(int count_x, int count_y, double distance, bool met
         ,"",0);*/
 
         boost::future<multi_polygon_type> fu = boost::asynchronous::post_future(pool,
-        [intersection_of_x_cutoff,many_polygons=std::move(many_polygons)/*,overlay_cutoff,partition_cutoff*/]()mutable
+        [intersection_of_x_cutoff,many_polygons=std::move(many_polygons),overlay_cutoff,partition_cutoff]()mutable
         {
             return boost::asynchronous::geometry::parallel_geometry_intersection_of_x<std::vector<multi_polygon_type>,BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-                    (std::move(many_polygons),"",0,intersection_of_x_cutoff/*,overlay_cutoff,partition_cutoff*/);
+                    (std::move(many_polygons),"",0,intersection_of_x_cutoff,overlay_cutoff,partition_cutoff);
         }
         ,"",0);
         multi_polygon_type final_output = std::move(fu.get());
@@ -251,12 +251,16 @@ int main(int argc, char** argv)
     // for asynchronous
     int tpsize = argc > 4 ? atol(argv[4]) : 8;
     long intersection_of_x_cutoff = argc > 5 ? atol(argv[5]) : 300;
+    long overlay_cutoff = argc > 6 ? atol(argv[6]) : 1500;
+    long partition_cutoff = argc > 7 ? atol(argv[7]) : 80000;
 
     std::cout << "tpsize=" << tpsize << std::endl;
     std::cout << "intersection_of_x_cutoff=" << intersection_of_x_cutoff << std::endl;
+    std::cout << "overlay_cutoff=" << overlay_cutoff << std::endl;
+    std::cout << "partition_cutoff=" << partition_cutoff << std::endl;
 
     std::cout << "Testing for " << count_x << " x " << count_y <<  " with " << distance << std::endl;
-    test_many_intersections(count_x, count_y, distance, true, false,tpsize,intersection_of_x_cutoff);
+    test_many_intersections(count_x, count_y, distance, true, false,tpsize,intersection_of_x_cutoff,overlay_cutoff,partition_cutoff);
 
     return 0;
 }

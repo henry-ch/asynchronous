@@ -34,6 +34,8 @@
 #include <boost/geometry/algorithms/detail/overlay/overlay_type.hpp>
 #include <boost/geometry/algorithms/detail/overlay/follow.hpp>
 
+#include <boost/asynchronous/algorithm/geometry/detail/overlay.hpp>
+
 #include <boost/geometry/policies/robustness/robust_point_type.hpp>
 #include <boost/geometry/policies/robustness/segment_ratio_type.hpp>
 #include <boost/geometry/policies/robustness/get_rescale_policy.hpp>
@@ -48,7 +50,6 @@
 #include <boost/geometry/io/wkt/wkt.hpp>
 #endif
 
-#include <boost/asynchronous/algorithm/geometry/detail/overlay.hpp>
 
 
 namespace boost { namespace geometry
@@ -312,7 +313,7 @@ struct parallel_intersection_insert
         );
 };
 
-
+/*
 template
 <
     typename Job,
@@ -358,8 +359,8 @@ struct parallel_intersection_insert
     > : detail::overlay::overlay
         <Geometry, Box, Reverse1, Reverse2, ReverseOut, GeometryOut, OverlayType>
 {};
+*/
 
-/*
 template
 <
     typename Job,
@@ -381,23 +382,6 @@ struct parallel_intersection_insert
     > : boost::geometry::detail::overlay::parallel_overlay
         <Job,Geometry1, Geometry2, Reverse1, Reverse2, ReverseOut, GeometryOut, OverlayType>
 {
-    template <typename TaskRes,typename RobustPolicy, typename Strategy>
-    static inline void apply(TaskRes task_res,
-                             Geometry1 const& g1,
-                             Geometry2 const& g2,
-                             RobustPolicy& robust_policy,
-                             Strategy const& strategy,
-                             long overlay_cutoff,
-                             long partition_cutoff)
-    {
-        // TODO we will start with this one for parallelization
-        //typename TaskRes::return_type output_collection;
-        boost::geometry::detail::overlay::parallel_overlay
-            <
-                Job,Geometry1, Geometry2, Reverse1, Reverse2, ReverseOut,GeometryOut, OverlayType
-            >::apply(std::move(task_res),g1, g2, robust_policy, strategy,overlay_cutoff,partition_cutoff);
-        //task_res.set_value(std::move(output_collection));
-    }
 };
 
 
@@ -423,25 +407,8 @@ struct parallel_intersection_insert
     > : boost::geometry::detail::overlay::parallel_overlay
         <Job,Geometry, Box, Reverse1, Reverse2, ReverseOut, GeometryOut, OverlayType>
 {
-    template <typename TaskRes,typename RobustPolicy, typename Strategy>
-    static inline void apply(TaskRes task_res,
-                             Geometry const& g1,
-                             Box const& g2,
-                             RobustPolicy& robust_policy,
-                             Strategy const& strategy,
-                             long overlay_cutoff,
-                             long partition_cutoff)
-    {
-        // TODO we will start with this one for parallelization
-        //typename TaskRes::return_type output_collection;
-        boost::geometry::detail::overlay::parallel_overlay
-            <
-                Job,Geometry, Box, Reverse1, Reverse2, ReverseOut,GeometryOut, OverlayType
-            >::apply(std::move(task_res),g1, g2, robust_policy, strategy,overlay_cutoff,partition_cutoff);
-        //task_res.set_value(std::move(output_collection));
-    }
 };
-*/
+
 
 /*
 

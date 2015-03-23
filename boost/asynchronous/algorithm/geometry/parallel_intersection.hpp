@@ -14,8 +14,12 @@
 #ifndef BOOST_ASYNCHRONOUS_GEOMETRY_ALGORITHMS_DETAIL_INTERSECTION_INTERFACE_HPP
 #define BOOST_ASYNCHRONOUS_GEOMETRY_ALGORITHMS_DETAIL_INTERSECTION_INTERFACE_HPP
 
+#include <boost/geometry/policies/robustness/no_rescale_policy.hpp>
+#include <boost/geometry/policies/robustness/rescale_policy.hpp>
+
 #include <boost/geometry/algorithms/detail/intersection/interface.hpp>
 #include <boost/asynchronous/algorithm/geometry/detail/intersection_insert.hpp>
+
 
 namespace boost { namespace asynchronous { namespace geometry
 {
@@ -45,15 +49,9 @@ struct intersection
                              long overlay_cutoff,
                              long partition_cutoff)
     {
-
-
-
         typedef typename boost::range_value<GeometryOut>::type OneOut;
-        //typename TaskRes::return_type geometry_out;
-        //test
-        //std::cout << "OUT: " << typeid(OneOut).name() << std::endl;
-        //std::cout << "G1: " << typeid(Geometry1).name() << std::endl;
-        //std::cout << "TASK_RES: " << typeid(typename TaskRes::return_type).name() << std::endl;
+/*        typename TaskRes::return_type geometry_out;
+
 
         boost::geometry::dispatch::parallel_intersection_insert
         <
@@ -62,15 +60,15 @@ struct intersection
             boost::geometry::overlay_intersection
         >::apply(geometry1, geometry2, robust_policy, std::back_inserter(geometry_out), strategy);
 
-        task_res.set_value(std::move(geometry_out));
-/*
+        task_res.set_value(std::move(geometry_out));*/
+
         boost::geometry::dispatch::parallel_intersection_insert
         <
             Job,
             Geometry1, Geometry2, OneOut,
             boost::geometry::overlay_intersection
         >::apply(task_res,geometry1, geometry2, robust_policy, strategy,overlay_cutoff,partition_cutoff);
-*/
+
     }
 
 };
@@ -128,16 +126,16 @@ struct intersection
     {
         boost::geometry::concept::check<Geometry1 const>();
         boost::geometry::concept::check<Geometry2 const>();
-        
+
         typedef typename boost::geometry::rescale_overlay_policy_type
         <
             Geometry1,
             Geometry2
         >::type rescale_policy_type;
-        
+
         rescale_policy_type robust_policy
         = boost::geometry::get_rescale_policy<rescale_policy_type>(geometry1, geometry2);
-        
+
         typedef boost::geometry::strategy_intersection
         <
             typename boost::geometry::cs_tag<Geometry1>::type,

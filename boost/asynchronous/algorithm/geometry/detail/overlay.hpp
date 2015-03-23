@@ -348,7 +348,7 @@ std::cout << "traverse" << std::endl;
                     cont.on_done(
 #ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
                     [start,task_res,rings,output_collection,geometry1,geometry2]
-                    (std::tuple<boost::asynchronous::expected<std::map<ring_identifier, properties>> >&& res)mutable
+                    (std::tuple<boost::asynchronous::expected<std::pair<std::map<ring_identifier, properties>,bool>>>&& res)mutable
 #else
                     [task_res,rings,output_collection,geometry1,geometry2]
                     (std::tuple<boost::asynchronous::expected<std::pair<std::map<ring_identifier, properties>,bool>>>&& res)mutable
