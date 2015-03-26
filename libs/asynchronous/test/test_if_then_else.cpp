@@ -69,20 +69,22 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                         [](std::vector<int> const&){return true;},
                                         [](std::vector<int> res)
                                         {
+                                            std::vector<unsigned int> new_result(res.begin(),res.end());
                                             return boost::asynchronous::parallel_for(
-                                                                std::move(res),
-                                                                [](int const& i)
+                                                                std::move(new_result),
+                                                                [](unsigned int const& i)
                                                                 {
-                                                                   const_cast<int&>(i) += 3;
+                                                                   const_cast<unsigned int&>(i) += 3;
                                                                 },1500);
                                         },
                                         [](std::vector<int> res)
                                         {
+                                            std::vector<unsigned int> new_result(res.begin(),res.end());
                                             return boost::asynchronous::parallel_for(
-                                                                std::move(res),
-                                                                [](int const& i)
+                                                                std::move(new_result),
+                                                                [](unsigned int const& i)
                                                                 {
-                                                                   const_cast<int&>(i) += 4;
+                                                                   const_cast<unsigned int&>(i) += 4;
                                                                 },1500);
                                         }
                                     )
@@ -94,13 +96,13 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                                             const_cast<int&>(i) += 2;
                                                                          },1500)
                                     ),
-                        [](int const& i)
+                        [](unsigned int const& i)
                         {
-                           const_cast<int&>(i) += 1;
+                           const_cast<unsigned int&>(i) += 1;
                         },1500
                     );
                     },// work
-           [aPromise,tp,this](boost::asynchronous::expected<std::vector<int>> res){
+           [aPromise,tp,this](boost::asynchronous::expected<std::vector<unsigned int>> res){
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
                         std::vector<boost::thread::id> ids = tp.thread_ids();
@@ -146,20 +148,22 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                         [](std::vector<int> const&){return false;},
                                         [](std::vector<int> res)
                                         {
+                                            std::vector<unsigned int> new_result(res.begin(),res.end());
                                             return boost::asynchronous::parallel_for(
-                                                                std::move(res),
-                                                                [](int const& i)
+                                                                std::move(new_result),
+                                                                [](unsigned int const& i)
                                                                 {
-                                                                   const_cast<int&>(i) += 3;
+                                                                   const_cast<unsigned int&>(i) += 3;
                                                                 },1500);
                                         },
                                         [](std::vector<int> res)
                                         {
+                                            std::vector<unsigned int> new_result(res.begin(),res.end());
                                             return boost::asynchronous::parallel_for(
-                                                                std::move(res),
-                                                                [](int const& i)
+                                                                std::move(new_result),
+                                                                [](unsigned int const& i)
                                                                 {
-                                                                   const_cast<int&>(i) += 4;
+                                                                   const_cast<unsigned int&>(i) += 4;
                                                                 },1500);
                                         }
                                     )
@@ -171,13 +175,13 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                                             const_cast<int&>(i) += 2;
                                                                          },1500)
                                     ),
-                        [](int const& i)
+                        [](unsigned int const& i)
                         {
-                           const_cast<int&>(i) += 1;
+                           const_cast<unsigned int&>(i) += 1;
                         },1500
                     );
                     },// work
-           [aPromise,tp,this](boost::asynchronous::expected<std::vector<int>> res){
+           [aPromise,tp,this](boost::asynchronous::expected<std::vector<unsigned int>> res){
                 BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                 BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
                 std::vector<boost::thread::id> ids = tp.thread_ids();

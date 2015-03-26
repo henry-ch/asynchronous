@@ -10,6 +10,7 @@
 #ifndef BOOST_ASYNCHRONOUS_IF_THEN_ELSE_CONTINUATION_HPP
 #define BOOST_ASYNCHRONOUS_IF_THEN_ELSE_CONTINUATION_HPP
 
+#include <type_traits>
 #include <boost/asynchronous/detail/continuation_impl.hpp>
 #include <boost/asynchronous/continuation_task.hpp>
 
@@ -18,13 +19,13 @@ namespace boost { namespace asynchronous
 namespace detail
 {
 
-template <class Continuation, class IfClause, class ThenClause, class ElseClause>
+template <class Continuation, class IfClause, class ThenClause, class ElseClause,class Return>
 struct if_then_else_continuation_helper :
-        public boost::asynchronous::continuation_task<typename Continuation::return_type>
+        public boost::asynchronous::continuation_task<Return>
 {
     if_then_else_continuation_helper(Continuation const& c,IfClause if_clause,ThenClause then_clause,ElseClause else_clause,
                    std::string& task_name)
-        :boost::asynchronous::continuation_task<typename Continuation::return_type>(std::move(task_name))
+        :boost::asynchronous::continuation_task<Return>(std::move(task_name))
         ,cont_(c)
         ,if_clause_(if_clause)
         ,then_clause_(then_clause)
@@ -32,7 +33,7 @@ struct if_then_else_continuation_helper :
     {}
     void operator()()
     {
-        boost::asynchronous::continuation_result<typename Continuation::return_type> task_res =
+        boost::asynchronous::continuation_result<Return> task_res =
                 this->this_task_result();
         auto if_clause = if_clause_;
         auto then_clause = then_clause_;
@@ -49,7 +50,7 @@ struct if_then_else_continuation_helper :
                 {
                     auto then_cont = then_clause(std::move(res));
                     then_cont.on_done(
-                        [task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& then_res)
+                        [task_res](std::tuple<boost::asynchronous::expected<Return> >&& then_res)
                         {
                             task_res.set_value(std::move(std::get<0>(then_res).get()));
                         }
@@ -59,7 +60,7 @@ struct if_then_else_continuation_helper :
                 {
                     auto else_cont = else_clause(std::move(res));
                     else_cont.on_done(
-                        [task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& then_res)
+                        [task_res](std::tuple<boost::asynchronous::expected<Return> >&& then_res)
                         {
                             task_res.set_value(std::move(std::get<0>(then_res).get()));
                         }
@@ -95,11 +96,17 @@ struct if_then_else_fwd
     std::string task_name_;
 
     template <class Continuation>
-    boost::asynchronous::detail::callback_continuation<typename Continuation::return_type,Job>
+    decltype(std::declval<ThenClause>()(std::declval<typename Continuation::return_type>()))
     operator()(Continuation c)
     {
-        return boost::asynchronous::top_level_callback_continuation_job<typename Continuation::return_type,Job>
-                (boost::asynchronous::detail::if_then_else_continuation_helper<Continuation,IfClause,ThenClause,ElseClause>
+        using Return = typename decltype(std::declval<ThenClause>()(std::declval<typename Continuation::return_type>()))::return_type;
+        using Return2 = typename decltype(std::declval<ElseClause>()(std::declval<typename Continuation::return_type>()))::return_type;
+
+        // then and else must return the same type
+        static_assert(std::is_same<Return,Return2>::value,"then and else clause must return the same type");
+
+        return boost::asynchronous::top_level_callback_continuation_job<Return,Job>
+                (boost::asynchronous::detail::if_then_else_continuation_helper<Continuation,IfClause,ThenClause,ElseClause,Return>
                     (std::move(c),std::move(if_clause_),std::move(then_clause_),std::move(else_clause_),task_name_));
     }
 
