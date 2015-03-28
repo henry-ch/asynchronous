@@ -27,15 +27,16 @@ using lockfree_queue = boost::asynchronous::guarded_deque<Job>;
 }
 }
 #else
+#include <boost/asynchronous/queue/detail/lockfree_size.hpp>
 #include <boost/lockfree/queue.hpp>
 namespace boost { namespace asynchronous
 {
-template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB >
+template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB, class Size = boost::asynchronous::no_lockfree_size >
 class lockfree_queue: 
 #ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
         public boost::asynchronous::any_queue_concept<JOB>,
 #endif          
-        public boost::asynchronous::queue_base<JOB>, private boost::noncopyable
+        public boost::asynchronous::queue_base<JOB>, Size, private boost::noncopyable
 {
 public:
     typedef lockfree_queue<JOB> this_type;
@@ -43,8 +44,7 @@ public:
 
     std::size_t get_queue_size() const
     {
-        // not supported
-        return 0;
+        return Size::size();
     }
 
 #ifndef BOOST_NO_CXX11_VARIADIC_TEMPLATES
@@ -63,6 +63,7 @@ public:
         {
             boost::this_thread::yield();
         }
+        Size::increase();
     }
     void push(JOB && j)
     {
@@ -71,6 +72,7 @@ public:
         {
             boost::this_thread::yield();
         }
+        Size::increase();
     }
 #endif
     void push(JOB const& j, std::size_t=0)
@@ -80,6 +82,7 @@ public:
         {
             boost::this_thread::yield();
         }
+        Size::increase();
     }
 
     JOB pop()
@@ -89,6 +92,7 @@ public:
         {
             boost::this_thread::yield();
         }
+        Size::decrease();
         boost::scoped_ptr<JOB> for_cleanup(resp);
 #ifndef BOOST_NO_RVALUE_REFERENCES
         JOB res(std::move(*resp));
@@ -104,6 +108,7 @@ public:
         bool res = m_queue.pop(jptr);
         if (res)
         {
+            Size::decrease();
             boost::scoped_ptr<JOB> for_cleanup(jptr);
 #ifndef BOOST_NO_RVALUE_REFERENCES
             job = std::move(*jptr);
@@ -120,6 +125,7 @@ public:
         bool res = m_queue.pop(jptr);
         if (res)
         {
+            Size::decrease();
             boost::scoped_ptr<JOB> for_cleanup(jptr);
 #ifndef BOOST_NO_RVALUE_REFERENCES
             job = std::move(*jptr);

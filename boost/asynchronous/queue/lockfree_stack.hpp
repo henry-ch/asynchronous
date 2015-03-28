@@ -17,10 +17,11 @@
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/queue/queue_base.hpp>
 #include <boost/asynchronous/queue/any_queue.hpp>
+#include <boost/asynchronous/queue/detail/lockfree_size.hpp>
 
 namespace boost { namespace asynchronous
 {
-template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB >
+template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB, class Size = boost::asynchronous::no_lockfree_size >
 class lockfree_stack: 
 #ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
         public boost::asynchronous::any_queue_concept<JOB>,
@@ -33,8 +34,7 @@ public:
 
     std::size_t get_queue_size() const
     {
-        // not supported
-        return 0;
+        return Size::size();
     }
 
 #ifndef BOOST_NO_CXX11_VARIADIC_TEMPLATES
@@ -52,6 +52,7 @@ public:
         {
             boost::this_thread::yield();
         }
+        Size::increase();
     }
     void push(JOB && j)
     {
@@ -60,6 +61,7 @@ public:
         {
             boost::this_thread::yield();
         }
+        Size::increase();
     }
 #endif
     void push(JOB const& j, std::size_t=0)
@@ -69,6 +71,7 @@ public:
         {
             boost::this_thread::yield();
         }
+        Size::increase();
     }
 
     JOB pop()
@@ -78,6 +81,7 @@ public:
         {
             boost::this_thread::yield();
         }
+        Size::decrease();
         boost::scoped_ptr<JOB> for_cleanup(resp);
 #ifndef BOOST_NO_RVALUE_REFERENCES
         JOB res(std::move(*resp));
@@ -93,6 +97,7 @@ public:
         bool res = m_queue.pop(jptr);
         if (res)
         {
+            Size::decrease();
             boost::scoped_ptr<JOB> for_cleanup(jptr);
 #ifndef BOOST_NO_RVALUE_REFERENCES
             job = std::move(*jptr);
@@ -109,6 +114,7 @@ public:
         bool res = m_queue.pop(jptr);
         if (res)
         {
+            Size::decrease();
             boost::scoped_ptr<JOB> for_cleanup(jptr);
 #ifndef BOOST_NO_RVALUE_REFERENCES
             job = std::move(*jptr);
