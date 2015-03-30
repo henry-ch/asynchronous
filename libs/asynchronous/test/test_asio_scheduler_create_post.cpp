@@ -37,14 +37,14 @@ struct DummyJob
 BOOST_AUTO_TEST_CASE( create_asio_scheduler )
 {
     {
-        boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::asio_scheduler<>(3));
+        boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::asio_scheduler<>>(3);
     }
 }
 
 BOOST_AUTO_TEST_CASE( default_post_asio_scheduler )
 {
     {
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy( new boost::asynchronous::asio_scheduler<>(3));
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::asio_scheduler<>>(3);
         
         std::vector<boost::thread::id> sids = scheduler.thread_ids();
         

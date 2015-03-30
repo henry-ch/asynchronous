@@ -61,14 +61,14 @@ struct Servant : boost::asynchronous::trackable_servant<>
     Servant(boost::asynchronous::any_weak_scheduler<> scheduler, int threads)
         : boost::asynchronous::trackable_servant<>(scheduler,
                                                // threadpool and a simple threadsafe_list queue
-                                               boost::asynchronous::create_shared_scheduler_proxy(
-                                                   new boost::asynchronous::multiqueue_threadpool_scheduler<
+                                               boost::asynchronous::make_shared_scheduler_proxy<
+                                                   boost::asynchronous::multiqueue_threadpool_scheduler<
                                                            boost::asynchronous::lockfree_queue<>,
                                                            boost::asynchronous::default_find_position< >,
                                                            //boost::asynchronous::default_save_cpu_load<10,80000,5000>
                                                            //boost::asynchronous::default_save_cpu_load<10,80000,1000>
                                                            boost::asynchronous::no_cpu_load_saving
-                                                       >(threads)))
+                                                       >>(threads))
         // for testing purpose
         , m_promise(new boost::promise<long>)
     {
@@ -125,10 +125,10 @@ void example_fibonacci(long fibo_val,long cutoff, int threads)
 
     {
         // a single-threaded world, where Servant will live.
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                                new boost::asynchronous::single_thread_scheduler<
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                                boost::asynchronous::single_thread_scheduler<
                                      boost::asynchronous::lockfree_queue<>,
-                                     boost::asynchronous::default_save_cpu_load<10,80000,1000>>);
+                                     boost::asynchronous::default_save_cpu_load<10,80000,1000>>>();
         {
             ServantProxy proxy(scheduler,threads);
             start = boost::chrono::high_resolution_clock::now();

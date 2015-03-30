@@ -114,10 +114,10 @@ public:
 struct outer_owner
 {
     outer_owner()
-        : m_servant1_scheduler(boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-                                                                                                boost::asynchronous::lockfree_queue<> >))
-        , m_servant2(boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-                                                                        boost::asynchronous::lockfree_queue<> >),
+        : m_servant1_scheduler(boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+                                                                                                boost::asynchronous::lockfree_queue<>>>())
+        , m_servant2(boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(),
                      m_servant1_scheduler)
         , m_servant1(m_servant1_scheduler,m_servant2)
     {

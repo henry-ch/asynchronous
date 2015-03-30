@@ -35,13 +35,13 @@ struct Servant : boost::asynchronous::trackable_servant<>
     typedef int simple_ctor;
     Servant(boost::asynchronous::any_weak_scheduler<> scheduler,int threads,int cutoff)
         : boost::asynchronous::trackable_servant<>(scheduler,
-                                               boost::asynchronous::create_shared_scheduler_proxy(
-                                                   new boost::asynchronous::multiqueue_threadpool_scheduler<
+                                               boost::asynchronous::make_shared_scheduler_proxy<
+                                                   boost::asynchronous::multiqueue_threadpool_scheduler<
                                                            boost::asynchronous::lockfree_queue<>,
                                                            boost::asynchronous::default_find_position< >,
                                                            //boost::asynchronous::default_save_cpu_load<10,80000,1000>
                                                            boost::asynchronous::no_cpu_load_saving
-                                                           >(threads)))
+                                                           >>(threads))
         , task_number_(0)
         , total_(0.0)
         , cutoff_(cutoff)
@@ -108,10 +108,10 @@ int main(int argc, char* argv[])
     start = boost::chrono::high_resolution_clock::now();
     double res = 0.0;
 
-    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                            new boost::asynchronous::single_thread_scheduler<
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                            boost::asynchronous::single_thread_scheduler<
                                     boost::asynchronous::lockfree_queue<>,
-                                    boost::asynchronous::default_save_cpu_load<10,80000,1000> >());
+                                    boost::asynchronous::default_save_cpu_load<10,80000,1000>>>();
     {
         ServantProxy proxy(scheduler,threads,cutoff);
         start = boost::chrono::high_resolution_clock::now();

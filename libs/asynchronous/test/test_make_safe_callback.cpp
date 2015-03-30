@@ -38,9 +38,9 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
     typedef int simple_ctor;
     Servant(boost::asynchronous::any_weak_scheduler<servant_job> scheduler)
         : boost::asynchronous::trackable_servant<servant_job,servant_job>(scheduler,
-                                               boost::asynchronous::create_shared_scheduler_proxy(
-                                                   new boost::asynchronous::threadpool_scheduler<
-                                                           boost::asynchronous::lockfree_queue<servant_job> >(3)))
+                                               boost::asynchronous::make_shared_scheduler_proxy<
+                                                   boost::asynchronous::threadpool_scheduler<
+                                                           boost::asynchronous::lockfree_queue<servant_job>>>(3))
     {
     }
     ~Servant()
@@ -96,8 +96,8 @@ BOOST_AUTO_TEST_CASE( test_make_safe_callback )
     servant_dtor=false;
     diag_type single_thread_sched_diag;
     {
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-                                                                            boost::asynchronous::lockfree_queue<servant_job> >);
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<servant_job>>>();
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);

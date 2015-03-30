@@ -75,9 +75,9 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
     Servant(boost::asynchronous::any_weak_scheduler<servant_job> scheduler)
         : boost::asynchronous::trackable_servant<servant_job,servant_job>(scheduler,
                                                // threadpool with 4 threads and a simple threadsafe_list queue
-                                               boost::asynchronous::create_shared_scheduler_proxy(
-                                                   new boost::asynchronous::multiqueue_threadpool_scheduler<
-                                                           boost::asynchronous::threadsafe_list<servant_job> >(4)))
+                                               boost::asynchronous::make_shared_scheduler_proxy<
+                                                   boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                           boost::asynchronous::threadsafe_list<servant_job>>>(4))
         // for testing purpose
         , m_promise(new boost::promise<long>)
     {
@@ -146,9 +146,9 @@ BOOST_AUTO_TEST_CASE( test_fibonacci_log_30_18 )
     long sres = serial_fib(fibo_val);
     {
         // a single-threaded world, where Servant will live.
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                                new boost::asynchronous::single_thread_scheduler<
-                                     boost::asynchronous::threadsafe_list<servant_job> >);
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                                boost::asynchronous::single_thread_scheduler<
+                                     boost::asynchronous::threadsafe_list<servant_job>>>();
         {
             ServantProxy proxy(scheduler);
             boost::shared_future<boost::shared_future<long> > fu = proxy.calc_fibonacci(fibo_val,cutoff);

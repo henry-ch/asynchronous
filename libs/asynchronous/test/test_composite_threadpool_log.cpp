@@ -46,15 +46,15 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
         // create a composite threadpool made of:
         // a multiqueue_threadpool_scheduler, 0 thread
         // This scheduler does not steal from other schedulers, but will lend its queues for stealing
-        auto tp = boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<servant_job> > (0));
+        auto tp = boost::asynchronous::make_shared_scheduler_proxy<
+                    boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<servant_job>>> (0);
         // a stealing_multiqueue_threadpool_scheduler, 3 threads, each with a lockfree_queue
         // this scheduler will steal from other schedulers if it can. In this case it will manage only with tp, not tp3
-        auto tp2 = boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::stealing_multiqueue_threadpool_scheduler<boost::asynchronous::lockfree_queue<servant_job> > (3));
+        auto tp2 = boost::asynchronous::make_shared_scheduler_proxy<
+                    boost::asynchronous::stealing_multiqueue_threadpool_scheduler<boost::asynchronous::lockfree_queue<servant_job>>> (3);
         // a pool for long-lasting, cpu-less tasks
-        auto tp3 = boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::io_threadpool_scheduler<boost::asynchronous::lockfree_queue<servant_job> > (2,4));
+        auto tp3 = boost::asynchronous::make_shared_scheduler_proxy<
+                    boost::asynchronous::io_threadpool_scheduler<boost::asynchronous::lockfree_queue<servant_job>>> (2,4);
         // composite pool made of the previous 2
         auto tp_worker =
                 boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::composite_threadpool_scheduler<servant_job> (tp,tp2,tp3));
@@ -120,8 +120,8 @@ public:
 
 BOOST_AUTO_TEST_CASE( test_composite_io_log )
 {
-    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-                                                                    boost::asynchronous::lockfree_queue<servant_job> >);
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+                                                                    boost::asynchronous::lockfree_queue<servant_job>>>();
 
     main_thread_id = boost::this_thread::get_id();
     ServantProxy proxy(scheduler);

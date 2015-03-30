@@ -33,7 +33,7 @@ BOOST_AUTO_TEST_CASE( test_shutdown_threadpool_scheduler )
         called = false;
         num_executed++;
         {
-          auto scheduler = boost::asynchronous::create_shared_scheduler_proxy( new boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<> >(1));
+          auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<>>>(1);
           boost::asynchronous::post_future( scheduler, [&called] () {called = true;});
         }
         if ( called == false)
@@ -55,7 +55,7 @@ BOOST_AUTO_TEST_CASE( test_shutdown_threadpool_scheduler_2 )
         called = false;
         num_executed++;
         {
-          auto scheduler = boost::asynchronous::create_shared_scheduler_proxy( new boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<> >(4));
+          auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<>>>(4);
           boost::asynchronous::post_future( scheduler, [&called] () {called = true;});
         }
         if ( called == false)
@@ -77,7 +77,7 @@ BOOST_AUTO_TEST_CASE( test_shutdown_multiqueue_threadpool_scheduler )
         called = false;
         num_executed++;
         {
-          auto scheduler = boost::asynchronous::create_shared_scheduler_proxy( new boost::asynchronous::multiqueue_threadpool_scheduler<boost::asynchronous::lockfree_queue<> >(1));
+          auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<boost::asynchronous::lockfree_queue<>>>(1);
           boost::asynchronous::post_future( scheduler, [&called] () {called = true;});
         }
         if ( called == false)
@@ -99,7 +99,7 @@ BOOST_AUTO_TEST_CASE( test_shutdown_single_thread_scheduler )
         called = false;
         num_executed++;
         {
-          auto scheduler = boost::asynchronous::create_shared_scheduler_proxy( new boost::asynchronous::single_thread_scheduler<boost::asynchronous::lockfree_queue<> >());
+          auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<boost::asynchronous::lockfree_queue<>>>();
           boost::asynchronous::post_future( scheduler, [&called] () {called = true;});
         }
         if ( called == false)
@@ -121,8 +121,8 @@ BOOST_AUTO_TEST_CASE( test_shutdown_stealing_threadpool_scheduler )
         called = false;
         num_executed++;
         {
-          auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                      new boost::asynchronous::stealing_threadpool_scheduler<boost::asynchronous::lockfree_queue<>,boost::asynchronous::no_cpu_load_saving,true >(1));
+          auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                      boost::asynchronous::stealing_threadpool_scheduler<boost::asynchronous::lockfree_queue<>,boost::asynchronous::no_cpu_load_saving,true>>(1);
           boost::asynchronous::post_future( scheduler, [&called] () {called = true;});
         }
         if ( called == false)
@@ -144,10 +144,10 @@ BOOST_AUTO_TEST_CASE( test_shutdown_stealing_multiqueue_threadpool_scheduler )
         called = false;
         num_executed++;
         {
-          auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                      new boost::asynchronous::stealing_multiqueue_threadpool_scheduler<boost::asynchronous::lockfree_queue<>,
+          auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                      boost::asynchronous::stealing_multiqueue_threadpool_scheduler<boost::asynchronous::lockfree_queue<>,
                                                                                         boost::asynchronous::default_find_position<>,
-                                                                                        boost::asynchronous::no_cpu_load_saving,true >(1));
+                                                                                        boost::asynchronous::no_cpu_load_saving,true>>(1);
           boost::asynchronous::post_future( scheduler, [&called] () {called = true;});
         }
         if ( called == false)
@@ -169,7 +169,7 @@ BOOST_AUTO_TEST_CASE( test_shutdown_asio_scheduler )
         called = false;
         num_executed++;
         {
-          auto scheduler = boost::asynchronous::create_shared_scheduler_proxy( new boost::asynchronous::asio_scheduler<>(1));
+          auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::asio_scheduler<>>(1);
           boost::asynchronous::post_future( scheduler, [&called] () {called = true;});
         }
         if ( called == false)
@@ -191,7 +191,7 @@ BOOST_AUTO_TEST_CASE( test_shutdown_io_scheduler )
         called = false;
         num_executed++;
         {
-          auto scheduler = boost::asynchronous::create_shared_scheduler_proxy( new boost::asynchronous::io_threadpool_scheduler<boost::asynchronous::lockfree_queue<>>(1,2));
+          auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::io_threadpool_scheduler<boost::asynchronous::lockfree_queue<>>>(1,2);
           boost::asynchronous::post_future( scheduler, [&called] () {called = true;});
         }
         if ( called == false)

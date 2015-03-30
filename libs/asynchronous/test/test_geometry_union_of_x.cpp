@@ -84,9 +84,9 @@ BOOST_AUTO_TEST_CASE( test_geometry_union_of_x_200_200_2 )
         }
     }
 
-    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::multiqueue_threadpool_scheduler<
-                                                                                boost::asynchronous::lockfree_queue<> >(
-                                                                                    boost::thread::hardware_concurrency()));
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                                boost::asynchronous::lockfree_queue<>>>(
+                                                                                    boost::thread::hardware_concurrency());
 
     // make a copy and execute in pool
     boost::future<std::vector<multi_polygon_type>> fu = boost::asynchronous::post_future(scheduler,
@@ -157,9 +157,9 @@ BOOST_AUTO_TEST_CASE( test_geometry_union_of_x_200_200_2_continuation )
         }
     }
 
-    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::multiqueue_threadpool_scheduler<
-                                                                                boost::asynchronous::lockfree_queue<> >(
-                                                                                    boost::thread::hardware_concurrency()));
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                                boost::asynchronous::lockfree_queue<>>>(
+                                                                                    boost::thread::hardware_concurrency());
 
     // make a copy and execute in pool
     boost::future<std::vector<multi_polygon_type>> fu = boost::asynchronous::post_future(scheduler,

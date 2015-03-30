@@ -29,9 +29,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
     typedef int simple_ctor;
     Servant(boost::asynchronous::any_weak_scheduler<> scheduler)
         : boost::asynchronous::trackable_servant<>(scheduler,
-                                               boost::asynchronous::create_shared_scheduler_proxy(
-                                                   new boost::asynchronous::threadpool_scheduler<
-                                                           boost::asynchronous::lockfree_queue<> >(3)))
+                                               boost::asynchronous::make_shared_scheduler_proxy<
+                                                   boost::asynchronous::threadpool_scheduler<
+                                                           boost::asynchronous::lockfree_queue<>>>(3))
     {
     }
     boost::future<int> start_async_work()
@@ -89,8 +89,8 @@ BOOST_AUTO_TEST_CASE( test_force_move )
 BOOST_AUTO_TEST_CASE( test_force_move_safe_callback )
 {
     {
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-                                                                            boost::asynchronous::lockfree_queue<> >);
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<>>>();
 
         ServantProxy proxy(scheduler);
         boost::future<boost::future<int> > fuv = proxy.start_async_work();

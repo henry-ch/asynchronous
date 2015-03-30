@@ -1,7 +1,7 @@
 #include <iostream>
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/extensions/asio/asio_scheduler.hpp>
-#include <boost/asynchronous/queue/threadsafe_list.hpp>
+#include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/servant_proxy.hpp>
 #include <boost/asynchronous/trackable_servant.hpp>
@@ -25,8 +25,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
     Servant(boost::asynchronous::any_weak_scheduler<> scheduler) 
         : boost::asynchronous::trackable_servant<>(scheduler,
                                                    // as timer servant we use an asio-based scheduler with 1 thread
-                                                   boost::asynchronous::create_shared_scheduler_proxy(
-                                                       new boost::asynchronous::asio_scheduler<>(1)))
+                                                   boost::asynchronous::make_shared_scheduler_proxy<
+                                                       boost::asynchronous::asio_scheduler<>>(1))
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant ctor not posted.");
         m_threadid = boost::this_thread::get_id();
@@ -101,8 +101,8 @@ public:
 
 BOOST_AUTO_TEST_CASE( test_asio_timer_expired )
 {        
-    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-                                                                    boost::asynchronous::threadsafe_list<> >);
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>();
     
     main_thread_id = boost::this_thread::get_id();   
     ServantProxy proxy(scheduler);

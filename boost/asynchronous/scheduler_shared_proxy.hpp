@@ -328,6 +328,10 @@ private:
     template <class Sched>
     friend boost::asynchronous::any_shared_scheduler_proxy<typename Sched::job_type>
     create_shared_scheduler_proxy(boost::shared_ptr<Sched>);
+
+    template< class Sched, class... Args >
+    friend boost::asynchronous::any_shared_scheduler_proxy<typename Sched::job_type>
+    make_shared_scheduler_proxy(Args && ... args);
 };
 
 template <class S>
@@ -371,6 +375,22 @@ boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type> create_sha
     return boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type>(ptr);
 }
 #endif
+
+template< class S, class... Args >
+boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type>
+make_shared_scheduler_proxy(Args && ... args)
+{
+    auto sps = boost::make_shared<S>(std::forward<Args>(args)...);
+    sps->constructor_done(sps);
+#ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
+    return boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type>(new boost::asynchronous::scheduler_shared_proxy<S>(std::move(sps)));
+#else
+    //TODO solve friend problem
+    boost::shared_ptr<boost::asynchronous::scheduler_shared_proxy<S> > p(new boost::asynchronous::scheduler_shared_proxy<S>(std::move(sps)));
+    boost::asynchronous::any_shared_scheduler_proxy_ptr<typename S::job_type> ptr (p);
+    return boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type>(ptr);
+#endif
+}
 
 #ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
 template<class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB,class Clock = boost::chrono::high_resolution_clock>

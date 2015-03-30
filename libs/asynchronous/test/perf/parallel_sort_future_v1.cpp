@@ -52,12 +52,12 @@ test_cast(T const& t)
 
 void ParallelAsyncPostCb(SORTED_TYPE a[], size_t n)
 {
-    auto pool = boost::asynchronous::create_shared_scheduler_proxy(
-                new boost::asynchronous::multiqueue_threadpool_scheduler<
+    auto pool = boost::asynchronous::make_shared_scheduler_proxy<
+                  boost::asynchronous::multiqueue_threadpool_scheduler<
                         boost::asynchronous::lockfree_queue<>,
                         boost::asynchronous::default_find_position< boost::asynchronous::sequential_push_policy>,
                         boost::asynchronous::no_cpu_load_saving
-                    >(tpsize,tasks));
+                    >>(tpsize,tasks);
     
     long tasksize = NELEM / tasks;
     servant_time = boost::chrono::high_resolution_clock::now();
@@ -72,12 +72,12 @@ void ParallelAsyncPostCb(SORTED_TYPE a[], size_t n)
 }
 void ParallelAsyncPostCbSpreadsort(SORTED_TYPE a[], size_t n)
 {
-    auto pool = boost::asynchronous::create_shared_scheduler_proxy(
-                new boost::asynchronous::multiqueue_threadpool_scheduler<
+    auto pool = boost::asynchronous::make_shared_scheduler_proxy<
+                  boost::asynchronous::multiqueue_threadpool_scheduler<
                         boost::asynchronous::lockfree_queue<>,
                         boost::asynchronous::default_find_position< boost::asynchronous::sequential_push_policy>,
                         boost::asynchronous::no_cpu_load_saving
-                    >(tpsize,tasks));
+                    >>(tpsize,tasks);
     
     long tasksize = NELEM / tasks;
     servant_time = boost::chrono::high_resolution_clock::now();

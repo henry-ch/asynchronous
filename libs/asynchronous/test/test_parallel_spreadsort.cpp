@@ -71,8 +71,8 @@ struct increasing_sort_subtask
 }
 BOOST_AUTO_TEST_CASE( test_parallel_spreadsort_int_post_future )
 {
-    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::threadpool_scheduler<
-                                                                                boost::asynchronous::lockfree_queue<> >(6));
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(6);
     std::vector<int> data;
     generate(data);
     // make a copy and execute in pool
@@ -93,8 +93,8 @@ BOOST_AUTO_TEST_CASE( test_parallel_spreadsort_int_post_future )
 }
 BOOST_AUTO_TEST_CASE( test_parallel_spreadsort_int_post_future2 )
 {
-    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::threadpool_scheduler<
-                                                                                boost::asynchronous::lockfree_queue<> >(6));
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(6);
     std::vector<int> data;
     generate(data);
     // make a copy and execute in pool
@@ -115,8 +115,8 @@ BOOST_AUTO_TEST_CASE( test_parallel_spreadsort_int_post_future2 )
 }
 BOOST_AUTO_TEST_CASE( test_parallel_spreadsort_int_post_future_dist )
 {
-    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::threadpool_scheduler<
-                                                                                boost::asynchronous::lockfree_queue<> >(6));
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(6);
     std::vector<int> data;
     generate(data);
     // make a copy and execute in pool

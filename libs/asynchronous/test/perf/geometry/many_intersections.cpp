@@ -203,12 +203,12 @@ void test_many_intersections(int count_x, int count_y, double distance, bool met
 
     // Method 3: in parallel
     double elapsed3=0.0;
-    auto pool = boost::asynchronous::create_shared_scheduler_proxy(
-                new boost::asynchronous::multiqueue_threadpool_scheduler<
+    auto pool = boost::asynchronous::make_shared_scheduler_proxy<
+                  boost::asynchronous::multiqueue_threadpool_scheduler<
                         boost::asynchronous::lockfree_queue<>/*,
                         boost::asynchronous::default_find_position< boost::asynchronous::sequential_push_policy>,
                         boost::asynchronous::no_cpu_load_saving*/
-                    >(tpsize,64));
+                    >>(tpsize,64);
 
     {
         auto start = boost::chrono::high_resolution_clock::now();

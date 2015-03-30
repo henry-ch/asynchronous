@@ -90,9 +90,9 @@ BOOST_AUTO_TEST_CASE( test_returned_servant )
     {
         main_thread_id = boost::this_thread::get_id();
         // with c++11
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::single_thread_scheduler<
-                          boost::asynchronous::lockfree_queue<> >);
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                    boost::asynchronous::single_thread_scheduler<
+                          boost::asynchronous::lockfree_queue<>>>();
 
 
         {

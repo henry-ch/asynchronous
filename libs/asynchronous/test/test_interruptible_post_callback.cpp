@@ -8,7 +8,7 @@
 // For more information, see http://www.boost.org
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
-#include <boost/asynchronous/queue/threadsafe_list.hpp>
+#include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/scheduler/threadpool_scheduler.hpp>
 #include <boost/asynchronous/servant_proxy.hpp>
@@ -27,9 +27,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
     typedef int simple_ctor;
     Servant(boost::asynchronous::any_weak_scheduler<> scheduler)
         : boost::asynchronous::trackable_servant<>(scheduler,
-                                               boost::asynchronous::create_shared_scheduler_proxy(
-                                                   new boost::asynchronous::threadpool_scheduler<
-                                                    boost::asynchronous::threadsafe_list<> >(1)))
+                                               boost::asynchronous::make_shared_scheduler_proxy<
+                                                   boost::asynchronous::threadpool_scheduler<
+                                                    boost::asynchronous::lockfree_queue<>>>(1))
         , m_ready(new boost::promise<void>)
     {
     }
@@ -93,8 +93,8 @@ BOOST_AUTO_TEST_CASE( test_interrupt_running_task )
 {     
     main_thread_id = boost::this_thread::get_id();
     {
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-                                                                            boost::asynchronous::threadsafe_list<> >);
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<>>>();
         boost::shared_ptr<boost::promise<void> > p(new boost::promise<void>);
         boost::shared_future<void> end=p->get_future();
         {
@@ -112,8 +112,8 @@ BOOST_AUTO_TEST_CASE( test_interrupt_not_running_task )
 {     
     main_thread_id = boost::this_thread::get_id();
     {
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-                                                                            boost::asynchronous::threadsafe_list<> >);
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<>>>();
         {
             typedef std::pair<
                     boost::shared_ptr<boost::promise<void> >,

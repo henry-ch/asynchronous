@@ -19,9 +19,9 @@ using namespace std;
 BOOST_AUTO_TEST_CASE( test_weak_scheduler_proxy_not_empty )
 {
 #ifdef BOOST_ASYNCHRONOUS_NO_TYPE_ERASURE
-    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                        new boost::asynchronous::threadpool_scheduler<
-                                boost::asynchronous::lockfree_queue<> >(1));
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                        boost::asynchronous::threadpool_scheduler<
+                                boost::asynchronous::lockfree_queue<>>>(1);
 
     boost::asynchronous::scheduler_weak_proxy<> wproxy(scheduler);
     auto locked = wproxy.lock();

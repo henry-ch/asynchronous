@@ -53,9 +53,9 @@ struct void_cont_task : public boost::asynchronous::continuation_task<void>
 
 BOOST_AUTO_TEST_CASE( test_post_future_continuation )
 {
-    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                        new boost::asynchronous::threadpool_scheduler<
-                                boost::asynchronous::lockfree_queue<> >(1));
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                        boost::asynchronous::threadpool_scheduler<
+                                boost::asynchronous::lockfree_queue<>>>(1);
     boost::future<int> fui = boost::asynchronous::post_future(scheduler,
                          []()
                          {
@@ -69,9 +69,9 @@ BOOST_AUTO_TEST_CASE( test_post_future_continuation )
 
 BOOST_AUTO_TEST_CASE( test_post_future_void_continuation )
 {
-    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                        new boost::asynchronous::threadpool_scheduler<
-                                boost::asynchronous::lockfree_queue<> >(1));
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                        boost::asynchronous::threadpool_scheduler<
+                                boost::asynchronous::lockfree_queue<>>>(1);
     boost::future<void> fu = boost::asynchronous::post_future(scheduler,
                          []()
                          {

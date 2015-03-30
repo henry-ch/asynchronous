@@ -66,13 +66,13 @@ struct Servant : boost::asynchronous::trackable_servant<>
     typedef int requires_weak_scheduler;
     Servant(boost::asynchronous::any_weak_scheduler<> scheduler)
         : boost::asynchronous::trackable_servant<>(scheduler,
-                                               boost::asynchronous::create_shared_scheduler_proxy(
-                                                   new boost::asynchronous::multiqueue_threadpool_scheduler<
+                                               boost::asynchronous::make_shared_scheduler_proxy<
+                                                   boost::asynchronous::multiqueue_threadpool_scheduler<
                                                            boost::asynchronous::lockfree_queue<>,
                                                            boost::asynchronous::default_find_position< boost::asynchronous::sequential_push_policy>,
                                                        //boost::asynchronous::default_save_cpu_load<10,80000,1000>
                                                        boost::asynchronous::no_cpu_load_saving
-                                                       >(tpsize,tasks)))
+                                                       >>(tpsize,tasks))
         , m_promise(new boost::promise<void>)
     {
     }
@@ -125,9 +125,9 @@ public:
 };
 void ParallelAsyncPostCb(SORTED_TYPE a[], size_t n)
 {
-    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                            new boost::asynchronous::single_thread_scheduler<boost::asynchronous::lockfree_queue<>,
-                                                                             boost::asynchronous::default_save_cpu_load<10,80000,1000>>(tpsize));
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                            boost::asynchronous::single_thread_scheduler<boost::asynchronous::lockfree_queue<>,
+                                                                         boost::asynchronous::default_save_cpu_load<10,80000,1000>>>(tpsize);
     {
         ServantProxy proxy(scheduler);
 

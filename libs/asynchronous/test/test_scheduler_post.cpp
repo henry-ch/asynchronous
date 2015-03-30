@@ -11,7 +11,7 @@
 #include <set>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
-#include <boost/asynchronous/queue/threadsafe_list.hpp>
+#include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/queue/any_queue_container.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
@@ -52,8 +52,8 @@ struct DummyJob
 
 BOOST_AUTO_TEST_CASE( post_single_thread_scheduler )
 {        
-    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
-                                                                    boost::asynchronous::threadsafe_list<> >);
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+                                                                    boost::asynchronous::lockfree_queue<>>>();
     
     std::vector<boost::thread::id> sids = scheduler.thread_ids();
     BOOST_CHECK_MESSAGE(number_of_threads(sids.begin(),sids.end())==1,"scheduler has wrong number of threads");
@@ -78,8 +78,8 @@ BOOST_AUTO_TEST_CASE( post_single_thread_scheduler )
 
 BOOST_AUTO_TEST_CASE( post_threadpool_scheduler )
 {        
-    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::threadpool_scheduler<
-                                                                        boost::asynchronous::threadsafe_list<> >(3));
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(3);
     
     std::vector<boost::thread::id> sids = scheduler.thread_ids();
     BOOST_CHECK_MESSAGE(number_of_threads(sids.begin(),sids.end())==3,"scheduler has wrong number of threads");
@@ -104,9 +104,9 @@ BOOST_AUTO_TEST_CASE( post_threadpool_scheduler )
 }
 BOOST_AUTO_TEST_CASE( post_stealing_threadpool_scheduler )
 {        
-    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                new boost::asynchronous::stealing_threadpool_scheduler<
-                    boost::asynchronous::lockfree_queue<>,boost::asynchronous::no_cpu_load_saving,true >(4,10));
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                boost::asynchronous::stealing_threadpool_scheduler<
+                    boost::asynchronous::lockfree_queue<>,boost::asynchronous::no_cpu_load_saving,true>>(4,10);
     
     std::vector<boost::thread::id> sids = scheduler.thread_ids();
     BOOST_CHECK_MESSAGE(number_of_threads(sids.begin(),sids.end())==4,"scheduler has wrong number of threads");
@@ -132,11 +132,11 @@ BOOST_AUTO_TEST_CASE( post_stealing_threadpool_scheduler )
 
 BOOST_AUTO_TEST_CASE( post_stealing_multiqueue_threadpool_scheduler )
 {        
-    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                new boost::asynchronous::stealing_multiqueue_threadpool_scheduler<
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                boost::asynchronous::stealing_multiqueue_threadpool_scheduler<
                         boost::asynchronous::lockfree_queue<>,boost::asynchronous::default_find_position<>,
-                                boost::asynchronous::no_cpu_load_saving,true >
-                            (4,10));
+                                boost::asynchronous::no_cpu_load_saving,true>>
+                            (4,10);
     
     std::vector<boost::thread::id> sids = scheduler.thread_ids();
     BOOST_CHECK_MESSAGE(number_of_threads(sids.begin(),sids.end())==4,"scheduler has wrong number of threads");
@@ -162,8 +162,8 @@ BOOST_AUTO_TEST_CASE( post_stealing_multiqueue_threadpool_scheduler )
 
 BOOST_AUTO_TEST_CASE( post_multiqueue_threadpool_scheduler )
 {        
-    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                new boost::asynchronous::multiqueue_threadpool_scheduler<boost::asynchronous::lockfree_queue<> >(4));
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                boost::asynchronous::multiqueue_threadpool_scheduler<boost::asynchronous::lockfree_queue<>>>(4);
     
     std::vector<boost::thread::id> sids = scheduler.thread_ids();
     BOOST_CHECK_MESSAGE(number_of_threads(sids.begin(),sids.end())==4,"scheduler has wrong number of threads");
@@ -189,10 +189,10 @@ BOOST_AUTO_TEST_CASE( post_multiqueue_threadpool_scheduler )
 
 BOOST_AUTO_TEST_CASE( post_composite_threadpool_scheduler )
 {        
-    auto tp = boost::asynchronous::create_shared_scheduler_proxy( 
-                new boost::asynchronous::threadpool_scheduler<boost::asynchronous::threadsafe_list<> > (3));
-    auto tp2 = boost::asynchronous::create_shared_scheduler_proxy( 
-                new boost::asynchronous::threadpool_scheduler<boost::asynchronous::threadsafe_list<> > (4));
+    auto tp = boost::asynchronous::make_shared_scheduler_proxy<
+                boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<>>> (3);
+    auto tp2 = boost::asynchronous::make_shared_scheduler_proxy<
+                boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<>>> (4);
     
     auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                 new boost::asynchronous::composite_threadpool_scheduler<> (tp,tp2));
@@ -221,8 +221,8 @@ BOOST_AUTO_TEST_CASE( post_composite_threadpool_scheduler )
 
 BOOST_AUTO_TEST_CASE( post_multiqueue_threadpool_scheduler_tbb_concurrent_queue )
 {
-    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                new boost::asynchronous::multiqueue_threadpool_scheduler<boost::asynchronous::tbb_concurrent_queue<> >(4));
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                boost::asynchronous::multiqueue_threadpool_scheduler<boost::asynchronous::tbb_concurrent_queue<>>>(4);
 
     std::vector<boost::thread::id> sids = scheduler.thread_ids();
     BOOST_CHECK_MESSAGE(number_of_threads(sids.begin(),sids.end())==4,"scheduler has wrong number of threads");
