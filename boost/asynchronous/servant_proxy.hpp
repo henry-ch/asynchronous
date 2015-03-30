@@ -332,7 +332,7 @@ public:
         else
         {
             // outside thread, create in scheduler thread if no other choice
-            init<servant_type>(std::move(args)...);
+            init_servant_proxy<servant_type>(std::move(args)...);
         }
     }
     servant_proxy(scheduler_proxy_type p, boost::future<boost::shared_ptr<servant_type> > s)
@@ -433,7 +433,7 @@ private:
                     typename has_simple_ctor<S>::type
                 >,
             void>::type
-    init(Args... args)
+    init_servant_proxy(Args... args)
     {
         // TODO forward
         // if a servant has a simple_ctor, then he MUST get a weak scheduler as he might get it too late with tss
@@ -447,7 +447,7 @@ private:
                     typename has_simple_ctor<S>::type
                 >,
             void>::type
-    init(Args... args)
+    init_servant_proxy(Args... args)
     {
         // outside thread, create in scheduler thread
         boost::shared_ptr<boost::promise<boost::shared_ptr<servant_type> > > p =
