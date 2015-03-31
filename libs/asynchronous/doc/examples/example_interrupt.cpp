@@ -2,7 +2,7 @@
 #include <boost/enable_shared_from_this.hpp>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
-#include <boost/asynchronous/queue/threadsafe_list.hpp>
+#include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/scheduler/threadpool_scheduler.hpp>
 #include <boost/asynchronous/servant_proxy.hpp>
@@ -18,10 +18,10 @@ struct Servant : boost::asynchronous::trackable_servant<>
 {
     Servant(boost::asynchronous::any_weak_scheduler<> scheduler)
         : boost::asynchronous::trackable_servant<>(scheduler,
-                                               // threadpool with 3 threads and a simple threadsafe_list queue
-                                               boost::asynchronous::create_shared_scheduler_proxy(
-                                                   new boost::asynchronous::threadpool_scheduler<
-                                                    boost::asynchronous::threadsafe_list<> >(3)))
+                                               // threadpool with 3 threads and a simple lockfree_queue queue
+                                               boost::asynchronous::make_shared_scheduler_proxy<
+                                                   boost::asynchronous::threadpool_scheduler<
+                                                    boost::asynchronous::lockfree_queue<>>>(3))
     {
     }
     // call to this is posted and executes in our (safe) single-thread scheduler
@@ -62,9 +62,9 @@ void example_interrupt()
 {
     cout << "start example_interrupt" << endl;
     {
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                                new boost::asynchronous::single_thread_scheduler<
-                                     boost::asynchronous::threadsafe_list<> >);
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                                boost::asynchronous::single_thread_scheduler<
+                                     boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler);
             boost::future<void> fu = proxy.start_async_work();

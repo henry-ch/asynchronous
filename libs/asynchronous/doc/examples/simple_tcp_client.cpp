@@ -27,8 +27,8 @@ int main(int argc, char* argv[])
     int job_getting_policy = (argc>4) ? strtol(argv[4],0,0):0;
     cout << "Starting connecting to " << server_address << " port " << server_port << " with " << threads << " threads" << endl;
 
-    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                new boost::asynchronous::asio_scheduler<>);
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                            boost::asynchronous::asio_scheduler<>>();
     {
         std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,std::function<void(boost::asynchronous::tcp::client_request const&)>)> executor=
         [](std::string const& task_name,boost::asynchronous::tcp::server_reponse resp,
@@ -125,9 +125,9 @@ int main(int argc, char* argv[])
 
         if (job_getting_policy == 0)
         {
-            auto pool = boost::asynchronous::create_shared_scheduler_proxy(
-                        new boost::asynchronous::threadpool_scheduler<
-                            boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable> >(threads));
+            auto pool = boost::asynchronous::make_shared_scheduler_proxy<
+                        boost::asynchronous::threadpool_scheduler<
+                            boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable>>>(threads);
 // g++ in uncooperative, clang no
 #if defined(__clang__)
             boost::asynchronous::tcp::simple_tcp_client_proxy_ext<> proxy(scheduler,pool,server_address,server_port,executor,
@@ -144,9 +144,9 @@ int main(int argc, char* argv[])
         else
         {
             // guarded_deque supports queue size
-            auto pool = boost::asynchronous::create_shared_scheduler_proxy(
-                        new boost::asynchronous::threadpool_scheduler<
-                            boost::asynchronous::guarded_deque<boost::asynchronous::any_serializable> >(threads));
+            auto pool = boost::asynchronous::make_shared_scheduler_proxy<
+                          boost::asynchronous::threadpool_scheduler<
+                            boost::asynchronous::guarded_deque<boost::asynchronous::any_serializable>>>(threads);
             // more advanced policy
 // g++ in uncooperative, clang no
 #if defined(__clang__)

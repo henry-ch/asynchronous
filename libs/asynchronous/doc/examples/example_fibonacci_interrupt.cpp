@@ -1,7 +1,7 @@
 #include <iostream>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
-#include <boost/asynchronous/queue/threadsafe_list.hpp>
+#include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/scheduler/multiqueue_threadpool_scheduler.hpp>
 #include <boost/asynchronous/continuation_task.hpp>
@@ -74,10 +74,10 @@ struct Servant : boost::asynchronous::trackable_servant<>
     typedef int simple_ctor;
     Servant(boost::asynchronous::any_weak_scheduler<> scheduler, int threads)
         : boost::asynchronous::trackable_servant<>(scheduler,
-                                               // threadpool and a simple threadsafe_list queue
-                                               boost::asynchronous::create_shared_scheduler_proxy(
-                                                   new boost::asynchronous::multiqueue_threadpool_scheduler<
-                                                           boost::asynchronous::threadsafe_list<> >(threads)))
+                                               // threadpool and a simple lockfree_queue queue
+                                               boost::asynchronous::make_shared_scheduler_proxy<
+                                                   boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                           boost::asynchronous::lockfree_queue<>>>(threads))
         // for testing purpose
         , m_promise(new boost::promise<long>)
     {
@@ -144,9 +144,9 @@ void example_fibonacci_interrupt(long fibo_val,long cutoff, int threads)
     std::cout << "example_fibonacci_interrupt" << std::endl;
     {
         // a single-threaded world, where Servant will live.
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                                new boost::asynchronous::single_thread_scheduler<
-                                     boost::asynchronous::threadsafe_list<> >);
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                                boost::asynchronous::single_thread_scheduler<
+                                     boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler,threads);
             boost::shared_future<std::pair<boost::shared_future<long>, boost::asynchronous::any_interruptible>  > fu = proxy.calc_fibonacci(fibo_val,cutoff);

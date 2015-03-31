@@ -26,9 +26,9 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
     Servant(boost::asynchronous::any_weak_scheduler<servant_job> scheduler)
         : boost::asynchronous::trackable_servant<servant_job,servant_job>(scheduler,
                                                // a threadpool with 1 thread using a lockfree queue of capacity 100
-                                               boost::asynchronous::create_shared_scheduler_proxy(
-                                                   new boost::asynchronous::threadpool_scheduler<
-                                                           boost::asynchronous::lockfree_queue< servant_job > >(1)))
+                                               boost::asynchronous::make_shared_scheduler_proxy<
+                                                   boost::asynchronous::threadpool_scheduler<
+                                                           boost::asynchronous::lockfree_queue< servant_job >>>(1))
         , m_promise(new boost::promise<int>)
     {
     }
@@ -86,12 +86,12 @@ void example_queue_container_log()
     {
         // a scheduler with 1 threadsafe list, and 3 lockfree queues as work input queue
         // the queue indicates the job name (loggable job)
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                                new boost::asynchronous::single_thread_scheduler<
-                                        boost::asynchronous::any_queue_container<servant_job> >
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                                boost::asynchronous::single_thread_scheduler<
+                                        boost::asynchronous::any_queue_container<servant_job>>>
                                 (boost::asynchronous::any_queue_container_config<boost::asynchronous::threadsafe_list<servant_job> >(1),
                                  boost::asynchronous::any_queue_container_config<boost::asynchronous::lockfree_queue<servant_job> >(3)
-                                 ));
+                                 );
         {
             ServantProxy proxy(scheduler);
 

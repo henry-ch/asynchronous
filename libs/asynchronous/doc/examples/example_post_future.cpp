@@ -1,6 +1,6 @@
 #include <iostream>
 #include <boost/asynchronous/scheduler/threadpool_scheduler.hpp>
-#include <boost/asynchronous/queue/threadsafe_list.hpp>
+#include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/post.hpp>
 using namespace std;
@@ -25,9 +25,9 @@ namespace{
 void example_post_future()
 {
     {
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                            new boost::asynchronous::threadpool_scheduler<
-                                    boost::asynchronous::threadsafe_list<> >(3));
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                                boost::asynchronous::threadpool_scheduler<
+                                     boost::asynchronous::lockfree_queue<>>>(3);
 
         boost::shared_future<void> fuv = boost::asynchronous::post_future(scheduler, void_task());
         fuv.get();
@@ -41,9 +41,9 @@ void example_post_future()
 void example_post_future_lambda()
 {
     {
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                            new boost::asynchronous::threadpool_scheduler<
-                                    boost::asynchronous::threadsafe_list<> >(3));
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                                boost::asynchronous::threadpool_scheduler<
+                                     boost::asynchronous::lockfree_queue<>>>(3);
 
         boost::shared_future<void> fuv =
                 boost::asynchronous::post_future(scheduler, [](){std::cout << "void lambda" << std::endl;});

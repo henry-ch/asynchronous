@@ -3,7 +3,7 @@
 #include <utility>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
-#include <boost/asynchronous/queue/threadsafe_list.hpp>
+#include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/scheduler/multiqueue_threadpool_scheduler.hpp>
 #include <boost/asynchronous/scheduler/detail/any_continuation.hpp>
@@ -60,10 +60,10 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
     typedef int simple_ctor;
     Servant(boost::asynchronous::any_weak_scheduler<servant_job> scheduler, int threads)
         : boost::asynchronous::trackable_servant<servant_job,servant_job>(scheduler,
-                                               // threadpool and a simple threadsafe_list queue
-                                               boost::asynchronous::create_shared_scheduler_proxy(
-                                                   new boost::asynchronous::multiqueue_threadpool_scheduler<
-                                                           boost::asynchronous::threadsafe_list<servant_job> >(threads)))
+                                               // threadpool and a simple lockfree_queue queue
+                                               boost::asynchronous::make_shared_scheduler_proxy<
+                                                   boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                           boost::asynchronous::lockfree_queue<servant_job>>>(threads))
         // for testing purpose
         , m_promise(new boost::promise<long>)
     {
@@ -132,9 +132,9 @@ void example_fibonacci_log(long fibo_val,long cutoff, int threads)
     std::cout << "example_fibonacci_log parallel" << std::endl;
     {
         // a single-threaded world, where Servant will live.
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                                new boost::asynchronous::single_thread_scheduler<
-                                     boost::asynchronous::threadsafe_list<servant_job> >);
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                                boost::asynchronous::single_thread_scheduler<
+                                     boost::asynchronous::lockfree_queue<servant_job>>>();
         {
             ServantProxy proxy(scheduler, threads);
             start = boost::chrono::high_resolution_clock::now();

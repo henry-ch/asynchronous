@@ -29,19 +29,19 @@ struct Servant : boost::asynchronous::trackable_servant<>
         // create a composite threadpool made of:
         // a multiqueue_threadpool_scheduler, 1 thread, with a lockfree_queue.
         // This scheduler does not steal from other schedulers, but will lend its queues for stealing
-        auto tp = boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::multiqueue_threadpool_scheduler<boost::asynchronous::lockfree_queue<> > (1));
+        auto tp = boost::asynchronous::make_shared_scheduler_proxy<
+                    boost::asynchronous::multiqueue_threadpool_scheduler<boost::asynchronous::lockfree_queue<>>> (1);
         // a stealing_multiqueue_threadpool_scheduler, 3 threads, each with a threadsafe_list
         // this scheduler will steal from other schedulers if it can. In this case it will manage only with tp, not tp3
-        auto tp2 = boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::stealing_multiqueue_threadpool_scheduler<boost::asynchronous::threadsafe_list<> > (3));
+        auto tp2 = boost::asynchronous::make_shared_scheduler_proxy<
+                    boost::asynchronous::stealing_multiqueue_threadpool_scheduler<boost::asynchronous::threadsafe_list<>>> (3);
         // a multiqueue_threadpool_scheduler, 4 threads, each with a lockfree_spsc_queue
         // this works because there will be no stealing as the queue can't, and only this single-thread scheduler will
         // be the producer
-        auto tp3 = boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::multiqueue_threadpool_scheduler<boost::asynchronous::lockfree_spsc_queue<> > (4));
+        auto tp3 = boost::asynchronous::make_shared_scheduler_proxy<
+                    boost::asynchronous::multiqueue_threadpool_scheduler<boost::asynchronous::lockfree_spsc_queue<>>> (4);
         auto tp_worker =
-                boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::composite_threadpool_scheduler<> (tp,tp2,tp3));
+                boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::composite_threadpool_scheduler<>> (tp,tp2,tp3);
 
         // use it as worker
         set_worker(tp_worker);
@@ -108,9 +108,9 @@ void example_composite_threadpool()
     std::cout << "example_composite_threadpool" << std::endl;
     {
         // a single-threaded world, where Servant will live.
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                                new boost::asynchronous::single_thread_scheduler<
-                                     boost::asynchronous::threadsafe_list<> >);
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                                boost::asynchronous::single_thread_scheduler<
+                                     boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler);
             // result of BOOST_ASYNC_FUTURE_MEMBER is a shared_future,

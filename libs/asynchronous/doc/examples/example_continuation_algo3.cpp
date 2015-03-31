@@ -1,7 +1,7 @@
 #include <iostream>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
-#include <boost/asynchronous/queue/threadsafe_list.hpp>
+#include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/scheduler/multiqueue_threadpool_scheduler.hpp>
 #include <boost/asynchronous/continuation_task.hpp>
@@ -120,10 +120,10 @@ struct Servant : boost::asynchronous::trackable_servant<>
     typedef int simple_ctor;
     Servant(boost::asynchronous::any_weak_scheduler<> scheduler)
         : boost::asynchronous::trackable_servant<>(scheduler,
-                                               // threadpool and a simple threadsafe_list queue
-                                               boost::asynchronous::create_shared_scheduler_proxy(
-                                                   new boost::asynchronous::multiqueue_threadpool_scheduler<
-                                                           boost::asynchronous::threadsafe_list<> >(6)))
+                                               // threadpool and a simple lockfree_queue queue
+                                               boost::asynchronous::make_shared_scheduler_proxy<
+                                                   boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                           boost::asynchronous::lockfree_queue<>>>(6))
         // for testing purpose
         , m_promise(new boost::promise<long>)
     {
@@ -185,9 +185,9 @@ void example_continuation_algo3()
     std::cout << "example_continuation_algo3" << std::endl;
     {
         // a single-threaded world, where Servant will live.
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                                new boost::asynchronous::single_thread_scheduler<
-                                     boost::asynchronous::threadsafe_list<> >);
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                                boost::asynchronous::single_thread_scheduler<
+                                     boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler);
             boost::shared_future<boost::shared_future<long> > fu = proxy.calc_algo();

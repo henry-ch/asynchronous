@@ -1,7 +1,7 @@
 #include <iostream>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
-#include <boost/asynchronous/queue/threadsafe_list.hpp>
+#include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/servant_proxy.hpp>
 #include <boost/asynchronous/post.hpp>
@@ -54,9 +54,9 @@ void exercise_simple_servant()
     int something = 3;
     {
         // with c++11
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::single_thread_scheduler<
-                          boost::asynchronous::threadsafe_list<> >);
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                                boost::asynchronous::single_thread_scheduler<
+                                     boost::asynchronous::lockfree_queue<>>>();
 
         {
             // arguments (here 42) are forwarded to Servant's constructor

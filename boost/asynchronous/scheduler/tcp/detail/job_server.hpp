@@ -49,7 +49,7 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
     {
         // For TCP communication we use an asio-based scheduler with 1 thread
         m_asioWorkers =
-                boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::asio_scheduler<>(1));
+                boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::asio_scheduler<>>(1);
 
         setup_connection();
     }

@@ -7,7 +7,6 @@
 #include <boost/asynchronous/scheduler/threadpool_scheduler.hpp>
 #include <boost/asynchronous/scheduler/composite_threadpool_scheduler.hpp>
 #include <boost/asynchronous/extensions/asio/asio_scheduler.hpp>
-#include <boost/asynchronous/queue/threadsafe_list.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/servant_proxy.hpp>
@@ -60,15 +59,15 @@ struct Servant : boost::asynchronous::trackable_servant<>
         , m_check_string_count(0)
     {
         // as worker we use a simple threadpool scheduler with 4 threads (0 would also do as the asio pool steals)
-        auto worker_tp = boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<> > (4));
+        auto worker_tp = boost::asynchronous::make_shared_scheduler_proxy<
+                    boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<>>> (4);
 
         // for tcp communication we use an asio-based scheduler with 3 threads
-        auto asio_workers = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::asio_scheduler<>(3));
+        auto asio_workers = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::asio_scheduler<>>(3);
 
         // we create a composite pool whose only goal is to allow asio worker threads to steal tasks from the threadpool
-        m_pools = boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::composite_threadpool_scheduler<> (worker_tp,asio_workers));
+        m_pools = boost::asynchronous::make_shared_scheduler_proxy<
+                    boost::asynchronous::composite_threadpool_scheduler<>> (worker_tp,asio_workers);
 
         set_worker(worker_tp);
         // we create one asynchronous communication manager in each thread
@@ -154,9 +153,9 @@ void example_asio_http_client()
     std::cout << "example_asio_http_client" << std::endl;
     {
         // a single-threaded world, where Servant will live.
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                                new boost::asynchronous::single_thread_scheduler<
-                                     boost::asynchronous::threadsafe_list<> >);
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                                boost::asynchronous::single_thread_scheduler<
+                                     boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler,"gwhaus.rt.schenk","/mitarbeiter/uebersicht.html");
             // call member, as if it was from Servant

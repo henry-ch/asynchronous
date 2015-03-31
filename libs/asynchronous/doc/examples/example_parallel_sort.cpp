@@ -23,9 +23,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
     Servant(boost::asynchronous::any_weak_scheduler<> scheduler)
         : boost::asynchronous::trackable_servant<>(scheduler,
                                                // threadpool with 3 threads and a simple threadsafe_list queue
-                                               boost::asynchronous::create_shared_scheduler_proxy(
-                                                   new boost::asynchronous::threadpool_scheduler<
-                                                           boost::asynchronous::lockfree_queue<> >(6)))
+                                               boost::asynchronous::make_shared_scheduler_proxy<
+                                                   boost::asynchronous::threadpool_scheduler<
+                                                           boost::asynchronous::lockfree_queue<>>>(6))
         // for testing purpose
         , m_promise(new boost::promise<void>)
     {
@@ -95,9 +95,9 @@ void example_sort()
     std::cout << "example_sort" << std::endl;
     {
         // a single-threaded world, where Servant will live.
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                                new boost::asynchronous::single_thread_scheduler<
-                                     boost::asynchronous::lockfree_queue<> >);
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                                boost::asynchronous::single_thread_scheduler<
+                                     boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler);
             boost::shared_future<boost::shared_future<void> > fu = proxy.start_async_work();

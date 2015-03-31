@@ -20,9 +20,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
     Servant(boost::asynchronous::any_weak_scheduler<> scheduler)
         : boost::asynchronous::trackable_servant<>(scheduler,
                                                // a threadpool with 1 thread using a threadsafe list
-                                               boost::asynchronous::create_shared_scheduler_proxy(
-                                                   new boost::asynchronous::threadpool_scheduler<
-                                                            boost::asynchronous::threadsafe_list<> >(1)))
+                                               boost::asynchronous::make_shared_scheduler_proxy<
+                                                   boost::asynchronous::threadpool_scheduler<
+                                                            boost::asynchronous::lockfree_queue<>>>(1))
         , m_promise(new boost::promise<int>)
     {
     }
@@ -70,12 +70,12 @@ void example_queue_container()
 {
     {
         // a scheduler with 1 threadsafe list, and 3 lockfree queues as work input queue
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                                new boost::asynchronous::single_thread_scheduler<
-                                        boost::asynchronous::any_queue_container<> >
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                                boost::asynchronous::single_thread_scheduler<
+                                        boost::asynchronous::any_queue_container<>>>
                         (boost::asynchronous::any_queue_container_config<boost::asynchronous::threadsafe_list<> >(1),
                          boost::asynchronous::any_queue_container_config<boost::asynchronous::lockfree_queue<> >(3)
-                         ));
+                         );
         {
             ServantProxy proxy(scheduler);
 

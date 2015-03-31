@@ -22,9 +22,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
     Servant(boost::asynchronous::any_weak_scheduler<> scheduler)
         : boost::asynchronous::trackable_servant<>(scheduler,
                                                // io pool with 2 threads and up to 4 threads
-                                               boost::asynchronous::create_shared_scheduler_proxy(
-                                                   new boost::asynchronous::io_threadpool_scheduler<
-                                                           boost::asynchronous::lockfree_queue<> >(2,4)))
+                                               boost::asynchronous::make_shared_scheduler_proxy<
+                                                   boost::asynchronous::io_threadpool_scheduler<
+                                                           boost::asynchronous::lockfree_queue<>>>(2,4))
         // for testing purpose
         , m_promise(new boost::promise<int>)
         , m_counter(0)
@@ -89,9 +89,9 @@ void example_io_pool_2()
     std::cout << "example_io_pool_2" << std::endl;
     {
         // a single-threaded world, where Servant will live.
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                                new boost::asynchronous::single_thread_scheduler<
-                                    boost::asynchronous::lockfree_queue<> >());
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                                boost::asynchronous::single_thread_scheduler<
+                                    boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler);
             // result of BOOST_ASYNC_FUTURE_MEMBER is a shared_future,
@@ -111,9 +111,9 @@ void example_io_pool_4()
     std::cout << "example_io_pool_4" << std::endl;
     {
         // a single-threaded world, where Servant will live.
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                                new boost::asynchronous::single_thread_scheduler<
-                                    boost::asynchronous::lockfree_queue<> >());
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                                boost::asynchronous::single_thread_scheduler<
+                                    boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler);
             // result of BOOST_ASYNC_FUTURE_MEMBER is a shared_future,
@@ -132,9 +132,9 @@ void example_io_pool_5()
     std::cout << "example_io_pool_5" << std::endl;
     {
         // a single-threaded world, where Servant will live.
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                                new boost::asynchronous::single_thread_scheduler<
-                                    boost::asynchronous::lockfree_queue<> >());
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                                boost::asynchronous::single_thread_scheduler<
+                                    boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler);
             // result of BOOST_ASYNC_FUTURE_MEMBER is a shared_future,
@@ -152,9 +152,9 @@ void example_io_pool_9()
     std::cout << "example_io_pool_9" << std::endl;
     {
         // a single-threaded world, where Servant will live.
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                                new boost::asynchronous::single_thread_scheduler<
-                                    boost::asynchronous::lockfree_queue<> >());
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                                boost::asynchronous::single_thread_scheduler<
+                                    boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler);
             // result of BOOST_ASYNC_FUTURE_MEMBER is a shared_future,

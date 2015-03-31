@@ -37,13 +37,13 @@ void example_cutoff_sort(std::size_t cutoff_begin,
     std::cout << "example_cutoff_sort" << std::endl;
     {
         // a single-threaded world, where Servant will live.
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                                new boost::asynchronous::multiqueue_threadpool_scheduler<
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                                boost::asynchronous::multiqueue_threadpool_scheduler<
                                         boost::asynchronous::lockfree_queue<>,
                                         boost::asynchronous::default_find_position< >,
                                         boost::asynchronous::no_cpu_load_saving
-                                    >
-                        (boost::thread::hardware_concurrency()));
+                                    >>
+                        (boost::thread::hardware_concurrency());
         std::vector<int> test_data;
         generate(test_data);
         std::tuple<std::size_t,std::vector<std::size_t>> best_cutoff=

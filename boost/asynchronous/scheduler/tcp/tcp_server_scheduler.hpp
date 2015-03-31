@@ -240,9 +240,9 @@ public:
         boost::asynchronous::get_thread_scheduler<job_type>(self_as_weak,true);
 
         // create server object and thread
-        auto simplescheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                                new boost::asynchronous::single_thread_scheduler<
-                                     boost::asynchronous::lockfree_queue<> >);
+        auto simplescheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                                boost::asynchronous::single_thread_scheduler<
+                                     boost::asynchronous::lockfree_queue<>>>();
         typename boost::asynchronous::tcp::get_correct_job_server_proxy<pool_job_type,job_type>::type
                 server(simplescheduler,worker_pool,address,port,IsStealing);
 

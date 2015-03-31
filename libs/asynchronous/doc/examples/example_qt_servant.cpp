@@ -13,9 +13,9 @@ using namespace std;
 QtServant::QtServant()
     : boost::asynchronous::qt_servant<>
       // threadpool with 3 threads
-      (boost::asynchronous::create_shared_scheduler_proxy(
-            new boost::asynchronous::threadpool_scheduler<
-                    boost::asynchronous::lockfree_queue<> >(3)))
+      (boost::asynchronous::make_shared_scheduler_proxy<
+            boost::asynchronous::threadpool_scheduler<
+                    boost::asynchronous::lockfree_queue<>>>(3))
 {
 }
 void QtServant::signaled()

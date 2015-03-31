@@ -60,10 +60,10 @@ struct Servant : boost::asynchronous::trackable_servant<>
     typedef int simple_ctor;
     Servant(boost::asynchronous::any_weak_scheduler<> scheduler, int threads)
         : boost::asynchronous::trackable_servant<>(scheduler,
-                                               // threadpool and a simple threadsafe_list queue
-                                               boost::asynchronous::create_shared_scheduler_proxy(
-                                                   new boost::asynchronous::multiqueue_threadpool_scheduler<
-                                                           boost::asynchronous::lockfree_queue<> >(threads)))
+                                               // threadpool and a simple lockfree_queue queue
+                                               boost::asynchronous::make_shared_scheduler_proxy<
+                                                   boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                           boost::asynchronous::lockfree_queue<>>>(threads))
         // for testing purpose
         , m_promise(new boost::promise<long>)
     {
@@ -127,9 +127,9 @@ void example_fibonacci(long fibo_val,long cutoff, int threads)
     std::cout << "example_fibonacci parallel" << std::endl;
     {
         // a single-threaded world, where Servant will live.
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                                new boost::asynchronous::single_thread_scheduler<
-                                     boost::asynchronous::lockfree_queue<> >);
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                                boost::asynchronous::single_thread_scheduler<
+                                     boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler,threads);
             start = boost::chrono::high_resolution_clock::now();

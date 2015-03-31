@@ -87,13 +87,13 @@ void example_post_tcp_fib2_bin(std::string const& server_address,std::string con
         std::cout << "fibonacci parallel TCP 2" << std::endl;
         // create pools
         // we need a pool where the tasks execute
-        auto pool = boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::threadpool_scheduler<
-                            boost::asynchronous::lockfree_queue<boost::asynchronous::any_bin_serializable> >(threads));
+        auto pool = boost::asynchronous::make_shared_scheduler_proxy<
+                    boost::asynchronous::threadpool_scheduler<
+                            boost::asynchronous::lockfree_queue<boost::asynchronous::any_bin_serializable>>>(threads);
         // a client will steal jobs in this pool
-        auto cscheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                            new boost::asynchronous::asio_scheduler<
-                                boost::asynchronous::default_find_position<boost::asynchronous::sequential_push_policy > >);
+        auto cscheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                            boost::asynchronous::asio_scheduler<
+                                boost::asynchronous::default_find_position<boost::asynchronous::sequential_push_policy >>>();
         // jobs we will support
         std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,
                            std::function<void(boost::asynchronous::tcp::client_request const&)>)> executor=
@@ -127,23 +127,23 @@ void example_post_tcp_fib2_bin(std::string const& server_address,std::string con
                                                                        10/*ms between calls to server*/);
         // we need a server
         // we use a tcp pool using 1 worker
-        auto server_pool = boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::threadpool_scheduler<
-                            boost::asynchronous::lockfree_queue<> >(1));
-        auto tcp_server= boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::tcp_server_scheduler<
+        auto server_pool = boost::asynchronous::make_shared_scheduler_proxy<
+                    boost::asynchronous::threadpool_scheduler<
+                            boost::asynchronous::lockfree_queue<>>>(1);
+        auto tcp_server= boost::asynchronous::make_shared_scheduler_proxy<
+                          boost::asynchronous::tcp_server_scheduler<
                             boost::asynchronous::lockfree_queue<boost::asynchronous::any_bin_serializable>,
-                            boost::asynchronous::any_callable,true>
-                                (server_pool,own_server_address,(unsigned int)own_server_port));
+                            boost::asynchronous::any_callable,true>>
+                                (server_pool,own_server_address,(unsigned int)own_server_port);
         // we need a composite for stealing
-        auto composite = boost::asynchronous::create_shared_scheduler_proxy
-                (new boost::asynchronous::composite_threadpool_scheduler<boost::asynchronous::any_bin_serializable>
-                          (pool,tcp_server));
+        auto composite = boost::asynchronous::make_shared_scheduler_proxy<
+                boost::asynchronous::composite_threadpool_scheduler<boost::asynchronous::any_bin_serializable>>
+                          (pool,tcp_server);
 
         // a single-threaded world, where Servant will live.
-        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                                new boost::asynchronous::single_thread_scheduler<
-                                     boost::asynchronous::lockfree_queue<> >);
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                                boost::asynchronous::single_thread_scheduler<
+                                     boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler,pool);
             start = boost::chrono::high_resolution_clock::now();
