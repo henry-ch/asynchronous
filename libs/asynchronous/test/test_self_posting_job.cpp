@@ -258,8 +258,8 @@ BOOST_AUTO_TEST_CASE( self_posting_job_composite_threadpool_scheduler)
     auto scheduler2 = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
                                                                         boost::asynchronous::lockfree_queue<>>>(4);
 
-    auto worker = boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::composite_threadpool_scheduler<> (scheduler,scheduler2));
+    auto worker = boost::asynchronous::make_shared_scheduler_proxy<
+                    boost::asynchronous::composite_threadpool_scheduler<>>(scheduler,scheduler2);
 
 
     sched_ids = scheduler.thread_ids();

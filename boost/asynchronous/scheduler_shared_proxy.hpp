@@ -330,7 +330,8 @@ private:
     create_shared_scheduler_proxy(boost::shared_ptr<Sched>);
 
     template< class Sched, class... Args >
-    friend boost::asynchronous::any_shared_scheduler_proxy<typename Sched::job_type>
+    friend
+    typename boost::disable_if<has_self_proxy_creation<Sched>,boost::asynchronous::any_shared_scheduler_proxy<typename Sched::job_type> >::type
     make_shared_scheduler_proxy(Args && ... args);
 };
 
@@ -377,7 +378,7 @@ boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type> create_sha
 #endif
 
 template< class S, class... Args >
-boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type>
+typename boost::disable_if<has_self_proxy_creation<S>,boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type> >::type
 make_shared_scheduler_proxy(Args && ... args)
 {
     auto sps = boost::make_shared<S>(std::forward<Args>(args)...);
@@ -386,7 +387,7 @@ make_shared_scheduler_proxy(Args && ... args)
     return boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type>(new boost::asynchronous::scheduler_shared_proxy<S>(std::move(sps)));
 #else
     //TODO solve friend problem
-    boost::shared_ptr<boost::asynchronous::scheduler_shared_proxy<S> > p(new boost::asynchronous::scheduler_shared_proxy<S>(std::move(sps)));
+    boost::shared_ptr<boost::asynchronous::scheduler_shared_proxy<S> > p(boost::make_shared<boost::asynchronous::scheduler_shared_proxy<S>>(std::move(sps)));
     boost::asynchronous::any_shared_scheduler_proxy_ptr<typename S::job_type> ptr (p);
     return boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type>(ptr);
 #endif

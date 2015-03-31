@@ -52,7 +52,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     boost::asynchronous::stealing_multiqueue_threadpool_scheduler<boost::asynchronous::threadsafe_list<>>> (3);
         // composite pool made of the previous 2
         auto tp_worker =
-                boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::composite_threadpool_scheduler<> (tp,tp2));
+                boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::composite_threadpool_scheduler<>>(tp,tp2);
 
         m_tp2_ids = tp2.thread_ids();
         // use it as worker

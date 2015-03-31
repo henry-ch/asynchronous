@@ -194,8 +194,8 @@ BOOST_AUTO_TEST_CASE( post_composite_threadpool_scheduler )
     auto tp2 = boost::asynchronous::make_shared_scheduler_proxy<
                 boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<>>> (4);
     
-    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                new boost::asynchronous::composite_threadpool_scheduler<> (tp,tp2));
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                boost::asynchronous::composite_threadpool_scheduler<>>(tp,tp2);
 
     std::vector<boost::thread::id> sids = scheduler.thread_ids();
     BOOST_CHECK_MESSAGE(number_of_threads(sids.begin(),sids.end())==7,"scheduler has wrong number of threads");

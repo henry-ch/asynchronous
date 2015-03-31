@@ -57,6 +57,7 @@ class composite_threadpool_scheduler:
 public:
     typedef Job job_type;
     typedef composite_threadpool_scheduler<Job,FindPosition,Clock> this_type;
+    typedef int self_proxy_creation;
 
     composite_threadpool_scheduler(): FindPosition()
     {
@@ -437,6 +438,21 @@ create_shared_scheduler_proxy(composite_threadpool_scheduler<Job,FindPosition,Cl
     boost::asynchronous::any_shared_scheduler_proxy<Job> composite(pcomposite);
     return composite;
 }
+template< class S, class... Args >
+typename boost::enable_if<has_self_proxy_creation<S>,boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type> >::type
+make_shared_scheduler_proxy(Args && ... args)
+{
+    auto sps = boost::make_shared<S>(std::forward<Args>(args)...);
+#ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
+    boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type> pcomposite(sps);
+#else
+    boost::shared_ptr<boost::asynchronous::composite_threadpool_scheduler<typename S::job_type> > sp(sps);
+    boost::asynchronous::any_shared_scheduler_proxy_ptr<typename S::job_type> pcomposite = sp;
+#endif
+    boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type> composite(pcomposite);
+    return composite;
+}
+
 }}
 
 #endif // BOOST_ASYNC_SCHEDULER_COMPOSITE_THREADPOOL_SCHEDULER_HPP

@@ -57,7 +57,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
                     boost::asynchronous::io_threadpool_scheduler<boost::asynchronous::lockfree_queue<servant_job>>> (2,4);
         // composite pool made of the previous 2
         auto tp_worker =
-                boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::composite_threadpool_scheduler<servant_job> (tp,tp2,tp3));
+                boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::composite_threadpool_scheduler<servant_job>>(tp,tp2,tp3);
 
         m_tp3_ids = tp3.thread_ids();
         // use it as worker

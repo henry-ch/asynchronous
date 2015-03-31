@@ -32,6 +32,8 @@
 #include <boost/asynchronous/detail/any_interruptible.hpp>
 #include <boost/asynchronous/queue/any_queue.hpp>
 
+BOOST_MPL_HAS_XXX_TRAIT_DEF(self_proxy_creation)
+
 namespace boost { namespace asynchronous
 {
 #ifdef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
