@@ -68,14 +68,22 @@ public:
         //m_queues.reserve(sizeof...(args));
         ctor_helper(m_queues,args...);
     }
-    std::size_t get_queue_size()const
+    std::size_t get_queue_size(std::size_t index =0)const
     {
-        std::size_t res=0;
-        for (typename queues_type::const_iterator it = m_queues.begin(); it != m_queues.end();++it)
+        if ((index == 0) || (index >= m_queues.size()))
         {
-            res += (*(*it)).get_queue_size();
+            std::size_t res=0;
+            for (typename queues_type::const_iterator it = m_queues.begin(); it != m_queues.end();++it)
+            {
+                res += (*(*it)).get_queue_size(index);
+            }
+            return res;
         }
-        return res;
+        else
+        {
+            // make sum of all queues added values
+            return (*m_queues[index]).get_queue_size(0);
+        }
     }
 #ifndef BOOST_NO_RVALUE_REFERENCES
     void push(JOB&& j, std::size_t pos)

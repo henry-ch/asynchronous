@@ -55,7 +55,7 @@ public:
     threadsafe_list(const threadsafe_list&) = delete;
     threadsafe_list& operator=(const threadsafe_list&) = delete;
 
-    std::size_t get_queue_size() const
+    std::size_t get_queue_size(std::size_t) const
     {
         // not supported
         return 0;

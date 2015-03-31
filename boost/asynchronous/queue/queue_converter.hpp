@@ -59,9 +59,9 @@ public:
         //else
         return false;
     }
-    virtual std::size_t get_queue_size()const
+    virtual std::size_t get_queue_size(std::size_t index)const
     {
-        return m_from_queue->get_queue_size();
+        return m_from_queue->get_queue_size(index);
     }
 
 private:

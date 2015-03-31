@@ -35,9 +35,9 @@ public:
     typedef typename Q::job_type job_type;
     typedef single_queue_scheduler_policy<Q> this_type;
     
-    std::size_t get_queue_size() const
+    std::size_t get_queue_size(std::size_t index =0) const
     {
-        return m_queue->get_queue_size();
+        return m_queue->get_queue_size(index);
     }
 #ifndef BOOST_NO_RVALUE_REFERENCES
     void post(typename queue_type::job_type job, std::size_t prio)

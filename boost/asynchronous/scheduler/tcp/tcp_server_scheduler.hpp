@@ -97,9 +97,9 @@ public:
         , m_port(port)
     {
     }
-    std::size_t get_queue_size() const
+    std::size_t get_queue_size(std::size_t index =0) const
     {
-        return this->m_queue->get_queue_size();
+        return this->m_queue->get_queue_size(index);
     }
     void init(std::vector<boost::asynchronous::any_queue_ptr<job_type> > const& others)
     {

@@ -42,7 +42,7 @@ public:
 
     }
 
-    std::size_t get_queue_size() const
+    std::size_t get_queue_size(std::size_t) const
     {
         return m_size;
     }
