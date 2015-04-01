@@ -41,7 +41,7 @@ private:
         }
     };
     // TODO unique_ptr bug?
-    std::vector<boost::shared_ptr<bucket_type> > m_buckets;
+    std::vector<std::unique_ptr<bucket_type> > m_buckets;
     Hash m_hasher;
 
     bucket_type& get_bucket(Key const& key) const
