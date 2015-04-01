@@ -91,7 +91,8 @@ struct queue_size_check_policy: boost::asynchronous::trackable_servant<boost::as
                 // if no valid scheduler, stop working
                 if (!sched.is_valid())
                     return;
-                s = sched.get_queue_size(0);
+                auto queues = sched.get_queue_size();
+                s = std::accumulate(queues.begin(),queues.end(),0,[](std::size_t rhs,std::size_t lhs){return rhs + lhs;});
             }
             // if not enough jobs, try getting more
             if (!err && (s < this->m_min_queue_size))

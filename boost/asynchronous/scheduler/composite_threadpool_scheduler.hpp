@@ -14,6 +14,7 @@
 #include <vector>
 #include <cstddef>
 #include <atomic>
+#include <numeric>
 
 #ifndef BOOST_THREAD_PROVIDES_FUTURE
 #define BOOST_THREAD_PROVIDES_FUTURE
@@ -80,22 +81,16 @@ public:
     ~composite_threadpool_scheduler()
     {
     }
-    std::size_t get_queue_size(std::size_t index =0) const
+    std::vector<std::size_t> get_queue_size() const
     {
-        if ((index == 0) || (index > m_subpools.size()))
+        std::vector<std::size_t> res;
+        for (typename std::vector<subpool_type>::const_iterator it = m_subpools.begin(); it != m_subpools.end();++it)
         {
-            std::size_t res = 0;
-            for (typename std::vector<subpool_type>::const_iterator it = m_subpools.begin(); it != m_subpools.end();++it)
-            {
-                res += (*it).get_queue_size(index);
-            }
-            return res;
+            auto one_queue_vec = (*it).get_queue_size();
+            res.push_back(std::accumulate(one_queue_vec.begin(),one_queue_vec.end(),0,
+                                          [](std::size_t rhs,std::size_t lhs){return rhs + lhs;}));
         }
-        else
-        {
-            // make sum of all subpool added queues
-            return m_subpools[index-1].get_queue_size(0);
-        }
+        return res;
     }
 #ifndef BOOST_NO_RVALUE_REFERENCES
     void post(job_type job) const
@@ -356,23 +351,18 @@ private:
             }
             return true;
         }
-        std::size_t get_queue_size(std::size_t index =0) const
+        std::vector<std::size_t> get_queue_size() const
         {
-            if ((index == 0) || (index > m_schedulers.size()))
+            std::vector<std::size_t> res;
+            for (typename std::vector<boost::asynchronous::any_shared_scheduler<job_type> >::const_iterator it = m_schedulers.begin(); it != m_schedulers.end();++it)
             {
-                std::size_t res = 0;
-                for (typename std::vector<boost::asynchronous::any_shared_scheduler<job_type> >::const_iterator it = m_schedulers.begin(); it != m_schedulers.end();++it)
-                {
-                    res += (*it).get_queue_size(index);
-                }
-                return res;
+                auto one_queue_vec = (*it).get_queue_size();
+                res.push_back(std::accumulate(one_queue_vec.begin(),one_queue_vec.end(),0,
+                                              [](std::size_t rhs,std::size_t lhs){return rhs + lhs;}));
             }
-            else
-            {
-                // make sum of all subpool added queues
-                return m_schedulers[index-1].get_queue_size(0);
-            }
+            return res;
         }
+
         std::map<std::string,
                  std::list<typename boost::asynchronous::job_traits<job_type>::diagnostic_item_type > >
         get_diagnostics(std::size_t pos=0)const

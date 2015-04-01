@@ -25,9 +25,11 @@ public:
     {
     }
 
-    std::size_t get_queue_size(std::size_t) const
+    std::vector<std::size_t> get_queue_size() const
     {
-        return m_queue.unsafe_size();
+        std::vector<std::size_t> res;
+        res.push_back(m_queue.unsafe_size());
+        return res;
     }
 
     void push(JOB && j, std::size_t)

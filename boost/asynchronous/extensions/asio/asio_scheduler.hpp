@@ -68,10 +68,10 @@ public:
         , m_immediate(immediate)
     {
     }
-    std::size_t get_queue_size(std::size_t) const
+    std::vector<std::size_t> get_queue_size() const
     {
         // not supported
-        return 0;
+        return std::vector<std::size_t>();
     }
     void init(size_t number_of_workers,std::vector<boost::asynchronous::any_queue_ptr<job_type> > const& others,boost::weak_ptr<this_type> weak_self)
     {

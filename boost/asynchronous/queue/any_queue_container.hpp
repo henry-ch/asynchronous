@@ -13,6 +13,7 @@
 #include <vector>
 #include <cstddef>
 #include <utility>
+#include <numeric>
 
 #include <boost/shared_ptr.hpp>
 #include <boost/asynchronous/queue/any_queue.hpp>
@@ -68,22 +69,16 @@ public:
         //m_queues.reserve(sizeof...(args));
         ctor_helper(m_queues,args...);
     }
-    std::size_t get_queue_size(std::size_t index =0)const
+    std::vector<std::size_t> get_queue_size()const
     {
-        if ((index == 0) || (index > m_queues.size()))
+        std::vector<std::size_t> res;
+        for (typename queues_type::const_iterator it = m_queues.begin(); it != m_queues.end();++it)
         {
-            std::size_t res=0;
-            for (typename queues_type::const_iterator it = m_queues.begin(); it != m_queues.end();++it)
-            {
-                res += (*(*it)).get_queue_size(index);
-            }
-            return res;
+            auto one_queue_vec = (*(*it)).get_queue_size();
+            res.push_back(std::accumulate(one_queue_vec.begin(),one_queue_vec.end(),0,
+                                          [](std::size_t rhs,std::size_t lhs){return rhs + lhs;}));
         }
-        else
-        {
-            // make sum of all queues added values
-            return (*m_queues[index-1]).get_queue_size(0);
-        }
+        return res;
     }
 #ifndef BOOST_NO_RVALUE_REFERENCES
     void push(JOB&& j, std::size_t pos)

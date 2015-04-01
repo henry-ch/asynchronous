@@ -46,9 +46,9 @@ public:
     {
         return (!!m_scheduler);
     }
-    std::size_t get_queue_size(std::size_t index =0) const
+    std::vector<std::size_t> get_queue_size() const
     {
-        return m_scheduler->get_queue_size(index);
+        return m_scheduler->get_queue_size();
     }
 #ifndef BOOST_NO_RVALUE_REFERENCES
     void post(job_type job) const
@@ -186,9 +186,9 @@ public:
     {
         return m_impl->is_valid();
     }
-    std::size_t get_queue_size(std::size_t index =0) const
+    std::vector<std::size_t> get_queue_size() const
     {
-        return m_impl->get_queue_size(index);
+        return m_impl->get_queue_size();
     }
 #ifndef BOOST_NO_RVALUE_REFERENCES
     void post(job_type job) const

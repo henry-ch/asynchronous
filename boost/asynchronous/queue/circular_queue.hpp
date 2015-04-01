@@ -42,9 +42,11 @@ public:
 
     }
 
-    std::size_t get_queue_size(std::size_t) const
+    std::vector<std::size_t> get_queue_size() const
     {
-        return m_size;
+        std::vector<std::size_t> res;
+        res.push_back(m_size);
+        return res;
     }
     bool is_not_empty() const
     {

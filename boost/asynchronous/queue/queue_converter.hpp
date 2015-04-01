@@ -59,9 +59,9 @@ public:
         //else
         return false;
     }
-    virtual std::size_t get_queue_size(std::size_t index)const
+    virtual std::vector<std::size_t> get_queue_size()const
     {
-        return m_from_queue->get_queue_size(index);
+        return m_from_queue->get_queue_size();
     }
 
 private:

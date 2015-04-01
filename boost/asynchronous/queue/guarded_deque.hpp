@@ -36,9 +36,11 @@ public:
     typedef boost::unique_lock<mutex_type> lock_type;
     template<typename... Args>
     guarded_deque(Args... ){}
-    std::size_t get_queue_size(std::size_t) const
+    std::vector<std::size_t> get_queue_size() const
     {
-        return m_jobs.size();
+        std::vector<std::size_t> res;
+        res.push_back(m_jobs.size());
+        return res;
     }
 
     bool is_not_empty() const

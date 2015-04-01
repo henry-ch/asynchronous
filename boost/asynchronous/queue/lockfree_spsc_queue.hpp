@@ -31,9 +31,11 @@ public:
     typedef lockfree_spsc_queue<JOB> this_type;
     typedef JOB job_type;
 
-    std::size_t get_queue_size(std::size_t) const
+    std::vector<std::size_t> get_queue_size() const
     {
-        return Size::size();
+        std::vector<std::size_t> res;
+        res.push_back(Size::size());
+        return res;
     }
 #ifndef BOOST_NO_CXX11_VARIADIC_TEMPLATES
     template<typename... Args>
