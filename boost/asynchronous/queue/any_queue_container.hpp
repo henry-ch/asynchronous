@@ -70,7 +70,7 @@ public:
     }
     std::size_t get_queue_size(std::size_t index =0)const
     {
-        if ((index == 0) || (index >= m_queues.size()))
+        if ((index == 0) || (index > m_queues.size()))
         {
             std::size_t res=0;
             for (typename queues_type::const_iterator it = m_queues.begin(); it != m_queues.end();++it)
@@ -82,7 +82,7 @@ public:
         else
         {
             // make sum of all queues added values
-            return (*m_queues[index]).get_queue_size(0);
+            return (*m_queues[index-1]).get_queue_size(0);
         }
     }
 #ifndef BOOST_NO_RVALUE_REFERENCES

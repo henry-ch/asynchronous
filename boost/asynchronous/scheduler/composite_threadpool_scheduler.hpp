@@ -82,7 +82,7 @@ public:
     }
     std::size_t get_queue_size(std::size_t index =0) const
     {
-        if ((index == 0) || (index >= m_subpools.size()))
+        if ((index == 0) || (index > m_subpools.size()))
         {
             std::size_t res = 0;
             for (typename std::vector<subpool_type>::const_iterator it = m_subpools.begin(); it != m_subpools.end();++it)
@@ -94,7 +94,7 @@ public:
         else
         {
             // make sum of all subpool added queues
-            return m_subpools[index].get_queue_size(0);
+            return m_subpools[index-1].get_queue_size(0);
         }
     }
 #ifndef BOOST_NO_RVALUE_REFERENCES
@@ -358,7 +358,7 @@ private:
         }
         std::size_t get_queue_size(std::size_t index =0) const
         {
-            if ((index == 0) || (index >= m_schedulers.size()))
+            if ((index == 0) || (index > m_schedulers.size()))
             {
                 std::size_t res = 0;
                 for (typename std::vector<boost::asynchronous::any_shared_scheduler<job_type> >::const_iterator it = m_schedulers.begin(); it != m_schedulers.end();++it)
@@ -370,7 +370,7 @@ private:
             else
             {
                 // make sum of all subpool added queues
-                return m_schedulers[index].get_queue_size(0);
+                return m_schedulers[index-1].get_queue_size(0);
             }
         }
         std::map<std::string,
