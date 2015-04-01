@@ -193,6 +193,10 @@ BOOST_AUTO_TEST_CASE( post_composite_threadpool_scheduler )
                 boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<>>> (3);
     auto tp2 = boost::asynchronous::make_shared_scheduler_proxy<
                 boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<>>> (4);
+
+    BOOST_CHECK_MESSAGE(tp != tp2,"tp and tp2 should not be equal");
+    BOOST_CHECK_MESSAGE(!(tp == tp2),"tp and tp2 should not be equal");
+    BOOST_CHECK_MESSAGE(tp == tp,"tp and tp should not be equal");
     
     auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
                 boost::asynchronous::composite_threadpool_scheduler<>>(tp,tp2);

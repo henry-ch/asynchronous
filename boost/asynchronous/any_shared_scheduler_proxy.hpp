@@ -280,6 +280,17 @@ private:
     boost::shared_ptr<boost::asynchronous::any_shared_scheduler_proxy_concept<JOB,Clock> > my_ptr;
 };
 
+template <class JOB,class Clock>
+inline bool operator==(const any_shared_scheduler_proxy<JOB,Clock>& lhs, const any_shared_scheduler_proxy<JOB,Clock>& rhs)
+{
+    return lhs.thread_ids() == rhs.thread_ids();
+}
+template <class JOB,class Clock>
+inline bool operator!=(const any_shared_scheduler_proxy<JOB,Clock>& lhs, const any_shared_scheduler_proxy<JOB,Clock>& rhs)
+{
+    return lhs.thread_ids() != rhs.thread_ids();
+}
+
 // weak pointer to any_shared_scheduler_proxy concept
 template <class JOB,class Clock>
 struct any_weak_scheduler_proxy_concept :
