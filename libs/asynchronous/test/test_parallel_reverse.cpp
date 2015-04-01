@@ -175,7 +175,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     std::vector<boost::thread::id> ids = tp.thread_ids();
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
                     return boost::asynchronous::parallel_reverse(
-                                boost::asynchronous::parallel_sort_move(std::move(this->m_data1),std::less<int>(),100),
+                                boost::asynchronous::parallel_sort(std::move(this->m_data1),std::less<int>(),100),
                                 100);
                     },// work
            [aPromise,tp,data_copy,this](boost::asynchronous::expected<std::vector<int>> res) mutable{
