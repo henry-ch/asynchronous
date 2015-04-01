@@ -23,7 +23,7 @@
 namespace boost { namespace asynchronous
 {
 
-template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB >
+template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB, class Size=void >
 class guarded_deque: 
 #ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
         public boost::asynchronous::any_queue_concept<JOB>,

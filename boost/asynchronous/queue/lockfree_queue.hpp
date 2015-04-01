@@ -17,6 +17,7 @@
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/queue/queue_base.hpp>
 #include <boost/asynchronous/queue/any_queue.hpp>
+#include <boost/asynchronous/queue/detail/lockfree_size.hpp>
 
 #ifdef BOOST_ASYNCHRONOUS_NO_LOCKFREE
 #include <boost/asynchronous/queue/guarded_deque.hpp>
@@ -27,7 +28,6 @@ using lockfree_queue = boost::asynchronous::guarded_deque<Job>;
 }
 }
 #else
-#include <boost/asynchronous/queue/detail/lockfree_size.hpp>
 #include <boost/lockfree/queue.hpp>
 namespace boost { namespace asynchronous
 {
