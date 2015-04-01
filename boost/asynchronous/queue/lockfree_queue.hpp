@@ -23,8 +23,8 @@
 #include <boost/asynchronous/queue/guarded_deque.hpp>
 namespace boost { namespace asynchronous
 {
-template <class Job = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-using lockfree_queue = boost::asynchronous::guarded_deque<Job>;
+template <class Job = BOOST_ASYNCHRONOUS_DEFAULT_JOB, class Size = boost::asynchronous::no_lockfree_size>
+using lockfree_queue = boost::asynchronous::guarded_deque<Job,Size>;
 }
 }
 #else

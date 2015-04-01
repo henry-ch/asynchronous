@@ -31,7 +31,7 @@ class guarded_deque:
         public boost::asynchronous::queue_base<JOB>,  private boost::noncopyable
 {
 public:
-    typedef guarded_deque<JOB> this_type;
+    typedef guarded_deque<JOB,Size> this_type;
     typedef boost::mutex  mutex_type;
     typedef boost::unique_lock<mutex_type> lock_type;
     template<typename... Args>
