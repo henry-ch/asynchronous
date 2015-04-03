@@ -78,7 +78,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                        p->set_value();
         });
         // cancel timer
-        m_timer =  boost::asynchronous::asio_deadline_timer_proxy(get_worker(),boost::posix_time::milliseconds(500));
+        m_timer.cancel();
     }
 private:
     boost::asynchronous::asio_deadline_timer_proxy m_timer;

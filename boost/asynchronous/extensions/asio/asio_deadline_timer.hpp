@@ -28,7 +28,26 @@ public:
     {
         m_timer->async_wait(fct);
     }
-
+    template <typename... T>
+    void cancel(T&&...  args)
+    {
+        m_timer->cancel(std::forward<T>(args)...);
+    }
+    template <typename... T>
+    void cancel_one(T&&...  args)
+    {
+        m_timer->cancel_one(std::forward<T>(args)...);
+    }
+    template <typename... T>
+    void expires_from_now(T&&...  args)
+    {
+        m_timer->expires_from_now(std::forward<T>(args)...);
+    }
+    template <typename Duration>
+    void reset(Duration duration)
+    {
+        m_timer.reset(new boost::asio::deadline_timer(*boost::asynchronous::get_io_service<>(),duration));
+    }
 private:
    boost::shared_ptr<boost::asio::deadline_timer> m_timer; 
 };
@@ -41,6 +60,10 @@ public:
         boost::asynchronous::servant_proxy< boost::asynchronous::asio_deadline_timer_proxy, boost::asynchronous::asio_deadline_timer >(s, timer_duration)
     {}
     BOOST_ASYNC_UNSAFE_MEMBER(unsafe_async_wait)
+    BOOST_ASYNC_POST_MEMBER(cancel)
+    BOOST_ASYNC_POST_MEMBER(cancel_one)
+    BOOST_ASYNC_POST_MEMBER(expires_from_now)
+    BOOST_ASYNC_POST_MEMBER(reset)
 };
 
 }}

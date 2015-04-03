@@ -27,6 +27,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                    // as timer servant we use an asio-based scheduler with 1 thread
                                                    boost::asynchronous::make_shared_scheduler_proxy<
                                                        boost::asynchronous::asio_scheduler<>>(1))
+        , m_timer(get_worker(),boost::posix_time::milliseconds(500))
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant ctor not posted.");
         m_threadid = boost::this_thread::get_id();
@@ -41,11 +42,10 @@ struct Servant : boost::asynchronous::trackable_servant<>
         std::vector<boost::thread::id> ids = s.thread_ids();
         BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"timer_expired running in wrong thread.");
         boost::thread::id threadid = m_threadid;
-        
-        typename boost::chrono::high_resolution_clock::time_point start = boost::chrono::high_resolution_clock::now();
 
         boost::asynchronous::asio_deadline_timer_proxy timer(get_worker(),boost::posix_time::milliseconds(500));
 
+        typename boost::chrono::high_resolution_clock::time_point start = boost::chrono::high_resolution_clock::now();
         // capture the timer in lambda to force keeping alive
         async_wait(timer,
                    [p,start,threadid,timer](const ::boost::system::error_code& err){
@@ -53,9 +53,31 @@ struct Servant : boost::asynchronous::trackable_servant<>
                        BOOST_CHECK_MESSAGE(!err,"timer not expired.");
                        typename boost::chrono::high_resolution_clock::time_point stop = boost::chrono::high_resolution_clock::now();
                        auto d =  boost::chrono::nanoseconds(stop - start).count();
-                       BOOST_CHECK_MESSAGE(d/1000000 >= 400,"timer was too long.");
+                       BOOST_CHECK_MESSAGE(d/1000000 < 600,"timer was too long.");
                        BOOST_CHECK_MESSAGE(d/1000000 >= 490,"timer was too short.");
                        ++timer_expired_count;
+                       p->set_value();
+                   });
+    }
+    void timer_expired2(boost::shared_ptr<boost::promise<void> > p)
+    {
+        boost::asynchronous::any_shared_scheduler<> s = get_scheduler().lock();
+        std::vector<boost::thread::id> ids = s.thread_ids();
+        BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"timer_expired running in wrong thread.");
+        boost::thread::id threadid = m_threadid;
+
+        typename boost::chrono::high_resolution_clock::time_point start = boost::chrono::high_resolution_clock::now();
+
+        async_wait(m_timer,
+                   [this,p,start,threadid](const ::boost::system::error_code& err){
+                       BOOST_CHECK_MESSAGE(threadid==boost::this_thread::get_id(),"timer callback in wrong thread.");
+                       BOOST_CHECK_MESSAGE(!err,"timer not expired.");
+                       typename boost::chrono::high_resolution_clock::time_point stop = boost::chrono::high_resolution_clock::now();
+                       auto d =  boost::chrono::nanoseconds(stop - start).count();
+                       BOOST_CHECK_MESSAGE(d/1000000 < 600,"timer was too long.");
+                       BOOST_CHECK_MESSAGE(d/1000000 >= 490,"timer was too short.");
+                       ++timer_expired_count;
+                       m_timer.reset(boost::posix_time::milliseconds(500));
                        p->set_value();
                    });
     }
@@ -70,7 +92,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         typename boost::chrono::high_resolution_clock::time_point start = boost::chrono::high_resolution_clock::now();
         
         async_wait(timer,
-                   [p,start,threadid](const ::boost::system::error_code& err){
+                   [p,start,timer,threadid](const ::boost::system::error_code& err){
                        BOOST_CHECK_MESSAGE(threadid==boost::this_thread::get_id(),"timer callback in wrong thread.");
                        BOOST_CHECK_MESSAGE(err,"timer not expired.");
                        typename boost::chrono::high_resolution_clock::time_point stop = boost::chrono::high_resolution_clock::now();
@@ -80,10 +102,11 @@ struct Servant : boost::asynchronous::trackable_servant<>
                        p->set_value();
         });
         // cancel timer
-        timer =  boost::asynchronous::asio_deadline_timer_proxy(get_worker(),boost::posix_time::milliseconds(500));
+        timer.cancel();
     }
 private:
     boost::thread::id m_threadid;
+    boost::asynchronous::asio_deadline_timer_proxy m_timer;
 };
 
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>
@@ -94,6 +117,7 @@ public:
         boost::asynchronous::servant_proxy<ServantProxy,Servant>(s)
     {}
     BOOST_ASYNC_FUTURE_MEMBER(timer_expired)
+    BOOST_ASYNC_FUTURE_MEMBER(timer_expired2)
     BOOST_ASYNC_FUTURE_MEMBER(timer_cancelled)
 };
 
@@ -111,4 +135,25 @@ BOOST_AUTO_TEST_CASE( test_asio_timer_expired )
     proxy.timer_expired(p);
     fu.get();
     BOOST_CHECK_MESSAGE(timer_expired_count==1,"timer callback not called.");
+    timer_expired_count=0;
+}
+
+BOOST_AUTO_TEST_CASE( test_asio_timer_expired_twice )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>();
+
+    main_thread_id = boost::this_thread::get_id();
+    ServantProxy proxy(scheduler);
+    boost::shared_ptr<boost::promise<void> > p(new boost::promise<void>);
+    boost::shared_future<void> fu = p->get_future();
+    proxy.timer_expired2(p);
+    fu.get();
+    BOOST_CHECK_MESSAGE(timer_expired_count==1,"timer callback not called.");
+
+    boost::shared_ptr<boost::promise<void> > p2(new boost::promise<void>);
+    boost::shared_future<void> fu2 = p2->get_future();
+    proxy.timer_expired2(p2);
+    fu2.get();
+    BOOST_CHECK_MESSAGE(timer_expired_count==2,"timer callback not called twice.");
 }
