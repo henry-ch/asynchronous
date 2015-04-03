@@ -170,16 +170,17 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
                     std::vector<boost::thread::id> ids = tp.thread_ids();
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
-                    return boost::asynchronous::parallel_sort(this->m_data.begin(),this->m_data.end(),increasing_sort_subtask(),1500);
+                    return boost::asynchronous::parallel_sort(std::move(this->m_data),increasing_sort_subtask(),1500);
                     },// work
-           [aPromise,tp,data_copy,this](boost::asynchronous::expected<void> res) mutable{
+           [aPromise,tp,data_copy,this](boost::asynchronous::expected<std::vector<int>> res) mutable{
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
                         std::vector<boost::thread::id> ids = tp.thread_ids();
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         std::sort(data_copy.begin(),data_copy.end(),std::less<int>());
-                        BOOST_CHECK_MESSAGE(data_copy == this->m_data,"parallel_sort gave a wrong value.");
+                        auto modified_vec = res.get();
+                        BOOST_CHECK_MESSAGE(data_copy == modified_vec,"parallel_sort gave a wrong value.");
                         // reset
                         generate(this->m_data);
                         aPromise->set_value();
@@ -202,16 +203,17 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
                     std::vector<boost::thread::id> ids = tp.thread_ids();
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
-                    return boost::asynchronous::parallel_sort(this->m_data.begin(),this->m_data.end(),increasing_sort_subtask(),1500);
+                    return boost::asynchronous::parallel_sort(std::move(this->m_data),increasing_sort_subtask(),1500);
                     },// work
-           [aPromise,tp,data_copy,this](boost::asynchronous::expected<void> res) mutable{
+           [aPromise,tp,data_copy,this](boost::asynchronous::expected<std::vector<int>> res) mutable{
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
                         std::vector<boost::thread::id> ids = tp.thread_ids();
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         std::sort(data_copy.begin(),data_copy.end(),std::less<int>());
-                        BOOST_CHECK_MESSAGE(data_copy == this->m_data,"parallel_sort gave a wrong value.");
+                        auto modified_vec = res.get();
+                        BOOST_CHECK_MESSAGE(data_copy == modified_vec,"parallel_sort gave a wrong value.");
                         // reset
                         generate(this->m_data);
                         aPromise->set_value();
