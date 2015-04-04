@@ -75,19 +75,19 @@ struct Servant : boost::asynchronous::trackable_servant<>
         boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
         boost::shared_future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
+        std::vector<boost::thread::id> ids = tp.thread_ids();
         auto data_copy = m_data;
         // start long tasks
         post_callback(
-           [tp,this](){
+           [ids,this](){
                     BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
-                    std::vector<boost::thread::id> ids = tp.thread_ids();
+
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
                     return boost::asynchronous::parallel_sort2(std::move(this->m_data),std::less<int>(),1500);
                     },// work
-           [aPromise,tp,data_copy,this](boost::asynchronous::expected<std::vector<int>> res) mutable{
+           [aPromise,ids,data_copy,this](boost::asynchronous::expected<std::vector<int>> res) mutable{
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
-                        std::vector<boost::thread::id> ids = tp.thread_ids();
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         std::sort(data_copy.begin(),data_copy.end(),std::less<int>());
@@ -107,12 +107,13 @@ struct Servant : boost::asynchronous::trackable_servant<>
         boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
         boost::shared_future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
+        std::vector<boost::thread::id> ids = tp.thread_ids();
         auto data_copy = m_data;
         // start long tasks
         post_callback(
-           [tp,this](){
+           [ids,this](){
                     BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
-                    std::vector<boost::thread::id> ids = tp.thread_ids();
+
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
                     return boost::asynchronous::parallel_sort2(
                                 boost::asynchronous::parallel_for(std::move(this->m_data),
@@ -122,10 +123,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                                   },1500),
                                 std::less<int>(),1500);
                     },// work
-           [aPromise,tp,data_copy,this](boost::asynchronous::expected<std::vector<int>> res) mutable{
+           [aPromise,ids,data_copy,this](boost::asynchronous::expected<std::vector<int>> res) mutable{
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
-                        std::vector<boost::thread::id> ids = tp.thread_ids();
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         std::for_each(data_copy.begin(),data_copy.end(),[](int const& i){const_cast<int&>(i) += 2;});
@@ -146,20 +146,20 @@ struct Servant : boost::asynchronous::trackable_servant<>
         boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
         boost::shared_future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
+        std::vector<boost::thread::id> ids = tp.thread_ids();
         std::sort(m_data.begin(),m_data.end(),std::greater<int>());
         auto data_copy = m_data;
         // start long tasks
         post_callback(
-           [tp,this](){
+           [ids,this](){
                     BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
-                    std::vector<boost::thread::id> ids = tp.thread_ids();
+
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
                     return boost::asynchronous::parallel_sort2(std::move(this->m_data),std::less<int>(),1500);
                     },// work
-           [aPromise,tp,data_copy,this](boost::asynchronous::expected<std::vector<int>> res) mutable{
+           [aPromise,ids,data_copy,this](boost::asynchronous::expected<std::vector<int>> res) mutable{
                      BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                      BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
-                     std::vector<boost::thread::id> ids = tp.thread_ids();
                      BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                      BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                      std::sort(data_copy.begin(),data_copy.end(),std::less<int>());
@@ -179,20 +179,20 @@ struct Servant : boost::asynchronous::trackable_servant<>
         boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
         boost::shared_future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
+        std::vector<boost::thread::id> ids = tp.thread_ids();
         std::sort(m_data.begin(),m_data.end(),std::less<int>());
         auto data_copy = m_data;
         // start long tasks
         post_callback(
-           [tp,this](){
+           [ids,this](){
                     BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
-                    std::vector<boost::thread::id> ids = tp.thread_ids();
+
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
                     return boost::asynchronous::parallel_sort2(std::move(this->m_data),std::less<int>(),1500);
                     },// work
-           [aPromise,tp,data_copy,this](boost::asynchronous::expected<std::vector<int>> res) mutable{
+           [aPromise,ids,data_copy,this](boost::asynchronous::expected<std::vector<int>> res) mutable{
                      BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                      BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
-                     std::vector<boost::thread::id> ids = tp.thread_ids();
                      BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                      BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                      std::sort(data_copy.begin(),data_copy.end(),std::less<int>());

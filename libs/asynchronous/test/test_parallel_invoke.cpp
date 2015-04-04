@@ -63,21 +63,21 @@ struct Servant : boost::asynchronous::trackable_servant<>
         boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
         boost::shared_future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
+        std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
         post_callback(
-           [tp](){
+           [ids](){
                     BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
-                    std::vector<boost::thread::id> ids = tp.thread_ids();
+
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
                     return boost::asynchronous::parallel_invoke<boost::asynchronous::any_callable>(
                                 boost::asynchronous::to_continuation_task([](){throw my_exception();}),
                                 boost::asynchronous::to_continuation_task([](){return 42.0;}));
                     },// work
-           [aPromise,tp,this](boost::asynchronous::expected<std::tuple<boost::asynchronous::expected<void>,
+           [aPromise,ids,this](boost::asynchronous::expected<std::tuple<boost::asynchronous::expected<void>,
                                                                        boost::asynchronous::expected<double>>> res){
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
-                        std::vector<boost::thread::id> ids = tp.thread_ids();
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         try
@@ -103,11 +103,12 @@ struct Servant : boost::asynchronous::trackable_servant<>
         boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
         boost::shared_future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
+        std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
         post_callback(
-           [tp](){
+           [ids](){
                     BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
-                    std::vector<boost::thread::id> ids = tp.thread_ids();
+
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
                     return boost::asynchronous::parallel_invoke_timeout<boost::asynchronous::any_callable>(
                                 boost::chrono::milliseconds(1000),
@@ -116,11 +117,10 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                 boost::asynchronous::to_continuation_task(
                                     [](){boost::this_thread::sleep(boost::posix_time::milliseconds(2000));return 42.0;}));
                     },// work
-           [aPromise,tp,this](boost::asynchronous::expected<std::tuple<boost::asynchronous::expected<void>,
+           [aPromise,ids,this](boost::asynchronous::expected<std::tuple<boost::asynchronous::expected<void>,
                                                                        boost::asynchronous::expected<double>>> res){
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
-                        std::vector<boost::thread::id> ids = tp.thread_ids();
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         try
