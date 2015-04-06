@@ -24,8 +24,19 @@ public:
         , m_timer(new boost::asio::deadline_timer(*boost::asynchronous::get_io_service<>(),timer_duration))
     {        
     }
+    asio_deadline_timer(boost::asynchronous::any_weak_scheduler<> scheduler)
+        : boost::asynchronous::trackable_servant<>(scheduler)
+        , m_timer(new boost::asio::deadline_timer(*boost::asynchronous::get_io_service<>()))
+    {
+    }
     void unsafe_async_wait(boost::function<void(const::boost::system::error_code&)> fct)
     {
+        m_timer->async_wait(fct);
+    }
+    template <class Duration>
+    void unsafe_async_wait(boost::function<void(const::boost::system::error_code&)> fct, Duration timer_duration)
+    {
+        reset(timer_duration);
         m_timer->async_wait(fct);
     }
     template <typename... T>
@@ -58,6 +69,10 @@ public:
     template <class Scheduler, class Duration>
     asio_deadline_timer_proxy(Scheduler s, Duration timer_duration):
         boost::asynchronous::servant_proxy< boost::asynchronous::asio_deadline_timer_proxy, boost::asynchronous::asio_deadline_timer >(s, timer_duration)
+    {}
+    template <class Scheduler>
+    asio_deadline_timer_proxy(Scheduler s):
+        boost::asynchronous::servant_proxy< boost::asynchronous::asio_deadline_timer_proxy, boost::asynchronous::asio_deadline_timer >(s)
     {}
     BOOST_ASYNC_UNSAFE_MEMBER(unsafe_async_wait)
     BOOST_ASYNC_POST_MEMBER(cancel)

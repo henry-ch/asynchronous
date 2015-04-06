@@ -81,6 +81,29 @@ struct Servant : boost::asynchronous::trackable_servant<>
                        p->set_value();
                    });
     }
+    void timer_expired3(boost::shared_ptr<boost::promise<void> > p)
+    {
+        boost::asynchronous::any_shared_scheduler<> s = get_scheduler().lock();
+        std::vector<boost::thread::id> ids = s.thread_ids();
+        BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"timer_expired running in wrong thread.");
+        boost::thread::id threadid = m_threadid;
+        m_timer = boost::asynchronous::asio_deadline_timer_proxy(get_worker());
+
+        typename boost::chrono::high_resolution_clock::time_point start = boost::chrono::high_resolution_clock::now();
+
+        async_wait(m_timer,
+                   boost::posix_time::milliseconds(500),
+                   [this,p,start,threadid](const ::boost::system::error_code& err){
+                       BOOST_CHECK_MESSAGE(threadid==boost::this_thread::get_id(),"timer callback in wrong thread.");
+                       BOOST_CHECK_MESSAGE(!err,"timer not expired.");
+                       typename boost::chrono::high_resolution_clock::time_point stop = boost::chrono::high_resolution_clock::now();
+                       auto d =  boost::chrono::nanoseconds(stop - start).count();
+                       BOOST_CHECK_MESSAGE(d/1000000 < 600,"timer was too long.");
+                       BOOST_CHECK_MESSAGE(d/1000000 >= 490,"timer was too short.");
+                       ++timer_expired_count;
+                       p->set_value();
+                   });
+    }
     void timer_cancelled(boost::shared_ptr<boost::promise<void> > p)
     {
         boost::asynchronous::asio_deadline_timer_proxy timer(get_worker(),boost::posix_time::milliseconds(50000));
@@ -118,6 +141,7 @@ public:
     {}
     BOOST_ASYNC_FUTURE_MEMBER(timer_expired)
     BOOST_ASYNC_FUTURE_MEMBER(timer_expired2)
+    BOOST_ASYNC_FUTURE_MEMBER(timer_expired3)
     BOOST_ASYNC_FUTURE_MEMBER(timer_cancelled)
 };
 
@@ -154,6 +178,26 @@ BOOST_AUTO_TEST_CASE( test_asio_timer_expired_twice )
     boost::shared_ptr<boost::promise<void> > p2(new boost::promise<void>);
     boost::shared_future<void> fu2 = p2->get_future();
     proxy.timer_expired2(p2);
+    fu2.get();
+    BOOST_CHECK_MESSAGE(timer_expired_count==2,"timer callback not called twice.");
+    timer_expired_count=0;
+}
+BOOST_AUTO_TEST_CASE( test_asio_timer_expired_twice_bis )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>();
+
+    main_thread_id = boost::this_thread::get_id();
+    ServantProxy proxy(scheduler);
+    boost::shared_ptr<boost::promise<void> > p(new boost::promise<void>);
+    boost::shared_future<void> fu = p->get_future();
+    proxy.timer_expired3(p);
+    fu.get();
+    BOOST_CHECK_MESSAGE(timer_expired_count==1,"timer callback not called.");
+
+    boost::shared_ptr<boost::promise<void> > p2(new boost::promise<void>);
+    boost::shared_future<void> fu2 = p2->get_future();
+    proxy.timer_expired3(p2);
     fu2.get();
     BOOST_CHECK_MESSAGE(timer_expired_count==2,"timer callback not called twice.");
 }
