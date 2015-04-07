@@ -150,7 +150,7 @@ BOOST_AUTO_TEST_CASE( test_two_servants_log )
             fu2.get();
         }
         {
-            diag_type diag = scheduler.get_diagnostics();
+            diag_type diag = scheduler.get_diagnostics().totals();
             bool has_foo=false;
             bool has_foobar=false;
             for (auto mit = diag.begin(); mit != diag.end() ; ++mit)
@@ -170,7 +170,7 @@ BOOST_AUTO_TEST_CASE( test_two_servants_log )
             BOOST_CHECK_MESSAGE(has_foobar,"foobar not found in diagnostics.");
         }
         {
-            diag_type diag = scheduler2.get_diagnostics();
+            diag_type diag = scheduler2.get_diagnostics().totals();
             bool has_foo=false;
             bool has_foobar=false;
             for (auto mit = diag.begin(); mit != diag.end() ; ++mit)

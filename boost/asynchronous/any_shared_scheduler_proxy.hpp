@@ -31,6 +31,7 @@
 #include <boost/asynchronous/detail/any_pointer.hpp>
 #include <boost/asynchronous/detail/any_interruptible.hpp>
 #include <boost/asynchronous/queue/any_queue.hpp>
+#include <boost/asynchronous/scheduler_diagnostics.hpp>
 
 BOOST_MPL_HAS_XXX_TRAIT_DEF(self_proxy_creation)
 
@@ -77,12 +78,10 @@ struct any_shared_scheduler_proxy_concept:
     boost::asynchronous::has_reset<void()>,
     boost::asynchronous::has_clear_diagnostics<void(), boost::type_erasure::_a>,
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    boost::asynchronous::has_get_diagnostics<std::map<std::string,
-                                                   std::list<boost::asynchronous::diagnostic_item<Clock> > >(std::size_t),
+    boost::asynchronous::has_get_diagnostics<boost::asynchronous::scheduler_diagnostics<JOB>(std::size_t),
                                           const boost::type_erasure::_a>,
 #endif
-    boost::asynchronous::has_get_diagnostics<std::map<std::string,
-                                                   std::list<boost::asynchronous::diagnostic_item<Clock> > >(),
+    boost::asynchronous::has_get_diagnostics<boost::asynchronous::scheduler_diagnostics<JOB>(),
                                           const boost::type_erasure::_a>,
     boost::asynchronous::has_get_internal_scheduler_aspect<boost::asynchronous::internal_scheduler_aspect<JOB>(), boost::type_erasure::_a>,
     boost::asynchronous::has_set_name<void(std::string const&), boost::type_erasure::_a>,
@@ -150,7 +149,7 @@ public:
     {
         return (*my_ptr).get_queue_size();
     }
-    std::map<std::string,std::list<boost::asynchronous::diagnostic_item<Clock> > > get_diagnostics(std::size_t prio=0)const
+    boost::asynchronous::scheduler_diagnostics<JOB> get_diagnostics(std::size_t prio=0)const
     {
         return (*my_ptr).get_diagnostics(prio);
     }
@@ -201,7 +200,7 @@ struct any_shared_scheduler_proxy_concept
     virtual boost::asynchronous::any_weak_scheduler<JOB> get_weak_scheduler() const = 0;
     virtual bool is_valid() const =0;
     virtual std::vector<std::size_t> get_queue_size()const=0;
-    virtual std::map<std::string,std::list<boost::asynchronous::diagnostic_item<Clock> > > get_diagnostics(std::size_t =0)const =0;
+    virtual boost::asynchronous::scheduler_diagnostics<JOB> get_diagnostics(std::size_t =0)const =0;
     virtual void clear_diagnostics() =0;
     virtual boost::asynchronous::internal_scheduler_aspect<JOB> get_internal_scheduler_aspect() =0;
     virtual void set_name(std::string const&)=0;
@@ -256,7 +255,7 @@ public:
     {
         return (*my_ptr).get_queue_size();
     }
-    std::map<std::string,std::list<boost::asynchronous::diagnostic_item<Clock> > > get_diagnostics(std::size_t prio=0)const
+    boost::asynchronous::scheduler_diagnostics<JOB> get_diagnostics(std::size_t prio=0)const
     {
         return (*my_ptr).get_diagnostics(prio);
     }

@@ -119,7 +119,7 @@ struct Servant : boost::asynchronous::trackable_servant<log_servant_job,log_serv
     // threadpool diagnostics
     diag_type get_diagnostics() const
     {
-        return get_worker().get_diagnostics();
+        return get_worker().get_diagnostics().totals();
     }
 private:
 // for testing
@@ -181,7 +181,7 @@ void example_post_tcp_log()
                 }
             }
             std::cout << "Display of servant jobs" << std::endl;
-            diag_type single_thread_sched_diag = scheduler.get_diagnostics();
+            diag_type single_thread_sched_diag = scheduler.get_diagnostics().totals();
             for (auto mit = single_thread_sched_diag.begin(); mit != single_thread_sched_diag.end() ; ++mit)
             {
                 std::cout << "job type: " << (*mit).first << std::endl;

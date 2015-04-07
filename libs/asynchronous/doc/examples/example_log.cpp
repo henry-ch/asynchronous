@@ -88,7 +88,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
     // get_worker is provided by trackable_servant and gives the proxy of our threadpool
     diag_type get_diagnostics() const
     {
-        return get_worker().get_diagnostics();
+        return get_worker().get_diagnostics().totals();
     }
 
 private:
@@ -154,7 +154,7 @@ void example_log()
             }
 
             // let's ask the single-threaded scheduler what it did.
-            diag_type single_thread_sched_diag = scheduler.get_diagnostics();
+            diag_type single_thread_sched_diag = scheduler.get_diagnostics().totals();
             // we expect 4 jobs: proxy::start_async_work, proxy::get_diagnostics and
             // int_async_work (the callback part of post_callback), and proxy::start_interruptible_async_work
             // no job will be interrupted as we stop the threadpool worker task, not the single-threaded one.

@@ -148,8 +148,7 @@ public:
             (*it).set_name(name);
         }
     }
-    std::map<std::string,
-             std::list<typename boost::asynchronous::job_traits<job_type>::diagnostic_item_type > >
+    boost::asynchronous::scheduler_diagnostics<job_type>
     get_diagnostics(std::size_t pos=0)const
     {
         if (pos==0)
@@ -158,7 +157,7 @@ public:
                      std::list<typename boost::asynchronous::job_traits<job_type>::diagnostic_item_type > > res;
             for (typename std::vector<subpool_type>::const_iterator it = m_subpools.begin(); it != m_subpools.end();++it)
             {
-                auto one_diag = (*it).get_diagnostics();
+                auto one_diag = (*it).get_diagnostics().totals();
                 res.insert(one_diag.begin(),one_diag.end());
             }
             return res;
@@ -363,8 +362,7 @@ private:
             return res;
         }
 
-        std::map<std::string,
-                 std::list<typename boost::asynchronous::job_traits<job_type>::diagnostic_item_type > >
+        boost::asynchronous::scheduler_diagnostics<job_type>
         get_diagnostics(std::size_t pos=0)const
         {
             if (m_schedulers.empty())
@@ -372,13 +370,12 @@ private:
                         std::list<typename boost::asynchronous::job_traits<job_type>::diagnostic_item_type > >();
             if (pos==0)
             {
-                std::map<std::string,
-                         std::list<typename boost::asynchronous::job_traits<job_type>::diagnostic_item_type > > res;
+                boost::asynchronous::scheduler_diagnostics<job_type> res;
                 for (typename std::vector<boost::asynchronous::any_shared_scheduler<job_type> >::const_iterator it = m_schedulers.begin();
                      it != m_schedulers.end();++it)
                 {
                     auto one_diag = (*it).get_diagnostics();
-                    res.insert(one_diag.begin(),one_diag.end());
+                    res.merge(std::move(one_diag));
                 }
                 return res;
             }

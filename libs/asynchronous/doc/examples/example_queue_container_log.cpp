@@ -56,7 +56,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
     // threadpool diagnostics
     diag_type get_diagnostics() const
     {
-        return get_worker().get_diagnostics();
+        return get_worker().get_diagnostics().totals();
     }
 
 private:
@@ -120,7 +120,7 @@ void example_queue_container_log()
         // wait a bit for tasks to be finished
         boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
 
-        diag_type single_thread_sched_diag = scheduler.get_diagnostics();
+        diag_type single_thread_sched_diag = scheduler.get_diagnostics().totals();
         std::cout << "Display of scheduler jobs" << std::endl;
         for (auto mit = single_thread_sched_diag.begin(); mit != single_thread_sched_diag.end() ; ++mit)
         {

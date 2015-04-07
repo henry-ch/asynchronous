@@ -134,8 +134,7 @@ public:
         return m_thread_ids;
     }
 
-    std::map<std::string,
-             std::list<typename boost::asynchronous::job_traits<typename queue_type::job_type>::diagnostic_item_type > >
+    boost::asynchronous::scheduler_diagnostics<job_type>
     get_diagnostics(std::size_t =0)const
     {
         return m_diagnostics->get_map();

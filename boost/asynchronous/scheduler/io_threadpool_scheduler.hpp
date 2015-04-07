@@ -136,8 +136,7 @@ public:
         boost::mutex::scoped_lock lock(m_data->m_current_number_of_workers_mutex);
         return std::vector<boost::thread::id>(m_data->m_thread_ids.begin(),m_data->m_thread_ids.end());
     }
-    std::map<std::string,
-             std::list<typename boost::asynchronous::job_traits<typename queue_type::job_type>::diagnostic_item_type > >
+    boost::asynchronous::scheduler_diagnostics<job_type>
     get_diagnostics(std::size_t =0)const
     {
         return m_diagnostics->get_map();

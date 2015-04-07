@@ -117,7 +117,7 @@ BOOST_AUTO_TEST_CASE( test_make_safe_callback )
         {
             BOOST_FAIL( "unexpected exception" );
         }
-        single_thread_sched_diag = scheduler.get_diagnostics();
+        single_thread_sched_diag = scheduler.get_diagnostics().totals();
     }
     BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
 

@@ -143,7 +143,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
     // threadpool diagnostics
     diag_type get_diagnostics() const
     {
-        return get_worker().get_diagnostics();
+        return get_worker().get_diagnostics().totals();
     }
 private:
 // for testing

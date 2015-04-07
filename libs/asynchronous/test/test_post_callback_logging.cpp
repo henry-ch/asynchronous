@@ -133,7 +133,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
     }
     diag_type get_diagnostics() const
     {
-        return get_worker().get_diagnostics();
+        return get_worker().get_diagnostics().totals();
     }
 };
 
@@ -186,7 +186,7 @@ BOOST_AUTO_TEST_CASE( test_void_post_callback_logging )
         }
         // wait for servant dtor
         boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
-        diag_type single_thread_sched_diag = scheduler.get_diagnostics();
+        diag_type single_thread_sched_diag = scheduler.get_diagnostics().totals();
         // start_void_async_work + get_diagnostics + servant dtor + void_async_work (cvallback)
         BOOST_CHECK_MESSAGE(single_thread_sched_diag.size()==4,"servant scheduler worker didn't log the number of works we expected.");
         for (auto mit = single_thread_sched_diag.begin(); mit != single_thread_sched_diag.end() ; ++mit)
@@ -200,7 +200,7 @@ BOOST_AUTO_TEST_CASE( test_void_post_callback_logging )
         }
         // clear diags
         scheduler.clear_diagnostics();
-        single_thread_sched_diag = scheduler.get_diagnostics();
+        single_thread_sched_diag = scheduler.get_diagnostics().totals();
         BOOST_CHECK_MESSAGE(single_thread_sched_diag.empty(),"Diags should have been cleared.");
         {
             ServantProxy proxy(scheduler);

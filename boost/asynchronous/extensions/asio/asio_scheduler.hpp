@@ -150,13 +150,11 @@ public:
         return m_thread_ids;
     }
     
-    std::map<std::string,
-             std::list<typename boost::asynchronous::job_traits<job_type>::diagnostic_item_type > >
+    boost::asynchronous::scheduler_diagnostics<job_type>
     get_diagnostics(std::size_t =0)const
     {
         // TODO if possible
-        return std::map<std::string,
-                std::list<typename boost::asynchronous::job_traits<job_type>::diagnostic_item_type > >();
+        return boost::asynchronous::scheduler_diagnostics<job_type>();
     }
     void clear_diagnostics()
     {
