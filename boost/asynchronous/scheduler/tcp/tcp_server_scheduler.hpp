@@ -103,7 +103,7 @@ public:
     }
     void init(std::vector<boost::asynchronous::any_queue_ptr<job_type> > const& others)
     {
-        m_diagnostics = boost::make_shared<diag_type>();
+        m_diagnostics = boost::make_shared<diag_type>(1);
         boost::promise<boost::thread*> new_thread_promise;
         boost::shared_future<boost::thread*> fu = new_thread_promise.get_future();
         boost::thread* new_thread =
@@ -211,7 +211,7 @@ public:
     boost::asynchronous::scheduler_diagnostics<job_type>
     get_diagnostics(std::size_t =0)const
     {
-        return m_diagnostics->get_map();
+        return boost::asynchronous::scheduler_diagnostics<job_type>(m_diagnostics->get_map(),m_diagnostics->get_current());
     }
     void clear_diagnostics()
     {

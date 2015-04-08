@@ -84,7 +84,7 @@ public:
     }
     void constructor_done(boost::weak_ptr<this_type> weak_self)
     {
-        m_diagnostics = boost::make_shared<diag_type>();
+        m_diagnostics = boost::make_shared<diag_type>(m_number_of_workers);
         m_thread_ids.reserve(m_number_of_workers);
         m_group.reset(new boost::thread_group);
         for (size_t i = 0; i< m_number_of_workers;++i)
@@ -93,7 +93,7 @@ public:
             boost::shared_future<boost::thread*> fu = new_thread_promise.get_future();
             boost::thread* new_thread =
                     m_group->create_thread(boost::bind(&threadpool_scheduler::run,this->m_queue,
-                                                       m_private_queues[i],m_diagnostics,fu,weak_self));
+                                                       m_private_queues[i],m_diagnostics,fu,weak_self,i));
             new_thread_promise.set_value(new_thread);
             m_thread_ids.push_back(new_thread->get_id());
         }
@@ -127,7 +127,7 @@ public:
     boost::asynchronous::scheduler_diagnostics<job_type>
     get_diagnostics(std::size_t =0)const
     {
-        return m_diagnostics->get_map();
+        return boost::asynchronous::scheduler_diagnostics<job_type>(m_diagnostics->get_map(),m_diagnostics->get_current());
     }
     void clear_diagnostics()
     {
@@ -152,7 +152,7 @@ public:
     }
     // try to execute a job, return true
     static bool execute_one_job(boost::shared_ptr<queue_type> queue,CPULoad& cpu_load,boost::shared_ptr<diag_type> diagnostics,
-                                std::list<boost::asynchronous::any_continuation>& waiting)
+                                std::list<boost::asynchronous::any_continuation>& waiting,size_t index)
     {
         bool popped = false;
         // get a job
@@ -171,8 +171,11 @@ public:
                         (&job,diagnostics.get());
                 // log time
                 boost::asynchronous::job_traits<typename Q::job_type>::set_started_time(job);
+                // log current
+                boost::asynchronous::job_traits<typename Q::job_type>::add_current_diagnostic(index,job,diagnostics.get());
                 // execute job
                 job();
+                boost::asynchronous::job_traits<typename Q::job_type>::reset_current_diagnostic(index,diagnostics.get());
             }
             else
             {
@@ -204,6 +207,7 @@ public:
             if (popped)
             {
                 boost::asynchronous::job_traits<typename Q::job_type>::set_failed(job);
+                boost::asynchronous::job_traits<typename Q::job_type>::reset_current_diagnostic(index,diagnostics.get());
             }
         }
         return popped;
@@ -213,7 +217,8 @@ public:
                     boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > private_queue,
                     boost::shared_ptr<diag_type> diagnostics,
                     boost::shared_future<boost::thread*> self,
-                    boost::weak_ptr<this_type> this_)
+                    boost::weak_ptr<this_type> this_,
+                    size_t index)
     {
         boost::thread* t = self.get();
         boost::asynchronous::detail::single_queue_scheduler_policy<Q>::m_self_thread.reset(new thread_ptr_wrapper(t));
@@ -230,7 +235,7 @@ public:
             try
             {
                 {
-                    bool popped = execute_one_job(queue,cpu_load,diagnostics,waiting);
+                    bool popped = execute_one_job(queue,cpu_load,diagnostics,waiting,index);
                     if (!popped)
                     {
                         cpu_load.loop_done_no_job();
@@ -251,7 +256,7 @@ public:
             catch(boost::asynchronous::detail::shutdown_exception&)
             {
                 // we are done, execute jobs posted short before to the end, then shutdown
-                while(execute_one_job(queue,cpu_load,diagnostics,waiting));
+                while(execute_one_job(queue,cpu_load,diagnostics,waiting,index));
                 delete boost::asynchronous::detail::single_queue_scheduler_policy<Q>::m_self_thread.release();
                 return;
             }

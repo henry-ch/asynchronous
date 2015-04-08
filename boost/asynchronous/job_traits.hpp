@@ -279,6 +279,14 @@ struct job_traits
     static void add_diagnostic(T&,Diag*)
     {
     }
+    template <class Diag>
+    static void add_current_diagnostic(size_t ,T& ,Diag* )
+    {
+    }
+    template <class Diag>
+    static void reset_current_diagnostic(size_t ,Diag* )
+    {
+    }
 };
 
 template< >
@@ -325,6 +333,14 @@ struct job_traits< boost::asynchronous::any_callable >
     }
     template <class Diag>
     static void add_diagnostic(boost::asynchronous::any_callable& ,Diag* )
+    {
+    }
+    template <class Diag>
+    static void add_current_diagnostic(size_t ,boost::asynchronous::any_callable& ,Diag* )
+    {
+    }
+    template <class Diag>
+    static void reset_current_diagnostic(size_t ,Diag* )
     {
     }
 };
@@ -382,6 +398,16 @@ struct job_traits< boost::asynchronous::any_loggable<Clock> >
     {
         diag->add(job.get_name(),job.get_diagnostic_item());
     }
+    template <class Diag>
+    static void add_current_diagnostic(size_t index,boost::asynchronous::any_loggable<Clock>& job,Diag* diag)
+    {
+        diag->set_current(index,job.get_name(),job.get_diagnostic_item());
+    }
+    template <class Diag>
+    static void reset_current_diagnostic(size_t index,Diag* diag)
+    {
+        diag->reset_current(index);
+    }
 };
 
 template< >
@@ -428,6 +454,14 @@ struct job_traits< boost::asynchronous::any_serializable >
     }
     template <class Diag>
     static void add_diagnostic(boost::asynchronous::any_serializable& ,Diag* )
+    {
+    }
+    template <class Diag>
+    static void add_current_diagnostic(size_t ,boost::asynchronous::any_serializable& ,Diag* )
+    {
+    }
+    template <class Diag>
+    static void reset_current_diagnostic(size_t ,Diag* )
     {
     }
 };

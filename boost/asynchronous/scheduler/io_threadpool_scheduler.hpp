@@ -88,7 +88,7 @@ public:
     }
     void constructor_done(boost::weak_ptr<this_type> weak_self)
     {
-        m_diagnostics = boost::make_shared<diag_type>();
+        m_diagnostics = boost::make_shared<diag_type>(m_data->m_max_number_of_workers);
         m_data->m_weak_self = weak_self;
         for (size_t i = 0; i< m_data->m_min_number_of_workers;++i)
         {
@@ -98,7 +98,7 @@ public:
             boost::thread* new_thread =
                     m_data->m_group->create_thread(
                         boost::bind(&io_threadpool_scheduler::run_always,this->m_queue,
-                                    m_private_queues[i],m_diagnostics,fu,weak_self,d));
+                                    m_private_queues[i],m_diagnostics,fu,weak_self,d,i));
             new_thread_promise.set_value(new_thread);
             m_data->m_thread_ids.insert(new_thread->get_id());
         }
@@ -139,7 +139,7 @@ public:
     boost::asynchronous::scheduler_diagnostics<job_type>
     get_diagnostics(std::size_t =0)const
     {
-        return m_diagnostics->get_map();
+        return boost::asynchronous::scheduler_diagnostics<job_type>(m_diagnostics->get_map(),m_diagnostics->get_current());
     }
     void clear_diagnostics()
     {
@@ -165,7 +165,8 @@ public:
             boost::thread* new_thread =
                      m_data->m_group->create_thread(boost::bind(&io_threadpool_scheduler::run_once,this->m_queue,
                                                                 m_private_queues[m_data->m_current_number_of_workers-1],
-                                                                m_diagnostics,fu,m_data->m_weak_self,d,c));
+                                                                m_diagnostics,fu,m_data->m_weak_self,d,c,
+                                                                m_data->m_current_number_of_workers-1));
             //lock.lock();
             m_data->m_thread_ids.insert(new_thread->get_id());
             new_thread_promise.set_value(new_thread);
@@ -291,7 +292,7 @@ public:
 
     // try to execute a job, return true
     static bool execute_one_job(boost::shared_ptr<queue_type> queue,CPULoad* cpu_load,boost::shared_ptr<diag_type> diagnostics,
-                                std::list<boost::asynchronous::any_continuation>& waiting)
+                                std::list<boost::asynchronous::any_continuation>& waiting,size_t index)
     {
         bool popped = false;
         // get a job
@@ -310,8 +311,11 @@ public:
                         (&job,diagnostics.get());
                 // log time
                 boost::asynchronous::job_traits<typename Q::job_type>::set_started_time(job);
+                // log current
+                boost::asynchronous::job_traits<typename Q::job_type>::add_current_diagnostic(index,job,diagnostics.get());
                 // execute job
                 job();
+                boost::asynchronous::job_traits<typename Q::job_type>::reset_current_diagnostic(index,diagnostics.get());
             }
             else
             {
@@ -343,6 +347,7 @@ public:
             if (popped)
             {
                 boost::asynchronous::job_traits<typename Q::job_type>::set_failed(job);
+                boost::asynchronous::job_traits<typename Q::job_type>::reset_current_diagnostic(index,diagnostics.get());
             }
         }
         return popped;
@@ -350,12 +355,13 @@ public:
     static bool run_loop(boost::shared_ptr<queue_type> queue,
                          boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > private_queue,
                          std::list<boost::asynchronous::any_continuation>& waiting,
-                         boost::shared_ptr<diag_type> diagnostics,CPULoad* cpu_load)
+                         boost::shared_ptr<diag_type> diagnostics,CPULoad* cpu_load,
+                         size_t index)
     {
         bool executed_job=false;
         {
             {
-                executed_job = execute_one_job(queue,cpu_load,diagnostics,waiting);
+                executed_job = execute_one_job(queue,cpu_load,diagnostics,waiting,index);
                 if (!executed_job)
                 {
                     if (cpu_load)
@@ -383,7 +389,8 @@ public:
                            boost::shared_ptr<diag_type> diagnostics,
                            boost::shared_future<boost::thread*> self,
                            boost::weak_ptr<this_type> this_,
-                           boost::function<void()> on_done)
+                           boost::function<void()> on_done,
+                           size_t index)
     {
         boost::thread* t = self.get();
         boost::asynchronous::detail::single_queue_scheduler_policy<Q>::m_self_thread.reset(new thread_ptr_wrapper(t));
@@ -399,12 +406,12 @@ public:
         {
             try
             {
-                run_loop(queue,private_queue,waiting,diagnostics,&cpu_load);
+                run_loop(queue,private_queue,waiting,diagnostics,&cpu_load,index);
             }
             catch(boost::asynchronous::detail::shutdown_exception&)
             {
                 // we are done, execute jobs posted short before to the end, then shutdown
-                while(execute_one_job(queue,&cpu_load,diagnostics,waiting));
+                while(execute_one_job(queue,&cpu_load,diagnostics,waiting,index));
                 on_done();
                 delete boost::asynchronous::detail::single_queue_scheduler_policy<Q>::m_self_thread.release();
                 return;
@@ -432,7 +439,8 @@ public:
                          boost::shared_future<boost::thread*> self,
                          boost::weak_ptr<this_type> this_,
                          boost::function<void(boost::thread*)> on_done,
-                         boost::function<bool()> check_continue)
+                         boost::function<bool()> check_continue,
+                         size_t index)
     {
         boost::thread* t = self.get();
         boost::asynchronous::detail::single_queue_scheduler_policy<Q>::m_self_thread.reset(new thread_ptr_wrapper(t));
@@ -447,7 +455,8 @@ public:
         {
             try
             {
-                run_loop(queue,boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >(),waiting,diagnostics,0);
+                run_loop(queue,boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >(),
+                         waiting,diagnostics,nullptr,index);
             }
             catch(boost::asynchronous::detail::shutdown_exception&)
             {

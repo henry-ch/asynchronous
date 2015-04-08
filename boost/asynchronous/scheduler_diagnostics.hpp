@@ -21,9 +21,10 @@ template <class Job>
 struct scheduler_diagnostics
 {
     typedef std::map<std::string,std::list<typename boost::asynchronous::job_traits<Job>::diagnostic_item_type>> total_type;
+    typedef std::vector<std::pair<std::string,typename boost::asynchronous::job_traits<Job>::diagnostic_item_type>> current_type;
 
-    scheduler_diagnostics(total_type const& t)
-        : m_totals(t)
+    scheduler_diagnostics(total_type const& t, current_type const& c)
+        : m_totals(t), m_current(c)
     {}
     scheduler_diagnostics() = default;
     scheduler_diagnostics (scheduler_diagnostics&&)=default;
@@ -34,6 +35,10 @@ struct scheduler_diagnostics
     total_type totals() const
     {
         return m_totals;
+    }
+    current_type current() const
+    {
+        return m_current;
     }
     void merge(scheduler_diagnostics<Job>&& other)
     {
@@ -51,10 +56,12 @@ struct scheduler_diagnostics
                 (*it).second.insert((*it).second.end(),diag.second.begin(),diag.second.end());
             }
         }
+        m_current.insert(m_current.end(),other.m_current.begin(),other.m_current.end());
     }
 
 private:
     total_type m_totals;
+    current_type m_current;
 };
 
 }}

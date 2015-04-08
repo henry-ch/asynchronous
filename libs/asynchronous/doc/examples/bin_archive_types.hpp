@@ -84,6 +84,14 @@ struct job_traits< boost::asynchronous::any_bin_serializable >
     static void set_failed(boost::asynchronous::any_bin_serializable& )
     {
     }
+    template <class Diag>
+    static void add_current_diagnostic(size_t ,boost::asynchronous::any_bin_serializable& ,Diag* )
+    {
+    }
+    template <class Diag>
+    static void reset_current_diagnostic(size_t ,Diag* )
+    {
+    }
 };
 namespace tcp
 {

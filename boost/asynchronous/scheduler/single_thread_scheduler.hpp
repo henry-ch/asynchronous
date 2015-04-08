@@ -75,7 +75,7 @@ public:
     }
     void constructor_done(boost::weak_ptr<this_type> weak_self)
     {
-        m_diagnostics = boost::make_shared<diag_type>();
+        m_diagnostics = boost::make_shared<diag_type>(1);
         boost::promise<boost::thread*> new_thread_promise;
         boost::shared_future<boost::thread*> fu = new_thread_promise.get_future();
         boost::thread* new_thread =
@@ -116,7 +116,7 @@ public:
     boost::asynchronous::scheduler_diagnostics<job_type>
     get_diagnostics(std::size_t =0)const
     {
-        return m_diagnostics->get_map();
+        return boost::asynchronous::scheduler_diagnostics<job_type>(m_diagnostics->get_map(),m_diagnostics->get_current());
     }
     void clear_diagnostics()
     {
@@ -162,8 +162,11 @@ public:
                             (&job,diagnostics.get());
                     // log time
                     boost::asynchronous::job_traits<typename Q::job_type>::set_started_time(job);
+                    // log current
+                    boost::asynchronous::job_traits<typename Q::job_type>::add_current_diagnostic(0,job,diagnostics.get());
                     // execute job
                     job();
+                    boost::asynchronous::job_traits<typename Q::job_type>::reset_current_diagnostic(0,diagnostics.get());
                 }
                 else
                 {
@@ -197,6 +200,7 @@ public:
             if (popped)
             {
                 boost::asynchronous::job_traits<typename Q::job_type>::set_failed(job);
+                boost::asynchronous::job_traits<typename Q::job_type>::reset_current_diagnostic(0,diagnostics.get());
             }
         }
         return popped;

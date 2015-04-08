@@ -155,12 +155,17 @@ public:
         {
             std::map<std::string,
                      std::list<typename boost::asynchronous::job_traits<job_type>::diagnostic_item_type > > res;
+
+            std::vector<std::pair<std::string,typename boost::asynchronous::job_traits<Job>::diagnostic_item_type>> res2;
             for (typename std::vector<subpool_type>::const_iterator it = m_subpools.begin(); it != m_subpools.end();++it)
             {
                 auto one_diag = (*it).get_diagnostics().totals();
                 res.insert(one_diag.begin(),one_diag.end());
+
+                auto one_diag2 = (*it).get_diagnostics().current();
+                res2.insert(res2.end(),one_diag2.begin(),one_diag2.end());
             }
-            return res;
+            return boost::asynchronous::scheduler_diagnostics<job_type>(res,res2);
         }
         else
         {
@@ -366,8 +371,7 @@ private:
         get_diagnostics(std::size_t pos=0)const
         {
             if (m_schedulers.empty())
-                return std::map<std::string,
-                        std::list<typename boost::asynchronous::job_traits<job_type>::diagnostic_item_type > >();
+                return boost::asynchronous::scheduler_diagnostics<job_type>();
             if (pos==0)
             {
                 boost::asynchronous::scheduler_diagnostics<job_type> res;

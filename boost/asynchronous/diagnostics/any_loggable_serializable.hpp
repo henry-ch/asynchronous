@@ -90,6 +90,16 @@ struct job_traits< boost::asynchronous::any_loggable_serializable<Clock> >
     {
         diag->add(job.get_name(),job.get_diagnostic_item());
     }
+    template <class Diag>
+    static void add_current_diagnostic(size_t index,boost::asynchronous::any_loggable_serializable<Clock>& job,Diag* diag)
+    {
+        diag->set_current(index,job.get_name(),job.get_diagnostic_item());
+    }
+    template <class Diag>
+    static void reset_current_diagnostic(size_t index,Diag* diag)
+    {
+        diag->reset_current(index);
+    }
 };
 
 }}

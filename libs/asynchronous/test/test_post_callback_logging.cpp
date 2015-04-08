@@ -28,6 +28,8 @@ namespace
 {
 typedef boost::asynchronous::any_loggable<boost::chrono::high_resolution_clock> servant_job;
 typedef std::map<std::string,std::list<boost::asynchronous::diagnostic_item<boost::chrono::high_resolution_clock> > > diag_type;
+typedef std::vector<std::pair<std::string,boost::asynchronous::diagnostic_item<boost::chrono::high_resolution_clock>>> current_type;
+typedef std::pair<std::string,boost::asynchronous::diagnostic_item<boost::chrono::high_resolution_clock>> one_current_type;
 
 // main thread id
 boost::thread::id main_thread_id;
@@ -131,6 +133,48 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
           );
           return fu;
     }
+    boost::shared_future<void> test_current()
+    {
+        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant test_current not posted.");
+        // we need a promise to inform caller when we're done
+        boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
+        boost::shared_future<void> fu = aPromise->get_future();
+
+        boost::shared_ptr<boost::promise<void> > blocking_promise(new boost::promise<void>);
+        boost::shared_future<void> block_fu = blocking_promise->get_future();
+
+        boost::shared_ptr<boost::promise<void> > blocking_promise2(new boost::promise<void>);
+        boost::shared_future<void> block_fu2 = blocking_promise2->get_future();
+
+        // start long tasks
+        post_callback(
+                    [block_fu,blocking_promise2]()mutable
+                    {
+                        blocking_promise2->set_value();
+                        block_fu.get();
+                    },// work
+                    [aPromise,this](boost::asynchronous::expected<void> res)mutable
+                    {
+                        BOOST_CHECK_MESSAGE(!res.has_exception(),"test_current threw an exception.");
+                        current_type current = get_worker().get_diagnostics().current();
+                        bool found = (std::find_if(current.begin(),current.end(),
+                                                  [](one_current_type const& c){return c.first == "current_async_work";})
+                                     != current.end());
+                        BOOST_CHECK_MESSAGE(!found,"current job should no more be present.");
+                        aPromise->set_value();
+                    },// callback functor.
+                    "current_async_work"
+          );
+          block_fu2.get();
+          // check current (is being blocked)
+          current_type current = get_worker().get_diagnostics().current();
+          blocking_promise->set_value();
+          bool found = (std::find_if(current.begin(),current.end(),
+                                    [](one_current_type const& c){return c.first == "current_async_work";})
+                        != current.end());
+          BOOST_CHECK_MESSAGE(found,"current job is not present.");
+          return fu;
+    }
     diag_type get_diagnostics() const
     {
         return get_worker().get_diagnostics().totals();
@@ -148,6 +192,7 @@ public:
     BOOST_ASYNC_FUTURE_MEMBER_LOG(start_async_work,"proxy::start_async_work")
     BOOST_ASYNC_FUTURE_MEMBER_LOG(start_exception_async_work,"proxy::start_exception_async_work")
     BOOST_ASYNC_FUTURE_MEMBER_LOG(get_diagnostics,"proxy::get_diagnostics")
+    BOOST_ASYNC_FUTURE_MEMBER_LOG(test_current,"proxy::test_current")
 };
 
 }
@@ -290,3 +335,25 @@ BOOST_AUTO_TEST_CASE( test_post_callback_logging_exception )
     BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
 }
 
+BOOST_AUTO_TEST_CASE( test_current )
+{
+    servant_dtor=false;
+    {
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<servant_job>>>();
+
+        main_thread_id = boost::this_thread::get_id();
+        ServantProxy proxy(scheduler);
+        boost::shared_future<boost::shared_future<void> > fuv = proxy.test_current();
+        try
+        {
+            boost::shared_future<void> resfuv = fuv.get();
+            resfuv.get();
+        }
+        catch(...)
+        {
+            BOOST_FAIL( "unexpected exception" );
+        }
+    }
+    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
+}
