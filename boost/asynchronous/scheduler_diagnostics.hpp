@@ -32,11 +32,11 @@ struct scheduler_diagnostics
     scheduler_diagnostics& operator=(scheduler_diagnostics const&)=default;
     scheduler_diagnostics& operator=(scheduler_diagnostics&&)=default;
 
-    total_type totals() const
+    total_type const& totals() const
     {
         return m_totals;
     }
-    current_type current() const
+    current_type const& current() const
     {
         return m_current;
     }
