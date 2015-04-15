@@ -92,9 +92,27 @@ struct parallel_assign_visitor
         // ring map is not being cloned
         return std::move(clone);
     }
-    inline void merge(parallel_assign_visitor& rhs)
+    inline void merge(parallel_assign_visitor const& rhs)
     {
-        m_ring_map.insert(rhs.m_ring_map.begin(),rhs.m_ring_map.end());
+        //no more this: m_ring_map.insert(rhs.m_ring_map.begin(),rhs.m_ring_map.end());
+        // 2nd try the other way around, iterate through rhs
+        for (auto e : rhs.m_ring_map)
+        {
+            auto it = m_ring_map.find(e.first);
+            if (it == m_ring_map.end())
+            {
+                // --> what to do here? take rhs?
+                m_ring_map.insert(e);
+                continue;
+            }
+            ring_info_type& inner_in_map = e.second;
+            if (inner_in_map.parent_area < (*it).second.parent_area)
+            {
+                 (*it).second.parent = inner_in_map.parent;
+                 (*it).second.parent_area = inner_in_map.parent_area;
+            }
+
+        }
     }
 };
 
