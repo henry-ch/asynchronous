@@ -61,7 +61,8 @@ template<class Iterator, class ResultIterator, class Func, class Job, class Tran
 struct parallel_transform_helper : public boost::asynchronous::continuation_task<void>
 {
     parallel_transform_helper(Iterator begin, Iterator end, ResultIterator result, Func func, long cutoff, std::string const & task_name, std::size_t prio)
-        : begin_(begin)
+        : boost::asynchronous::continuation_task<void>(task_name)
+        , begin_(begin)
         , end_(end)
         , result_(result)
         , func_(std::move(func))
@@ -145,7 +146,8 @@ template<class Iterator1, class Iterator2, class ResultIterator, class Func, cla
 struct parallel_transform2_helper : public boost::asynchronous::continuation_task<void>
 {
     parallel_transform2_helper(Iterator1 begin1, Iterator1 end1, Iterator2 begin2, ResultIterator result, Func func, long cutoff, std::string const & task_name, std::size_t prio)
-        : begin1_(begin1)
+        : boost::asynchronous::continuation_task<void>(task_name)
+        , begin1_(begin1)
         , end1_(end1)
         , begin2_(begin2)
         , result_(result)
@@ -230,7 +232,8 @@ template<class Range, class ResultIterator, class Func, class Job, class Transfo
 struct parallel_transform_range_helper : public boost::asynchronous::continuation_task<void>
 {
     parallel_transform_range_helper(Range & range, ResultIterator result, Func func, long cutoff, std::string const & task_name, std::size_t prio)
-        : range_(range)
+        : boost::asynchronous::continuation_task<void>(task_name)
+        , range_(range)
         , result_(result)
         , func_(std::move(func))
         , cutoff_(cutoff)
@@ -312,7 +315,8 @@ template<class Range1, class Range2, class ResultIterator, class Func, class Job
 struct parallel_transform2_range_helper : public boost::asynchronous::continuation_task<void>
 {
     parallel_transform2_range_helper(Range1 & range1, Range2 & range2, ResultIterator result, Func func, long cutoff, std::string const & task_name, std::size_t prio)
-        : range1_(range1)
+        : boost::asynchronous::continuation_task<void>(task_name)
+        , range1_(range1)
         , range2_(range2)
         , result_(result)
         , func_(std::move(func))
