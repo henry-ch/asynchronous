@@ -144,9 +144,6 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
             auto beg = beg_;
             auto end = end_;
             auto depth = depth_;
-            auto merge_memory = merge_memory_;
-            auto merge_beg = merge_beg_;
-            auto merge_end = merge_end_;
             auto func = func_;
             auto cutoff = cutoff_;
             auto task_name = this->get_name();
@@ -154,9 +151,9 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
             auto prio = prio_;
 // GCC 4.7 imagines needing "this"
 #if BOOST_GCC_VERSION < 40800
-            cont.on_done([this,beg,end,depth,merge_memory,merge_beg,merge_end,func,cutoff,task_name,prio,task_res]
+            cont.on_done([this,beg,end,depth,func,cutoff,task_name,prio,task_res]
 #else
-            cont.on_done([beg,end,depth,merge_memory,merge_beg,merge_end,func,cutoff,task_name,prio,task_res]
+            cont.on_done([beg,end,depth,func,cutoff,task_name,prio,task_res]
 #endif
 
                          (std::tuple<boost::asynchronous::expected<bool> >&& res)
@@ -172,9 +169,9 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
                     auto cont2 = boost::asynchronous::parallel_is_reverse_sorted<Iterator,Func,Job>
                             (beg,end,func,cutoff,task_name+"_is_reverse_sorted",prio);
 #if BOOST_GCC_VERSION < 40800
-                    cont2.on_done([this,beg,end,depth,merge_memory,merge_beg,merge_end,func,cutoff,task_name,prio,task_res]
+                    cont2.on_done([this,beg,end,depth,func,cutoff,task_name,prio,task_res]
 #else
-                    cont2.on_done([beg,end,depth,merge_memory,merge_beg,merge_end,func,cutoff,task_name,prio,task_res]
+                    cont2.on_done([beg,end,depth,func,cutoff,task_name,prio,task_res]
 #endif
                                   (std::tuple<boost::asynchronous::expected<bool> >&& res)
                     {
@@ -199,7 +196,12 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
                                 });
                                 return;
                             }
-                            helper(beg,end,depth,merge_memory,merge_beg,merge_end,func,cutoff,task_name,prio,task_res);
+                            // create extra memory for merge
+                            auto size = std::distance(beg,end);
+                            boost::shared_array<value_type> merge_memory(
+                                        new typename std::iterator_traits<Iterator>::value_type[size]);
+
+                            helper(beg,end,depth,merge_memory,merge_memory.get(),merge_memory.get()+size,func,cutoff,task_name,prio,task_res);
                         }
                         catch(std::exception& e)
                         {
@@ -237,13 +239,10 @@ parallel_sort(Iterator beg, Iterator end,Func func,long cutoff,
               const std::string& task_name="", std::size_t prio=0)
 #endif
 {
-    // create extra memory for merge
-    auto size = std::distance(beg,end);
-    boost::shared_array<typename std::iterator_traits<Iterator>::value_type> merge_memory (
-                new typename std::iterator_traits<Iterator>::value_type[size]);
     return boost::asynchronous::top_level_callback_continuation_job<void,Job>
             (boost::asynchronous::detail::parallel_sort_fast_helper<Iterator,Func,Job,boost::asynchronous::std_sort>
-              (beg,end,0,merge_memory,merge_memory.get(),merge_memory.get()+size,std::move(func),cutoff,task_name,prio));
+              (beg,end,0, boost::shared_array<typename std::iterator_traits<Iterator>::value_type>(),
+               nullptr,nullptr,std::move(func),cutoff,task_name,prio));
 }
 
 template <class Iterator, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
@@ -255,13 +254,10 @@ parallel_stable_sort(Iterator beg, Iterator end,Func func,long cutoff,
                      const std::string& task_name="", std::size_t prio=0)
 #endif
 {
-    // create extra memory for merge
-    auto size = std::distance(beg,end);
-    boost::shared_array<typename std::iterator_traits<Iterator>::value_type> merge_memory (
-                new typename std::iterator_traits<Iterator>::value_type[size]);
     return boost::asynchronous::top_level_callback_continuation_job<void,Job>
             (boost::asynchronous::detail::parallel_sort_fast_helper<Iterator,Func,Job,boost::asynchronous::std_stable_sort>
-               (beg,end,0,merge_memory,merge_memory.get(),merge_memory.get()+size,std::move(func),cutoff,task_name,prio));
+               (beg,end,0,boost::shared_array<typename std::iterator_traits<Iterator>::value_type>(),
+                nullptr,nullptr,std::move(func),cutoff,task_name,prio));
 }
 
 #ifdef BOOST_ASYNCHRONOUS_USE_BOOST_SPREADSORT
@@ -274,13 +270,10 @@ parallel_spreadsort(Iterator beg, Iterator end,Func func,long cutoff,
               const std::string& task_name="", std::size_t prio=0)
 #endif
 {
-    // create extra memory for merge
-    auto size = std::distance(beg,end);
-    boost::shared_array<typename std::iterator_traits<Iterator>::value_type> merge_memory (
-                new typename std::iterator_traits<Iterator>::value_type[size]);
     return boost::asynchronous::top_level_callback_continuation_job<void,Job>
             (boost::asynchronous::detail::parallel_sort_fast_helper<Iterator,Func,Job,boost::asynchronous::boost_spreadsort>
-               (beg,end,0,merge_memory,merge_memory.get(),merge_memory.get()+size,std::move(func),cutoff,task_name,prio));
+               (beg,end,0,boost::shared_array<typename std::iterator_traits<Iterator>::value_type>(),
+                nullptr,nullptr,std::move(func),cutoff,task_name,prio));
 }
 #endif
 
