@@ -158,8 +158,8 @@ public:
                                              boost::asynchronous::tcp::server_connection<Job>>::servant_type servant_type;
     typedef typename boost::asynchronous::servant_proxy<server_connection_proxy<Job>,
                                              boost::asynchronous::tcp::server_connection<Job>>::callable_type callable_type;
-    BOOST_ASYNC_POST_MEMBER(start)
-    BOOST_ASYNC_POST_MEMBER(send)
+    BOOST_ASYNC_POST_MEMBER_LOG(start,"start",1)
+    BOOST_ASYNC_POST_MEMBER_LOG(send,"send",1)
 };
 
 }}}

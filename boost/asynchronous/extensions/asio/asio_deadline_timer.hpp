@@ -75,10 +75,10 @@ public:
         boost::asynchronous::servant_proxy< boost::asynchronous::asio_deadline_timer_proxy, boost::asynchronous::asio_deadline_timer >(s)
     {}
     BOOST_ASYNC_UNSAFE_MEMBER(unsafe_async_wait)
-    BOOST_ASYNC_POST_MEMBER(cancel)
-    BOOST_ASYNC_POST_MEMBER(cancel_one)
-    BOOST_ASYNC_POST_MEMBER(expires_from_now)
-    BOOST_ASYNC_POST_MEMBER(reset)
+    BOOST_ASYNC_POST_MEMBER_LOG(cancel,"cancel",1)
+    BOOST_ASYNC_POST_MEMBER_LOG(cancel_one,"cancel_one",1)
+    BOOST_ASYNC_POST_MEMBER_LOG(expires_from_now,"expires_from_now",1)
+    BOOST_ASYNC_POST_MEMBER_LOG(reset,"reset",1)
 };
 
 }}

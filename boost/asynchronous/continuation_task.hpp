@@ -145,7 +145,12 @@ struct continuation_task
 public:
     typedef Return return_type;
 
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+    continuation_task(const std::string& name):m_promise(),m_name(name){}
+#else
     continuation_task(const std::string& name=""):m_promise(),m_name(name){}
+#endif
+
     continuation_task(continuation_task&& rhs)noexcept
         : m_promise(std::move(rhs.m_promise))
         , m_name(std::move(rhs.m_name))
@@ -260,8 +265,11 @@ public:
         m_done_func = rhs.m_done_func;
         return *this;
     }
-
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+    continuation_task(const std::string& name):m_promise(),m_name(name){}
+#else
     continuation_task(const std::string& name=""):m_promise(),m_name(name){}
+#endif
 
     boost::future<void> get_future()const
     {
