@@ -67,6 +67,63 @@ parallel_any_of(Iterator beg, Iterator end,Func func,long cutoff,
             (boost::asynchronous::detail::parallel_all_of_helper<Iterator,Func,boost::asynchronous::detail::any_of_operator,Job>
                 (beg,end,func,cutoff,task_name,prio));
 }
+
+// version for ranges returned as continuations
+namespace detail
+{
+template <class Continuation, class Func,class Job>
+struct parallel_any_of_continuation_range_helper: public boost::asynchronous::continuation_task<bool>
+{
+    parallel_any_of_continuation_range_helper(Continuation c,Func func,long cutoff,
+                        const std::string& task_name, std::size_t prio)
+        : boost::asynchronous::continuation_task<bool>(task_name)
+        , cont_(std::move(c)),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
+    {}
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<bool> task_res = this->this_task_result();
+        auto func(std::move(func_));
+        auto cutoff = cutoff_;
+        auto task_name = this->get_name();
+        auto prio = prio_;
+        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
+        {
+            try
+            {
+                auto res = boost::make_shared<typename Continuation::return_type>(std::move(std::get<0>(continuation_res).get()));
+                auto new_continuation = boost::asynchronous::parallel_any_of
+                        <decltype(boost::begin(std::declval<typename Continuation::return_type>())), Func, Job>
+                            (boost::begin(*res),boost::end(*res),func,cutoff,task_name,prio);
+                new_continuation.on_done([res,task_res](std::tuple<boost::asynchronous::expected<bool> >&& new_continuation_res)
+                {
+                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
+                });
+            }
+            catch(std::exception& e)
+            {
+                task_res.set_exception(boost::copy_exception(e));
+            }
+        });
+    }
+    Continuation cont_;
+    Func func_;
+    long cutoff_;
+    std::size_t prio_;
+};
+
+}
+template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+typename boost::enable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<bool,Job> >::type
+parallel_any_of(Range range,Func func,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+             const std::string& task_name, std::size_t prio)
+#else
+             const std::string& task_name="", std::size_t prio=0)
+#endif
+{
+    return boost::asynchronous::top_level_callback_continuation_job<bool,Job>
+            (boost::asynchronous::detail::parallel_any_of_continuation_range_helper<Range,Func,Job>(range,std::move(func),cutoff,task_name,prio));
+}
 }}
 #endif // BOOST_ASYNCHRONOUS_PARALLEL_ANY_OF_HPP
 
