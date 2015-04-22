@@ -94,6 +94,9 @@ struct any_shared_scheduler_concept
     virtual std::vector<boost::thread::id> thread_ids() const =0;
     virtual std::vector<std::size_t> get_queue_size()const=0;
     virtual boost::asynchronous::scheduler_diagnostics<JOB> get_diagnostics(std::size_t =0)const =0;
+    virtual void register_diagnostics_functor(std::function<void(boost::asynchronous::scheduler_diagnostics<JOB>)>,
+                                              boost::asynchronous::register_diagnostics_type =
+                                                    boost::asynchronous::register_diagnostics_type()) =0;
     virtual void clear_diagnostics() =0;
 };
 template <class T = BOOST_ASYNCHRONOUS_DEFAULT_JOB,class Clock = boost::chrono::high_resolution_clock>
@@ -164,6 +167,12 @@ public:
     void clear_diagnostics()
     {
         (*my_ptr).clear_diagnostics();
+    }
+    void register_diagnostics_functor(std::function<void(boost::asynchronous::scheduler_diagnostics<job_type>)> fct,
+                                      boost::asynchronous::register_diagnostics_type t =
+                                                    boost::asynchronous::register_diagnostics_type())
+    {
+        (*my_ptr).register_diagnostics_functor(std::move(fct),std::move(t));
     }
 
 private:

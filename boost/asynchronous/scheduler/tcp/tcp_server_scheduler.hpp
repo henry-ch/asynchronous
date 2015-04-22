@@ -125,7 +125,15 @@ public:
     }
     ~tcp_server_scheduler()
     {
-        boost::asynchronous::detail::default_termination_task<typename Q::diagnostic_type,boost::thread> ttask;
+        auto fct = m_diagnostics_fct;
+        auto diag = m_diagnostics;
+        auto l = [fct,diag]() mutable
+        {
+            if (fct)
+                fct(boost::asynchronous::scheduler_diagnostics<job_type>(diag->get_map(),diag->get_current()));
+        };
+        boost::asynchronous::detail::default_termination_task<typename Q::diagnostic_type,boost::thread>
+                ttask(std::move(l));
             // this task has to be executed lat => lowest prio
 #ifndef BOOST_NO_RVALUE_REFERENCES
         boost::asynchronous::any_callable job(std::move(ttask));
@@ -216,6 +224,12 @@ public:
     void clear_diagnostics()
     {
         m_diagnostics->clear();
+    }
+    void register_diagnostics_functor(std::function<void(boost::asynchronous::scheduler_diagnostics<job_type>)> fct,
+                                      boost::asynchronous::register_diagnostics_type =
+                                                    boost::asynchronous::register_diagnostics_type())
+    {
+        m_diagnostics_fct = fct;
     }
     std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues()
     {
@@ -318,6 +332,7 @@ private:
     std::string m_address;
     unsigned int m_port;
     boost::weak_ptr<this_type> m_weak_self;
+    std::function<void(boost::asynchronous::scheduler_diagnostics<job_type>)> m_diagnostics_fct;
 };
 
 }} // boost::async::scheduler

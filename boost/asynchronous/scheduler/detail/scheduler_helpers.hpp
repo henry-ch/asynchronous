@@ -14,6 +14,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/asynchronous/scheduler/detail/exceptions.hpp>
+#include <functional>
 
 #ifdef BOOST_ASYNCHRONOUS_PRCTL_SUPPORT
 #include <sys/prctl.h>
@@ -25,10 +26,20 @@ namespace boost { namespace asynchronous { namespace detail
 template <class Diag, class ThreadType>
 struct default_termination_task: public Diag
 {
+    default_termination_task(std::function<void()> fct = std::function<void()>())
+        :m_fct(std::move(fct)){}
+    default_termination_task(default_termination_task&&)=default;
+    default_termination_task(default_termination_task const&)=default;
+    default_termination_task& operator= (default_termination_task&&)=default;
+    default_termination_task& operator= (default_termination_task const&)=default;
+
     void operator()()const
     {
+        if (m_fct)
+            m_fct();
         throw boost::asynchronous::detail::shutdown_exception();
     }
+    std::function<void()> m_fct;
 };
 
 template<class ThreadType>

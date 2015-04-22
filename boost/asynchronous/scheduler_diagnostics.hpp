@@ -64,6 +64,11 @@ private:
     current_type m_current;
 };
 
+struct register_diagnostics_type
+{
+    // placeholder for later (register atshutdown, or intervals)
+};
+
 }}
 #endif // BOOST_ASYNCHRONOUS_SCHEDULER_DIAGNOSTICS_HPP
 

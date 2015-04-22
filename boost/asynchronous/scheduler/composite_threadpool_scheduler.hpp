@@ -179,7 +179,12 @@ public:
             (*it).clear_diagnostics();
         }
     }
-    
+    void register_diagnostics_functor(std::function<void(boost::asynchronous::scheduler_diagnostics<job_type>)> ,
+                                      boost::asynchronous::register_diagnostics_type =
+                                                    boost::asynchronous::register_diagnostics_type())
+    {
+        //TODO
+    }
     boost::asynchronous::any_weak_scheduler<job_type> get_weak_scheduler() const
     {
         composite_lockable_weak_scheduler w(m_subpools);
@@ -394,6 +399,12 @@ private:
             {
                 (*it).clear_diagnostics();
             }
+        }
+        void register_diagnostics_functor(std::function<void(boost::asynchronous::scheduler_diagnostics<job_type>)> ,
+                                          boost::asynchronous::register_diagnostics_type =
+                                                        boost::asynchronous::register_diagnostics_type())
+        {
+            //TODO
         }
     private:
         std::vector<boost::asynchronous::any_shared_scheduler<job_type> > m_schedulers;

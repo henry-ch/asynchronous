@@ -103,14 +103,18 @@ public:
     {
         for (size_t i = 0; i< m_thread_ids.size();++i)
         {
-            boost::asynchronous::detail::default_termination_task<typename Q::diagnostic_type,boost::thread_group> ttask;
+            auto fct = m_diagnostics_fct;
+            auto diag = m_diagnostics;
+            auto l = [fct,diag]() mutable
+            {
+                if (fct)
+                    fct(boost::asynchronous::scheduler_diagnostics<job_type>(diag->get_map(),diag->get_current()));
+            };
+            boost::asynchronous::detail::default_termination_task<typename Q::diagnostic_type,boost::thread_group>
+                    ttask(std::move(l));
             // this task has to be executed lat => lowest prio
-#ifndef BOOST_NO_RVALUE_REFERENCES
             boost::asynchronous::any_callable job(std::move(ttask));
             m_private_queues[i]->push(std::move(job),std::numeric_limits<std::size_t>::max());
-#else
-            m_private_queues[i]->push(boost::asynchronous::any_callable(ttask),std::numeric_limits<std::size_t>::max());
-#endif
         }
     }
 
@@ -150,6 +154,13 @@ public:
 #endif
         }
     }
+    void register_diagnostics_functor(std::function<void(boost::asynchronous::scheduler_diagnostics<job_type>)> fct,
+                                      boost::asynchronous::register_diagnostics_type =
+                                                    boost::asynchronous::register_diagnostics_type())
+    {
+        m_diagnostics_fct = fct;
+    }
+
     // try to execute a job, return true
     static bool execute_one_job(boost::shared_ptr<queue_type> queue,CPULoad& cpu_load,boost::shared_ptr<diag_type> diagnostics,
                                 std::list<boost::asynchronous::any_continuation>& waiting,size_t index)
@@ -277,6 +288,7 @@ private:
     std::vector<boost::shared_ptr<
                 boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable>>> m_private_queues;
     size_t m_number_of_workers;
+    std::function<void(boost::asynchronous::scheduler_diagnostics<job_type>)> m_diagnostics_fct;
 };
 
 }} // boost::asynchronous::scheduler

@@ -112,7 +112,15 @@ public:
     {
         for (size_t i = 0; i< m_thread_ids.size();++i)
         {
-            boost::asynchronous::detail::default_termination_task<typename Q::diagnostic_type,boost::thread_group> ttask;
+            auto fct = m_diagnostics_fct;
+            auto diag = m_diagnostics;
+            auto l = [fct,diag]() mutable
+            {
+                if (fct)
+                    fct(boost::asynchronous::scheduler_diagnostics<job_type>(diag->get_map(),diag->get_current()));
+            };
+            boost::asynchronous::detail::default_termination_task<typename Q::diagnostic_type,boost::thread_group>
+                    ttask(std::move(l));
             // this task has to be executed last => lowest prio
 #ifndef BOOST_NO_RVALUE_REFERENCES
             boost::asynchronous::any_callable job(std::move(ttask));
@@ -142,6 +150,12 @@ public:
     void clear_diagnostics()
     {
         m_diagnostics->clear();
+    }
+    void register_diagnostics_functor(std::function<void(boost::asynchronous::scheduler_diagnostics<job_type>)> fct,
+                                      boost::asynchronous::register_diagnostics_type =
+                                                    boost::asynchronous::register_diagnostics_type())
+    {
+        m_diagnostics_fct = fct;
     }
     void set_steal_from_queues(std::vector<boost::asynchronous::any_queue_ptr<job_type> > const&)
     {
@@ -302,6 +316,7 @@ private:
     boost::shared_ptr<diag_type> m_diagnostics;
     std::vector<boost::shared_ptr<
                 boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable>>> m_private_queues;
+    std::function<void(boost::asynchronous::scheduler_diagnostics<job_type>)> m_diagnostics_fct;
 };
 
 }} // boost::async::scheduler
