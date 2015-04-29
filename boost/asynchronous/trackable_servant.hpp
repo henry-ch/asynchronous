@@ -20,6 +20,8 @@
 #include <boost/asynchronous/scheduler/tss_scheduler.hpp>
 #include <boost/asynchronous/detail/move_bind.hpp>
 #include <boost/system/error_code.hpp>
+#include <boost/signals2/signal.hpp>
+
 
 namespace boost { namespace asynchronous
 {
@@ -309,6 +311,13 @@ public:
                                         post_prio,
                                         cb_prio);
     }
+
+    template <class SlotFct, class Signal>
+    void safe_slot(Signal& signal, SlotFct slot)
+    {
+        signal.connect(typename Signal::slot_type(make_safe_callback(std::move(slot))).track(m_tracking));
+    }
+
 private:
     template<typename... Args>
     std::function<void(Args... )> make_safe_callback_helper(std::function<void(Args... )> func,
