@@ -312,12 +312,17 @@ public:
                                         cb_prio);
     }
 
+    // connect to a signal from any thread
     template <class SlotFct, class Signal>
-    void safe_slot(Signal& signal, SlotFct slot)
+    void safe_slot(Signal& signal, SlotFct slot,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+    const std::string& task_name, std::size_t prio)
+#else
+    const std::string& task_name="", std::size_t prio=0)
+#endif
     {
-        signal.connect(typename Signal::slot_type(make_safe_callback(std::move(slot))).track(m_tracking));
+        signal.connect(typename Signal::slot_type(make_safe_callback(std::move(slot),task_name,prio)).track(m_tracking));
     }
-
 private:
     template<typename... Args>
     std::function<void(Args... )> make_safe_callback_helper(std::function<void(Args... )> func,

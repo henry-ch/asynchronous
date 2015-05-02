@@ -406,6 +406,12 @@ public:
     static const char* get_ctor_name() {return "ctor";}
     static const char* get_dtor_name() {return "dtor";}
 
+    // return a shared_ptr to our servant (careful! Use at own risk)
+    boost::shared_ptr<servant_type> get_servant() const
+    {
+        return m_servant;
+    }
+
     scheduler_proxy_type m_proxy;
     boost::shared_ptr<servant_type> m_servant;
 
