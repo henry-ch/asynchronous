@@ -40,11 +40,11 @@ struct Servant : boost::asynchronous::trackable_servant<>
     {
         servant1_thread_id = boost::this_thread::get_id();
     }
-
-    signal_type* get_signal()
+    void connect(boost::function<void(int)> fct)
     {
-        return &m_int_signal;
+        m_int_signal.connect(std::move(fct));
     }
+
     void fire()
     {
         BOOST_CHECK_MESSAGE(m_data==42,"servant got wrong value.");
@@ -62,7 +62,7 @@ public:
     ServantProxy(Scheduler s, int data):
         boost::asynchronous::servant_proxy<ServantProxy,Servant>(s, data)
     {}
-    BOOST_ASYNC_FUTURE_MEMBER(get_signal)
+    BOOST_ASYNC_FUTURE_MEMBER(connect)
     BOOST_ASYNC_FUTURE_MEMBER(fire)
 };
 
@@ -75,9 +75,9 @@ struct Servant2 : boost::asynchronous::trackable_servant<>
     {
         servant2_thread_id = boost::this_thread::get_id();
     }
-    void connect_signal(signal_type* sig)
+    boost::function<void(int)> get_slot()
     {
-        safe_slot(*sig,[this](int i){int_slot(i);});
+        return this->make_safe_callback([this](int i){int_slot(i);});
     }
     void int_slot(int i)
     {
@@ -103,7 +103,7 @@ public:
     ServantProxy2(Scheduler s):
         boost::asynchronous::servant_proxy<ServantProxy2,Servant2>(s)
     {}
-    BOOST_ASYNC_FUTURE_MEMBER(connect_signal)
+    BOOST_ASYNC_FUTURE_MEMBER(get_slot)
     BOOST_ASYNC_FUTURE_MEMBER(get_data)
 };
 
@@ -125,7 +125,8 @@ BOOST_AUTO_TEST_CASE( test_signal_servant )
         {
             ServantProxy proxy(scheduler,42);
             ServantProxy2 proxy2(scheduler2);
-            proxy2.connect_signal(proxy.get_signal().get()).get();
+            auto fct = proxy2.get_slot().get();
+            proxy.connect(std::move(fct)).get();
             proxy.fire().get();
             int res = proxy2.get_data().get();
             BOOST_CHECK_MESSAGE(res==42,"test_signal_servant got wrong value.");
