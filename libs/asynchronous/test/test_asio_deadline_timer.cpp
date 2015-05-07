@@ -91,7 +91,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
 
         typename boost::chrono::high_resolution_clock::time_point start = boost::chrono::high_resolution_clock::now();
 
-        async_wait(m_timer,
+        async_wait_duration(
+                   m_timer,
                    boost::posix_time::milliseconds(500),
                    [this,p,start,threadid](const ::boost::system::error_code& err){
                        BOOST_CHECK_MESSAGE(threadid==boost::this_thread::get_id(),"timer callback in wrong thread.");

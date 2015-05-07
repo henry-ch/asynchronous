@@ -105,9 +105,9 @@ public:
     }
     template <class Timer, class Duration, class F>
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-    void async_wait(Timer& t, Duration timer_duration, F func, std::string const& task_name,std::size_t post_prio, std::size_t cb_prio)
+    void async_wait_duration(Timer& t, Duration timer_duration, F func, std::string const& task_name,std::size_t post_prio, std::size_t cb_prio)
 #else
-    void async_wait(Timer& t, Duration timer_duration, F func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
+    void async_wait_duration(Timer& t, Duration timer_duration, F func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
 #endif
     {
         std::function<void(const ::boost::system::error_code&)> f = std::move(func);
