@@ -18,7 +18,7 @@ namespace boost { namespace asynchronous
 
 // versions with iterators
 template <class Iterator, class Iterator2, class T, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-boost::asynchronous::detail::callback_continuation<void,Job>
+boost::asynchronous::detail::callback_continuation<Iterator2,Job>
 parallel_replace_copy_if(Iterator beg,Iterator end,Iterator2 beg2, Func func, T const& new_value,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
              const std::string& task_name, std::size_t prio)
@@ -43,7 +43,7 @@ parallel_replace_copy_if(Iterator beg,Iterator end,Iterator2 beg2, Func func, T 
 }
 
 template <class Iterator, class Iterator2, class T, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-boost::asynchronous::detail::callback_continuation<void,Job>
+boost::asynchronous::detail::callback_continuation<Iterator2,Job>
 parallel_replace_copy(Iterator beg,Iterator end,Iterator2 beg2, T const& old_value, T const& new_value,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
              const std::string& task_name, std::size_t prio)

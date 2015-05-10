@@ -31,6 +31,7 @@ namespace
 // main thread id
 boost::thread::id main_thread_id;
 bool servant_dtor=false;
+typedef std::vector<int>::iterator Iterator;
 
 struct Servant : boost::asynchronous::trackable_servant<>
 {
@@ -77,7 +78,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                   3, //new value if i==2
                                   1500);
                     },// work
-           [aPromise,ids,copy_vec,this](boost::asynchronous::expected<void> res)mutable{
+           [aPromise,ids,copy_vec,this](boost::asynchronous::expected<Iterator> res)mutable{
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
@@ -122,7 +123,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                   3, //new value if i==2
                                   1500);
                     },// work
-           [aPromise,ids,copy_vec,this](boost::asynchronous::expected<void> res)mutable{
+           [aPromise,ids,copy_vec,this](boost::asynchronous::expected<Iterator> res)mutable{
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");

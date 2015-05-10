@@ -38,6 +38,7 @@ namespace
 // main thread id
 boost::thread::id main_thread_id;
 bool servant_dtor=false;
+typedef std::vector<int>::iterator Iterator;
 
 struct my_exception : virtual boost::exception, virtual std::exception
 {
@@ -85,7 +86,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                 BOOST_CHECK_MESSAGE(contains_id(ids.begin(), ids.end(), boost::this_thread::get_id()), "task executed in the wrong thread");
                 return boost::asynchronous::parallel_transform(this->m_data.begin(), this->m_data.end(), this->m_result.begin(), [](int i) { return ++i; }, 1500, "", 0);
             },
-            [aPromise, ids, data_copy, result_copy, this](boost::asynchronous::expected<void> res) mutable
+            [aPromise, ids, data_copy, result_copy, this](boost::asynchronous::expected<Iterator> res) mutable
             {
                 BOOST_CHECK_MESSAGE(!res.has_exception(), "servant work threw an exception.");
                 BOOST_CHECK_MESSAGE(main_thread_id != boost::this_thread::get_id(), "servant callback in main thread.");
@@ -122,7 +123,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                 BOOST_CHECK_MESSAGE(contains_id(ids.begin(), ids.end(), boost::this_thread::get_id()), "task executed in the wrong thread");
                 return boost::asynchronous::parallel_transform(this->m_data.begin(), this->m_data.end(), this->m_data2.begin(), this->m_result.begin(), [](int i, int j) { return i + j; }, 1500, "", 0);
             },
-            [aPromise, ids, data_copy, data2_copy, result_copy, this](boost::asynchronous::expected<void> res) mutable
+            [aPromise, ids, data_copy, data2_copy, result_copy, this](boost::asynchronous::expected<Iterator> res) mutable
             {
                 BOOST_CHECK_MESSAGE(!res.has_exception(), "servant work threw an exception.");
                 BOOST_CHECK_MESSAGE(main_thread_id != boost::this_thread::get_id(), "servant callback in main thread.");
@@ -159,7 +160,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                 BOOST_CHECK_MESSAGE(contains_id(ids.begin(), ids.end(), boost::this_thread::get_id()), "task executed in the wrong thread");
                 return boost::asynchronous::parallel_transform(this->m_data, this->m_result.begin(), [](int i) { return ++i; }, 1500, "", 0);
             },
-            [aPromise, ids, data_copy, result_copy, this](boost::asynchronous::expected<void> res) mutable
+            [aPromise, ids, data_copy, result_copy, this](boost::asynchronous::expected<Iterator> res) mutable
             {
                 BOOST_CHECK_MESSAGE(!res.has_exception(), "servant work threw an exception.");
                 BOOST_CHECK_MESSAGE(main_thread_id != boost::this_thread::get_id(), "servant callback in main thread.");
@@ -197,7 +198,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                 BOOST_CHECK_MESSAGE(contains_id(ids.begin(), ids.end(), boost::this_thread::get_id()), "task executed in the wrong thread");
                 return boost::asynchronous::parallel_transform(this->m_data, this->m_data2, this->m_result.begin(), [](int i, int j) { return i + j; }, 1500, "", 0);
             },
-            [aPromise, ids, data_copy, data2_copy, result_copy, this](boost::asynchronous::expected<void> res) mutable
+            [aPromise, ids, data_copy, data2_copy, result_copy, this](boost::asynchronous::expected<Iterator> res) mutable
             {
                 BOOST_CHECK_MESSAGE(!res.has_exception(), "servant work threw an exception.");
                 BOOST_CHECK_MESSAGE(main_thread_id != boost::this_thread::get_id(), "servant callback in main thread.");
