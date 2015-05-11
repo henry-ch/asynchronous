@@ -382,8 +382,17 @@ public:
         typename boost::asynchronous::job_traits<callable_type>::wrapper_type  a(std::move(n));
         a.set_name(ServantProxy::get_dtor_name());
         m_proxy.post(std::move(a),ServantProxy::get_dtor_prio());
-        // block until done if necessary (TODO better later)
-        dtor_wait_helper<servant_type>(std::move(fu));
+        try
+        {
+            // no interruption could go good here
+            boost::this_thread::disable_interruption di;
+            // block until done if necessary (TODO better later)
+            dtor_wait_helper<servant_type>(std::move(fu));
+        }
+        catch(...)
+        {
+            //no throw from destructor
+        }
 
         m_servant.reset();
         m_proxy.reset();

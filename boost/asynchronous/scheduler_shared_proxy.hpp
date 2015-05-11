@@ -153,6 +153,8 @@ public:
         //TODO post instead?
         boost::asynchronous::any_joinable worker = m_scheduler->get_worker();
         m_scheduler.reset();
+        // no interruption could go good here
+        boost::this_thread::disable_interruption di;
         worker.join();
     }
 
