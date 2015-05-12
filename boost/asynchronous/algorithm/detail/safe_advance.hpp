@@ -64,5 +64,29 @@ Iterator find_cutoff(Iterator it, Distance n, Iterator end)
 {
     return find_cutoff_helper(it,n,end,typename std::iterator_traits<Iterator>::iterator_category());
 }
+
+template <class It, class Distance>
+std::pair<It,It> find_cutoff_and_prev_helper(It it, Distance n, It end,std::random_access_iterator_tag)
+{
+    if (end-it <= n)
+        return std::make_pair(end,end);
+    return std::make_pair(it -1 + (end-it)/2,it + (end-it)/2);
+}
+template <class It, class Distance>
+std::pair<It,It> find_cutoff_and_prev_helper(It it, Distance n, It end,std::input_iterator_tag)
+{
+    // advance up to cutoff or end
+    It it2 = it;
+    boost::asynchronous::detail::safe_advance(it2,n-1,end);
+    it = it2;
+    boost::asynchronous::detail::safe_advance(it,1,end);
+    return std::make_pair(it2,it);
+}
+template <class It, class Distance>
+std::pair<It,It> find_cutoff_and_prev(It it, Distance n, It end)
+{
+    return find_cutoff_and_prev_helper(it,n,end,typename std::iterator_traits<It>::iterator_category());
+}
+
 }}}
 #endif // BOOST_ASYNCHRONOUS_SAFE_ADVANCE_HPP
