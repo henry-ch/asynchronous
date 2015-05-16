@@ -51,8 +51,18 @@ struct parallel_partition_part1_helper: public boost::asynchronous::continuation
         Iterator it = boost::asynchronous::detail::find_cutoff(beg_,cutoff_,end_);
         if (it == end_)
         {
-            Iterator it_part = std::partition(beg_,end_,std::move(func_));
-            partition_data data(std::distance(beg_,it_part),std::distance(it_part,end_));
+            std::size_t count_true=0;
+            std::size_t count_false=0;
+            for (auto it = beg_; it != end_; ++it)
+            {
+                if (func_(*it))
+                    ++ count_true;
+                else
+                    ++count_false;
+            }
+            partition_data data(count_true,count_false);
+            //Iterator it_part = std::partition(beg_,end_,std::move(func_));
+            //partition_data data(std::distance(beg_,it_part),std::distance(it_part,end_));
             task_res.set_value(std::move(data));
         }
         else
@@ -108,16 +118,16 @@ parallel_partition_part1(Iterator beg, Iterator end, Func func,long cutoff,
 
 }
 
-template <class Iterator, class Iterator2, class Job>
+template <class Iterator, class Iterator2, class Func, class Job>
 struct parallel_partition_part2_helper: public boost::asynchronous::continuation_task<void>
 {
-    parallel_partition_part2_helper(Iterator beg, Iterator end, Iterator2 out,
+    parallel_partition_part2_helper(Iterator beg, Iterator end, Iterator2 out,Func func,
                                     std::size_t start_false,
                                     std::size_t offset_true, std::size_t offset_false,
                                     boost::asynchronous::detail::partition_data data,
                                     long cutoff, const std::string& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<void>(task_name),
-          beg_(beg),end_(end),out_(out),start_false_(start_false),offset_true_(offset_true),offset_false_(offset_false),data_(std::move(data)),
+          beg_(beg),end_(end),out_(out),func_(std::move(func)),start_false_(start_false),offset_true_(offset_true),offset_false_(offset_false),data_(std::move(data)),
           cutoff_(cutoff),prio_(prio)
     {}
     void operator()()const
@@ -131,12 +141,20 @@ struct parallel_partition_part2_helper: public boost::asynchronous::continuation
             auto out = out_;
             auto beg = beg_;
             std::advance(out,offset_true_);
-            std::move(beg, beg+data_.partition_true_, out);
-            // write false part
-            auto out2 = out_;
-            std::advance(beg,data_.partition_true_);
-            std::advance(out2,offset_false_ + start_false_);
-            std::move(beg, beg+data_.partition_false_, out2);
+            auto out2 = out_+offset_false_+ start_false_;
+            while (beg != end_)
+            {
+                 if (func_(*beg))
+                 {
+                     *out++ = *beg;
+                 }
+                 else
+                 {
+                     *out2++ = *beg;
+                 }
+                 beg++;
+            }
+
             // done
             task_res.set_value();
         }
@@ -159,13 +177,13 @@ struct parallel_partition_part2_helper: public boost::asynchronous::continuation
                             }
                         },
                         // recursive tasks
-                        parallel_partition_part2_helper<Iterator,Iterator2,Job>
-                                (beg_,it,out_,start_false_,
+                        parallel_partition_part2_helper<Iterator,Iterator2,Func,Job>
+                                (beg_,it,out_,func_,start_false_,
                                  offset_true_,
                                  offset_false_,
                                  data_.data_[0],cutoff_,this->get_name(),prio_),
-                        parallel_partition_part2_helper<Iterator,Iterator2,Job>
-                                (it,end_,out_,start_false_,
+                        parallel_partition_part2_helper<Iterator,Iterator2,Func,Job>
+                                (it,end_,out_,func_,start_false_,
                                  offset_true_ + data_.data_[0].partition_true_,
                                  offset_false_ + data_.data_[0].partition_false_,
                                  data_.data_[1],cutoff_,this->get_name(),prio_)
@@ -175,6 +193,7 @@ struct parallel_partition_part2_helper: public boost::asynchronous::continuation
     Iterator beg_;
     Iterator end_;
     Iterator2 out_;
+    Func func_;
     std::size_t start_false_;
     std::size_t offset_true_;
     std::size_t offset_false_;
@@ -182,9 +201,9 @@ struct parallel_partition_part2_helper: public boost::asynchronous::continuation
     long cutoff_;
     std::size_t prio_;
 };
-template <class Iterator,class Iterator2, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+template <class Iterator,class Iterator2, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<void,Job>
-parallel_partition_part2(Iterator beg, Iterator end, Iterator2 out, std::size_t start_false,
+parallel_partition_part2(Iterator beg, Iterator end, Iterator2 out, Func func, std::size_t start_false,
                          std::size_t offset_true, std::size_t offset_false, boost::asynchronous::detail::partition_data data,
                          long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -194,8 +213,8 @@ parallel_partition_part2(Iterator beg, Iterator end, Iterator2 out, std::size_t 
 #endif
 {
     return boost::asynchronous::top_level_callback_continuation_job<void,Job>
-            (boost::asynchronous::detail::parallel_partition_part2_helper<Iterator,Iterator2,Job>
-             (beg,end,out,start_false,offset_true,offset_false,std::move(data),cutoff,task_name,prio));
+            (boost::asynchronous::detail::parallel_partition_part2_helper<Iterator,Iterator2,Func,Job>
+             (beg,end,out,std::move(func),start_false,offset_true,offset_false,std::move(data),cutoff,task_name,prio));
 
 }
 
@@ -218,7 +237,8 @@ struct parallel_partition_helper: public boost::asynchronous::continuation_task<
         auto cutoff = cutoff_;
         auto task_name = this->get_name();
         auto prio = prio_;
-        cont.on_done([task_res,beg,end,out,cutoff,task_name,prio/*,p1_start*/]
+        auto func = func_;
+        cont.on_done([task_res,beg,end,out,func,cutoff,task_name,prio/*,p1_start*/]
                      (std::tuple<boost::asynchronous::expected<boost::asynchronous::detail::partition_data> >&& res)
         {
 //            auto p1_stop = boost::chrono::high_resolution_clock::now();
@@ -230,8 +250,8 @@ struct parallel_partition_helper: public boost::asynchronous::continuation_task<
                 std::size_t start_false = data.partition_true_;
 //                auto p2_start = boost::chrono::high_resolution_clock::now();
                 auto cont =
-                        boost::asynchronous::detail::parallel_partition_part2<Iterator,Iterator2,Job>
-                        (beg,end,out,start_false,0,0,std::move(data),cutoff,task_name,prio);
+                        boost::asynchronous::detail::parallel_partition_part2<Iterator,Iterator2,Func,Job>
+                        (beg,end,out,std::move(func),start_false,0,0,std::move(data),cutoff,task_name,prio);
                 Iterator2 ret = out;
                 std::advance(ret,start_false);
                 cont.on_done([task_res,ret/*,p2_start*/](std::tuple<boost::asynchronous::expected<void> >&& res)
@@ -281,5 +301,74 @@ parallel_partition(Iterator beg, Iterator end, Iterator2 out, Func func,long cut
                 (beg,end,out,std::move(func),cutoff,task_name,prio));
 
 }
+
+// version for moved ranges => will return the range as continuation
+template <class Range, class Iterator,class Func, class Job,class Enable=void>
+struct parallel_partition_range_move_helper:
+        public boost::asynchronous::continuation_task<std::pair<Range,Iterator>>
+{
+    parallel_partition_range_move_helper(boost::shared_ptr<Range> range,Iterator beg, Iterator end,Func func,long cutoff,
+                        const std::string& task_name, std::size_t prio)
+        :boost::asynchronous::continuation_task<std::pair<Range,Iterator>>(task_name)
+        ,range_(range),beg_(beg),end_(end),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
+    {
+    }
+    parallel_partition_range_move_helper(parallel_partition_range_move_helper&&)=default;
+    parallel_partition_range_move_helper& operator=(parallel_partition_range_move_helper&&)=default;
+    parallel_partition_range_move_helper(parallel_partition_range_move_helper const&)=delete;
+    parallel_partition_range_move_helper& operator=(parallel_partition_range_move_helper const&)=delete;
+
+    void operator()()
+    {
+        boost::shared_ptr<Range> range = range_;
+        // TODO better ctor?
+        boost::shared_ptr<Range> new_range = boost::make_shared<Range>(range->size());
+        boost::asynchronous::continuation_result<std::pair<Range,Iterator>> task_res
+                                                                                              = this->this_task_result();
+        auto cont = boost::asynchronous::parallel_partition<decltype(beg_),decltype(beg_),Func,Job>
+                (beg_,end_,boost::begin(*new_range),std::move(func_),cutoff_,this->get_name(),prio_);
+        cont.on_done([task_res,range,new_range]
+                      (std::tuple<boost::asynchronous::expected<Iterator> >&& continuation_res)
+        {
+            try
+            {
+                task_res.set_value(std::make_pair(std::move(*new_range),std::get<0>(continuation_res).get()));
+            }
+            catch(std::exception& e)
+            {
+                task_res.set_exception(boost::copy_exception(e));
+            }
+        });
+
+    }
+    boost::shared_ptr<Range> range_;
+    Iterator beg_;
+    Iterator end_;
+    Func func_;
+    long cutoff_;
+    std::size_t prio_;
+};
+
+
+template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+auto parallel_partition(Range&& range,Func func,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+             const std::string& task_name, std::size_t prio)
+#else
+             const std::string& task_name="", std::size_t prio=0)
+#endif
+-> typename boost::disable_if<
+              has_is_continuation_task<Range>,
+              boost::asynchronous::detail::callback_continuation<std::pair<Range,decltype(boost::begin(range))>,Job> >::type
+
+{
+    auto r = boost::make_shared<Range>(std::forward<Range>(range));
+    auto beg = boost::begin(*r);
+    auto end = boost::end(*r);
+    return boost::asynchronous::top_level_callback_continuation_job<std::pair<Range,decltype(boost::begin(range))>,Job>
+            (boost::asynchronous::parallel_partition_range_move_helper<Range,decltype(beg),Func,Job>
+                (r,beg,end,func,cutoff,task_name,prio));
+}
+
 }}
 #endif // BOOST_ASYNCHRONOUS_PARALLEL_PARTITION_HPP

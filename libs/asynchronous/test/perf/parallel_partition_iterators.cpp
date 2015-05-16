@@ -62,8 +62,9 @@ SORTED_TYPE compare_with = test_cast<uint32_t,SORTED_TYPE>(NELEM/2);
 
 struct Servant : boost::asynchronous::trackable_servant<>
 {
-    typedef int simple_ctor;
-    typedef int requires_weak_scheduler;
+    //typedef int simple_ctor;
+    //typedef int requires_weak_scheduler;
+    typedef std::vector<SORTED_TYPE>::iterator Iterator;
     Servant(boost::asynchronous::any_weak_scheduler<> scheduler)
         : boost::asynchronous::trackable_servant<>(scheduler,
                                                boost::asynchronous::make_shared_scheduler_proxy<
@@ -79,9 +80,18 @@ struct Servant : boost::asynchronous::trackable_servant<>
     ~Servant(){}
 
     // called when task done, in our thread
-    void on_callback()
+    void on_callback(boost::shared_array<SORTED_TYPE> /*result*/, size_t /*n*/)
     {
         servant_intern += (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - servant_time).count() / 1000000);
+        /*std::cout << "partitioned? " << std::is_partitioned(result.get(),result.get()+n,
+                                                            [](SORTED_TYPE i)
+                                                            {
+                                                                // cheap version
+                                                                return i < compare_with;
+                                                                // expensive version
+                                                                //return i < test_cast<uint32_t,SORTED_TYPE>(NELEM/2);
+                                                            })
+                                     << std::endl;*/
         m_promise->set_value();
     }
  
@@ -97,14 +107,56 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                                        [](SORTED_TYPE i)
                                                                        {
                                                                           // cheap version
-                                                                          //return i < compare_with;
+                                                                          return i < compare_with;
                                                                           // expensive version to show parallelism
-                                                                          return i < test_cast<uint32_t,SORTED_TYPE>(NELEM/2);
+                                                                          //return i < test_cast<uint32_t,SORTED_TYPE>(NELEM/2);
                                                                        },tasksize,"",0);
                       },// work
                // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
-               [this,result](boost::asynchronous::expected<SORTED_TYPE*> /*res*/){
-                            this->on_callback();
+               [this,n,result](boost::asynchronous::expected<SORTED_TYPE*> /*res*/){
+                            this->on_callback(result,n);
+               }// callback functor.
+               ,"",0,0
+        );
+        return fu;
+    }
+    void on_callback_vec(std::vector<SORTED_TYPE>&& /*vec*/)
+    {
+        servant_intern += (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - servant_time).count() / 1000000);
+        /*std::cout << "partitioned? " << std::is_partitioned(vec.begin(),vec.end(),
+                                                            [](SORTED_TYPE i)
+                                                            {
+                                                                // cheap version
+                                                                return i < compare_with;
+                                                                // expensive version
+                                                                //return i < test_cast<uint32_t,SORTED_TYPE>(NELEM/2);
+                                                            })
+                                     << std::endl;*/
+        m_promise->set_value();
+    }
+    boost::shared_future<void> do_partition_vec(std::vector<SORTED_TYPE> a)
+    {
+        boost::shared_future<void> fu = m_promise->get_future();
+        long tasksize = NELEM / tasks;
+        boost::shared_ptr<std::vector<SORTED_TYPE>> vec = boost::make_shared<std::vector<SORTED_TYPE>>(std::move(a));
+        servant_time = boost::chrono::high_resolution_clock::now();
+        post_callback(
+               [vec,tasksize](){
+                        return boost::asynchronous::parallel_partition(std::move(*vec),
+                                                                       [](SORTED_TYPE i)
+                                                                       {
+                                                                          // cheap version
+                                                                          return i < compare_with;
+                                                                          // expensive version to show parallelism
+                                                                          //return i < test_cast<uint32_t,SORTED_TYPE>(NELEM/2);
+                                                                       },tasksize,"",0);
+                      },// work
+               // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
+               [this](boost::asynchronous::expected<std::pair<std::vector<SORTED_TYPE>,Iterator>> res)
+               {
+                    auto res_pair = std::move(res.get());
+                    std::vector<SORTED_TYPE> res_vec = std::move(res_pair.first);
+                    this->on_callback_vec(std::move(res_vec));
                }// callback functor.
                ,"",0,0
         );
@@ -122,6 +174,7 @@ public:
         boost::asynchronous::servant_proxy<ServantProxy,Servant>(s)
     {}
     BOOST_ASYNC_FUTURE_MEMBER(do_partition,0)
+    BOOST_ASYNC_FUTURE_MEMBER(do_partition_vec,0)
 };
 void ParallelAsyncPostCb(SORTED_TYPE a[], size_t n)
 {
@@ -134,7 +187,7 @@ void ParallelAsyncPostCb(SORTED_TYPE a[], size_t n)
         boost::shared_future<boost::shared_future<void> > fu = proxy.do_partition(a,n);
         boost::shared_future<void> resfu = fu.get();
         resfu.get();
-    }
+    }    
     {
         boost::shared_array<SORTED_TYPE> b (new SORTED_TYPE[NELEM]);
         std::copy(a,a+n,b.get());
@@ -142,16 +195,31 @@ void ParallelAsyncPostCb(SORTED_TYPE a[], size_t n)
         std::partition(b.get(),b.get()+n,[](SORTED_TYPE i)
         {
             // cheap version
-            //return i < compare_with;
+            return i < compare_with;
             // expensive version
-            return i < test_cast<uint32_t,SORTED_TYPE>(NELEM/2);
+            //return i < test_cast<uint32_t,SORTED_TYPE>(NELEM/2);
         });
         auto seq_stop = boost::chrono::high_resolution_clock::now();
         double seq_time = (boost::chrono::nanoseconds(seq_stop - seq_start).count() / 1000000);
-        printf ("%50s: time = %.1f msec\n","sequential", seq_time);
+        printf ("\n%50s: time = %.1f msec\n","sequential", seq_time);
     }
 }
+void ParallelAsyncPostCbVec(SORTED_TYPE a[], size_t n)
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                            boost::asynchronous::single_thread_scheduler<boost::asynchronous::lockfree_queue<>,
+                                                                         boost::asynchronous::default_save_cpu_load<10,80000,1000>>>(tpsize);
+    {
+        ServantProxy proxy(scheduler);
 
+        // we want to test partitioning a vector
+        std::vector<SORTED_TYPE> vec(n);
+        std::copy(a,a+n,vec.begin());
+        boost::shared_future<boost::shared_future<void> > fu = proxy.do_partition_vec(std::move(vec));
+        boost::shared_future<void> resfu = fu.get();
+        resfu.get();
+    }
+}
 void test_sorted_elements(void(*pf)(SORTED_TYPE [], size_t ))
 {
     boost::shared_array<SORTED_TYPE> a (new SORTED_TYPE[NELEM]);
@@ -219,6 +287,13 @@ int main( int argc, const char *argv[] )
         test_random_elements_many_repeated(ParallelAsyncPostCb);
     }
     printf ("%50s: time = %.1f msec\n","test_random_elements_many_repeated", servant_intern);
+
+    servant_intern=0.0;
+    for (int i=0;i<LOOP;++i)
+    {
+        test_random_elements_many_repeated(ParallelAsyncPostCbVec);
+    }
+    printf ("%50s: time = %.1f msec\n","test_random_elements_many_repeated_vec", servant_intern);
     
     servant_intern=0.0;
     for (int i=0;i<LOOP;++i)
@@ -226,6 +301,13 @@ int main( int argc, const char *argv[] )
         test_random_elements_few_repeated(ParallelAsyncPostCb);
     }
     printf ("%50s: time = %.1f msec\n","test_random_elements_few_repeated", servant_intern);
+
+    servant_intern=0.0;
+    for (int i=0;i<LOOP;++i)
+    {
+        test_random_elements_few_repeated(ParallelAsyncPostCbVec);
+    }
+    printf ("%50s: time = %.1f msec\n","test_random_elements_few_repeated_vec", servant_intern);
     
     servant_intern=0.0;
     for (int i=0;i<LOOP;++i)
@@ -233,6 +315,13 @@ int main( int argc, const char *argv[] )
         test_random_elements_quite_repeated(ParallelAsyncPostCb);
     }
     printf ("%50s: time = %.1f msec\n","test_random_elements_quite_repeated", servant_intern);
+
+    servant_intern=0.0;
+    for (int i=0;i<LOOP;++i)
+    {
+        test_random_elements_quite_repeated(ParallelAsyncPostCbVec);
+    }
+    printf ("%50s: time = %.1f msec\n","test_random_elements_quite_repeated_vec", servant_intern);
     
     servant_intern=0.0;
     for (int i=0;i<LOOP;++i)
