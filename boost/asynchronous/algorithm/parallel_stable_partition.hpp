@@ -1,5 +1,5 @@
 // Boost.Asynchronous library
-//  Copyright (C) Christophe Henry 2014
+//  Copyright (C) Christophe Henry 2015
 //
 //  Use, modification and distribution is subject to the Boost
 //  Software License, Version 1.0.  (See accompanying file
@@ -7,8 +7,8 @@
 //
 // For more information, see http://www.boost.org
 
-#ifndef BOOST_ASYNCHRONOUS_PARALLEL_PARTITION_HPP
-#define BOOST_ASYNCHRONOUS_PARALLEL_PARTITION_HPP
+#ifndef BOOST_ASYNCHRONOUS_PARALLEL_STABLE_PARTITION_HPP
+#define BOOST_ASYNCHRONOUS_PARALLEL_STABLE_PARTITION_HPP
 
 #include <algorithm>
 #include <vector>
@@ -37,9 +37,9 @@ struct partition_data
 };
 
 template <class Iterator, class Func, class Job>
-struct parallel_partition_part1_helper: public boost::asynchronous::continuation_task<boost::asynchronous::detail::partition_data>
+struct parallel_stable_partition_part1_helper: public boost::asynchronous::continuation_task<boost::asynchronous::detail::partition_data>
 {
-    parallel_partition_part1_helper(Iterator beg, Iterator end, Func func,long cutoff,
+    parallel_stable_partition_part1_helper(Iterator beg, Iterator end, Func func,long cutoff,
                         const std::string& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<boost::asynchronous::detail::partition_data>(task_name),
           beg_(beg),end_(end),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
@@ -89,9 +89,9 @@ struct parallel_partition_part1_helper: public boost::asynchronous::continuation
                             }
                         },
                         // recursive tasks
-                        parallel_partition_part1_helper<Iterator,Func,Job>
+                        parallel_stable_partition_part1_helper<Iterator,Func,Job>
                             (beg_,it,func_,cutoff_,this->get_name(),prio_),
-                        parallel_partition_part1_helper<Iterator,Func,Job>
+                        parallel_stable_partition_part1_helper<Iterator,Func,Job>
                             (it,end_,func_,cutoff_,this->get_name(),prio_)
             );
         }
@@ -105,7 +105,7 @@ struct parallel_partition_part1_helper: public boost::asynchronous::continuation
 
 template <class Iterator,class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<boost::asynchronous::detail::partition_data,Job>
-parallel_partition_part1(Iterator beg, Iterator end, Func func,long cutoff,
+parallel_stable_partition_part1(Iterator beg, Iterator end, Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                     const std::string& task_name, std::size_t prio)
 #else
@@ -113,15 +113,15 @@ parallel_partition_part1(Iterator beg, Iterator end, Func func,long cutoff,
 #endif
 {
     return boost::asynchronous::top_level_callback_continuation_job<boost::asynchronous::detail::partition_data,Job>
-            (boost::asynchronous::detail::parallel_partition_part1_helper<Iterator,Func,Job>
+            (boost::asynchronous::detail::parallel_stable_partition_part1_helper<Iterator,Func,Job>
                 (beg,end,std::move(func),cutoff,task_name,prio));
 
 }
 
 template <class Iterator, class Iterator2, class Func, class Job>
-struct parallel_partition_part2_helper: public boost::asynchronous::continuation_task<void>
+struct parallel_stable_partition_part2_helper: public boost::asynchronous::continuation_task<void>
 {
-    parallel_partition_part2_helper(Iterator beg, Iterator end, Iterator2 out,Func func,
+    parallel_stable_partition_part2_helper(Iterator beg, Iterator end, Iterator2 out,Func func,
                                     std::size_t start_false,
                                     std::size_t offset_true, std::size_t offset_false,
                                     boost::asynchronous::detail::partition_data data,
@@ -177,12 +177,12 @@ struct parallel_partition_part2_helper: public boost::asynchronous::continuation
                             }
                         },
                         // recursive tasks
-                        parallel_partition_part2_helper<Iterator,Iterator2,Func,Job>
+                        parallel_stable_partition_part2_helper<Iterator,Iterator2,Func,Job>
                                 (beg_,it,out_,func_,start_false_,
                                  offset_true_,
                                  offset_false_,
                                  data_.data_[0],cutoff_,this->get_name(),prio_),
-                        parallel_partition_part2_helper<Iterator,Iterator2,Func,Job>
+                        parallel_stable_partition_part2_helper<Iterator,Iterator2,Func,Job>
                                 (it,end_,out_,func_,start_false_,
                                  offset_true_ + data_.data_[0].partition_true_,
                                  offset_false_ + data_.data_[0].partition_false_,
@@ -203,7 +203,7 @@ struct parallel_partition_part2_helper: public boost::asynchronous::continuation
 };
 template <class Iterator,class Iterator2, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<void,Job>
-parallel_partition_part2(Iterator beg, Iterator end, Iterator2 out, Func func, std::size_t start_false,
+parallel_stable_partition_part2(Iterator beg, Iterator end, Iterator2 out, Func func, std::size_t start_false,
                          std::size_t offset_true, std::size_t offset_false, boost::asynchronous::detail::partition_data data,
                          long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -213,15 +213,15 @@ parallel_partition_part2(Iterator beg, Iterator end, Iterator2 out, Func func, s
 #endif
 {
     return boost::asynchronous::top_level_callback_continuation_job<void,Job>
-            (boost::asynchronous::detail::parallel_partition_part2_helper<Iterator,Iterator2,Func,Job>
+            (boost::asynchronous::detail::parallel_stable_partition_part2_helper<Iterator,Iterator2,Func,Job>
              (beg,end,out,std::move(func),start_false,offset_true,offset_false,std::move(data),cutoff,task_name,prio));
 
 }
 
 template <class Iterator, class Iterator2, class Func, class Job>
-struct parallel_partition_helper: public boost::asynchronous::continuation_task<Iterator2>
+struct parallel_stable_partition_helper: public boost::asynchronous::continuation_task<Iterator2>
 {
-    parallel_partition_helper(Iterator beg, Iterator end, Iterator2 out, Func func,long cutoff,
+    parallel_stable_partition_helper(Iterator beg, Iterator end, Iterator2 out, Func func,long cutoff,
                         const std::string& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<Iterator2>(task_name),
           beg_(beg),end_(end),out_(out),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
@@ -230,7 +230,7 @@ struct parallel_partition_helper: public boost::asynchronous::continuation_task<
     {
         boost::asynchronous::continuation_result<Iterator2> task_res = this->this_task_result();
         //auto p1_start = boost::chrono::high_resolution_clock::now();
-        auto cont = boost::asynchronous::detail::parallel_partition_part1<Iterator,Func,Job>(beg_,end_,func_,cutoff_,this->get_name(),prio_);
+        auto cont = boost::asynchronous::detail::parallel_stable_partition_part1<Iterator,Func,Job>(beg_,end_,func_,cutoff_,this->get_name(),prio_);
         auto beg = beg_;
         auto end = end_;
         auto out = out_;
@@ -250,7 +250,7 @@ struct parallel_partition_helper: public boost::asynchronous::continuation_task<
                 std::size_t start_false = data.partition_true_;
 //                auto p2_start = boost::chrono::high_resolution_clock::now();
                 auto cont =
-                        boost::asynchronous::detail::parallel_partition_part2<Iterator,Iterator2,Func,Job>
+                        boost::asynchronous::detail::parallel_stable_partition_part2<Iterator,Iterator2,Func,Job>
                         (beg,end,out,std::move(func),start_false,0,0,std::move(data),cutoff,task_name,prio);
                 Iterator2 ret = out;
                 std::advance(ret,start_false);
@@ -289,7 +289,7 @@ struct parallel_partition_helper: public boost::asynchronous::continuation_task<
 
 template <class Iterator, class Iterator2,class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<Iterator2,Job>
-parallel_partition(Iterator beg, Iterator end, Iterator2 out, Func func,long cutoff,
+parallel_stable_partition(Iterator beg, Iterator end, Iterator2 out, Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                     const std::string& task_name, std::size_t prio)
 #else
@@ -297,26 +297,26 @@ parallel_partition(Iterator beg, Iterator end, Iterator2 out, Func func,long cut
 #endif
 {
     return boost::asynchronous::top_level_callback_continuation_job<Iterator2,Job>
-            (boost::asynchronous::detail::parallel_partition_helper<Iterator,Iterator2,Func,Job>
+            (boost::asynchronous::detail::parallel_stable_partition_helper<Iterator,Iterator2,Func,Job>
                 (beg,end,out,std::move(func),cutoff,task_name,prio));
 
 }
 
 // version for moved ranges => will return the range as continuation
 template <class Range, class Iterator,class Func, class Job,class Enable=void>
-struct parallel_partition_range_move_helper:
+struct parallel_stable_partition_range_move_helper:
         public boost::asynchronous::continuation_task<std::pair<Range,Iterator>>
 {
-    parallel_partition_range_move_helper(boost::shared_ptr<Range> range,Iterator beg, Iterator end,Func func,long cutoff,
+    parallel_stable_partition_range_move_helper(boost::shared_ptr<Range> range,Iterator beg, Iterator end,Func func,long cutoff,
                         const std::string& task_name, std::size_t prio)
         :boost::asynchronous::continuation_task<std::pair<Range,Iterator>>(task_name)
         ,range_(range),beg_(beg),end_(end),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
     {
     }
-    parallel_partition_range_move_helper(parallel_partition_range_move_helper&&)=default;
-    parallel_partition_range_move_helper& operator=(parallel_partition_range_move_helper&&)=default;
-    parallel_partition_range_move_helper(parallel_partition_range_move_helper const&)=delete;
-    parallel_partition_range_move_helper& operator=(parallel_partition_range_move_helper const&)=delete;
+    parallel_stable_partition_range_move_helper(parallel_stable_partition_range_move_helper&&)=default;
+    parallel_stable_partition_range_move_helper& operator=(parallel_stable_partition_range_move_helper&&)=default;
+    parallel_stable_partition_range_move_helper(parallel_stable_partition_range_move_helper const&)=delete;
+    parallel_stable_partition_range_move_helper& operator=(parallel_stable_partition_range_move_helper const&)=delete;
 
     void operator()()
     {
@@ -325,7 +325,7 @@ struct parallel_partition_range_move_helper:
         boost::shared_ptr<Range> new_range = boost::make_shared<Range>(range->size());
         boost::asynchronous::continuation_result<std::pair<Range,Iterator>> task_res
                                                                                               = this->this_task_result();
-        auto cont = boost::asynchronous::parallel_partition<decltype(beg_),decltype(beg_),Func,Job>
+        auto cont = boost::asynchronous::parallel_stable_partition<decltype(beg_),decltype(beg_),Func,Job>
                 (beg_,end_,boost::begin(*new_range),std::move(func_),cutoff_,this->get_name(),prio_);
         cont.on_done([task_res,range,new_range]
                       (std::tuple<boost::asynchronous::expected<Iterator> >&& continuation_res)
@@ -351,7 +351,7 @@ struct parallel_partition_range_move_helper:
 
 
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-auto parallel_partition(Range&& range,Func func,long cutoff,
+auto parallel_stable_partition(Range&& range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
              const std::string& task_name, std::size_t prio)
 #else
@@ -366,9 +366,9 @@ auto parallel_partition(Range&& range,Func func,long cutoff,
     auto beg = boost::begin(*r);
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<std::pair<Range,decltype(boost::begin(range))>,Job>
-            (boost::asynchronous::parallel_partition_range_move_helper<Range,decltype(beg),Func,Job>
+            (boost::asynchronous::parallel_stable_partition_range_move_helper<Range,decltype(beg),Func,Job>
                 (r,beg,end,func,cutoff,task_name,prio));
 }
 
 }}
-#endif // BOOST_ASYNCHRONOUS_PARALLEL_PARTITION_HPP
+#endif // BOOST_ASYNCHRONOUS_PARALLEL_STABLE_PARTITION_HPP
