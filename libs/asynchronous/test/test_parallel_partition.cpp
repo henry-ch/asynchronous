@@ -71,7 +71,6 @@ struct Servant : boost::asynchronous::trackable_servant<>
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant async work not posted.");
         generate(m_data1,1000,700);
-        m_data2 = std::vector<int>(1000,-1);
         auto data_copy = m_data1;
         // we need a promise to inform caller when we're done
         boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
@@ -83,8 +82,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
                     std::vector<boost::thread::id> ids = tp.thread_ids();
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
-                    return boost::asynchronous::parallel_partition(m_data1.begin(),m_data1.end(),m_data2.begin(),
-                                                                   [](int i){return i < 300;},100);
+                    return boost::asynchronous::parallel_partition(m_data1.begin(),m_data1.end(),
+                                                                   [](int i){return i < 300;},
+                                                                   boost::thread::hardware_concurrency());
                     },// work
            [aPromise,tp,data_copy,this](boost::asynchronous::expected<std::vector<int>::iterator> res) mutable{
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
@@ -98,18 +98,18 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         auto it2 = res.get();
 
                         // check if the iterator is at the same position
-                        std::size_t dist1 = it2 - m_data2.begin();
+                        std::size_t dist1 = it2 - m_data1.begin();
                         BOOST_CHECK_MESSAGE(dist1 == dist2,"parallel_partition gave the wrong iterator.");
 
                         bool ok = true;
-                        for (auto it3 = m_data2.begin() ; it3 != it2 ; ++it3)
+                        for (auto it3 = m_data1.begin() ; it3 != it2 ; ++it3)
                         {
                             if (*it3 >= 300 || *it3 == -1)
                                 ok = false;
                         }
                         BOOST_CHECK_MESSAGE(ok,"parallel_partition has false elements at wrong place.");
                         ok = true;
-                        for (auto it3 = it2 ; it3 != m_data2.end() ; ++it3)
+                        for (auto it3 = it2 ; it3 != m_data1.end() ; ++it3)
                         {
                            if (*it3 < 300)
                                ok = false;
@@ -119,15 +119,15 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         // to compare we need to sort because while sequential and parallel algorithm are both correct
                         // and stable, they do not return the same results
                         std::sort(data_copy.begin(), it, std::less<int>());
-                        std::sort(m_data2.begin(), it2, std::less<int>());
+                        std::sort(m_data1.begin(), it2, std::less<int>());
                         std::sort(it, data_copy.end(), std::less<int>());
-                        std::sort(it2, m_data2.end(), std::less<int>());
+                        std::sort(it2, m_data1.end(), std::less<int>());
 
-                        BOOST_CHECK_MESSAGE(m_data2 == data_copy,"parallel_partition did not partition correctly.");
-                        std::vector<int> true_part_1(m_data2.begin(),it2);
+                        BOOST_CHECK_MESSAGE(m_data1 == data_copy,"parallel_partition did not partition correctly.");
+                        std::vector<int> true_part_1(m_data1.begin(),it2);
                         std::vector<int> true_part_2(data_copy.begin(),it);
                         BOOST_CHECK_MESSAGE(true_part_1 == true_part_2,"parallel_partition partitioned first part wrong.");
-                        std::vector<int> true_part_1b(it2,m_data2.end());
+                        std::vector<int> true_part_1b(it2,m_data1.end());
                         std::vector<int> true_part_2b(it,data_copy.end());
                         BOOST_CHECK_MESSAGE(true_part_1b == true_part_2b,"parallel_partition partitioned second part wrong.");
 
@@ -210,7 +210,6 @@ struct Servant : boost::asynchronous::trackable_servant<>
     }
 private:
     std::vector<int> m_data1;
-    std::vector<int> m_data2;
 };
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>
 {

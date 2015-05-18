@@ -35,7 +35,6 @@ using namespace std;
 typename boost::chrono::high_resolution_clock::time_point servant_time;
 double servant_intern=0.0;
 long tpsize = 12;
-long tasks = 48;
 
 namespace boost {
 template<>
@@ -73,14 +72,15 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                            boost::asynchronous::default_find_position< boost::asynchronous::sequential_push_policy>,
                                                        //boost::asynchronous::default_save_cpu_load<10,80000,1000>
                                                        boost::asynchronous::no_cpu_load_saving
-                                                       >>(tpsize,tasks))
+                                                       >>(tpsize))
         , m_promise(new boost::promise<void>)
+        , m_tpsize(tpsize)
     {
     }
     ~Servant(){}
 
     // called when task done, in our thread
-    void on_callback(boost::shared_array<SORTED_TYPE> /*result*/, size_t /*n*/)
+    void on_callback(SORTED_TYPE /*a*/[], size_t /*n*/)
     {
         servant_intern += (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - servant_time).count() / 1000000);
         /*std::cout << "partitioned? " << std::is_partitioned(result.get(),result.get()+n,
@@ -98,23 +98,22 @@ struct Servant : boost::asynchronous::trackable_servant<>
     boost::shared_future<void> do_partition(SORTED_TYPE a[], size_t n)
     {
         boost::shared_future<void> fu = m_promise->get_future();
-        long tasksize = NELEM / tasks;
-        boost::shared_array<SORTED_TYPE> result (new SORTED_TYPE[NELEM]);
+        size_t tpsize = m_tpsize;
         servant_time = boost::chrono::high_resolution_clock::now();        
         post_callback(
-               [a,n,tasksize,result](){
-                        return boost::asynchronous::parallel_partition(a,a+n,result.get(),
+               [a,n,tpsize](){
+                        return boost::asynchronous::parallel_partition(a,a+n,
                                                                        [](SORTED_TYPE i)
                                                                        {
                                                                           // cheap version
                                                                           return i < compare_with;
                                                                           // expensive version to show parallelism
                                                                           //return i < test_cast<uint32_t,SORTED_TYPE>(NELEM/2);
-                                                                       },tasksize,"",0);
+                                                                       },tpsize,"",0);
                       },// work
                // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
-               [this,n,result](boost::asynchronous::expected<SORTED_TYPE*> /*res*/){
-                            this->on_callback(result,n);
+               [this,a,n](boost::asynchronous::expected<SORTED_TYPE*> /*res*/){
+                            this->on_callback(a,n);
                }// callback functor.
                ,"",0,0
         );
@@ -137,11 +136,11 @@ struct Servant : boost::asynchronous::trackable_servant<>
     boost::shared_future<void> do_partition_vec(std::vector<SORTED_TYPE> a)
     {
         boost::shared_future<void> fu = m_promise->get_future();
-        long tasksize = NELEM / tasks;
+        size_t tpsize = m_tpsize;
         boost::shared_ptr<std::vector<SORTED_TYPE>> vec = boost::make_shared<std::vector<SORTED_TYPE>>(std::move(a));
         servant_time = boost::chrono::high_resolution_clock::now();
         post_callback(
-               [vec,tasksize](){
+               [vec,tpsize](){
                         return boost::asynchronous::parallel_partition(std::move(*vec),
                                                                        [](SORTED_TYPE i)
                                                                        {
@@ -149,7 +148,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                                           return i < compare_with;
                                                                           // expensive version to show parallelism
                                                                           //return i < test_cast<uint32_t,SORTED_TYPE>(NELEM/2);
-                                                                       },tasksize,"",0);
+                                                                       },tpsize,"",0);
                       },// work
                // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
                [this](boost::asynchronous::expected<std::pair<std::vector<SORTED_TYPE>,Iterator>> res)
@@ -165,6 +164,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
 private:
 // for testing
 boost::shared_ptr<boost::promise<void> > m_promise;
+size_t m_tpsize;
 };
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>
 {
@@ -277,9 +277,7 @@ void test_equal_elements(void(*pf)(SORTED_TYPE [], size_t ))
 int main( int argc, const char *argv[] ) 
 {           
     tpsize = (argc>1) ? strtol(argv[1],0,0) : boost::thread::hardware_concurrency();
-    tasks = (argc>2) ? strtol(argv[2],0,0) : 500;
     std::cout << "tpsize=" << tpsize << std::endl;
-    std::cout << "tasks=" << tasks << std::endl;
     
     servant_intern=0.0;
     for (int i=0;i<LOOP;++i)
