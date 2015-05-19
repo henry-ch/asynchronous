@@ -26,7 +26,7 @@ using namespace std;
 
 #define LOOP 1
 
-//#define NELEM 80000000
+//#define NELEM 1000000000
 //#define SORTED_TYPE uint32_t
 
 #define NELEM 10000000
@@ -102,7 +102,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         post_callback(
                [vec,tpsize](){
                         return boost::asynchronous::parallel_partition(std::move(*vec),
-                                                                       [](SORTED_TYPE i)
+                                                                       [](SORTED_TYPE const& i)
                                                                        {
                                                                           // cheap version
                                                                           return i < compare_with;
@@ -149,7 +149,7 @@ void ParallelAsyncPostCb(std::vector<SORTED_TYPE>& vec)
     }
     {
         auto seq_start = boost::chrono::high_resolution_clock::now();
-        std::partition(vec.begin(),vec.end(),[](SORTED_TYPE i)
+        std::partition(vec.begin(),vec.end(),[](SORTED_TYPE const& i)
         {
             // cheap version
             return i < compare_with;
