@@ -205,7 +205,7 @@ namespace boost { namespace asynchronous
 
 #define BOOST_ASYNC_FUTURE_MEMBER(...)                                                                          \
     BOOST_PP_OVERLOAD(BOOST_ASYNC_FUTURE_MEMBER_,__VA_ARGS__)(__VA_ARGS__)
-    
+
 #ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
 #define BOOST_ASYNC_POST_CALLBACK_MEMBER_1(funcname)                                                                                                \
     template <typename F, typename S,typename... Args>                                                                                              \
