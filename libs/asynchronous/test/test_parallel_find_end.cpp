@@ -1,4 +1,5 @@
 
+
 // Boost.Asynchronous library
 //  Copyright (C) Christophe Henry 2015
 //
@@ -19,7 +20,7 @@
 #include <boost/asynchronous/servant_proxy.hpp>
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/trackable_servant.hpp>
-#include <boost/asynchronous/algorithm/parallel_find_first_of.hpp>
+#include <boost/asynchronous/algorithm/parallel_find_end.hpp>
 #include <boost/asynchronous/algorithm/parallel_for.hpp>
 
 #include "test_common.hpp"
@@ -61,9 +62,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work_ok not posted.");
         m_data2.clear();
-        m_data2.push_back(m_data[10]);
-        m_data2.push_back(m_data[100]);
-        m_data2.push_back(m_data[200]);
+        m_data2.push_back(m_data[3100]);
+        m_data2.push_back(m_data[3101]);
+        m_data2.push_back(m_data[3102]);
         // we need a promise to inform caller when we're done
         boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
         boost::shared_future<void> fu = aPromise->get_future();
@@ -75,9 +76,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
 
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
-                    return boost::asynchronous::parallel_find_first_of(this->m_data.begin(),this->m_data.end(),
-                                                                       this->m_data2.begin(),this->m_data2.end(),
-                                                                       [](int i, int j){return i == j;},1500);
+                    return boost::asynchronous::parallel_find_end(this->m_data.begin(),this->m_data.end(),
+                                                                  this->m_data2.begin(),this->m_data2.end(),
+                                                                  [](int i, int j){return i == j;},1500);
                     },// work
            [aPromise,ids,this](boost::asynchronous::expected<Iterator> res){
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
@@ -85,11 +86,52 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
 
-                        auto it = std::find_first_of(this->m_data.begin(),this->m_data.end(),
-                                                     this->m_data2.begin(),this->m_data2.end(),
-                                                     [](int i, int j){return i == j;});
+                        auto it = std::find_end(this->m_data.begin(),this->m_data.end(),
+                                                this->m_data2.begin(),this->m_data2.end(),
+                                                 [](int i, int j){return i == j;});
 
-                        BOOST_CHECK_MESSAGE(it == res.get(),"parallel_find_first_of found wrong value.");
+                        BOOST_CHECK_MESSAGE(it != m_data.end(),"parallel_find_end should have found value.");
+                        BOOST_CHECK_MESSAGE(it == res.get(),"parallel_find_end found wrong value.");
+                        aPromise->set_value();
+           }// callback functor.
+        );
+        return fu;
+    }
+
+    boost::shared_future<void> start_async_work_ok2()
+    {
+        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work_ok not posted.");
+        m_data2.clear();
+        m_data2.push_back(m_data[2999]);
+        m_data2.push_back(m_data[3000]);
+        m_data2.push_back(m_data[3001]);
+        // we need a promise to inform caller when we're done
+        boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
+        boost::shared_future<void> fu = aPromise->get_future();
+        boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
+        std::vector<boost::thread::id> ids = tp.thread_ids();
+        // start long tasks
+        post_callback(
+           [ids,this](){
+                    BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
+
+                    BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
+                    return boost::asynchronous::parallel_find_end(this->m_data.begin(),this->m_data.end(),
+                                                                  this->m_data2.begin(),this->m_data2.end(),
+                                                                  [](int i, int j){return i == j;},1500);
+                    },// work
+           [aPromise,ids,this](boost::asynchronous::expected<Iterator> res){
+                        BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
+                        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
+                        BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
+                        BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
+
+                        auto it = std::find_end(this->m_data.begin(),this->m_data.end(),
+                                                this->m_data2.begin(),this->m_data2.end(),
+                                                 [](int i, int j){return i == j;});
+
+                        BOOST_CHECK_MESSAGE(it != m_data.end(),"parallel_find_end should have found value.");
+                        BOOST_CHECK_MESSAGE(it == res.get(),"parallel_find_end found wrong value.");
                         aPromise->set_value();
            }// callback functor.
         );
@@ -100,9 +142,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work_ok not posted.");
         m_data2.clear();
-        m_data2.push_back(m_data[10]);
-        m_data2.push_back(m_data[100]);
-        m_data2.push_back(m_data[200]);
+        m_data2.push_back(m_data[3100]);
+        m_data2.push_back(m_data[3101]);
+        m_data2.push_back(m_data[3102]);
         // we need a promise to inform caller when we're done
         boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
         boost::shared_future<void> fu = aPromise->get_future();
@@ -114,8 +156,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
 
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
-                    return boost::asynchronous::parallel_find_first_of(this->m_data.begin(),this->m_data.end(),
-                                                                       this->m_data2.begin(),this->m_data2.end(),1500);
+                    return boost::asynchronous::parallel_find_end(this->m_data.begin(),this->m_data.end(),
+                                                                  this->m_data2.begin(),this->m_data2.end(),1500);
                     },// work
            [aPromise,ids,this](boost::asynchronous::expected<Iterator> res){
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
@@ -123,16 +165,16 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
 
-                        auto it = std::find_first_of(this->m_data.begin(),this->m_data.end(),
-                                                     this->m_data2.begin(),this->m_data2.end());
+                        auto it = std::find_end(this->m_data.begin(),this->m_data.end(),
+                                                this->m_data2.begin(),this->m_data2.end());
 
-                        BOOST_CHECK_MESSAGE(it == res.get(),"parallel_find_first_of found wrong value.");
+                        BOOST_CHECK_MESSAGE(it != m_data.end(),"parallel_find_end should have found value.");
+                        BOOST_CHECK_MESSAGE(it == res.get(),"parallel_find_end found wrong value.");
                         aPromise->set_value();
            }// callback functor.
         );
         return fu;
     }
-
     boost::shared_future<void> start_async_work_nok()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work_nok not posted.");
@@ -151,9 +193,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
 
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
-                    return boost::asynchronous::parallel_find_first_of(this->m_data.begin(),this->m_data.end(),
-                                                                       this->m_data2.begin(),this->m_data2.end(),
-                                                                       [](int i, int j){return i == j;},1500);
+                    return boost::asynchronous::parallel_find_end(this->m_data.begin(),this->m_data.end(),
+                                                                  this->m_data2.begin(),this->m_data2.end(),
+                                                                  [](int i, int j){return i == j;},1500);
                     },// work
            [aPromise,ids,this](boost::asynchronous::expected<Iterator> res){
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
@@ -161,24 +203,24 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
 
-                        auto it = std::find_first_of(this->m_data.begin(),this->m_data.end(),
-                                                     this->m_data2.begin(),this->m_data2.end(),
-                                                     [](int i, int j){return i == j;});
+                        auto it = std::find_end(this->m_data.begin(),this->m_data.end(),
+                                                this->m_data2.begin(),this->m_data2.end(),
+                                                [](int i, int j){return i == j;});
 
-                        BOOST_CHECK_MESSAGE(it == res.get(),"parallel_find_first_of found wrong value.");
+                        BOOST_CHECK_MESSAGE(it == m_data.end(),"parallel_find_end should not have found value.");
+                        BOOST_CHECK_MESSAGE(it == res.get(),"parallel_find_end found wrong value.");
                         aPromise->set_value();
            }// callback functor.
         );
         return fu;
     }
-
     boost::shared_future<void> start_async_work_continuation()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work_ok not posted.");
         m_data2.clear();
-        m_data2.push_back(m_data[10]);
-        m_data2.push_back(m_data[100]);
-        m_data2.push_back(m_data[200]);
+        m_data2.push_back(m_data[2999]);
+        m_data2.push_back(m_data[3000]);
+        m_data2.push_back(m_data[3001]);
         auto copy2 = m_data2;
         for (auto& i : copy2)
         {
@@ -195,7 +237,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
 
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
-                    return boost::asynchronous::parallel_find_first_of(this->m_data.begin(),this->m_data.end(),
+                    return boost::asynchronous::parallel_find_end(this->m_data.begin(),this->m_data.end(),
                                                                        boost::asynchronous::parallel_for(
                                                                            std::move(this->m_data2),
                                                                            [](int const& i)
@@ -210,11 +252,11 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
 
-                        auto it = std::find_first_of(this->m_data.begin(),this->m_data.end(),
-                                                     copy2.begin(),copy2.end(),
-                                                     [](int i, int j){return i == j;});
+                        auto it = std::find_end(this->m_data.begin(),this->m_data.end(),
+                                                copy2.begin(),copy2.end(),
+                                                [](int i, int j){return i == j;});
 
-                        BOOST_CHECK_MESSAGE(it == res.get(),"parallel_find_first_of found wrong value.");
+                        BOOST_CHECK_MESSAGE(it == res.get(),"parallel_find_end found wrong value.");
                         aPromise->set_value();
            }// callback functor.
         );
@@ -234,14 +276,15 @@ public:
         boost::asynchronous::servant_proxy<ServantProxy,Servant>(s)
     {}
     BOOST_ASYNC_FUTURE_MEMBER(start_async_work_ok)
-    BOOST_ASYNC_FUTURE_MEMBER(start_async_work_ok_no_fct)
+    BOOST_ASYNC_FUTURE_MEMBER(start_async_work_ok2)
     BOOST_ASYNC_FUTURE_MEMBER(start_async_work_nok)
+    BOOST_ASYNC_FUTURE_MEMBER(start_async_work_ok_no_fct)
     BOOST_ASYNC_FUTURE_MEMBER(start_async_work_continuation)
 };
 
 }
 
-BOOST_AUTO_TEST_CASE( test_parallel_find_first_of_ok )
+BOOST_AUTO_TEST_CASE( test_parallel_find_end_ok )
 {
     servant_dtor=false;
     {
@@ -264,7 +307,52 @@ BOOST_AUTO_TEST_CASE( test_parallel_find_first_of_ok )
     BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
 }
 
-BOOST_AUTO_TEST_CASE( test_parallel_find_first_of_ok_no_fct )
+BOOST_AUTO_TEST_CASE( test_parallel_find_end_ok2 )
+{
+    servant_dtor=false;
+    {
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<>>>();
+
+        main_thread_id = boost::this_thread::get_id();
+        ServantProxy proxy(scheduler);
+        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_async_work_ok2();
+        try
+        {
+            boost::shared_future<void> resfuv = fuv.get();
+            resfuv.get();
+        }
+        catch(...)
+        {
+            BOOST_FAIL( "unexpected exception" );
+        }
+    }
+    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
+}
+
+BOOST_AUTO_TEST_CASE( test_parallel_find_end_nok )
+{
+    servant_dtor=false;
+    {
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<>>>();
+
+        main_thread_id = boost::this_thread::get_id();
+        ServantProxy proxy(scheduler);
+        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_async_work_nok();
+        try
+        {
+            boost::shared_future<void> resfuv = fuv.get();
+            resfuv.get();
+        }
+        catch(...)
+        {
+            BOOST_FAIL( "unexpected exception" );
+        }
+    }
+    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
+}
+BOOST_AUTO_TEST_CASE( test_parallel_find_end_ok_no_fct )
 {
     servant_dtor=false;
     {
@@ -287,31 +375,7 @@ BOOST_AUTO_TEST_CASE( test_parallel_find_first_of_ok_no_fct )
     BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
 }
 
-
-BOOST_AUTO_TEST_CASE( test_parallel_find_first_of_nok )
-{
-    servant_dtor=false;
-    {
-        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
-                                                                            boost::asynchronous::lockfree_queue<>>>();
-
-        main_thread_id = boost::this_thread::get_id();
-        ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_async_work_nok();
-        try
-        {
-            boost::shared_future<void> resfuv = fuv.get();
-            resfuv.get();
-        }
-        catch(...)
-        {
-            BOOST_FAIL( "unexpected exception" );
-        }
-    }
-    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
-}
-
-BOOST_AUTO_TEST_CASE( test_parallel_find_first_of_continuation )
+BOOST_AUTO_TEST_CASE( test_parallel_find_end_continuation )
 {
     servant_dtor=false;
     {

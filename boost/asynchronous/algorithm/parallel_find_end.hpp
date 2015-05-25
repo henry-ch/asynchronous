@@ -6,8 +6,8 @@
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 // For more information, see http://www.boost.org
-#ifndef BOOST_ASYNCHRONOUS_PARALLEL_FIND_FIRST_OF_HPP
-#define BOOST_ASYNCHRONOUS_PARALLEL_FIND_FIRST_OF_HPP
+#ifndef BOOST_ASYNCHRONOUS_PARALLEL_FIND_END_HPP
+#define BOOST_ASYNCHRONOUS_PARALLEL_FIND_END_HPP
 
 #include <algorithm>
 #include <vector>
@@ -36,9 +36,9 @@ namespace boost { namespace asynchronous
 namespace detail
 {
 template <class Iterator1,class Iterator2, class Func, class Job>
-struct parallel_find_first_of_helper: public boost::asynchronous::continuation_task<Iterator1>
+struct parallel_find_end_helper: public boost::asynchronous::continuation_task<Iterator1>
 {
-    parallel_find_first_of_helper(Iterator1 beg1, Iterator1 end1,Iterator2 beg2, Iterator2 end2,Func func,
+    parallel_find_end_helper(Iterator1 beg1, Iterator1 end1,Iterator2 beg2, Iterator2 end2,Func func,
                                   long cutoff,const std::string& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<Iterator1>(task_name)
         , beg1_(beg1),end1_(end1),beg2_(beg2),end2_(end2),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
@@ -52,23 +52,54 @@ struct parallel_find_first_of_helper: public boost::asynchronous::continuation_t
         // if not at end, recurse, otherwise execute here
         if (it == end1_)
         {
-            task_res.set_value(std::find_first_of(beg1_,end1_,beg2_,end2_,func_));
+            task_res.set_value(std::find_end(beg1_,end1_,beg2_,end2_,func_));
         }
         else
         {
+            auto beg1 = beg1_;
             auto end1 = end1_;
+            auto beg2 = end2_;
+            auto end2 = end2_;
+            auto func = std::move(func_);
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [task_res,it,end1](std::tuple<boost::asynchronous::expected<Iterator1>,boost::asynchronous::expected<Iterator1> > res)
+                        [task_res,it,beg1,end1,beg2,end2,func]
+                        (std::tuple<boost::asynchronous::expected<Iterator1>,boost::asynchronous::expected<Iterator1>> res)
                         {
                             try
                             {
-                                Iterator1 r1 (std::move(std::get<0>(res).get()));
-                                Iterator1 r2 (std::move(std::get<1>(res).get()));
-                                if (r1 == it)
+                                auto r1 = std::move(std::get<0>(res).get());
+                                auto r2 = std::move(std::get<1>(res).get());
+                                if (r2 != end1)
+                                {
+                                    // found in last part => take it
                                     task_res.set_value(std::move(r2));
+                                }
                                 else
-                                    task_res.set_value(std::move(r1));
+                                {
+                                    // check in overlap region
+                                    auto itbeg = beg1;
+                                    auto itend = it;
+                                    auto dist2 = std::distance(beg2,end2);
+
+                                    std::advance(itbeg, std::distance(beg1,it) - dist2);
+                                    std::advance(itend, dist2);
+                                    auto itoverlap = std::find_end(itbeg,itend,beg2,end2,func);
+                                    if(itoverlap != itend)
+                                    {
+                                        task_res.set_value(std::move(itoverlap));
+                                    }
+                                    // check in first part
+                                    else if (r1 != it)
+                                    {
+                                        task_res.set_value(std::move(r1));
+                                    }
+                                    // nowhere found => end
+                                    else
+                                    {
+                                        task_res.set_value(std::move(end1));
+                                    }
+                                }
                             }
                             catch(std::exception& e)
                             {
@@ -76,9 +107,9 @@ struct parallel_find_first_of_helper: public boost::asynchronous::continuation_t
                             }
                         },
                         // recursive tasks
-                        parallel_find_first_of_helper<Iterator1,Iterator2,Func,Job>
+                        parallel_find_end_helper<Iterator1,Iterator2,Func,Job>
                                 (beg1_,it,beg2_,end2_,func_,cutoff_,this->get_name(),prio_),
-                        parallel_find_first_of_helper<Iterator1,Iterator2,Func,Job>
+                        parallel_find_end_helper<Iterator1,Iterator2,Func,Job>
                                 (it,end1_,beg2_,end2_,func_,cutoff_,this->get_name(),prio_)
                );
         }
@@ -92,11 +123,11 @@ struct parallel_find_first_of_helper: public boost::asynchronous::continuation_t
     long cutoff_;
     std::size_t prio_;
 };
-
 }
+
 template <class Iterator1,class Iterator2, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<Iterator1,Job>
-parallel_find_first_of(Iterator1 beg1, Iterator1 end1,Iterator2 beg2, Iterator2 end2,Func func,long cutoff,
+parallel_find_end(Iterator1 beg1, Iterator1 end1,Iterator2 beg2, Iterator2 end2,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
              const std::string& task_name, std::size_t prio)
 #else
@@ -104,13 +135,13 @@ parallel_find_first_of(Iterator1 beg1, Iterator1 end1,Iterator2 beg2, Iterator2 
 #endif
 {
     return boost::asynchronous::top_level_callback_continuation_job<Iterator1,Job>
-            (boost::asynchronous::detail::parallel_find_first_of_helper<Iterator1,Iterator2,Func,Job>
+            (boost::asynchronous::detail::parallel_find_end_helper<Iterator1,Iterator2,Func,Job>
                (beg1,end1,beg2,end2,std::move(func),cutoff,task_name,prio));
 }
 
 template <class Iterator1,class Iterator2, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<Iterator1,Job>
-parallel_find_first_of(Iterator1 beg1, Iterator1 end1,Iterator2 beg2, Iterator2 end2,long cutoff,
+parallel_find_end(Iterator1 beg1, Iterator1 end1,Iterator2 beg2, Iterator2 end2,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
              const std::string& task_name, std::size_t prio)
 #else
@@ -122,8 +153,9 @@ parallel_find_first_of(Iterator1 beg1, Iterator1 end1,Iterator2 beg2, Iterator2 
     {
         return i == j;
     };
+
     return boost::asynchronous::top_level_callback_continuation_job<Iterator1,Job>
-            (boost::asynchronous::detail::parallel_find_first_of_helper<Iterator1,Iterator2,decltype(l),Job>
+            (boost::asynchronous::detail::parallel_find_end_helper<Iterator1,Iterator2,decltype(l),Job>
                (beg1,end1,beg2,end2,std::move(l),cutoff,task_name,prio));
 }
 
@@ -131,9 +163,9 @@ parallel_find_first_of(Iterator1 beg1, Iterator1 end1,Iterator2 beg2, Iterator2 
 namespace detail
 {
 template <class Iterator1,class Continuation, class Func, class Job>
-struct parallel_find_first_of_range_helper: public boost::asynchronous::continuation_task<Iterator1>
+struct parallel_find_end_range_helper: public boost::asynchronous::continuation_task<Iterator1>
 {
-    parallel_find_first_of_range_helper(Iterator1 beg1, Iterator1 end1,Continuation cont,Func func,
+    parallel_find_end_range_helper(Iterator1 beg1, Iterator1 end1,Continuation cont,Func func,
                                         long cutoff,const std::string& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<Iterator1>(task_name)
         , beg1_(beg1),end1_(end1),cont_(std::move(cont)),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
@@ -154,7 +186,7 @@ struct parallel_find_first_of_range_helper: public boost::asynchronous::continua
             try
             {
                 auto res = boost::make_shared<typename Continuation::return_type>(std::move(std::get<0>(continuation_res).get()));
-                auto new_continuation = boost::asynchronous::parallel_find_first_of
+                auto new_continuation = boost::asynchronous::parallel_find_end
                         <Iterator1,
                         decltype(boost::begin(std::declval<typename Continuation::return_type>())),
                         Func,
@@ -183,7 +215,7 @@ struct parallel_find_first_of_range_helper: public boost::asynchronous::continua
 // version for 2nd range returned as continuation
 template <class Iterator1,class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::enable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<Iterator1,Job> >::type
-parallel_find_first_of(Iterator1 beg1, Iterator1 end1,Range range,Func func,long cutoff,
+parallel_find_end(Iterator1 beg1, Iterator1 end1,Range range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
              const std::string& task_name, std::size_t prio)
 #else
@@ -191,10 +223,11 @@ parallel_find_first_of(Iterator1 beg1, Iterator1 end1,Range range,Func func,long
 #endif
 {
     return boost::asynchronous::top_level_callback_continuation_job<Iterator1,Job>
-            (boost::asynchronous::detail::parallel_find_first_of_range_helper<Iterator1,Range,Func,Job>
+            (boost::asynchronous::detail::parallel_find_end_range_helper<Iterator1,Range,Func,Job>
                (beg1,end1,std::move(range),std::move(func),cutoff,task_name,prio));
 }
 
+
 }}
-#endif // BOOST_ASYNCHRONOUS_PARALLEL_FIND_FIRST_OF_HPP
+#endif // BOOST_ASYNCHRONOUS_PARALLEL_FIND_END_HPP
 
