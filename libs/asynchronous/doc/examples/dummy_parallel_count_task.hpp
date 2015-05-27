@@ -48,12 +48,12 @@ struct dummy_parallel_count_task : public boost::asynchronous::serializable_task
     {
         ar & m_data;
     }
-    auto operator()() -> decltype(boost::asynchronous::parallel_count<std::vector<int>,dummy_parallel_count_subtask,boost::asynchronous::any_serializable>(
+    auto operator()() -> decltype(boost::asynchronous::parallel_count_if<std::vector<int>,dummy_parallel_count_subtask,boost::asynchronous::any_serializable>(
                                       std::move(std::vector<int>()),
                                       dummy_parallel_count_subtask(400,600),
                                       1000))
     {
-        return boost::asynchronous::parallel_count
+        return boost::asynchronous::parallel_count_if
                 <std::vector<int>,dummy_parallel_count_subtask,boost::asynchronous::any_serializable>(
             std::move(m_data),
             dummy_parallel_count_subtask(400,600),

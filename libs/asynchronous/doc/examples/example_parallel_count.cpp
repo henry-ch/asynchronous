@@ -57,7 +57,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         // we know the data will be alive until the end so we can use "this"
         post_callback(
                [this](){
-                        return boost::asynchronous::parallel_count(this->m_data.begin(),this->m_data.end(),
+                        return boost::asynchronous::parallel_count_if(this->m_data.begin(),this->m_data.end(),
                                                           [](int i)
                                                           {
                                                             return (400 <= i) && (i < 600);

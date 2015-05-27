@@ -112,7 +112,7 @@ struct parallel_count_helper: public boost::asynchronous::continuation_task<long
 template <class Iterator, class Func,
           class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<long,Job>
-parallel_count(Iterator beg, Iterator end,Func func,long cutoff,
+parallel_count_if(Iterator beg, Iterator end,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
              const std::string& task_name, std::size_t prio)
 #else
@@ -120,7 +120,24 @@ parallel_count(Iterator beg, Iterator end,Func func,long cutoff,
 #endif
 {
     return boost::asynchronous::top_level_callback_continuation_job<long,Job>
-            (boost::asynchronous::detail::parallel_count_helper<Iterator,Func,Job>(beg,end,func,cutoff,task_name,prio));
+            (boost::asynchronous::detail::parallel_count_helper<Iterator,Func,Job>(beg,end,std::move(func),cutoff,task_name,prio));
+}
+template <class Iterator, class T,
+          class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation<long,Job>
+parallel_count(Iterator beg, Iterator end,T const& value,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+             const std::string& task_name, std::size_t prio)
+#else
+             const std::string& task_name="", std::size_t prio=0)
+#endif
+{
+    auto l = [value](const typename std::iterator_traits<Iterator>::value_type& i)
+    {
+        return i == value;
+    };
+    return boost::asynchronous::top_level_callback_continuation_job<long,Job>
+            (boost::asynchronous::detail::parallel_count_helper<Iterator,decltype(l),Job>(beg,end,std::move(l),cutoff,task_name,prio));
 }
 
 // version for ranges held only by reference
@@ -175,7 +192,7 @@ struct parallel_count_range_helper: public boost::asynchronous::continuation_tas
 }
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<long,Job> >::type
-parallel_count(Range const& range,Func func,long cutoff,
+parallel_count_if(Range const& range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                const std::string& task_name, std::size_t prio)
 #else
@@ -327,7 +344,7 @@ struct parallel_count_range_move_helper<Range,Func,Job,typename ::boost::enable_
 
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<long,Job> >::type
-parallel_count(Range&& range,Func func,long cutoff,
+parallel_count_if(Range&& range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                const std::string& task_name, std::size_t prio)
 #else
@@ -338,9 +355,27 @@ parallel_count(Range&& range,Func func,long cutoff,
     auto beg = boost::begin(*r);
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<long,Job>
-            (boost::asynchronous::parallel_count_range_move_helper<Range,Func,Job>(r,beg,end,func,cutoff,task_name,prio));
+            (boost::asynchronous::parallel_count_range_move_helper<Range,Func,Job>(r,beg,end,std::move(func),cutoff,task_name,prio));
 }
-
+template <class Range, class T, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<long,Job> >::type
+parallel_count(Range&& range,const T& value,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+               const std::string& task_name, std::size_t prio)
+#else
+               const std::string& task_name="", std::size_t prio=0)
+#endif
+{
+    auto r = boost::make_shared<Range>(std::forward<Range>(range));
+    auto beg = boost::begin(*r);
+    auto end = boost::end(*r);
+    auto l = [value](decltype(*beg) i)
+    {
+        return i == value;
+    };
+    return boost::asynchronous::top_level_callback_continuation_job<long,Job>
+            (boost::asynchronous::parallel_count_range_move_helper<Range,decltype(l),Job>(r,beg,end,std::move(l),cutoff,task_name,prio));
+}
 
 // version for ranges given as continuation
 namespace detail
@@ -365,7 +400,7 @@ struct parallel_count_continuation_range_helper: public boost::asynchronous::con
         {
             try
             {
-                auto new_continuation = boost::asynchronous::parallel_count<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
+                auto new_continuation = boost::asynchronous::parallel_count_if<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
                 new_continuation.on_done([task_res](std::tuple<boost::future<long> >&& new_continuation_res)
                 {
                     task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
@@ -406,7 +441,7 @@ struct parallel_count_continuation_range_helper<Continuation,Func,Job,typename :
         {
             try
             {
-                auto new_continuation = boost::asynchronous::parallel_count<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
+                auto new_continuation = boost::asynchronous::parallel_count_if<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
                 new_continuation.on_done([task_res](std::tuple<boost::future<long> >&& new_continuation_res)
                 {
                     task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
@@ -428,7 +463,7 @@ struct parallel_count_continuation_range_helper<Continuation,Func,Job,typename :
 
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::enable_if<has_is_continuation_task<Range>, boost::asynchronous::detail::continuation<long, Job>>::type
-parallel_count(Range range,Func func,long cutoff,
+parallel_count_if(Range range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                const std::string& task_name, std::size_t prio)
 #else
