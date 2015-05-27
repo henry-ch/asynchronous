@@ -442,7 +442,7 @@ struct parallel_count_continuation_range_helper<Continuation,Func,Job,typename :
             try
             {
                 auto new_continuation = boost::asynchronous::parallel_count_if<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
-                new_continuation.on_done([task_res](std::tuple<boost::future<long> >&& new_continuation_res)
+                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<long> >&& new_continuation_res)
                 {
                     task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                 });
@@ -471,9 +471,27 @@ parallel_count_if(Range range,Func func,long cutoff,
 #endif
 {
     return boost::asynchronous::top_level_continuation_job<long,Job>
-            (boost::asynchronous::detail::parallel_count_continuation_range_helper<Range,Func,Job>(range,func,cutoff,task_name,prio));
+            (boost::asynchronous::detail::parallel_count_continuation_range_helper<Range,Func,Job>
+             (range,std::move(func),cutoff,task_name,prio));
 }
 
+template <class Range, class T, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+typename boost::enable_if<has_is_continuation_task<Range>, boost::asynchronous::detail::continuation<long, Job>>::type
+parallel_count(Range range,T const& value,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+               const std::string& task_name, std::size_t prio)
+#else
+               const std::string& task_name="", std::size_t prio=0)
+#endif
+{
+    auto l = [value](decltype(*boost::begin(std::declval<typename Range::return_type>())) i)
+    {
+        return i == value;
+    };
+    return boost::asynchronous::top_level_continuation_job<long,Job>
+            (boost::asynchronous::detail::parallel_count_continuation_range_helper<Range,decltype(l),Job>
+             (range,std::move(l),cutoff,task_name,prio));
+}
 
 }}
 #endif // BOOST_ASYNCHRON_PARALLEL_COUNT_HPP
