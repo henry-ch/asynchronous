@@ -71,9 +71,9 @@ public:
     template<class T>
     auto make_safe_callback(T func,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                                                     const std::string& task_name, std::size_t prio)
+                                                     const std::string& task_name, std::size_t prio) const
 #else
-                                                     const std::string& task_name="", std::size_t prio=0)
+                                                     const std::string& task_name="", std::size_t prio=0) const
 #endif
     -> decltype(boost::asynchronous::make_function(std::move(func)))
     {
@@ -327,9 +327,9 @@ private:
     template<typename... Args>
     std::function<void(Args... )> make_safe_callback_helper(std::function<void(Args... )> func,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                                                     const std::string& task_name, std::size_t prio)
+                                                     const std::string& task_name, std::size_t prio) const
 #else
-                                                     const std::string& task_name="", std::size_t prio=0)
+                                                     const std::string& task_name="", std::size_t prio=0) const
 #endif
     {
         boost::weak_ptr<track> tracking (m_tracking);
