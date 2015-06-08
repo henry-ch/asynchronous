@@ -109,6 +109,10 @@ struct call_if_alive<Func,T,void>
 template <class Func, class T,class R,class Enable=void>
 struct call_if_alive_exec
 {
+    typedef typename boost::asynchronous::detail::get_return_type<Func>::type return_type;
+    // pretend we are a continuation as we do not know and return the correct type above
+    // TODO a bit better...
+    typedef int is_continuation_task;
 #ifndef BOOST_NO_RVALUE_REFERENCES
     call_if_alive_exec(Func&& f, boost::weak_ptr<T> tracked):m_wrapped(std::forward<Func>(f)),m_tracked(tracked){}
 #else
@@ -150,6 +154,11 @@ struct call_if_alive_exec
 template <class Func, class T,class R>
 struct call_if_alive_exec<Func,T,R,typename ::boost::enable_if<boost::asynchronous::detail::is_serializable<Func> >::type>
 {
+    typedef typename boost::asynchronous::detail::get_return_type<Func>::type return_type;
+    // pretend we are a continuation as we do not know and return the correct type above
+    // TODO a bit better...
+    typedef int is_continuation_task;
+
 #ifndef BOOST_NO_RVALUE_REFERENCES
     call_if_alive_exec(Func&& f, boost::weak_ptr<T> tracked):m_wrapped(std::forward<Func>(f)),m_tracked(tracked){}
 #else

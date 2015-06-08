@@ -193,7 +193,7 @@ public:
 #else
     auto post_self(F1 func, std::string const& task_name="", std::size_t post_prio=0)
 #endif
-        -> boost::future<decltype(func())>
+        -> boost::future<typename boost::asynchronous::detail::get_return_type_if_possible_continuation<decltype(func())>::type>
     {
         // we want to log if possible
         return boost::asynchronous::post_future(m_scheduler.lock(),
@@ -207,7 +207,8 @@ public:
 #else
     auto interruptible_post_self(F1 func, std::string const& task_name="",std::size_t post_prio=0)
 #endif
-    -> std::tuple<boost::future<decltype(func())>,boost::asynchronous::any_interruptible >
+    -> std::tuple<boost::future<typename boost::asynchronous::detail::get_return_type_if_possible_continuation<decltype(func())>::type>,
+                  boost::asynchronous::any_interruptible >
     {
         // we want to log if possible
         return std::move(boost::asynchronous::interruptible_post_future(
@@ -222,7 +223,7 @@ public:
 #else
     auto post_future(F1 func, std::string const& task_name="", std::size_t post_prio=0)
 #endif
-        -> boost::future<decltype(func())>
+        -> boost::future<typename boost::asynchronous::detail::get_return_type_if_possible_continuation<decltype(func())>::type>
     {
         // we want to log if possible
         return boost::asynchronous::post_future(
@@ -238,7 +239,8 @@ public:
 #else
     auto interruptible_post_future(F1 func, std::string const& task_name="",std::size_t post_prio=0)
 #endif
-     -> std::tuple<boost::future<decltype(func())>,boost::asynchronous::any_interruptible >
+     -> std::tuple<boost::future<typename boost::asynchronous::detail::get_return_type_if_possible_continuation<decltype(func())>::type>,
+                   boost::asynchronous::any_interruptible >
     {
         // we want to log if possible
         return std::move(boost::asynchronous::interruptible_post_future(
@@ -253,7 +255,7 @@ public:
 #else
     auto post_future(Worker& wscheduler,F1 func, std::string const& task_name="", std::size_t post_prio=0)
 #endif
-        -> boost::future<decltype(func())>
+        -> boost::future<typename boost::asynchronous::detail::get_return_type_if_possible_continuation<decltype(func())>::type>
     {
         // we want to log if possible
         return boost::asynchronous::post_future(
@@ -268,7 +270,8 @@ public:
 #else
     auto interruptible_post_future(Worker& wscheduler,F1 func, std::string const& task_name="",std::size_t post_prio=0)
 #endif
-     -> std::tuple<boost::future<decltype(func())>,boost::asynchronous::any_interruptible >
+     -> std::tuple<boost::future<typename boost::asynchronous::detail::get_return_type_if_possible_continuation<decltype(func())>::type>,
+                   boost::asynchronous::any_interruptible >
     {
         // we want to log if possible
         return std::move(boost::asynchronous::interruptible_post_future(
