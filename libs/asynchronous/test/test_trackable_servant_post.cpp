@@ -28,7 +28,8 @@ namespace
 boost::thread::id main_thread_id;
 bool task_called=false;
 bool dtor_called=false;
-
+//make template just to try it out
+template <class T>
 struct Servant : boost::asynchronous::trackable_servant<>
 {
     typedef int simple_ctor;
@@ -63,13 +64,19 @@ struct Servant : boost::asynchronous::trackable_servant<>
 boost::shared_ptr<boost::promise<void> > m_dtor_done;
 };
 
-class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>
+//make template just to try it out
+template <class T>
+class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy<T>,Servant<T>>
 {
 public:
     template <class Scheduler>
     ServantProxy(Scheduler s):
-        boost::asynchronous::servant_proxy<ServantProxy,Servant>(s)
+        boost::asynchronous::servant_proxy<ServantProxy,Servant<T>>(s)
     {}
+    // this is only for c++11 compilers necessary
+#ifdef BOOST_NO_CXX14_RETURN_TYPE_DEDUCTION
+    using servant_type = typename boost::asynchronous::servant_proxy<ServantProxy<T>,Servant<T>>::servant_type;
+#endif
     BOOST_ASYNC_FUTURE_MEMBER(start_endless_async_work)
 };
 
@@ -87,7 +94,7 @@ BOOST_AUTO_TEST_CASE( test_trackable_servant_post )
         boost::shared_ptr<boost::promise<void> > startp(new boost::promise<void>);
         boost::shared_future<void> start=startp->get_future();
         {
-            ServantProxy proxy(scheduler);
+            ServantProxy<int> proxy(scheduler);
             boost::shared_future<void> fuv = proxy.start_endless_async_work(startp,end);
             // wait for task to start
             start.get();

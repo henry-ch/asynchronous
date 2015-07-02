@@ -89,12 +89,13 @@ BOOST_AUTO_TEST_CASE( test_geometry_union_of_x_200_200_2 )
                                                                                     boost::thread::hardware_concurrency());
 
     // make a copy and execute in pool
+    auto many_polygons_ = std::move(many_polygons);
     boost::future<std::vector<multi_polygon_type>> fu = boost::asynchronous::post_future(scheduler,
-    [many_polygons=std::move(many_polygons)]()mutable
+    [many_polygons_]()mutable
     {
         return boost::asynchronous::geometry::parallel_geometry_union_of_x<std::vector<multi_polygon_type>,
                                                                  BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-                (std::move(many_polygons),"",0);
+                (std::move(many_polygons_),"",0);
     }
     ,"",0);
 
@@ -162,12 +163,13 @@ BOOST_AUTO_TEST_CASE( test_geometry_union_of_x_200_200_2_continuation )
                                                                                     boost::thread::hardware_concurrency());
 
     // make a copy and execute in pool
+    auto many_polygons_ = std::move(many_polygons);
     boost::future<std::vector<multi_polygon_type>> fu = boost::asynchronous::post_future(scheduler,
-    [many_polygons=std::move(many_polygons)]()mutable
+    [many_polygons_]()mutable
     {
         return boost::asynchronous::geometry::parallel_geometry_union_of_x(
             boost::asynchronous::geometry::parallel_geometry_union_of_x<std::vector<multi_polygon_type>>
-                (std::move(many_polygons),"",0));
+                (std::move(many_polygons_),"",0));
     }
     ,"",0);
 

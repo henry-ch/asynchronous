@@ -93,6 +93,7 @@ namespace boost { namespace asynchronous
 // with this, will not compile with gcc 4.7 :(
 // ,typename boost::disable_if< boost::is_same<void,decltype(m_servant->funcname(args...))> >::type* dummy = 0
 #ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+#ifdef BOOST_NO_CXX14_RETURN_TYPE_DEDUCTION
 #define BOOST_ASYNC_FUTURE_MEMBER_LOG_2(funcname,taskname)                                                                                                  \
     template <typename... Args>                                                                                                                             \
     auto funcname(Args... args)const                                                                                                                        \
@@ -104,8 +105,21 @@ namespace boost { namespace asynchronous
                                     {return servant->funcname(std::move(as)...);                                                                            \
                                     },std::move(args)...),taskname);                                                                                        \
     }
+#else
+#define BOOST_ASYNC_FUTURE_MEMBER_LOG_2(funcname,taskname)                                                                                                  \
+    template <typename... Args>                                                                                                                             \
+    auto funcname(Args... args)const                                                                                                                        \
+    {                                                                                                                                                       \
+        auto servant = this->m_servant;                                                                                                                     \
+        return boost::asynchronous::post_future(this->m_proxy,                                                                                              \
+                boost::asynchronous::move_bind([servant](Args... as)                                                                                        \
+                                    {return servant->funcname(std::move(as)...);                                                                            \
+                                    },std::move(args)...),taskname);                                                                                        \
+    }
+#endif
 #endif
 
+#ifdef BOOST_NO_CXX14_RETURN_TYPE_DEDUCTION
 #define BOOST_ASYNC_FUTURE_MEMBER_LOG_3(funcname,taskname,prio)                                                                                         \
     template <typename... Args>                                                                                                                         \
     auto funcname(Args... args)const                                                                                                                    \
@@ -117,11 +131,23 @@ namespace boost { namespace asynchronous
                                     {return servant->funcname(std::move(as)...);                                                                        \
                                     },std::move(args)...),taskname,prio);                                                                               \
     }
-
+#else
+#define BOOST_ASYNC_FUTURE_MEMBER_LOG_3(funcname,taskname,prio)                                                                                         \
+    template <typename... Args>                                                                                                                         \
+    auto funcname(Args... args)const                                                                                                                    \
+    {                                                                                                                                                   \
+        auto servant = this->m_servant;                                                                                                                 \
+        return boost::asynchronous::post_future(this->m_proxy,                                                                                          \
+                boost::asynchronous::move_bind([servant](Args... as)                                                                                    \
+                                    {return servant->funcname(std::move(as)...);                                                                        \
+                                    },std::move(args)...),taskname,prio);                                                                               \
+    }
+#endif
 #define BOOST_ASYNC_FUTURE_MEMBER_LOG(...)                                                                      \
     BOOST_PP_OVERLOAD(BOOST_ASYNC_FUTURE_MEMBER_LOG_,__VA_ARGS__)(__VA_ARGS__)
 
 #ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+#ifdef BOOST_NO_CXX14_RETURN_TYPE_DEDUCTION
 #define BOOST_ASYNC_FUTURE_MEMBER_1(funcname)                                                                                                           \
     template <typename... Args>                                                                                                                         \
     auto funcname(Args... args)const                                                                                                                    \
@@ -133,8 +159,21 @@ namespace boost { namespace asynchronous
                                     {return servant->funcname(std::move(as)...);                                                                        \
                                     },std::move(args)...));                                                                                             \
     }
+#else
+#define BOOST_ASYNC_FUTURE_MEMBER_1(funcname)                                                                                                           \
+    template <typename... Args>                                                                                                                         \
+    auto funcname(Args... args)const                                                                                                                    \
+    {                                                                                                                                                   \
+        auto servant = this->m_servant;                                                                                                                 \
+        return boost::asynchronous::post_future(this->m_proxy,                                                                                          \
+                boost::asynchronous::move_bind([servant](Args... as)                                                                                    \
+                                    {return servant->funcname(std::move(as)...);                                                                        \
+                                    },std::move(args)...));                                                                                             \
+    }
+#endif
 #endif
 
+#ifdef BOOST_NO_CXX14_RETURN_TYPE_DEDUCTION
 #define BOOST_ASYNC_FUTURE_MEMBER_2(funcname,prio)                                                                                                      \
     template <typename... Args>                                                                                                                         \
     auto funcname(Args... args)const                                                                                                                    \
@@ -146,7 +185,18 @@ namespace boost { namespace asynchronous
                                     {return servant->funcname(std::move(as)...);                                                                        \
                                     },std::move(args)...),"",prio);                                                                                     \
     }
-
+#else
+#define BOOST_ASYNC_FUTURE_MEMBER_2(funcname,prio)                                                                                                      \
+    template <typename... Args>                                                                                                                         \
+    auto funcname(Args... args)const                                                                                                                    \
+    {                                                                                                                                                   \
+        auto servant = this->m_servant;                                                                                                                 \
+        return boost::asynchronous::post_future(this->m_proxy,                                                                                          \
+                boost::asynchronous::move_bind([servant](Args... as)                                                                                    \
+                                    {return servant->funcname(std::move(as)...);                                                                        \
+                                    },std::move(args)...),"",prio);                                                                                     \
+    }
+#endif
 #define BOOST_ASYNC_FUTURE_MEMBER(...)                                                                          \
     BOOST_PP_OVERLOAD(BOOST_ASYNC_FUTURE_MEMBER_,__VA_ARGS__)(__VA_ARGS__)
 
@@ -177,6 +227,7 @@ namespace boost { namespace asynchronous
 #define BOOST_ASYNC_POST_CALLBACK_MEMBER(...)                                                                                                       \
     BOOST_PP_OVERLOAD(BOOST_ASYNC_POST_CALLBACK_MEMBER_,__VA_ARGS__)(__VA_ARGS__)    
 
+#ifdef BOOST_NO_CXX14_RETURN_TYPE_DEDUCTION
 #define BOOST_ASYNC_UNSAFE_MEMBER(funcname)                                                                                                         \
     template <typename... Args>                                                                                                                     \
     auto funcname(Args... args)const                                                                                                                \
@@ -185,7 +236,15 @@ namespace boost { namespace asynchronous
         auto servant = m_servant;                                                                                                                   \
         return boost::asynchronous::move_bind([servant](Args... as){return servant->funcname(std::move(as)...);},std::move(args)...);               \
     }    
-    
+#else
+#define BOOST_ASYNC_UNSAFE_MEMBER(funcname)                                                                                                         \
+    template <typename... Args>                                                                                                                     \
+    auto funcname(Args... args)const                                                                                                                \
+    {                                                                                                                                               \
+        auto servant = m_servant;                                                                                                                   \
+        return boost::asynchronous::move_bind([servant](Args... as){return servant->funcname(std::move(as)...);},std::move(args)...);               \
+    }
+#endif
 #ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
 #define BOOST_ASYNC_SERVANT_POST_CTOR_0()                                                                       \
     static std::size_t get_ctor_prio() {return 0;}
