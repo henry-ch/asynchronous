@@ -211,7 +211,7 @@ namespace boost { namespace asynchronous
     template <typename F, typename S,typename... Args>                                                                                              \
     void funcname(F&& cb_func,S const& weak_cb_scheduler,std::size_t cb_prio, Args... args)const                                                    \
     {                                                                                                                                               \
-        boost::shared_ptr<servant_type> servant = m_servant;                                                                                        \
+        boost::shared_ptr<servant_type> servant = this->m_servant;                                                                                  \
         boost::asynchronous::post_callback(m_proxy,                                                                                                 \
                 boost::asynchronous::move_bind([servant](Args... as)->decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))     \
                                     {return servant->funcname(std::move(as)...);                                                                    \

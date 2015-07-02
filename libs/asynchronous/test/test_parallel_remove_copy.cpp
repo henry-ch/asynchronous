@@ -40,14 +40,6 @@ void generate(std::vector<int>& data)
     std::uniform_int_distribution<> dis(0, 10);
     std::generate(data.begin(), data.end(), std::bind(dis, std::ref(mt)));
 }
-void generate2(std::vector<int>& data)
-{
-    data = std::vector<int>(10000,1);
-    std::random_device rd;
-    std::mt19937 mt(rd());
-    std::uniform_int_distribution<> dis(0, 3000);
-    std::generate(data.begin(), data.end(), std::bind(dis, std::ref(mt)));
-}
 struct Servant : boost::asynchronous::trackable_servant<>
 {
     typedef int simple_ctor;
