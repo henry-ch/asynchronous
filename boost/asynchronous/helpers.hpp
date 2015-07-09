@@ -20,12 +20,12 @@ namespace boost { namespace asynchronous
 // calls f(cutoff) on the given scheduler and measures elapsed time
 // returns elapsed time in us
 template <class Func, class Scheduler>
-std::size_t measure_cutoff(Scheduler s, Func f,std::size_t cutoff)
+std::size_t measure_cutoff(Scheduler s, Func f,std::size_t cutoff,const std::string& task_name, std::size_t prio)
 {
     typename boost::chrono::high_resolution_clock::time_point start;
     typename boost::chrono::high_resolution_clock::time_point stop;
     start = boost::chrono::high_resolution_clock::now();
-    auto fu = boost::asynchronous::post_future(s,[cutoff,&f]()mutable{return f(cutoff);});
+    auto fu = boost::asynchronous::post_future(s,[cutoff,&f]()mutable{return f(cutoff);},task_name,prio);
     fu.get();
     stop = boost::chrono::high_resolution_clock::now();
     return (boost::chrono::nanoseconds(stop - start).count() / 1000);
@@ -41,7 +41,15 @@ std::tuple<std::size_t,std::vector<std::size_t>> find_best_cutoff(Scheduler s, F
                                                      std::size_t cutoff_begin,
                                                      std::size_t cutoff_end,
                                                      std::size_t steps,
-                                                     std::size_t retries)
+                                                     std::size_t retries,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                                                     const std::string& task_name,
+                                                     std::size_t prio
+#else
+                                                     const std::string& task_name="",
+                                                     std::size_t prio=0
+#endif
+                                                     )
 {
     std::map<std::size_t, std::vector<std::size_t>> map_cutoff_to_elapsed;
     for (std::size_t i = 0; i< steps; ++i)
@@ -50,7 +58,7 @@ std::tuple<std::size_t,std::vector<std::size_t>> find_best_cutoff(Scheduler s, F
         for (std::size_t j = 0; j< retries; ++j)
         {
             std::size_t cutoff = cutoff_begin+((double)(cutoff_end-cutoff_begin)/steps)*i;
-            std::size_t one_step = measure_cutoff(s, f, cutoff);
+            std::size_t one_step = measure_cutoff(s, f, cutoff,task_name,prio);
             map_cutoff_to_elapsed[cutoff].push_back(one_step);
 #ifdef BOOST_ASYNCHRONOUS_USE_COUT
             std::cout << "algorithm took for cutoff "<< cutoff << " in us:" << one_step << std::endl;

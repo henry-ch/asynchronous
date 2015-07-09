@@ -45,9 +45,9 @@ namespace boost { namespace asynchronous
     template <typename... Args>                                                                                             \
     void funcname(Args... args)const                                                                                        \
     {                                                                                                                       \
-        boost::shared_ptr<servant_type> servant = this->m_servant;                                                          \
+        auto servant = this->m_servant;                                                                                     \
         this->post(typename boost::asynchronous::job_traits<callable_type>::wrapper_type(boost::asynchronous::any_callable  \
-        (boost::asynchronous::move_bind([servant](Args... as){servant->funcname(std::move(as)...);},std::move(args)...))));  \
+        (boost::asynchronous::move_bind([servant](Args... as){servant->funcname(std::move(as)...);},std::move(args)...)))); \
     }
 #endif
 
@@ -55,7 +55,7 @@ namespace boost { namespace asynchronous
     template <typename... Args>                                                                                                 \
     void funcname(Args... args)const                                                                                            \
     {                                                                                                                           \
-        boost::shared_ptr<servant_type> servant = this->m_servant;                                                              \
+        auto servant = this->m_servant;                                                                                         \
         this->post(typename boost::asynchronous::job_traits<callable_type>::wrapper_type(boost::asynchronous::any_callable      \
         (boost::asynchronous::move_bind([servant](Args... as){servant->funcname(std::move(as)...);},std::move(args)...))),prio);\
     }
@@ -68,7 +68,7 @@ namespace boost { namespace asynchronous
     template <typename... Args>                                                                                                             \
     void funcname(Args... args)const                                                                                                        \
     {                                                                                                                                       \
-        boost::shared_ptr<servant_type> servant = this->m_servant;                                                                          \
+        auto servant = this->m_servant;                                                                                                     \
         typename boost::asynchronous::job_traits<callable_type>::wrapper_type  a(boost::asynchronous::any_callable                          \
                         (boost::asynchronous::move_bind([servant](Args... as){servant->funcname(std::move(as)...);},std::move(args)...)));  \
         a.set_name(taskname);                                                                                                               \
@@ -80,7 +80,7 @@ namespace boost { namespace asynchronous
     template <typename... Args>                                                                                                             \
     void funcname(Args... args)const                                                                                                        \
     {                                                                                                                                       \
-        boost::shared_ptr<servant_type> servant = this->m_servant;                                                                          \
+        auto servant = this->m_servant;                                                                                                     \
         typename boost::asynchronous::job_traits<callable_type>::wrapper_type  a(boost::asynchronous::any_callable                          \
                         (boost::asynchronous::move_bind([servant](Args... as){servant->funcname(std::move(as)...);},std::move(args)...)));  \
         a.set_name(taskname);                                                                                                               \
@@ -93,116 +93,110 @@ namespace boost { namespace asynchronous
 // with this, will not compile with gcc 4.7 :(
 // ,typename boost::disable_if< boost::is_same<void,decltype(m_servant->funcname(args...))> >::type* dummy = 0
 #ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+#ifdef BOOST_NO_CXX14_RETURN_TYPE_DEDUCTION
 #define BOOST_ASYNC_FUTURE_MEMBER_LOG_2(funcname,taskname)                                                                                                  \
     template <typename... Args>                                                                                                                             \
     auto funcname(Args... args)const                                                                                                                        \
-        -> typename boost::disable_if< boost::is_same<void,decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))>,                      \
-                                       boost::future<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))> >::type                     \
+        -> boost::future<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))>                                                         \
     {                                                                                                                                                       \
-        boost::shared_ptr<servant_type> servant = this->m_servant;                                                                                          \
-        boost::future<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))> fu=boost::asynchronous::post_future(this->m_proxy,         \
-                boost::asynchronous::move_bind([servant](Args... as)->decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))             \
+        auto servant = this->m_servant;                                                                                                                     \
+        return boost::asynchronous::post_future(this->m_proxy,                                                                                              \
+                boost::asynchronous::move_bind([servant](Args... as)                                                                                        \
                                     {return servant->funcname(std::move(as)...);                                                                            \
                                     },std::move(args)...),taskname);                                                                                        \
-        return std::move(fu);                                                                                                                               \
-    }                                                                                                                                                       \
+    }
+#else
+#define BOOST_ASYNC_FUTURE_MEMBER_LOG_2(funcname,taskname)                                                                                                  \
     template <typename... Args>                                                                                                                             \
     auto funcname(Args... args)const                                                                                                                        \
-        -> typename boost::enable_if< boost::is_same<void,decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))>,                       \
-                                       boost::future<void> >::type                                                                                          \
     {                                                                                                                                                       \
-        boost::shared_ptr<servant_type> servant = this->m_servant;                                                                                          \
-        boost::future<void> fu = boost::asynchronous::post_future(this->m_proxy,                                                                            \
+        auto servant = this->m_servant;                                                                                                                     \
+        return boost::asynchronous::post_future(this->m_proxy,                                                                                              \
                 boost::asynchronous::move_bind([servant](Args... as)                                                                                        \
-                                {servant->funcname(std::move(as)...);                                                                                       \
-                                },args...),taskname);                                                                                                       \
-        return std::move(fu);                                                                                                                               \
+                                    {return servant->funcname(std::move(as)...);                                                                            \
+                                    },std::move(args)...),taskname);                                                                                        \
     }
 #endif
+#endif
 
+#ifdef BOOST_NO_CXX14_RETURN_TYPE_DEDUCTION
 #define BOOST_ASYNC_FUTURE_MEMBER_LOG_3(funcname,taskname,prio)                                                                                         \
     template <typename... Args>                                                                                                                         \
     auto funcname(Args... args)const                                                                                                                    \
-        -> typename boost::disable_if< boost::is_same<void,decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))>,                  \
-                                       boost::future<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))> >::type                 \
+        -> boost::future<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))>                                                     \
     {                                                                                                                                                   \
-        boost::shared_ptr<servant_type> servant = this->m_servant;                                                                                      \
-        boost::future<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))> fu=boost::asynchronous::post_future(this->m_proxy,     \
-                boost::asynchronous::move_bind([servant](Args... as)->decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))         \
+        auto servant = this->m_servant;                                                                                                                 \
+        return boost::asynchronous::post_future(this->m_proxy,                                                                                          \
+                boost::asynchronous::move_bind([servant](Args... as)                                                                                    \
                                     {return servant->funcname(std::move(as)...);                                                                        \
                                     },std::move(args)...),taskname,prio);                                                                               \
-        return std::move(fu);                                                                                                                           \
-    }                                                                                                                                                   \
+    }
+#else
+#define BOOST_ASYNC_FUTURE_MEMBER_LOG_3(funcname,taskname,prio)                                                                                         \
     template <typename... Args>                                                                                                                         \
     auto funcname(Args... args)const                                                                                                                    \
-        -> typename boost::enable_if< boost::is_same<void,decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))>,                   \
-                                       boost::future<void> >::type                                                                                      \
     {                                                                                                                                                   \
-        boost::shared_ptr<servant_type> servant = this->m_servant;                                                                                      \
-        boost::future<void> fu = boost::asynchronous::post_future(this->m_proxy,                                                                        \
+        auto servant = this->m_servant;                                                                                                                 \
+        return boost::asynchronous::post_future(this->m_proxy,                                                                                          \
                 boost::asynchronous::move_bind([servant](Args... as)                                                                                    \
-                                {servant->funcname(std::move(as)...);                                                                                   \
-                                },std::move(args)...),taskname,prio);                                                                                   \
-        return std::move(fu);                                                                                                                           \
+                                    {return servant->funcname(std::move(as)...);                                                                        \
+                                    },std::move(args)...),taskname,prio);                                                                               \
     }
-
+#endif
 #define BOOST_ASYNC_FUTURE_MEMBER_LOG(...)                                                                      \
     BOOST_PP_OVERLOAD(BOOST_ASYNC_FUTURE_MEMBER_LOG_,__VA_ARGS__)(__VA_ARGS__)
 
 #ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+#ifdef BOOST_NO_CXX14_RETURN_TYPE_DEDUCTION
 #define BOOST_ASYNC_FUTURE_MEMBER_1(funcname)                                                                                                           \
     template <typename... Args>                                                                                                                         \
     auto funcname(Args... args)const                                                                                                                    \
-        -> typename boost::disable_if< boost::is_same<void,decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))>,                  \
-                                       boost::future<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))> >::type                 \
+        -> boost::future<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))>                                                     \
     {                                                                                                                                                   \
-        boost::shared_ptr<servant_type> servant = this->m_servant;                                                                                      \
-        boost::future<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))> fu=boost::asynchronous::post_future(this->m_proxy,     \
-                boost::asynchronous::move_bind([servant](Args... as)->decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))         \
+        auto servant = this->m_servant;                                                                                                                 \
+        return boost::asynchronous::post_future(this->m_proxy,                                                                                          \
+                boost::asynchronous::move_bind([servant](Args... as)                                                                                    \
                                     {return servant->funcname(std::move(as)...);                                                                        \
                                     },std::move(args)...));                                                                                             \
-        return std::move(fu);                                                                                                                           \
-    }                                                                                                                                                   \
+    }
+#else
+#define BOOST_ASYNC_FUTURE_MEMBER_1(funcname)                                                                                                           \
     template <typename... Args>                                                                                                                         \
     auto funcname(Args... args)const                                                                                                                    \
-        -> typename boost::enable_if< boost::is_same<void,decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))>,                   \
-                                       boost::future<void> >::type                                                                                      \
     {                                                                                                                                                   \
-        boost::shared_ptr<servant_type> servant = this->m_servant;                                                                                      \
-        boost::future<void> fu = boost::asynchronous::post_future(this->m_proxy,                                                                        \
+        auto servant = this->m_servant;                                                                                                                 \
+        return boost::asynchronous::post_future(this->m_proxy,                                                                                          \
                 boost::asynchronous::move_bind([servant](Args... as)                                                                                    \
-                                {servant->funcname(std::move(as)...);                                                                                   \
-                                },std::move(args)...));                                                                                                 \
-        return std::move(fu);                                                                                                                           \
+                                    {return servant->funcname(std::move(as)...);                                                                        \
+                                    },std::move(args)...));                                                                                             \
     }
 #endif
+#endif
 
+#ifdef BOOST_NO_CXX14_RETURN_TYPE_DEDUCTION
 #define BOOST_ASYNC_FUTURE_MEMBER_2(funcname,prio)                                                                                                      \
     template <typename... Args>                                                                                                                         \
     auto funcname(Args... args)const                                                                                                                    \
-        -> typename boost::disable_if< boost::is_same<void,decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))>,                  \
-                                       boost::future<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))> >::type                 \
+        -> boost::future<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))>                                                     \
     {                                                                                                                                                   \
-        boost::shared_ptr<servant_type> servant = this->m_servant;                                                                                      \
-        boost::future<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))> fu=boost::asynchronous::post_future(this->m_proxy,     \
-                boost::asynchronous::move_bind([servant](Args... as)->decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))         \
+        auto servant = this->m_servant;                                                                                                                 \
+        return boost::asynchronous::post_future(this->m_proxy,                                                                                          \
+                boost::asynchronous::move_bind([servant](Args... as)                                                                                    \
                                     {return servant->funcname(std::move(as)...);                                                                        \
                                     },std::move(args)...),"",prio);                                                                                     \
-        return std::move(fu);                                                                                                                           \
-    }                                                                                                                                                   \
+    }
+#else
+#define BOOST_ASYNC_FUTURE_MEMBER_2(funcname,prio)                                                                                                      \
     template <typename... Args>                                                                                                                         \
     auto funcname(Args... args)const                                                                                                                    \
-        -> typename boost::enable_if< boost::is_same<void,decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))>,                   \
-                                       boost::future<void> >::type                                                                                      \
     {                                                                                                                                                   \
-        boost::shared_ptr<servant_type> servant = this->m_servant;                                                                                      \
-        boost::future<void> fu = boost::asynchronous::post_future(this->m_proxy,                                                                        \
+        auto servant = this->m_servant;                                                                                                                 \
+        return boost::asynchronous::post_future(this->m_proxy,                                                                                          \
                 boost::asynchronous::move_bind([servant](Args... as)                                                                                    \
-                                {servant->funcname(std::move(as)...);                                                                                   \
-                                },std::move(args)...),"",prio);                                                                                         \
-        return std::move(fu);                                                                                                                           \
+                                    {return servant->funcname(std::move(as)...);                                                                        \
+                                    },std::move(args)...),"",prio);                                                                                     \
     }
-
+#endif
 #define BOOST_ASYNC_FUTURE_MEMBER(...)                                                                          \
     BOOST_PP_OVERLOAD(BOOST_ASYNC_FUTURE_MEMBER_,__VA_ARGS__)(__VA_ARGS__)
 
@@ -211,9 +205,9 @@ namespace boost { namespace asynchronous
     template <typename F, typename S,typename... Args>                                                                                              \
     void funcname(F&& cb_func,S const& weak_cb_scheduler,std::size_t cb_prio, Args... args)const                                                    \
     {                                                                                                                                               \
-        boost::shared_ptr<servant_type> servant = m_servant;                                                                                        \
+        auto servant = this->m_servant;                                                                                                             \
         boost::asynchronous::post_callback(m_proxy,                                                                                                 \
-                boost::asynchronous::move_bind([servant](Args... as)->decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))     \
+                boost::asynchronous::move_bind([servant](Args... as)                                                                                \
                                     {return servant->funcname(std::move(as)...);                                                                    \
                                     },std::move(args)...),weak_cb_scheduler,std::forward<F>(cb_func),"",0,cb_prio);                                 \
     }
@@ -223,9 +217,9 @@ namespace boost { namespace asynchronous
     template <typename F, typename S,typename... Args>                                                                                              \
     void funcname(F&& cb_func,S const& weak_cb_scheduler,std::size_t cb_prio, Args... args)const                                                    \
     {                                                                                                                                               \
-        boost::shared_ptr<servant_type> servant = m_servant;                                                                                        \
+        auto servant = m_servant;                                                                                                                   \
         boost::asynchronous::post_callback(m_proxy,                                                                                                 \
-                boost::asynchronous::move_bind([servant](Args... as)->decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))     \
+                boost::asynchronous::move_bind([servant](Args... as)                                                                                \
                                     {return servant->funcname(std::move(as)...);                                                                    \
                                     },std::move(args)...),weak_cb_scheduler,std::forward<F>(cb_func),"",prio,cb_prio);                              \
     }
@@ -233,24 +227,24 @@ namespace boost { namespace asynchronous
 #define BOOST_ASYNC_POST_CALLBACK_MEMBER(...)                                                                                                       \
     BOOST_PP_OVERLOAD(BOOST_ASYNC_POST_CALLBACK_MEMBER_,__VA_ARGS__)(__VA_ARGS__)    
 
+#ifdef BOOST_NO_CXX14_RETURN_TYPE_DEDUCTION
 #define BOOST_ASYNC_UNSAFE_MEMBER(funcname)                                                                                                         \
     template <typename... Args>                                                                                                                     \
     auto funcname(Args... args)const                                                                                                                \
-    -> typename boost::enable_if< boost::is_same<void,decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))>,                   \
-                                  std::function<void()> >::type                                                                                     \
+    -> std::function<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))()>               \
     {                                                                                                                                               \
-        boost::shared_ptr<servant_type> servant = m_servant;                                                                                        \
-        return boost::asynchronous::move_bind([servant](Args... as){servant->funcname(std::move(as)...);},std::move(args)...);                      \
-    }                                                                                                                                               \
-    template <typename... Args>                                                                                                                     \
-    auto funcname(Args... args)const                                                                                                                \
-    -> typename boost::disable_if< boost::is_same<void,decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))>,                  \
-                                   std::function<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))()> >::type               \
-    {                                                                                                                                               \
-        boost::shared_ptr<servant_type> servant = m_servant;                                                                                        \
+        auto servant = m_servant;                                                                                                                   \
         return boost::asynchronous::move_bind([servant](Args... as){return servant->funcname(std::move(as)...);},std::move(args)...);               \
     }    
-    
+#else
+#define BOOST_ASYNC_UNSAFE_MEMBER(funcname)                                                                                                         \
+    template <typename... Args>                                                                                                                     \
+    auto funcname(Args... args)const                                                                                                                \
+    {                                                                                                                                               \
+        auto servant = m_servant;                                                                                                                   \
+        return boost::asynchronous::move_bind([servant](Args... as){return servant->funcname(std::move(as)...);},std::move(args)...);               \
+    }
+#endif
 #ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
 #define BOOST_ASYNC_SERVANT_POST_CTOR_0()                                                                       \
     static std::size_t get_ctor_prio() {return 0;}

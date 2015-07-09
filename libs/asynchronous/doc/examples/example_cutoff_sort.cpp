@@ -55,7 +55,7 @@ void example_cutoff_sort(std::size_t cutoff_begin,
         std::size_t acc = std::accumulate(std::get<1>(best_cutoff).begin(),std::get<1>(best_cutoff).end(),0,
                                           [](std::size_t a, std::size_t b){return a+b;});
         std::cout << "example_cutoff_sort has best cutoff: "<< std::get<0>(best_cutoff)
-                  << " , took us (average):" << acc/10 << std::endl;
+                  << " , took us (average):" << acc/std::get<1>(best_cutoff).size() << std::endl;
 
     }
     std::cout << "end example_sort \n" << std::endl;
