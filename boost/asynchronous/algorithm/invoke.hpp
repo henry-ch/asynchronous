@@ -1,4 +1,4 @@
-// Boost.Asynchronous library
+﻿// Boost.Asynchronous library
 //  Copyright (C) Christophe Henry 2013
 //
 //  Use, modification and distribution is subject to the Boost
@@ -34,9 +34,9 @@ namespace detail
 template <class Continuation, class Func, class Job,class Return,class Enable=void>
 struct invoke_helper: public boost::asynchronous::continuation_task<Return>
 {
-    invoke_helper(Continuation const& c,Func func)
-        : boost::asynchronous::continuation_task<Return>()
-        , cont_(c),func_(std::move(func))
+    invoke_helper(Continuation const& c,Func func, std::string const & task_name, std::size_t prio)
+        : boost::asynchronous::continuation_task<Return>(task_name)
+        , cont_(c),func_(std::move(func)), prio_(prio)
     {}
     void operator()()
     {
@@ -60,16 +60,17 @@ struct invoke_helper: public boost::asynchronous::continuation_task<Return>
 private:
     Continuation cont_;
     Func func_;
+    std::size_t prio_;
 };
 template <class Continuation, class Func, class Job,class Return>
 struct invoke_helper<Continuation,Func,Job,Return,typename ::boost::enable_if<boost::asynchronous::detail::is_serializable<Func> >::type>
         : public boost::asynchronous::continuation_task<Return>
         , public boost::asynchronous::serializable_task
 {
-    invoke_helper(Continuation const& c,Func func)
-        : boost::asynchronous::continuation_task<Return>()
+    invoke_helper(Continuation const& c,Func func, std::string const & task_name, std::size_t prio)
+        : boost::asynchronous::continuation_task<Return>(task_name)
         , boost::asynchronous::serializable_task(func.get_task_name())
-        , cont_(c),func_(std::move(func))
+        , cont_(c),func_(std::move(func)), prio_(prio)
     {}
     void operator()()
     {
@@ -99,17 +100,24 @@ struct invoke_helper<Continuation,Func,Job,Return,typename ::boost::enable_if<bo
 private:
     Continuation cont_;
     Func func_;
+    std::size_t prio_;
 };
 }
 // Notice: return value of Continuation must have a default-ctor
 template <class Continuation, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-auto invoke(Continuation c,Func func)
+auto invoke(Continuation c,Func func,
+ #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+            const std::string& task_name, std::size_t prio
+#else
+            const std::string& task_name = "", std::size_t prio = 0
+#endif
+            )
     -> typename boost::enable_if<has_is_continuation_task<Continuation>,
             boost::asynchronous::detail::callback_continuation<decltype(func(typename Continuation::return_type())),Job> >::type
 {
     return boost::asynchronous::top_level_callback_continuation_job<decltype(func(typename Continuation::return_type())),Job>
             (boost::asynchronous::detail::invoke_helper<Continuation,Func,Job,decltype(func(typename Continuation::return_type()))>
-                (std::move(c),std::move(func)));
+                (std::move(c),std::move(func), task_name, prio));
 }
 
 }}
