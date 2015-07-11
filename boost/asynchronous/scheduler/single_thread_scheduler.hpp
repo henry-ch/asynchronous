@@ -59,17 +59,17 @@ public:
     {
     }
 #endif
-#ifndef BOOST_NO_CXX11_VARIADIC_TEMPLATES
+    template<typename... Args>
+    single_thread_scheduler(std::string const& name,Args... args)
+        : boost::asynchronous::detail::single_queue_scheduler_policy<Q>(boost::make_shared<queue_type>(std::move(args)...))
+        , m_private_queue(boost::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable>>())
+        , m_name(name)
+    {
+         set_name(name);
+    }
     template<typename... Args>
     single_thread_scheduler(Args... args)
         : boost::asynchronous::detail::single_queue_scheduler_policy<Q>(boost::make_shared<queue_type>(std::move(args)...))
-        , m_private_queue(boost::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable>>())
-    {
-    }
-#endif
-
-    single_thread_scheduler()
-        : boost::asynchronous::detail::single_queue_scheduler_policy<Q>()
         , m_private_queue(boost::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable>>())
     {
     }
@@ -150,6 +150,10 @@ public:
 #else
         m_private_queue->push(boost::asynchronous::any_callable(ntask),std::numeric_limits<std::size_t>::max());
 #endif
+    }
+    std::string get_name()const
+    {
+        return m_name;
     }
     // try to execute a job, return true
     static bool execute_one_job(boost::shared_ptr<queue_type> queue,CPULoad& cpu_load,boost::shared_ptr<diag_type> diagnostics,
@@ -278,6 +282,7 @@ private:
     boost::shared_ptr<diag_type> m_diagnostics;
     boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable>> m_private_queue;
     std::function<void(boost::asynchronous::scheduler_diagnostics<job_type>)> m_diagnostics_fct;
+    const std::string m_name;
 };
 
 }} // boost::async::scheduler

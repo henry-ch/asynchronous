@@ -148,6 +148,10 @@ public:
             (*it).set_name(name);
         }
     }
+    std::string get_name()const
+    {
+        return "composite_threadpool_scheduler";
+    }
     boost::asynchronous::scheduler_diagnostics<job_type>
     get_diagnostics(std::size_t pos=0)const
     {

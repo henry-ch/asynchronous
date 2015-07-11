@@ -61,7 +61,6 @@ public:
     typedef typename Q::job_type job_type;
     typedef typename boost::asynchronous::job_traits<typename Q::job_type>::diagnostic_table_type diag_type;
 
-#ifndef BOOST_NO_CXX11_VARIADIC_TEMPLATES
     template<typename... Args>
     io_threadpool_scheduler(size_t min_number_of_workers, size_t max_number_of_workers, Args... args)
         : boost::asynchronous::detail::single_queue_scheduler_policy<Q>(boost::make_shared<queue_type>(std::move(args)...))
@@ -74,10 +73,11 @@ public:
                         boost::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >());
         }
     }
-#endif
-    io_threadpool_scheduler(size_t min_number_of_workers, size_t max_number_of_workers)
-        : boost::asynchronous::detail::single_queue_scheduler_policy<Q>()
+    template<typename... Args>
+    io_threadpool_scheduler(size_t min_number_of_workers, size_t max_number_of_workers,std::string const& name, Args... args)
+        : boost::asynchronous::detail::single_queue_scheduler_policy<Q>(boost::make_shared<queue_type>(std::move(args)...))
         , m_data (boost::make_shared<internal_data>(min_number_of_workers,max_number_of_workers))
+        , m_name(name)
     {
         m_private_queues.reserve(max_number_of_workers);
         for (size_t i = 0; i< max_number_of_workers;++i)
@@ -85,6 +85,7 @@ public:
             m_private_queues.push_back(
                         boost::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >());
         }
+        set_name(name);
     }
     void constructor_done(boost::weak_ptr<this_type> weak_self)
     {
@@ -303,7 +304,10 @@ public:
 #endif
         }
     }
-
+    std::string get_name()const
+    {
+        return m_name;
+    }
     // try to execute a job, return true
     static bool execute_one_job(boost::shared_ptr<queue_type> queue,CPULoad* cpu_load,boost::shared_ptr<diag_type> diagnostics,
                                 std::list<boost::asynchronous::any_continuation>& waiting,size_t index)
@@ -583,6 +587,7 @@ private:
     std::vector<boost::shared_ptr<
                 boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable>>> m_private_queues;
     std::function<void(boost::asynchronous::scheduler_diagnostics<job_type>)> m_diagnostics_fct;
+    const std::string m_name;
 };
 
 }} // boost::asynchronous::scheduler

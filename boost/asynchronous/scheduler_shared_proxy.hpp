@@ -146,7 +146,10 @@ public:
     {
         m_scheduler->set_name(name);
     }
-
+    std::string get_name()const
+    {
+        return m_scheduler->get_name();
+    }
     ~scheduler_shared_proxy_impl()
     {
         // stop scheduler and block until joined
@@ -279,7 +282,10 @@ public:
     {
         m_impl->set_name(name);
     }
-
+    std::string get_name()const
+    {
+        return m_impl->get_name();
+    }
     ~scheduler_shared_proxy()
     {
     }

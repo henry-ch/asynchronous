@@ -38,7 +38,6 @@ struct continuation
 {
     typedef int is_continuation_task;
     typedef Return return_type;
-    typedef Tuple tuple_type;
     // metafunction telling if we are future or expected based sind
     template <class T>
     struct continuation_args
@@ -227,7 +226,6 @@ struct callback_continuation
     typedef int is_continuation_task;
     typedef int is_callback_continuation_task;
     typedef Return return_type;
-    typedef Tuple tuple_type;
     // metafunction telling if we are future or expected based
     template <class T>
     struct continuation_args

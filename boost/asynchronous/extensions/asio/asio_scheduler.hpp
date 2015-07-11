@@ -62,11 +62,13 @@ public:
     typedef boost::asynchronous::any_callable job_type;
     typedef asio_scheduler<FindPosition,CPULoad> this_type;
     
-    asio_scheduler(size_t number_of_workers=1,bool immediate=true)
+    asio_scheduler(size_t number_of_workers=1,bool immediate=true,std::string const& name="")
         : m_next_shutdown_bucket(0)
         , m_number_of_workers(number_of_workers)
         , m_immediate(immediate)
+        , m_name(name)
     {
+        set_name(name);
     }
     std::vector<std::size_t> get_queue_size() const
     {
@@ -139,6 +141,10 @@ public:
             this->post(job_type(ntask),i);
 #endif
         }
+    }
+    std::string get_name()const
+    {
+        return m_name;
     }
     boost::asynchronous::any_joinable get_worker()const
     {
@@ -445,6 +451,7 @@ private:
     std::vector<boost::thread::id> m_thread_ids;
     boost::weak_ptr<this_type> m_weak_self;
     bool m_immediate;
+    const std::string m_name;
 };
 
 template<class FindPosition,class CPULoad>

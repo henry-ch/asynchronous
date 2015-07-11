@@ -62,7 +62,6 @@ public:
     typedef typename boost::asynchronous::job_traits<typename Q::job_type>::diagnostic_table_type diag_type;
     typedef stealing_threadpool_scheduler<Q,CPULoad,IsImmediate> this_type;
 
-#ifndef BOOST_NO_CXX11_VARIADIC_TEMPLATES
     template<typename... Args>
     stealing_threadpool_scheduler(size_t number_of_workers, Args... args)
         : boost::asynchronous::detail::single_queue_scheduler_policy<Q>(boost::make_shared<queue_type>(std::move(args)...))
@@ -75,17 +74,19 @@ public:
                         boost::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >());
         }
     }
-#endif
-    stealing_threadpool_scheduler(size_t number_of_workers)
-        : boost::asynchronous::detail::single_queue_scheduler_policy<Q>()
+    template<typename... Args>
+    stealing_threadpool_scheduler(size_t number_of_workers, std::string const& name, Args... args)
+        : boost::asynchronous::detail::single_queue_scheduler_policy<Q>(boost::make_shared<queue_type>(std::move(args)...))
         , m_number_of_workers(number_of_workers)
-     {
+        , m_name(name)
+    {
         m_private_queues.reserve(number_of_workers);
         for (size_t i = 0; i< number_of_workers;++i)
         {
             m_private_queues.push_back(
                         boost::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >());
         }
+        set_name(name);
     }
     void set_steal_from_queues(std::vector<boost::asynchronous::any_queue_ptr<job_type> > const& others)
     {
@@ -172,6 +173,10 @@ public:
             m_private_queues[i]->push(boost::asynchronous::any_callable(ntask),std::numeric_limits<std::size_t>::max());
 #endif
         }
+    }
+    std::string get_name()const
+    {
+        return m_name;
     }
     // try to execute a job, return true
     static bool execute_one_job(boost::shared_ptr<queue_type> own_queue,std::vector<boost::asynchronous::any_queue_ptr<job_type> > other_queues,
@@ -314,6 +319,7 @@ private:
     std::vector<boost::shared_ptr<
                 boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable>>> m_private_queues;
     std::function<void(boost::asynchronous::scheduler_diagnostics<job_type>)> m_diagnostics_fct;
+    const std::string m_name;
 };
 
 }} // boost::async::scheduler
