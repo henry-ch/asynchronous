@@ -533,6 +533,8 @@ struct callback_continuation
                 }
                 if (interrupted)
                     return_result();
+                else if (m_ready_futures ==(std::tuple_size<Tuple>::value + 1))
+                    return_result();
             }
             else
             {
@@ -692,6 +694,231 @@ struct continuation_as_seq
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> m_state;
     Duration m_timeout;
     typename boost::chrono::high_resolution_clock::time_point m_start;
+};
+
+template <class Return, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB, typename Duration = boost::chrono::milliseconds >
+struct callback_continuation_as_seq
+{
+    typedef int is_continuation_task;
+    typedef int is_callback_continuation_task;
+    typedef Return return_type;
+    // metafunction telling if we are future or expected based
+    template <class T>
+    struct continuation_args
+    {
+        typedef boost::asynchronous::expected<T> type;
+    };
+    // workaround for compiler crash (gcc 4.7)
+    boost::asynchronous::expected<Return> get_continuation_args()const
+    {
+        return boost::asynchronous::expected<Return>();
+    }
+
+    callback_continuation_as_seq(callback_continuation_as_seq&& rhs)noexcept
+        : m_state(std::move(rhs.m_state))
+        , m_timeout(std::move(rhs.m_timeout))
+        , m_start(std::move(rhs.m_start))
+        , m_finished(rhs.m_finished)
+    {
+    }
+    callback_continuation_as_seq(callback_continuation_as_seq const& rhs)noexcept
+        : m_state(std::move((const_cast<callback_continuation_as_seq&>(rhs)).m_state))
+        , m_timeout(std::move((const_cast<callback_continuation_as_seq&>(rhs)).m_timeout))
+        , m_start(std::move((const_cast<callback_continuation_as_seq&>(rhs)).m_start))
+        , m_finished(rhs.m_finished)
+    {
+    }
+
+    callback_continuation_as_seq& operator= (callback_continuation_as_seq&& rhs)noexcept
+    {
+        std::swap(m_state,rhs.m_state);
+        std::swap(m_timeout,rhs.m_timeout);
+        std::swap(m_start,rhs.m_start);
+        m_finished=rhs.m_finished;
+        return *this;
+    }
+    callback_continuation_as_seq& operator= (callback_continuation_as_seq const& rhs)noexcept
+    {
+        std::swap(m_state,(const_cast<callback_continuation_as_seq&>(rhs)).m_state);
+        std::swap(m_timeout,(const_cast<callback_continuation_as_seq&>(rhs)).m_timeout);
+        std::swap(m_start,(const_cast<callback_continuation_as_seq&>(rhs)).m_start);
+        m_finished=rhs.m_finished;
+        return *this;
+    }
+
+    template <typename Func,typename Args>
+    callback_continuation_as_seq(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state, Duration d,Func f,
+                          std::vector<Args> args)
+    : m_state(state)
+    , m_timeout(d)
+    , m_finished(boost::make_shared<subtask_finished>(args.size(),!!m_state,(m_timeout.count() != 0)))
+    {
+        // remember when we started
+        m_start = boost::chrono::high_resolution_clock::now();
+
+        on_done(std::move(f));
+
+        boost::asynchronous::any_weak_scheduler<Job> weak_scheduler = boost::asynchronous::get_thread_scheduler<Job>();
+        boost::asynchronous::any_shared_scheduler<Job> locked_scheduler = weak_scheduler.lock();
+        std::vector<boost::asynchronous::any_interruptible> interruptibles;
+        if (locked_scheduler.is_valid())
+        {
+            continuation_ctor_helper(locked_scheduler,interruptibles,args);
+        }
+        if (m_state)
+            m_state->add_subs(interruptibles.begin(),interruptibles.end());
+
+    }
+
+    template <typename T,typename Interruptibles,typename ArgsVec>
+    void continuation_ctor_helper(T& sched, Interruptibles& interruptibles,std::vector<ArgsVec>& l)
+    {
+        unsigned index = 0;
+        for(auto& elem : l)
+        {
+            std::string n(elem.get_name());
+            auto finished = m_finished;
+            elem.set_done_func([finished,index](boost::asynchronous::expected<typename ArgsVec::return_type> r)
+                            {
+                               (*finished).m_futures[index] = std::move(r);
+                               finished->done();
+                            });
+            if (index == l.size()-1)
+            {
+                // we execute one task ourselves to save one post
+                try
+                {
+                    elem();
+                }
+                catch(std::exception& e)
+                {
+                    boost::asynchronous::expected<typename ArgsVec::return_type> r;
+                    r.set_exception(boost::copy_exception(e));
+                    (*finished).m_futures[index] = std::move(r);
+                    finished->done();
+                }
+            }
+            else if (!m_state)
+            {
+                // no interruptible requested
+                boost::asynchronous::post_future(sched,std::move(elem),n,boost::asynchronous::get_own_queue_index<>());
+            }
+            else if(!m_state->is_interrupted())
+            {
+                // interruptible requested
+                interruptibles.push_back(std::get<1>(
+                                             boost::asynchronous::interruptible_post_future(sched,std::move(elem),n,
+                                                                                            boost::asynchronous::get_own_queue_index<>())));
+            }
+            ++index;
+        }
+    }
+    void operator()()
+    {
+    }
+    template <class Func>
+    void on_done(Func f)
+    {
+        m_finished->on_done(std::move(f));
+    }
+    bool is_ready()
+    {
+        if (!!m_state && m_state->is_interrupted())
+        {
+            // we are interrupted => we are ready
+            return true;
+        }
+        // if timeout, we are ready too
+        typename boost::chrono::high_resolution_clock::time_point time_now = boost::chrono::high_resolution_clock::now();
+        if (m_timeout.count() != 0 && (time_now - m_start >= m_timeout))
+        {
+            m_finished->set_interrupted();
+            return true;
+        }
+        return m_finished->is_ready();
+    }
+    // called each time a subtask gives us a ready future. When all are here, we are done
+    struct subtask_finished
+    {
+        subtask_finished(std::size_t number_of_tasks, bool interruptible, bool supports_timeout)
+            :m_futures(number_of_tasks),m_ready_futures(0),m_done(),m_interruptible(interruptible)
+            ,m_interrupted(false),m_supports_timeout(supports_timeout)
+        {
+        }
+        void done()
+        {
+            if (++m_ready_futures == m_futures.size()+1)
+            {
+                if (!m_interrupted)
+                {
+                    return_result();
+                }
+            }
+        }
+        template <class Func>
+        void on_done(Func f)
+        {
+            if (m_interruptible || m_supports_timeout)
+            {
+                bool interrupted = false;
+                {
+                    boost::mutex::scoped_lock lock(m_mutex);
+                    ++m_ready_futures;
+                    m_done = std::move(f);
+                    interrupted = m_interrupted;
+                }
+                if (interrupted)
+                    return_result();
+                else if (m_ready_futures == m_futures.size()+1)
+                    return_result();
+            }
+            else
+            {
+                m_done = std::move(f);
+                if (++m_ready_futures == m_futures.size()+1)
+                {
+                    if (!m_interrupted)
+                    {
+                        return_result();
+                    }
+                }
+            }
+        }
+        bool is_ready()
+        {
+            return m_ready_futures == m_futures.size()+1;
+        }
+        void set_interrupted()
+        {
+            bool done_fct_set=false;
+            {
+                boost::mutex::scoped_lock lock(m_mutex);
+                m_interrupted=true;
+                done_fct_set = !!m_done;
+            }
+            if (done_fct_set)
+                return_result();
+        }
+        void return_result()
+        {
+            m_done(std::move(m_futures));
+        }
+
+        std::vector<boost::asynchronous::expected<Return> > m_futures;
+        std::atomic<std::size_t> m_ready_futures;
+        std::function<void(std::vector<boost::asynchronous::expected<Return> >)> m_done;
+        const bool m_interruptible;
+        bool m_interrupted;
+        const bool m_supports_timeout;
+        // only needed in case interrupt capability is needed
+        mutable boost::mutex m_mutex;
+    };
+
+    boost::shared_ptr<boost::asynchronous::detail::interrupt_state> m_state;
+    Duration m_timeout;
+    typename boost::chrono::high_resolution_clock::time_point m_start;
+    boost::shared_ptr<subtask_finished> m_finished;
+
 };
 
 // used by variadic make_future_tuple

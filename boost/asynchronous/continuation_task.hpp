@@ -558,6 +558,15 @@ void create_callback_continuation(OnDone on_done, FutureType expected_tuple, std
                 std::move(on_done),std::move(args));
     // no need of registration as no timeout checking
 }
+template <class OnDone, typename Args>
+void create_callback_continuation(OnDone on_done, std::vector<Args> args)
+{
+    boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
+    boost::asynchronous::detail::callback_continuation_as_seq<typename Args::return_type,BOOST_ASYNCHRONOUS_DEFAULT_JOB> c (
+                state,boost::chrono::milliseconds(0),
+                std::move(on_done),std::move(args));
+    // no need of registration as no timeout checking
+}
 template <typename Job, class OnDone, typename... Args>
 void create_callback_continuation_job(OnDone on_done, Args&&... args)
 {
@@ -575,6 +584,15 @@ void create_callback_continuation_job(OnDone on_done, FutureType expected_tuple,
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
     boost::asynchronous::detail::callback_continuation<void,Job,FutureType> c (
                 state,std::move(expected_tuple), boost::chrono::milliseconds(0),
+                std::move(on_done),std::move(args));
+    // no need of registration as no timeout checking
+}
+template <typename Job,class OnDone, typename Args>
+void create_callback_continuation_job(OnDone on_done, std::vector<Args> args)
+{
+    boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
+    boost::asynchronous::detail::callback_continuation_as_seq<typename Args::return_type,Job> c (
+                state,boost::chrono::milliseconds(0),
                 std::move(on_done),std::move(args));
     // no need of registration as no timeout checking
 }
@@ -597,6 +615,15 @@ void create_callback_continuation_job_timeout(OnDone on_done, Duration const& d,
                 state,std::move(expected_tuple), d, std::move(on_done),std::move(args));
     boost::asynchronous::any_continuation a(std::move(c));
     boost::asynchronous::get_continuations().emplace_front(std::move(a));
+}
+template <typename Job,class OnDone, class Duration, typename Args>
+void create_callback_continuation_job_timeout(OnDone on_done, Duration const& d, std::vector<Args> args)
+{
+    boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
+    boost::asynchronous::detail::callback_continuation_as_seq<typename Args::return_type,Job> c (
+                state,d,
+                std::move(on_done),std::move(args));
+    // no need of registration as no timeout checking
 }
 
 template <class Return, class FirstTask>
