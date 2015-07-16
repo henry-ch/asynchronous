@@ -399,7 +399,7 @@ private:
         }
         void clear_diagnostics()
         {
-            for (typename std::vector<boost::asynchronous::any_shared_scheduler<job_type> >::iterator it = m_schedulers.begin(); it != m_schedulers.end();++it)
+            for (auto it = m_schedulers.begin(); it != m_schedulers.end();++it)
             {
                 (*it).clear_diagnostics();
             }
@@ -409,6 +409,17 @@ private:
                                                         boost::asynchronous::register_diagnostics_type())
         {
             //TODO
+        }
+        void set_name(std::string const& name)
+        {
+            for (auto it = m_schedulers.begin(); it != m_schedulers.end();++it)
+            {
+                (*it).set_name(name);
+            }
+        }
+        std::string get_name()const
+        {
+            return "composite_threadpool_scheduler";
         }
     private:
         std::vector<boost::asynchronous::any_shared_scheduler<job_type> > m_schedulers;

@@ -68,7 +68,8 @@ struct any_shared_scheduler_concept :
     boost::asynchronous::has_clear_diagnostics<void(), boost::type_erasure::_a>,
     boost::asynchronous::has_get_queue_size<std::vector<std::size_t>(), const boost::type_erasure::_a>,
     boost::asynchronous::has_get_diagnostics<boost::asynchronous::scheduler_diagnostics<JOB>(),
-                                          const boost::type_erasure::_a>
+                                          const boost::type_erasure::_a>,
+    boost::asynchronous::has_get_name<std::string(), const boost::type_erasure::_a>
 > {};
 
 template <class T = BOOST_ASYNCHRONOUS_DEFAULT_JOB, class Clock = boost::chrono::high_resolution_clock >
@@ -98,6 +99,7 @@ struct any_shared_scheduler_concept
                                               boost::asynchronous::register_diagnostics_type =
                                                     boost::asynchronous::register_diagnostics_type()) =0;
     virtual void clear_diagnostics() =0;
+    virtual std::string get_name()const =0;
 };
 template <class T = BOOST_ASYNCHRONOUS_DEFAULT_JOB,class Clock = boost::chrono::high_resolution_clock>
 struct any_shared_scheduler_ptr: boost::shared_ptr<boost::asynchronous::any_shared_scheduler_concept<T,Clock> >
@@ -174,7 +176,10 @@ public:
     {
         (*my_ptr).register_diagnostics_functor(std::move(fct),std::move(t));
     }
-
+    std::string get_name()const
+    {
+        return (*my_ptr).get_name();
+    }
 private:
     any_shared_scheduler_ptr<JOB,Clock> my_ptr;
 };

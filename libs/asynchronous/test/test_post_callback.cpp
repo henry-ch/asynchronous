@@ -46,7 +46,7 @@ struct Servant
     {
         m_threadpool = boost::asynchronous::make_shared_scheduler_proxy<
                             boost::asynchronous::threadpool_scheduler<
-                                    boost::asynchronous::lockfree_queue<>>>(3);
+                                    boost::asynchronous::lockfree_queue<>>>(3,std::string("pool"));
     }
     boost::shared_future<void> start_void_async_work()
     {
@@ -148,7 +148,7 @@ public:
 BOOST_AUTO_TEST_CASE( test_void_post_callback )
 {        
     auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
-                                                                        boost::asynchronous::lockfree_queue<>>>();
+                                                                        boost::asynchronous::lockfree_queue<>>>(std::string("servant thread"));
     
     main_thread_id = boost::this_thread::get_id();   
     ServantProxy proxy(scheduler);
