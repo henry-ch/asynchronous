@@ -36,6 +36,8 @@ BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_set_steal_from_queues), set_
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_get_internal_scheduler_aspect), get_internal_scheduler_aspect,0);
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_clear_diagnostics), clear_diagnostics,0);
 
+BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_set_done_func), set_done_func, 1);
+
 #ifdef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
 #ifndef BOOST_NO_RVALUE_REFERENCES
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_post), post);

@@ -12,6 +12,7 @@
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/trackable_servant.hpp>
 #include <boost/asynchronous/continuation_task.hpp>
+#include <boost/asynchronous/any_continuation_task.hpp>
 
 #include "test_common.hpp"
 #include <boost/test/unit_test.hpp>
@@ -32,6 +33,26 @@ struct sub_task : public boost::asynchronous::continuation_task<long>
     }
     long m_val;
 };
+struct sub_task2 : public boost::asynchronous::continuation_task<long>
+{
+    sub_task2(long val):m_val(val){}
+    void operator()()const
+    {
+        boost::asynchronous::continuation_result<long> task_res = this_task_result();
+        task_res.set_value(m_val);
+    }
+    long m_val;
+};
+struct sub_task3 : public boost::asynchronous::continuation_task<long>
+{
+    sub_task3(long val):m_val(val){}
+    void operator()()const
+    {
+        boost::asynchronous::continuation_result<long> task_res = this_task_result();
+        task_res.set_value(m_val);
+    }
+    long m_val;
+};
 struct main_task : public boost::asynchronous::continuation_task<long>
 {
     void operator()()const
@@ -41,6 +62,7 @@ struct main_task : public boost::asynchronous::continuation_task<long>
         subs.push_back(sub_task(15));
         subs.push_back(sub_task(22));
         subs.push_back(sub_task(5));
+
         boost::asynchronous::create_callback_continuation(
                         [task_res](std::vector<boost::asynchronous::expected<long>> res)
                         {
@@ -50,7 +72,25 @@ struct main_task : public boost::asynchronous::continuation_task<long>
                         std::move(subs));
     }
 };
+struct main_task2 : public boost::asynchronous::continuation_task<long>
+{
+    void operator()()const
+    {
+        boost::asynchronous::continuation_result<long> task_res = this_task_result();
+        std::vector<boost::asynchronous::any_continuation_task<long>> subs;
+        subs.push_back(sub_task(15));
+        subs.push_back(sub_task2(22));
+        subs.push_back(sub_task3(5));
 
+        boost::asynchronous::create_callback_continuation(
+                        [task_res](std::vector<boost::asynchronous::expected<long>> res)
+                        {
+                            long r = res[0].get() + res[1].get() + res[2].get();
+                            task_res.set_value(r);
+                        },
+                        std::move(subs));
+    }
+};
 struct Servant : boost::asynchronous::trackable_servant<>
 {
     // optional, ctor is simple enough not to be posted
@@ -97,6 +137,31 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
+    boost::future<long> do_it2()
+    {
+        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant do_it not posted.");
+        // for testing purpose
+        boost::future<long> fu = m_promise->get_future();
+        boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
+        tpids = tp.thread_ids();
+        // start long tasks in threadpool (first lambda) and callback in our thread
+        post_callback(
+                []()
+                {
+                    BOOST_CHECK_MESSAGE(contains_id(tpids.begin(),tpids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
+                    return boost::asynchronous::top_level_callback_continuation<long>(main_task2());
+                 }// work
+               ,
+               // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
+               [this](boost::asynchronous::expected<long> res){
+                            BOOST_CHECK_MESSAGE(!contains_id(tpids.begin(),tpids.end(),boost::this_thread::get_id()),"do_it callback executed in the wrong thread(pool)");
+                            BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
+                            BOOST_CHECK_MESSAGE(res.has_value(),"callback has a blocking future.");
+                            this->on_callback(res.get());
+               }// callback functor.
+        );
+        return fu;
+    }
 private:
 // for testing
 boost::shared_ptr<boost::promise<long> > m_promise;
@@ -110,6 +175,7 @@ public:
     {}
     // caller will get a future
     BOOST_ASYNC_FUTURE_MEMBER(do_it)
+    BOOST_ASYNC_FUTURE_MEMBER(do_it2)
 };
 }
 
@@ -126,6 +192,24 @@ BOOST_AUTO_TEST_CASE( test_callback_continuation_of_sequence )
             boost::future<long> resfu = fu.get();
             long res = resfu.get();
             BOOST_CHECK_MESSAGE(res == 42,"test_callback_continuation_of_sequence has wrong value");
+        }
+    }
+}
+
+
+BOOST_AUTO_TEST_CASE( test_callback_continuation_of_sequence_any_continuation_task )
+{
+    main_thread_id = boost::this_thread::get_id();
+    {
+        // a single-threaded world, where Servant will live.
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<>>>();
+        {
+            ServantProxy proxy(scheduler);
+            boost::future<boost::future<long> > fu = proxy.do_it2();
+            boost::future<long> resfu = fu.get();
+            long res = resfu.get();
+            BOOST_CHECK_MESSAGE(res == 42,"test_callback_continuation_of_sequence_any_continuation_task has wrong value");
         }
     }
 }
