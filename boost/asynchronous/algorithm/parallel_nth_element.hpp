@@ -19,7 +19,6 @@
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/algorithm/detail/safe_advance.hpp>
 #include <boost/asynchronous/detail/metafunctions.hpp>
-#include <boost/asynchronous/algorithm/parallel_stable_partition.hpp>
 #include <boost/asynchronous/algorithm/parallel_partition.hpp>
 
 namespace boost { namespace asynchronous
@@ -42,6 +41,7 @@ struct parallel_nth_element_helper: public boost::asynchronous::continuation_tas
         // if not at end, recurse, otherwise execute here
         if (it == end_)
         {
+            //std::cout << "start sequential nth_element" << std::endl;
             std::nth_element(beg_,nth_,end_,func_);
             task_res.set_value();
         }
@@ -55,7 +55,10 @@ struct parallel_nth_element_helper: public boost::asynchronous::continuation_tas
             auto beg = beg_;
             auto end = end_;
             auto nth=nth_;
-            auto nthval = *nth;
+            // we "randomize" a little by taking the medium element of (beg,middle,end) as pivot for the next partition run
+            std::vector<typename std::remove_reference<decltype(*beg)>::type> temp = {*beg, *(beg+std::distance(beg,end)/2), *(end-1)};
+            std::nth_element(temp.begin(),temp.begin()+1,temp.end(),func_);
+            auto nthval = *(temp.begin()+1);
             //std::cout << "*nth: " << nthval << std::endl;
             auto l = [nthval](const typename std::iterator_traits<Iterator>::value_type& i)
             {
@@ -63,19 +66,13 @@ struct parallel_nth_element_helper: public boost::asynchronous::continuation_tas
             };
 
             //std::cout << "start parallel_partition: " << end_ - beg_ << std::endl;
-            boost::shared_ptr<std::vector<int>> temp = boost::make_shared<std::vector<int>>(beg_,end_);
-            auto cont = boost::asynchronous::parallel_stable_partition<Iterator,Iterator,decltype(l),Job>(beg_,end_,temp->begin(),std::move(l),cutoff_);
-            //auto cont = boost::asynchronous::parallel_partition<Iterator,decltype(l),Job>(beg_,end_,std::move(l),thread_num_);
-            cont.on_done([temp,task_res,beg,end,nth,func,cutoff,thread_num,task_name,prio]
+            auto cont = boost::asynchronous::parallel_partition<Iterator,decltype(l),Job>(beg_,end_,std::move(l),thread_num_);
+            cont.on_done([/*temp,*/task_res,beg,end,nth,func,cutoff,thread_num,task_name,prio]
                          (std::tuple<boost::asynchronous::expected<Iterator> >&& continuation_res)
             {
                 try
                 {
                     auto res = std::move(std::get<0>(continuation_res).get());
-                    auto d = std::distance(temp->begin(),res);
-                    std::swap_ranges(beg,end,temp->begin());
-                    //auto d = std::distance(beg,res);
-                    res = beg+d;
                     //std::cout << "done parallel_partition: " << res-beg << " , " << nth-beg  << std::endl;
                     if (std::distance(beg,res) >= std::distance(beg,nth))
                     {

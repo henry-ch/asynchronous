@@ -72,18 +72,13 @@ struct Servant : boost::asynchronous::trackable_servant<>
     boost::shared_future<void> test_parallel_nth_element()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant async work not posted.");
-        generate(m_data1,10000,9000);
-        /*for (auto i = 0 ; i < 9999; ++i)
-        {
-            m_data1.push_back(i);
-        }
-        std::random_shuffle(m_data1.begin(),m_data1.end());*/
+        generate(m_data1,100000,90000);
         auto data_copy = m_data1;
         // we need a promise to inform caller when we're done
         boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
         boost::shared_future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
-        auto itnth = m_data1.begin()+2000;
+        auto itnth = m_data1.begin()+20000;
 
         // start long tasks
         post_callback(
@@ -93,7 +88,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
                     return boost::asynchronous::parallel_nth_element(m_data1.begin(),itnth,m_data1.end(),
                                                                      [](int i,int j){return i < j;},
-                                                                     1000,
+                                                                     2000,
                                                                      boost::thread::hardware_concurrency()
                     );
                     },// work
@@ -104,7 +99,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
 
-                        auto itnth2 = data_copy.begin()+2000;
+                        auto itnth2 = data_copy.begin()+20000;
                         std::nth_element(data_copy.begin(),itnth2,data_copy.end(),
                                          [](int i,int j){return i < j;});
 
@@ -114,7 +109,46 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
+    boost::shared_future<void> test_parallel_nth_element_dense()
+    {
+        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant async work not posted.");
+        generate(m_data1,100000,20000);
+        auto data_copy = m_data1;
+        // we need a promise to inform caller when we're done
+        boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
+        boost::shared_future<void> fu = aPromise->get_future();
+        boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
+        auto itnth = m_data1.begin()+20000;
 
+        // start long tasks
+        post_callback(
+           [tp,this,itnth](){
+                    BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
+                    std::vector<boost::thread::id> ids = tp.thread_ids();
+                    BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
+                    return boost::asynchronous::parallel_nth_element(m_data1.begin(),itnth,m_data1.end(),
+                                                                     [](int i,int j){return i < j;},
+                                                                     2000,
+                                                                     boost::thread::hardware_concurrency()
+                    );
+                    },// work
+           [aPromise,tp,data_copy,this,itnth](boost::asynchronous::expected<void> res) mutable{
+                        BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
+                        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
+                        std::vector<boost::thread::id> ids = tp.thread_ids();
+                        BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
+                        BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
+
+                        auto itnth2 = data_copy.begin()+20000;
+                        std::nth_element(data_copy.begin(),itnth2,data_copy.end(),
+                                         [](int i,int j){return i < j;});
+
+                        BOOST_CHECK_MESSAGE(*itnth2 == *itnth,"parallel_nth_element gave the wrong result.");
+                        aPromise->set_value();
+           }// callback functor.
+        );
+        return fu;
+    }
 private:
     std::vector<int> m_data1;
 };
@@ -126,7 +160,7 @@ public:
         boost::asynchronous::servant_proxy<ServantProxy,Servant>(s)
     {}
     BOOST_ASYNC_FUTURE_MEMBER(test_parallel_nth_element)
-
+    BOOST_ASYNC_FUTURE_MEMBER(test_parallel_nth_element_dense)
 };
 
 }
@@ -154,4 +188,26 @@ BOOST_AUTO_TEST_CASE( test_parallel_nth_element )
     BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
 }
 
+BOOST_AUTO_TEST_CASE( test_parallel_nth_element_dense )
+{
+    servant_dtor=false;
+    {
+        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<> >);
+
+        main_thread_id = boost::this_thread::get_id();
+        ServantProxy proxy(scheduler);
+        boost::shared_future<boost::shared_future<void> > fuv = proxy.test_parallel_nth_element_dense();
+        try
+        {
+            boost::shared_future<void> resfuv = fuv.get();
+            resfuv.get();
+        }
+        catch(...)
+        {
+            BOOST_FAIL( "unexpected exception" );
+        }
+    }
+    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
+}
 
