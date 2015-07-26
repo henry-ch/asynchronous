@@ -59,20 +59,21 @@ public:
     typedef typename boost::asynchronous::job_traits<typename Q::job_type>::diagnostic_table_type diag_type;
     typedef tcp_server_scheduler<Q,pool_job_type,IsStealing,CPULoad> this_type;
 
-#ifndef BOOST_NO_RVALUE_REFERENCES
-    tcp_server_scheduler(boost::shared_ptr<queue_type>&& queue,
-                         boost::asynchronous::any_shared_scheduler_proxy<pool_job_type> worker_pool,
+    template<typename... Args>
+    tcp_server_scheduler(boost::asynchronous::any_shared_scheduler_proxy<pool_job_type> worker_pool,
                          std::string const & address,
-                         unsigned int port)
-        : boost::asynchronous::detail::single_queue_scheduler_policy<Q>(std::forward<boost::shared_ptr<queue_type> >(queue))
+                         unsigned int port,
+                         std::string const& name,
+                         Args... args)
+        : boost::asynchronous::detail::single_queue_scheduler_policy<Q>(boost::make_shared<queue_type>(std::move(args)...))
         , m_private_queue (boost::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >())
         , m_worker_pool(worker_pool)
         , m_address(address)
         , m_port(port)
+        , m_name(name)
     {
+        set_name(name);
     }
-#endif
-#ifndef BOOST_NO_CXX11_VARIADIC_TEMPLATES
     template<typename... Args>
     tcp_server_scheduler(boost::asynchronous::any_shared_scheduler_proxy<pool_job_type> worker_pool,
                          std::string const & address,
@@ -85,18 +86,7 @@ public:
         , m_port(port)
     {
     }
-#endif
 
-    tcp_server_scheduler(boost::asynchronous::any_shared_scheduler_proxy<pool_job_type> worker_pool,
-                         std::string const & address,
-                         unsigned int port)
-        : boost::asynchronous::detail::single_queue_scheduler_policy<Q>()
-        , m_private_queue (boost::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >())
-        , m_worker_pool(worker_pool)
-        , m_address(address)
-        , m_port(port)
-    {
-    }
     std::vector<std::size_t> get_queue_size() const
     {
         return this->m_queue->get_queue_size();
@@ -151,6 +141,10 @@ public:
 #else
         m_private_queue->push(boost::asynchronous::any_callable(ntask),std::numeric_limits<std::size_t>::max());
 #endif
+    }
+    std::string get_name()const
+    {
+        return m_name;
     }
     void post(typename queue_type::job_type job, std::size_t prio)
     {
@@ -333,6 +327,7 @@ private:
     unsigned int m_port;
     boost::weak_ptr<this_type> m_weak_self;
     std::function<void(boost::asynchronous::scheduler_diagnostics<job_type>)> m_diagnostics_fct;
+    const std::string m_name;
 };
 
 }} // boost::async::scheduler
