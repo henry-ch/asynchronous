@@ -47,17 +47,16 @@ namespace boost { namespace asynchronous
 {
 //TODO boost.parameter
 template<class Job = BOOST_ASYNCHRONOUS_DEFAULT_JOB,
-         class FindPosition=boost::asynchronous::default_find_position< >,
-         class Clock = boost::chrono::high_resolution_clock >
+         class FindPosition=boost::asynchronous::default_find_position< >>
 class composite_threadpool_scheduler: 
 #ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
         public any_shared_scheduler_proxy_concept<Job>, public internal_scheduler_aspect_concept<Job>,
 #endif        
-        public FindPosition, public boost::enable_shared_from_this<composite_threadpool_scheduler<Job,FindPosition,Clock> >
+        public FindPosition, public boost::enable_shared_from_this<composite_threadpool_scheduler<Job,FindPosition> >
 {
 public:
     typedef Job job_type;
-    typedef composite_threadpool_scheduler<Job,FindPosition,Clock> this_type;
+    typedef composite_threadpool_scheduler<Job,FindPosition> this_type;
     typedef int self_proxy_creation;
 
     composite_threadpool_scheduler(): FindPosition()
@@ -213,12 +212,12 @@ public:
         boost::asynchronous::internal_scheduler_aspect<job_type> a(this->shared_from_this());
         return a;
     }
-    boost::asynchronous::any_shared_scheduler_proxy<job_type,Clock> get_scheduler(std::size_t index)const
+    boost::asynchronous::any_shared_scheduler_proxy<job_type> get_scheduler(std::size_t index)const
     {
         return m_subpools.at(index-1);
     }
 private:
-    typedef boost::asynchronous::any_shared_scheduler_proxy<Job,Clock> subpool_type;
+    typedef boost::asynchronous::any_shared_scheduler_proxy<Job> subpool_type;
     std::vector<subpool_type> m_subpools;
     
     template <class T,class S>
@@ -458,9 +457,9 @@ private:
         std::vector<boost::asynchronous::any_weak_scheduler<job_type> > m_schedulers;
     };
 };
-template<class Job, class FindPosition,class Clock>
+template<class Job, class FindPosition>
 boost::asynchronous::any_shared_scheduler_proxy<Job>
-create_shared_scheduler_proxy(composite_threadpool_scheduler<Job,FindPosition,Clock>* scheduler)
+create_shared_scheduler_proxy(composite_threadpool_scheduler<Job,FindPosition>* scheduler)
 {
 #ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
     boost::asynchronous::any_shared_scheduler_proxy<Job> pcomposite(scheduler);
