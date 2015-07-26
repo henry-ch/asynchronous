@@ -12,22 +12,20 @@
 namespace boost { namespace asynchronous
 {
 
-template <class Clock>
 struct any_loggable_serializable_concept :
         boost::mpl::vector<
-            boost::asynchronous::any_loggable_concept<Clock>,
+            boost::asynchronous::any_loggable_concept,
             boost::asynchronous::any_serializable_concept
 > {};
 
-template <class Clock = boost::chrono::high_resolution_clock>
-struct any_loggable_serializable: public boost::type_erasure::any<any_loggable_serializable_concept<Clock>>
+struct any_loggable_serializable: public boost::type_erasure::any<any_loggable_serializable_concept>
 {
-    typedef Clock clock_type;
+    typedef boost::chrono::high_resolution_clock clock_type;
     typedef int task_failed_handling;
 
     any_loggable_serializable(){}
     template <class T>
-    any_loggable_serializable(T t): boost::type_erasure::any<any_loggable_serializable_concept<Clock>>(std::move(t)){}
+    any_loggable_serializable(T t): boost::type_erasure::any<any_loggable_serializable_concept>(std::move(t)){}
 #ifdef BOOST_ASYNCHRONOUS_USE_PORTABLE_BINARY_ARCHIVE
     typedef portable_binary_oarchive oarchive;
     typedef portable_binary_iarchive iarchive;
@@ -37,61 +35,60 @@ struct any_loggable_serializable: public boost::type_erasure::any<any_loggable_s
 #endif
 };
 
-template< class Clock >
-struct job_traits< boost::asynchronous::any_loggable_serializable<Clock> >
+template<>
+struct job_traits< boost::asynchronous::any_loggable_serializable >
 {
-    typedef typename boost::asynchronous::default_loggable_job_extended<
-                                             boost::chrono::high_resolution_clock >        diagnostic_type;
+    typedef typename boost::asynchronous::default_loggable_job_extended             diagnostic_type;
     typedef boost::asynchronous::detail::serializable_base_job<
-            diagnostic_type,boost::asynchronous::any_loggable_serializable<Clock> >        wrapper_type;
+            diagnostic_type,boost::asynchronous::any_loggable_serializable >        wrapper_type;
 
     typedef typename diagnostic_type::diagnostic_item_type                          diagnostic_item_type;
     typedef boost::asynchronous::diagnostics_table<
             std::string,diagnostic_item_type>                                       diagnostic_table_type;
 
-    static bool get_failed(boost::asynchronous::any_loggable_serializable<Clock> const& job)
+    static bool get_failed(boost::asynchronous::any_loggable_serializable const& job)
     {
         return job.get_failed();
     }
-    static void set_posted_time(boost::asynchronous::any_loggable_serializable<Clock>& job)
+    static void set_posted_time(boost::asynchronous::any_loggable_serializable& job)
     {
         job.set_posted_time();
     }
-    static void set_started_time(boost::asynchronous::any_loggable_serializable<Clock>& job)
+    static void set_started_time(boost::asynchronous::any_loggable_serializable& job)
     {
         job.set_started_time();
     }
-    static void set_failed(boost::asynchronous::any_loggable_serializable<Clock>& job)
+    static void set_failed(boost::asynchronous::any_loggable_serializable& job)
     {
         job.set_failed();
     }
-    static void set_finished_time(boost::asynchronous::any_loggable_serializable<Clock>& job)
+    static void set_finished_time(boost::asynchronous::any_loggable_serializable& job)
     {
         job.set_finished_time();
     }
-    static void set_name(boost::asynchronous::any_loggable_serializable<Clock>& job, std::string const& name)
+    static void set_name(boost::asynchronous::any_loggable_serializable& job, std::string const& name)
     {
         job.set_name(name);
     }
-    static std::string get_name(boost::asynchronous::any_loggable_serializable<Clock>& job)
+    static std::string get_name(boost::asynchronous::any_loggable_serializable& job)
     {
         return job.get_name();
     }
-    static diagnostic_item_type get_diagnostic_item(boost::asynchronous::any_loggable_serializable<Clock>& job)
+    static diagnostic_item_type get_diagnostic_item(boost::asynchronous::any_loggable_serializable& job)
     {
         return job.get_diagnostic_item();
     }
-    static void set_interrupted(boost::asynchronous::any_loggable_serializable<Clock>& job, bool is_interrupted)
+    static void set_interrupted(boost::asynchronous::any_loggable_serializable& job, bool is_interrupted)
     {
         job.set_interrupted(is_interrupted);
     }
     template <class Diag>
-    static void add_diagnostic(boost::asynchronous::any_loggable_serializable<Clock>& job,Diag* diag)
+    static void add_diagnostic(boost::asynchronous::any_loggable_serializable& job,Diag* diag)
     {
         diag->add(job.get_name(),job.get_diagnostic_item());
     }
     template <class Diag>
-    static void add_current_diagnostic(size_t index,boost::asynchronous::any_loggable_serializable<Clock>& job,Diag* diag)
+    static void add_current_diagnostic(size_t index,boost::asynchronous::any_loggable_serializable& job,Diag* diag)
     {
         diag->set_current(index,job.get_name(),job.get_diagnostic_item());
     }

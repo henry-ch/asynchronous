@@ -100,7 +100,7 @@ private :
 public :
 
     template <typename Point, typename DistanceType, typename RangeOut>
-    inline bool apply(Point const& ip, Point const& vertex,
+    inline bool apply(Point const& , Point const& vertex,
                 Point const& perp1, Point const& perp2,
                 DistanceType const& buffer_distance,
                 RangeOut& range_out) const

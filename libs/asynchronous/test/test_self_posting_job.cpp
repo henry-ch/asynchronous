@@ -67,15 +67,18 @@ struct DummyJob
     void set_finished_time()
     {
     }
+    void set_interrupted(bool)
+    {
+    }
     bool get_failed()const{return false;}
 
-    boost::asynchronous::diagnostic_item<boost::chrono::high_resolution_clock> get_diagnostic_item() const
+    boost::asynchronous::diagnostic_item get_diagnostic_item() const
     {
-        return boost::asynchronous::diagnostic_item<boost::chrono::high_resolution_clock>();
+        return boost::asynchronous::diagnostic_item();
     }
 };
-typedef boost::asynchronous::any_loggable<boost::chrono::high_resolution_clock> servant_job;
-typedef std::map<std::string,std::list<boost::asynchronous::diagnostic_item<boost::chrono::high_resolution_clock> > > diag_type;
+typedef boost::asynchronous::any_loggable servant_job;
+typedef std::map<std::string,std::list<boost::asynchronous::diagnostic_item> > diag_type;
 struct PostJob
 {
     PostJob(boost::shared_ptr<boost::promise<void> > done,std::string const& name=""):m_done(done),m_name(name){}
@@ -112,10 +115,13 @@ struct PostJob
     void set_finished_time()
     {
     }
-    bool get_failed()const{return false;}
-    boost::asynchronous::diagnostic_item<boost::chrono::high_resolution_clock> get_diagnostic_item() const
+    void set_interrupted(bool)
     {
-        return boost::asynchronous::diagnostic_item<boost::chrono::high_resolution_clock>();
+    }
+    bool get_failed()const{return false;}
+    boost::asynchronous::diagnostic_item get_diagnostic_item() const
+    {
+        return boost::asynchronous::diagnostic_item();
     }
 };
 

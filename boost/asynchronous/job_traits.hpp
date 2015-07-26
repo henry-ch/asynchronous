@@ -50,9 +50,9 @@ struct no_diagnostics
     void set_interrupted(bool)
     {
     }
-    boost::asynchronous::diagnostic_item<> get_diagnostic_item()const
+    boost::asynchronous::diagnostic_item get_diagnostic_item()const
     {
-        return boost::asynchronous::diagnostic_item<>();
+        return boost::asynchronous::diagnostic_item();
     }
 };
 
@@ -292,10 +292,9 @@ struct job_traits
 template< >
 struct job_traits< boost::asynchronous::any_callable >
 {
-    typedef typename boost::asynchronous::default_loggable_job<
-                                  boost::chrono::high_resolution_clock >            diagnostic_type;
+    typedef typename boost::asynchronous::default_loggable_job                      diagnostic_type;
     typedef boost::asynchronous::detail::base_job<
-            diagnostic_type,boost::asynchronous::any_callable >                        wrapper_type;
+            diagnostic_type,boost::asynchronous::any_callable >                     wrapper_type;
 
     typedef typename diagnostic_type::diagnostic_item_type                          diagnostic_item_type;
     typedef boost::asynchronous::diagnostics_table<
@@ -345,61 +344,60 @@ struct job_traits< boost::asynchronous::any_callable >
     }
 };
 
-template< class Clock >
-struct job_traits< boost::asynchronous::any_loggable<Clock> >
+template<>
+struct job_traits< boost::asynchronous::any_loggable>
 {
-    typedef typename boost::asynchronous::default_loggable_job_extended<
-            typename boost::asynchronous::any_loggable<Clock>::clock_type >             diagnostic_type;
+    typedef typename boost::asynchronous::default_loggable_job_extended                 diagnostic_type;
     typedef boost::asynchronous::detail::base_job<
-            diagnostic_type,boost::asynchronous::any_loggable<Clock> >                  wrapper_type;
+            diagnostic_type,boost::asynchronous::any_loggable>                          wrapper_type;
 
     typedef typename diagnostic_type::diagnostic_item_type                              diagnostic_item_type;
     typedef boost::asynchronous::diagnostics_table<
             std::string,diagnostic_item_type>                                           diagnostic_table_type;
 
-    static bool get_failed(boost::asynchronous::any_loggable<Clock> const& job)
+    static bool get_failed(boost::asynchronous::any_loggable const& job)
     {
         return job.get_failed();
     }
-    static void set_posted_time(boost::asynchronous::any_loggable<Clock>& job)
+    static void set_posted_time(boost::asynchronous::any_loggable& job)
     {
         job.set_posted_time();
     }
-    static void set_started_time(boost::asynchronous::any_loggable<Clock>& job)
+    static void set_started_time(boost::asynchronous::any_loggable& job)
     {
         job.set_started_time();
     }
-    static void set_failed(boost::asynchronous::any_loggable<Clock>& job)
+    static void set_failed(boost::asynchronous::any_loggable& job)
     {
         job.set_failed();
     }
-    static void set_finished_time(boost::asynchronous::any_loggable<Clock>& job)
+    static void set_finished_time(boost::asynchronous::any_loggable& job)
     {
         job.set_finished_time();
     }
-    static void set_name(boost::asynchronous::any_loggable<Clock>& job, std::string const& name)
+    static void set_name(boost::asynchronous::any_loggable& job, std::string const& name)
     {
         job.set_name(name);
     }
-    static std::string get_name(boost::asynchronous::any_loggable<Clock>& job)
+    static std::string get_name(boost::asynchronous::any_loggable& job)
     {
         return job.get_name();
     }
-    static diagnostic_item_type get_diagnostic_item(boost::asynchronous::any_loggable<Clock>& job)
+    static diagnostic_item_type get_diagnostic_item(boost::asynchronous::any_loggable& job)
     {
         return job.get_diagnostic_item();
     }
-    static void set_interrupted(boost::asynchronous::any_loggable<Clock>& job, bool is_interrupted)
+    static void set_interrupted(boost::asynchronous::any_loggable& job, bool is_interrupted)
     {
         job.set_interrupted(is_interrupted);
     }
     template <class Diag>
-    static void add_diagnostic(boost::asynchronous::any_loggable<Clock>& job,Diag* diag)
+    static void add_diagnostic(boost::asynchronous::any_loggable& job,Diag* diag)
     {
         diag->add(job.get_name(),job.get_diagnostic_item());
     }
     template <class Diag>
-    static void add_current_diagnostic(size_t index,boost::asynchronous::any_loggable<Clock>& job,Diag* diag)
+    static void add_current_diagnostic(size_t index,boost::asynchronous::any_loggable& job,Diag* diag)
     {
         diag->set_current(index,job.get_name(),job.get_diagnostic_item());
     }
@@ -413,8 +411,7 @@ struct job_traits< boost::asynchronous::any_loggable<Clock> >
 template< >
 struct job_traits< boost::asynchronous::any_serializable >
 {
-    typedef typename boost::asynchronous::default_loggable_job<
-                                  boost::chrono::high_resolution_clock >                diagnostic_type;
+    typedef typename boost::asynchronous::default_loggable_job                          diagnostic_type;
     typedef boost::asynchronous::detail::serializable_base_job<
             diagnostic_type,boost::asynchronous::any_serializable >                     wrapper_type;
 

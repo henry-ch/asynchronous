@@ -272,13 +272,13 @@ public:
 };
 class job_server_proxy_log :
         public boost::asynchronous::servant_proxy<job_server_proxy,
-        job_server<boost::asynchronous::any_loggable<boost::chrono::high_resolution_clock> > >
+        job_server<boost::asynchronous::any_loggable> >
 {
 public:
     template <class Scheduler,class Worker>
     job_server_proxy_log(Scheduler s, Worker w,std::string const & address,unsigned int port, bool stealing):
         boost::asynchronous::servant_proxy<job_server_proxy,
-                                           job_server<boost::asynchronous::any_loggable<boost::chrono::high_resolution_clock> > >
+                                           job_server<boost::asynchronous::any_loggable> >
         (s,w,address,port,stealing)
     {
     }
@@ -289,15 +289,15 @@ public:
 };
 class job_server_proxy_log_serialize :
         public boost::asynchronous::servant_proxy<job_server_proxy_log_serialize,
-                                                  job_server<boost::asynchronous::any_loggable<boost::chrono::high_resolution_clock>,
-                                                             boost::asynchronous::any_loggable_serializable<> > >
+                                                  job_server<boost::asynchronous::any_loggable,
+                                                             boost::asynchronous::any_loggable_serializable > >
 {
 public:
     template <class Scheduler,class Worker>
     job_server_proxy_log_serialize(Scheduler s, Worker w,std::string const & address,unsigned int port, bool stealing):
         boost::asynchronous::servant_proxy<job_server_proxy_log_serialize,
-                                           job_server<boost::asynchronous::any_loggable<boost::chrono::high_resolution_clock>,
-                                                      boost::asynchronous::any_loggable_serializable<> > >
+                                           job_server<boost::asynchronous::any_loggable,
+                                                      boost::asynchronous::any_loggable_serializable > >
         (s,w,address,port,stealing)
     {
     }
@@ -313,15 +313,15 @@ struct get_correct_job_server_proxy
     typedef boost::asynchronous::tcp::job_server_proxy type;
 };
 template <>
-struct get_correct_job_server_proxy<boost::asynchronous::any_loggable<boost::chrono::high_resolution_clock>,
+struct get_correct_job_server_proxy<boost::asynchronous::any_loggable,
                                     boost::asynchronous::any_serializable >
 {
     typedef boost::asynchronous::tcp::job_server_proxy_log type;
 };
 
 template <>
-struct get_correct_job_server_proxy<boost::asynchronous::any_loggable<boost::chrono::high_resolution_clock>,
-                                    boost::asynchronous::any_loggable_serializable<> >
+struct get_correct_job_server_proxy<boost::asynchronous::any_loggable,
+                                    boost::asynchronous::any_loggable_serializable >
 {
     typedef boost::asynchronous::tcp::job_server_proxy_log_serialize type;
 };

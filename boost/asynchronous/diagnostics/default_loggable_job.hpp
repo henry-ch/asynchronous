@@ -17,14 +17,15 @@
 namespace boost { namespace asynchronous
 {
 
-template<class Clock = boost::chrono::high_resolution_clock>
 class default_loggable_job
 {
 public:
+    typedef boost::chrono::high_resolution_clock Clock;
+
     default_loggable_job(default_loggable_job const&)=default;
     default_loggable_job(default_loggable_job&&)=default;
     // our diagnostic item
-    typedef boost::asynchronous::diagnostic_item<Clock> diagnostic_item_type;
+    typedef boost::asynchronous::diagnostic_item diagnostic_item_type;
     default_loggable_job(std::string const& name="")
         : m_name(name)
         , m_posted(Clock::time_point::min())
@@ -72,9 +73,9 @@ public:
         m_interrupted = is_interrupted;
     }
 
-    boost::asynchronous::diagnostic_item<Clock> get_diagnostic_item()const
+    boost::asynchronous::diagnostic_item get_diagnostic_item()const
     {
-        return boost::asynchronous::diagnostic_item<Clock>(m_posted,m_started,m_finished,m_interrupted,m_failed);
+        return boost::asynchronous::diagnostic_item(m_posted,m_started,m_finished,m_interrupted,m_failed);
     }
 private:
     std::string m_name;
@@ -86,14 +87,15 @@ private:
 };
 
 //same as default_loggable_job but with a vtable for get_failed support
-template<class Clock = boost::chrono::high_resolution_clock>
 class default_loggable_job_extended
 {
 public:
+    typedef boost::chrono::high_resolution_clock Clock;
+
     default_loggable_job_extended(default_loggable_job_extended const&)=default;
     default_loggable_job_extended(default_loggable_job_extended&&)=default;
     // our diagnostic item
-    typedef boost::asynchronous::diagnostic_item<Clock> diagnostic_item_type;
+    typedef boost::asynchronous::diagnostic_item diagnostic_item_type;
     default_loggable_job_extended(std::string const& name="")
         : m_name(name)
         , m_posted(Clock::time_point::min())
@@ -143,9 +145,9 @@ public:
         m_interrupted = is_interrupted;
     }
 
-    boost::asynchronous::diagnostic_item<Clock> get_diagnostic_item()const
+    boost::asynchronous::diagnostic_item get_diagnostic_item()const
     {
-        return boost::asynchronous::diagnostic_item<Clock>(m_posted,m_started,m_finished,m_interrupted,get_failed());
+        return boost::asynchronous::diagnostic_item(m_posted,m_started,m_finished,m_interrupted,get_failed());
     }
 private:
     std::string m_name;

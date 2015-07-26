@@ -27,10 +27,10 @@ BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_set_started_time), set_start
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_set_finished_time), set_finished_time, 0);
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_set_failed), set_failed, 0);
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_get_failed), get_failed, 0);
+BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_set_interrupted), set_interrupted, 1);
 
 namespace boost { namespace asynchronous
 {
-template <class Clock>
 struct any_loggable_concept :
  ::boost::mpl::vector<
     boost::asynchronous::any_callable_concept,
@@ -41,17 +41,17 @@ struct any_loggable_concept :
     boost::asynchronous::has_set_finished_time<void()>,
     boost::asynchronous::has_set_failed<void()>,
     boost::asynchronous::has_get_failed<bool(), const boost::type_erasure::_self>,
-    boost::asynchronous::has_get_diagnostic_item<boost::asynchronous::diagnostic_item<Clock>(), const boost::type_erasure::_self>
+    boost::asynchronous::has_set_interrupted<void(bool)>,
+    boost::asynchronous::has_get_diagnostic_item<boost::asynchronous::diagnostic_item(),const boost::type_erasure::_self>
 > {};
 
-template <class Clock = boost::chrono::high_resolution_clock>
-struct any_loggable: boost::type_erasure::any<any_loggable_concept<Clock> >
+struct any_loggable: boost::type_erasure::any<any_loggable_concept>
 {
-    typedef Clock clock_type;
+    typedef boost::chrono::high_resolution_clock clock_type;
     typedef int task_failed_handling;
     template <class U>
-    any_loggable(U const& u): boost::type_erasure::any< boost::asynchronous::any_loggable_concept<Clock> > (u){}
-    any_loggable(): boost::type_erasure::any< boost::asynchronous::any_loggable_concept<Clock> > (){}
+    any_loggable(U const& u): boost::type_erasure::any< boost::asynchronous::any_loggable_concept> (u){}
+    any_loggable(): boost::type_erasure::any< boost::asynchronous::any_loggable_concept> (){}
     // dummies
     typedef boost::archive::text_oarchive oarchive;
     typedef boost::archive::text_iarchive iarchive;

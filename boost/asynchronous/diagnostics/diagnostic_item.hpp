@@ -16,10 +16,11 @@
 namespace boost { namespace asynchronous
 {
 
-template<class Clock = boost::chrono::high_resolution_clock>
 class diagnostic_item
 {
 public:
+    typedef boost::chrono::high_resolution_clock Clock;
+
     diagnostic_item():m_posted(),m_started(),m_finished(){}
     diagnostic_item(typename Clock::time_point const& posted,
                     typename Clock::time_point const& started,

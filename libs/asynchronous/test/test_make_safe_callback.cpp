@@ -30,8 +30,8 @@ namespace
 boost::thread::id main_thread_id;
 bool servant_dtor=false;
 bool f_called = false;
-typedef boost::asynchronous::any_loggable<boost::chrono::high_resolution_clock> servant_job;
-typedef std::map<std::string,std::list<boost::asynchronous::diagnostic_item<boost::chrono::high_resolution_clock> > > diag_type;
+typedef boost::asynchronous::any_loggable servant_job;
+typedef std::map<std::string,std::list<boost::asynchronous::diagnostic_item> > diag_type;
 
 struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
 {

@@ -41,10 +41,9 @@ struct any_bin_serializable: public boost::asynchronous::any_bin_serializable_he
 template< >
 struct job_traits< boost::asynchronous::any_bin_serializable >
 {
-    typedef typename boost::asynchronous::default_loggable_job<
-                                  boost::chrono::high_resolution_clock >            diagnostic_type;
+    typedef typename boost::asynchronous::default_loggable_job                      diagnostic_type;
     typedef boost::asynchronous::detail::serializable_base_job<
-            diagnostic_type,boost::asynchronous::any_bin_serializable >                     wrapper_type;
+            diagnostic_type,boost::asynchronous::any_bin_serializable >             wrapper_type;
 
     typedef typename diagnostic_type::diagnostic_item_type                          diagnostic_item_type;
     typedef boost::asynchronous::diagnostics_table<
