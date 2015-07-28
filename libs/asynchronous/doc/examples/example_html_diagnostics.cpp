@@ -107,12 +107,13 @@ public:
 };
 
 
-int main(int argc, char *argv[]) {
+void test_html_diagnostics(int argc, char *argv[])
+{
 
     if (argc != 4) {
         std::cerr << (argc - 1) << " arguments given, should be 3." << std::endl;
         std::cerr << "Usage:" << std::endl << "    " << argv[0] << " <final.html> <in_progress.html> <wait ms>" << std::endl;
-        return 1;
+        return;
     }
 
     // Create schedulers
@@ -156,7 +157,4 @@ int main(int argc, char *argv[]) {
 
     // Output final statistics
 
-    std::ofstream(argv[1]) << formatter.format().get() << std::endl;
-
-    return 0;
-}
+    std::ofstream(argv[1]) << formatter.format().get() << std::endl;}
