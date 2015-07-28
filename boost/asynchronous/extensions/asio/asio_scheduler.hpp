@@ -156,17 +156,17 @@ public:
         return m_thread_ids;
     }
     
-    boost::asynchronous::scheduler_diagnostics<job_type>
+    boost::asynchronous::scheduler_diagnostics
     get_diagnostics(std::size_t =0)const
     {
         // TODO if possible
-        return boost::asynchronous::scheduler_diagnostics<job_type>();
+        return boost::asynchronous::scheduler_diagnostics();
     }
     void clear_diagnostics()
     {
         // TODO if possible
     }
-    void register_diagnostics_functor(std::function<void(boost::asynchronous::scheduler_diagnostics<job_type>)> ,
+    void register_diagnostics_functor(std::function<void(boost::asynchronous::scheduler_diagnostics)> ,
                                       boost::asynchronous::register_diagnostics_type =
                                                     boost::asynchronous::register_diagnostics_type())
     {

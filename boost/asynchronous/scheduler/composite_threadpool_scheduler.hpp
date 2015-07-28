@@ -151,7 +151,7 @@ public:
     {
         return "composite_threadpool_scheduler";
     }
-    boost::asynchronous::scheduler_diagnostics<job_type>
+    boost::asynchronous::scheduler_diagnostics
     get_diagnostics(std::size_t pos=0)const
     {
         if (pos==0)
@@ -168,7 +168,7 @@ public:
                 auto one_diag2 = (*it).get_diagnostics().current();
                 res2.insert(res2.end(),one_diag2.begin(),one_diag2.end());
             }
-            return boost::asynchronous::scheduler_diagnostics<job_type>(res,res2);
+            return boost::asynchronous::scheduler_diagnostics(res,res2);
         }
         else
         {
@@ -182,7 +182,7 @@ public:
             (*it).clear_diagnostics();
         }
     }
-    void register_diagnostics_functor(std::function<void(boost::asynchronous::scheduler_diagnostics<job_type>)> ,
+    void register_diagnostics_functor(std::function<void(boost::asynchronous::scheduler_diagnostics)> ,
                                       boost::asynchronous::register_diagnostics_type =
                                                     boost::asynchronous::register_diagnostics_type())
     {
@@ -375,14 +375,14 @@ private:
             return res;
         }
 
-        boost::asynchronous::scheduler_diagnostics<job_type>
+        boost::asynchronous::scheduler_diagnostics
         get_diagnostics(std::size_t pos=0)const
         {
             if (m_schedulers.empty())
-                return boost::asynchronous::scheduler_diagnostics<job_type>();
+                return boost::asynchronous::scheduler_diagnostics();
             if (pos==0)
             {
-                boost::asynchronous::scheduler_diagnostics<job_type> res;
+                boost::asynchronous::scheduler_diagnostics res;
                 for (typename std::vector<boost::asynchronous::any_shared_scheduler<job_type> >::const_iterator it = m_schedulers.begin();
                      it != m_schedulers.end();++it)
                 {
@@ -403,7 +403,7 @@ private:
                 (*it).clear_diagnostics();
             }
         }
-        void register_diagnostics_functor(std::function<void(boost::asynchronous::scheduler_diagnostics<job_type>)> ,
+        void register_diagnostics_functor(std::function<void(boost::asynchronous::scheduler_diagnostics)> ,
                                           boost::asynchronous::register_diagnostics_type =
                                                         boost::asynchronous::register_diagnostics_type())
         {

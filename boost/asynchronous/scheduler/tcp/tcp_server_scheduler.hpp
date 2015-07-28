@@ -120,7 +120,7 @@ public:
         auto l = [fct,diag]() mutable
         {
             if (fct)
-                fct(boost::asynchronous::scheduler_diagnostics<job_type>(diag->get_map(),diag->get_current()));
+                fct(boost::asynchronous::scheduler_diagnostics(diag->get_map(),diag->get_current()));
         };
         boost::asynchronous::detail::default_termination_task<typename Q::diagnostic_type,boost::thread>
                 ttask(std::move(l));
@@ -210,16 +210,16 @@ public:
         return ids;
     }
 
-    boost::asynchronous::scheduler_diagnostics<job_type>
+    boost::asynchronous::scheduler_diagnostics
     get_diagnostics(std::size_t =0)const
     {
-        return boost::asynchronous::scheduler_diagnostics<job_type>(m_diagnostics->get_map(),m_diagnostics->get_current());
+        return boost::asynchronous::scheduler_diagnostics(m_diagnostics->get_map(),m_diagnostics->get_current());
     }
     void clear_diagnostics()
     {
         m_diagnostics->clear();
     }
-    void register_diagnostics_functor(std::function<void(boost::asynchronous::scheduler_diagnostics<job_type>)> fct,
+    void register_diagnostics_functor(std::function<void(boost::asynchronous::scheduler_diagnostics)> fct,
                                       boost::asynchronous::register_diagnostics_type =
                                                     boost::asynchronous::register_diagnostics_type())
     {
@@ -326,7 +326,7 @@ private:
     std::string m_address;
     unsigned int m_port;
     boost::weak_ptr<this_type> m_weak_self;
-    std::function<void(boost::asynchronous::scheduler_diagnostics<job_type>)> m_diagnostics_fct;
+    std::function<void(boost::asynchronous::scheduler_diagnostics)> m_diagnostics_fct;
     const std::string m_name;
 };
 

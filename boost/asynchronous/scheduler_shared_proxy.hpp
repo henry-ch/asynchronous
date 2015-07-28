@@ -108,7 +108,7 @@ public:
         return m_scheduler->thread_ids();
     }
 
-    boost::asynchronous::scheduler_diagnostics<job_type>
+    boost::asynchronous::scheduler_diagnostics
     get_diagnostics(std::size_t pos=0)const
     {
         return m_scheduler->get_diagnostics(pos);
@@ -244,7 +244,7 @@ public:
         return m_impl->thread_ids();
     }
     
-    boost::asynchronous::scheduler_diagnostics<job_type>
+    boost::asynchronous::scheduler_diagnostics
     get_diagnostics(std::size_t pos=0)const
     {
         return m_impl->get_diagnostics(pos);
