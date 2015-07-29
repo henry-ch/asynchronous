@@ -30,7 +30,313 @@
 BOOST_MPL_HAS_XXX_TRAIT_DEF(state)
 BOOST_MPL_HAS_XXX_TRAIT_DEF(iterator)
 
-namespace boost { namespace asynchronous { namespace detail {
+namespace boost { namespace asynchronous {
+
+// what has to be set when a task is ready
+template <class Return>
+struct continuation_result
+{
+public:
+    typedef Return return_type;
+    continuation_result(boost::shared_ptr<boost::promise<Return> > p,std::function<void(boost::asynchronous::expected<Return>)> f)
+        : m_promise(p),m_done_func(f){}
+    continuation_result(continuation_result&& rhs)noexcept
+        : m_promise(std::move(rhs.m_promise))
+        , m_done_func(std::move(rhs.m_done_func))
+    {}
+    continuation_result(continuation_result const& rhs)noexcept
+        : m_promise(rhs.m_promise)
+        , m_done_func(rhs.m_done_func)
+    {}
+    continuation_result& operator= (continuation_result&& rhs)noexcept
+    {
+        std::swap(m_promise,rhs.m_promise);
+        std::swap(m_done_func,rhs.m_done_func);
+        return *this;
+    }
+    continuation_result& operator= (continuation_result const& rhs)noexcept
+    {
+        m_promise = rhs.m_promise;
+        m_done_func = rhs.m_done_func;
+        return *this;
+    }
+    void set_value(Return val)const
+    {
+        // inform caller if any
+        if (m_done_func)
+        {
+            (m_done_func)(boost::asynchronous::expected<Return>(std::move(val)));
+        }
+        else
+        {
+            m_promise->set_value(std::move(val));
+        }
+    }
+    void set_exception(boost::exception_ptr p)const
+    {
+        // inform caller if any
+        if (m_done_func)
+        {
+            (m_done_func)(boost::asynchronous::expected<Return>(p));
+        }
+        else
+        {
+           m_promise->set_exception(p);
+        }
+    }
+
+private:
+    boost::shared_ptr<boost::promise<Return> > m_promise;
+    std::function<void(boost::asynchronous::expected<Return>)> m_done_func;
+};
+template <>
+struct continuation_result<void>
+{
+public:
+    typedef void return_type;
+    continuation_result(boost::shared_ptr<boost::promise<void> > p,std::function<void(boost::asynchronous::expected<void>)> f)
+        :m_promise(p),m_done_func(f){}
+    continuation_result(continuation_result&& rhs)noexcept
+        : m_promise(std::move(rhs.m_promise))
+        , m_done_func(std::move(rhs.m_done_func))
+    {}
+    continuation_result(continuation_result const& rhs)noexcept
+        : m_promise(rhs.m_promise)
+        , m_done_func(rhs.m_done_func)
+    {}
+    continuation_result& operator= (continuation_result&& rhs)noexcept
+    {
+        std::swap(m_promise,rhs.m_promise);
+        std::swap(m_done_func,rhs.m_done_func);
+        return *this;
+    }
+    continuation_result& operator= (continuation_result const& rhs)noexcept
+    {
+        m_promise = rhs.m_promise;
+        m_done_func = rhs.m_done_func;
+        return *this;
+    }
+    void set_value()const
+    {
+        // inform caller if any
+        if (m_done_func)
+        {
+            (m_done_func)(boost::asynchronous::expected<void>());
+        }
+        else
+        {
+            m_promise->set_value();
+        }
+    }
+    void set_exception(boost::exception_ptr p)const
+    {
+
+        // inform caller if any
+        if (m_done_func)
+        {
+            (m_done_func)(boost::asynchronous::expected<void>(p));
+        }
+        else
+        {
+            m_promise->set_exception(p);
+        }
+    }
+
+private:
+    boost::shared_ptr<boost::promise<void> > m_promise;
+    std::function<void(boost::asynchronous::expected<void>)> m_done_func;
+};
+
+// the base class of continuation tasks Provides typedefs and hides promise.
+template <class Return>
+struct continuation_task
+{
+public:
+    typedef Return return_type;
+
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+    continuation_task(const std::string& name):m_promise(),m_name(name){}
+#else
+    continuation_task(const std::string& name=""):m_promise(),m_name(name){}
+#endif
+
+    continuation_task(continuation_task&& rhs)noexcept
+        : m_promise(std::move(rhs.m_promise))
+        , m_name(std::move(rhs.m_name))
+        , m_done_func(std::move(rhs.m_done_func))
+    {}
+    continuation_task(continuation_task const& rhs)noexcept
+        : m_promise(rhs.m_promise)
+        , m_name(rhs.m_name)
+        , m_done_func(rhs.m_done_func)
+    {}
+    continuation_task& operator= (continuation_task&& rhs)noexcept
+    {
+        std::swap(m_promise,rhs.m_promise);
+        std::swap(m_name,rhs.m_name);
+        std::swap(m_done_func,rhs.m_done_func);
+        return *this;
+    }
+    continuation_task& operator= (continuation_task const& rhs)noexcept
+    {
+        m_promise = rhs.m_promise;
+        m_name = rhs.m_name;
+        m_done_func = rhs.m_done_func;
+        return *this;
+    }
+
+    boost::future<Return> get_future()const
+    {
+        // create only when asked
+        if (!m_promise)
+            const_cast<continuation_task<Return>&>(*this).m_promise = boost::make_shared<boost::promise<Return>>();
+        return m_promise->get_future();
+    }
+
+    boost::shared_ptr<boost::promise<Return> > get_promise()const
+    {
+        // create only when asked
+        if (!m_promise)
+            const_cast<continuation_task<Return>&>(*this).m_promise = boost::make_shared<boost::promise<Return>>();
+        return m_promise;
+    }
+    std::string get_name()const
+    {
+        return m_name;
+    }
+
+    boost::asynchronous::continuation_result<Return> this_task_result()const
+    {
+        return continuation_result<Return>(m_promise,m_done_func);
+    }
+    // called in case task is stolen by some client and only the result is returned
+    template <class Archive,class InternalArchive>
+    void as_result(Archive & ar, const unsigned int /*version*/)
+    {
+        boost::asynchronous::tcp::client_request::message_payload payload;
+        ar >> payload;
+        if (!payload.m_has_exception)
+        {
+            std::istringstream archive_stream(payload.m_data);
+            InternalArchive archive(archive_stream);
+
+            Return res;
+            archive >> res;
+            if (m_done_func)
+                (m_done_func)(boost::asynchronous::expected<Return>(std::move(res)));
+            else
+                get_promise()->set_value(res);
+        }
+        else
+        {
+            if (m_done_func)
+                (m_done_func)(boost::asynchronous::expected<Return>(boost::copy_exception(payload.m_exception)));
+            else
+                get_promise()->set_exception(boost::copy_exception(payload.m_exception));
+        }
+    }
+    void set_done_func(std::function<void(boost::asynchronous::expected<Return>)> f)
+    {
+        m_done_func=std::move(f);
+    }
+private:
+    boost::shared_ptr<boost::promise<Return> > m_promise;
+    std::string m_name;
+    std::function<void(boost::asynchronous::expected<Return>)> m_done_func;
+};
+template <>
+struct continuation_task<void>
+{
+public:
+    typedef void return_type;
+
+    continuation_task(continuation_task&& rhs)noexcept
+        : m_promise(std::move(rhs.m_promise))
+        , m_name(std::move(rhs.m_name))
+        , m_done_func(std::move(rhs.m_done_func))
+    {}
+    continuation_task(continuation_task const& rhs)noexcept
+        : m_promise(rhs.m_promise)
+        , m_name(rhs.m_name)
+        , m_done_func(rhs.m_done_func)
+    {}
+    continuation_task& operator= (continuation_task&& rhs)noexcept
+    {
+        std::swap(m_promise,rhs.m_promise);
+        std::swap(m_name,rhs.m_name);
+        std::swap(m_done_func,rhs.m_done_func);
+        return *this;
+    }
+    continuation_task& operator= (continuation_task const& rhs)noexcept
+    {
+        m_promise = rhs.m_promise;
+        m_name = rhs.m_name;
+        m_done_func = rhs.m_done_func;
+        return *this;
+    }
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+    continuation_task(const std::string& name):m_promise(),m_name(name){}
+#else
+    continuation_task(const std::string& name=""):m_promise(),m_name(name){}
+#endif
+
+    boost::future<void> get_future()const
+    {
+        // create only when asked
+        if (!m_promise)
+            const_cast<continuation_task<void>&>(*this).m_promise = boost::make_shared<boost::promise<void>>();
+        return m_promise->get_future();
+    }
+
+    boost::shared_ptr<boost::promise<void> > get_promise()const
+    {
+        // create only when asked
+        if (!m_promise)
+            const_cast<continuation_task<void>&>(*this).m_promise = boost::make_shared<boost::promise<void>>();
+        return m_promise;
+    }
+    std::string get_name()const
+    {
+        return m_name;
+    }
+
+    boost::asynchronous::continuation_result<void> this_task_result()const
+    {
+        return continuation_result<void>(m_promise,m_done_func);
+    }
+    // called in case task is stolen by some client and only the result is returned
+    template <class Archive,class InternalArchive>
+    void as_result(Archive & ar, const unsigned int /*version*/)
+    {
+        boost::asynchronous::tcp::client_request::message_payload payload;
+        ar >> payload;
+        if (!payload.m_has_exception)
+        {
+            if (m_done_func)
+                (m_done_func)(boost::asynchronous::expected<void>());
+            else
+                get_promise()->set_value();
+        }
+        else
+        {
+            if (m_done_func)
+                (m_done_func)(boost::asynchronous::expected<void>(boost::copy_exception(payload.m_exception)));
+            else
+                get_promise()->set_exception(boost::copy_exception(payload.m_exception));
+        }
+    }
+    void set_done_func(std::function<void(boost::asynchronous::expected<void>)> f)
+    {
+        m_done_func=std::move(f);
+    }
+
+private:
+    boost::shared_ptr<boost::promise<void> > m_promise;
+    std::string m_name;
+    std::function<void(boost::asynchronous::expected<void>)> m_done_func;
+};
+
+namespace detail {
 
 // the continuation task implementation
 template <class Return, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB, typename Tuple=std::tuple<boost::future<Return> > , typename Duration = boost::chrono::milliseconds >
@@ -708,6 +1014,32 @@ struct callback_continuation_as_seq
     {
         typedef boost::asynchronous::expected<T> type;
     };
+    // wrapper in case we only get a callback_continuation
+    template <class Continuation>
+    struct callback_continuation_wrapper : public boost::asynchronous::continuation_task<Return>
+    {
+        callback_continuation_wrapper(Continuation cont)
+        : boost::asynchronous::continuation_task<Return>("callback_continuation_wrapper")
+        , m_cont(std::move(cont))
+        {}
+        void operator()()
+        {
+            boost::asynchronous::continuation_result<Return> task_res = this->this_task_result();
+            m_cont.on_done([task_res](std::tuple<boost::asynchronous::expected<Return> >&& res)
+            {
+                try
+                {
+                    task_res.set_value(std::move(std::get<0>(res).get()));
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
+            });
+        }
+        Continuation m_cont;
+    };
+
     // workaround for compiler crash (gcc 4.7)
     boost::asynchronous::expected<Return> get_continuation_args()const
     {
@@ -767,7 +1099,37 @@ struct callback_continuation_as_seq
         }
         if (m_state)
             m_state->add_subs(interruptibles.begin(),interruptibles.end());
+    }
 
+    template <typename Func>
+    callback_continuation_as_seq(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state, Duration d,Func f,
+                          std::vector<boost::asynchronous::detail::callback_continuation<Return,Job>> args)
+    : m_state(state)
+    , m_timeout(d)
+    , m_finished(boost::make_shared<subtask_finished>(args.size(),!!m_state,(m_timeout.count() != 0)))
+    {
+        // remember when we started
+        m_start = boost::chrono::high_resolution_clock::now();
+
+        on_done(std::move(f));
+
+        boost::asynchronous::any_weak_scheduler<Job> weak_scheduler = boost::asynchronous::get_thread_scheduler<Job>();
+        boost::asynchronous::any_shared_scheduler<Job> locked_scheduler = weak_scheduler.lock();
+        std::vector<boost::asynchronous::any_interruptible> interruptibles;
+        if (locked_scheduler.is_valid())
+        {
+            // transform to continuation tasks
+            using wrapper_type = callback_continuation_wrapper<boost::asynchronous::detail::callback_continuation<Return,Job>>;
+            std::vector<wrapper_type> targs;
+            targs.reserve((args.size()));
+            for(auto const& c : args)
+            {
+                targs.emplace_back(std::move(c));
+            }
+            continuation_ctor_helper(locked_scheduler,interruptibles,targs);
+        }
+        if (m_state)
+            m_state->add_subs(interruptibles.begin(),interruptibles.end());
     }
 
     template <typename T,typename Interruptibles,typename ArgsVec>
