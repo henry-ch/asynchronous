@@ -120,34 +120,34 @@ struct summary_diagnostics {
     boost::chrono::nanoseconds max_scheduling_average;
     boost::chrono::nanoseconds max_scheduling_max;
     boost::chrono::nanoseconds max_scheduling_min;
-    bool scheduling_maxima_set;
+    bool scheduling_maxima_set = false;
 
     boost::chrono::nanoseconds max_execution_total;
     boost::chrono::nanoseconds max_execution_average;
     boost::chrono::nanoseconds max_execution_max;
     boost::chrono::nanoseconds max_execution_min;
-    bool execution_maxima_set;
+    bool execution_maxima_set = false;
 
     boost::chrono::nanoseconds max_failure_total;
     boost::chrono::nanoseconds max_failure_average;
     boost::chrono::nanoseconds max_failure_max;
     boost::chrono::nanoseconds max_failure_min;
-    bool failure_maxima_set;
+    bool failure_maxima_set = false;
 
     boost::chrono::nanoseconds max_interrupted_total;
     boost::chrono::nanoseconds max_interrupted_average;
     boost::chrono::nanoseconds max_interrupted_max;
     boost::chrono::nanoseconds max_interrupted_min;
-    bool interrupted_maxima_set;
+    bool interrupted_maxima_set = false;
 
     boost::chrono::nanoseconds max_total_total;
     boost::chrono::nanoseconds max_total_average;
     boost::chrono::nanoseconds max_total_max;
     boost::chrono::nanoseconds max_total_min;
-    bool total_maxima_set;
+    bool total_maxima_set = false;
 
-    bool has_fails;
-    bool has_interrupts;
+    bool has_fails = false;
+    bool has_interrupts = false;
 
     std::map<std::string, summary_diagnostic_item> items;
 

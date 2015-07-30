@@ -24,6 +24,7 @@
 #include <boost/asynchronous/scheduler/serializable_task.hpp>
 #include <boost/asynchronous/algorithm/detail/safe_advance.hpp>
 #include <boost/asynchronous/detail/metafunctions.hpp>
+#include <boost/asynchronous/detail/move_bind.hpp>
 
 #include <boost/mpl/has_xxx.hpp>
 
@@ -38,6 +39,41 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(iterator_category)
 namespace boost { namespace asynchronous
 {
 
+namespace detail {
+
+template <class Tuple, std::size_t Size = std::tuple_size<Tuple>::value, std::size_t Index = 0>
+typename boost::disable_if_c<Index < Size, void>::type
+advance_iterators(Tuple & /* tuple */, std::size_t /* distance */) { /* Index >= Size, do nothing */ }
+
+template <class Tuple, std::size_t Size = std::tuple_size<Tuple>::value, std::size_t Index = 0>
+typename boost::enable_if_c<Index < Size, void>::type
+advance_iterators(Tuple & tuple, std::size_t distance) {
+    std::advance(std::get<Index>(tuple), distance);
+    advance_iterators<Tuple, Size, Index + 1>(tuple, distance);
+}
+
+template <class Iterator, class ResultIterator, class Func, class Tuple, std::size_t Size = std::tuple_size<Tuple>::value, std::size_t Index = Size>
+struct parallel_transform_dereference_helper
+{
+    template <typename... Args>
+    static void invoke(Iterator & beg, Tuple & t, ResultIterator & result, Func & f, Args & ... args)
+    {
+        parallel_transform_dereference_helper<Iterator, ResultIterator, Func, Tuple, Size, Index - 1>::invoke(beg, t, result, f, *std::get<Index - 1>(t), args...);
+        ++(std::get<Index - 1>(t));
+    }
+};
+template <class Iterator, class ResultIterator, class Func, class Tuple, std::size_t Size>
+struct parallel_transform_dereference_helper<Iterator, ResultIterator, Func, Tuple, Size, 0>
+{
+    template <typename... Args>
+    static void invoke(Iterator & beg, Tuple & /* t */, ResultIterator & result, Func & f, Args & ... args)
+    {
+        *result++ = f(*beg++, args...);
+    }
+};
+
+}
+
 struct std_transform
 {
     template<class Iterator, class ResultIterator, class Func>
@@ -50,6 +86,15 @@ struct std_transform
     ResultIterator operator()(Iterator1 beg1, Iterator1 end1, Iterator2 beg2, ResultIterator result, Func & f)
     {
         return std::transform(beg1, end1, beg2, result, f);
+    }
+    template <class Iterator, class... Iterators, class ResultIterator, class Func>
+    ResultIterator operator()(Iterator beg, Iterator end, std::tuple<Iterators...> iterators, ResultIterator result, Func & f)
+    {
+        while (beg != end) {
+            boost::asynchronous::detail::parallel_transform_dereference_helper<Iterator, ResultIterator, Func, std::tuple<Iterators...>>::invoke(beg, iterators, result, f);
+        }
+
+        return result;
     }
 };
 
@@ -387,6 +432,100 @@ parallel_transform(Range1 & range1, Range2 & range2, ResultIterator result, Func
 {
     return boost::asynchronous::top_level_callback_continuation_job<ResultIterator, Job>
                (boost::asynchronous::detail::parallel_transform2_range_helper<Range1, Range2, ResultIterator, Func, Job, boost::asynchronous::std_transform>(range1, range2, result, func, cutoff, task_name, prio));
+}
+
+// version for any number of iterators
+namespace detail {
+
+template<class Iterator, class ResultIterator, class Func, class Job, class Transform, class... Iterators>
+struct parallel_transform_any_iterators_helper : public boost::asynchronous::continuation_task<ResultIterator>
+{
+    parallel_transform_any_iterators_helper(Iterator begin, Iterator end, std::tuple<Iterators...> iterators, ResultIterator result, Func func, long cutoff, std::string const & task_name, std::size_t prio)
+        : boost::asynchronous::continuation_task<ResultIterator>(task_name)
+        , begin_(begin)
+        , end_(end)
+        , iterators_(iterators)
+        , result_(result)
+        , func_(std::move(func))
+        , cutoff_(cutoff)
+        , task_name_(std::move(task_name))
+        , prio_(prio)
+    {}
+
+    void operator()() const
+    {
+        boost::asynchronous::continuation_result<ResultIterator> task_res = this->this_task_result();
+
+        // advance first up to cutoff
+        Iterator it = boost::asynchronous::detail::find_cutoff(begin_, cutoff_, end_);
+
+        // if not at end, recurse, otherwise execute here
+        if (it == end_)
+        {
+            task_res.set_value(Transform()(begin_, it, iterators_, result_, func_));
+        }
+        else
+        {
+            // distance between begin and it
+            std::size_t dist = std::distance(begin_, it);
+
+            // advance other iterators up to first cutoff
+            std::tuple<Iterators...> cutoffs = iterators_;
+
+            boost::asynchronous::detail::advance_iterators(cutoffs, dist);
+
+            // advance result iterator
+            ResultIterator result_it = result_;
+            std::advance(result_it, dist);
+
+            // recurse
+            boost::asynchronous::create_callback_continuation_job<Job>(
+                // called when subtasks are done, set our result
+                [task_res](std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res)
+                {
+                    try
+                    {
+                        // get to check that no exception happened
+                        std::get<0>(res).get();
+                        task_res.set_value(std::get<1>(res).get());
+                    }
+                    catch (std::exception const & e)
+                    {
+                        task_res.set_exception(boost::copy_exception(e));
+                    }
+                },
+                // recursive tasks
+                parallel_transform_any_iterators_helper<Iterator, ResultIterator, Func, Job, Transform, Iterators...>(begin_, it, iterators_, result_, func_, cutoff_, task_name_, prio_),
+                parallel_transform_any_iterators_helper<Iterator, ResultIterator, Func, Job, Transform, Iterators...>(it, end_, cutoffs, result_it, func_, cutoff_, task_name_, prio_)
+            );
+        }
+    }
+
+    Iterator begin_;
+    Iterator end_;
+    std::tuple<Iterators...> iterators_;
+    ResultIterator result_;
+    Func func_;
+    long cutoff_;
+    std::string task_name_;
+    std::size_t prio_;
+};
+
+}
+
+
+// version for any number of iterators
+template <class ResultIterator, class Func, class Job, class Iterator, class... Iterators>
+boost::asynchronous::detail::callback_continuation<ResultIterator, Job>
+parallel_transform(ResultIterator result, Func func, Iterator begin, Iterator end, Iterators... iterators, long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                   const std::string& task_name, std::size_t prio)
+#else
+                   const std::string& task_name = "", std::size_t prio = 0)
+#endif
+{
+    return boost::asynchronous::top_level_callback_continuation_job<ResultIterator, Job>
+            (boost::asynchronous::detail::parallel_transform_any_iterators_helper<Iterator, ResultIterator, Func, Job, boost::asynchronous::std_transform, Iterators...>(begin, end, std::forward_as_tuple(iterators...), result, func, cutoff, task_name, prio));
 }
 
 }}

@@ -65,6 +65,9 @@ struct parameters
     bool background_override = true;
     bool include_histograms = true;
     bool enable_checkboxes = true;
+    bool javascript_checkboxes = false;
+    bool show_menu = true;
+    bool check_totals_by_default = true;
 
     std::size_t histogram_bin_count = 20;
 
@@ -302,8 +305,10 @@ private:
                    << "      }"                                                                       << std::endl
                    << "      .checkbox_label {"                                                       << std::endl
                    << "        margin-right: 10px;"                                                   << std::endl
-                   << "      }"                                                                       << std::endl
-                   << "      .fail_cb:not(:checked) ~ table td.failure_cell,"                         << std::endl
+                   << "      }"                                                                       << std::endl;
+        }
+        if (params.enable_checkboxes && !params.javascript_checkboxes) {
+            header << "      .fail_cb:not(:checked) ~ table td.failure_cell,"                         << std::endl
                    << "      .fail_cb:not(:checked) ~ table th.failure_cell {"                        << std::endl
                    << "        display: none;"                                                        << std::endl
                    << "      }"                                                                       << std::endl
@@ -318,7 +323,7 @@ private:
         }
         header <<                                                                                    std::endl
                << "      #content {"                                                              << std::endl
-               << "        margin-left: 20%;"                                                     << std::endl
+               << "        margin-left: " << (params.show_menu ? "20" : "5") << "%;"              << std::endl
                << "        margin-right: 5%;"                                                     << std::endl
                << "      }"                                                                       << std::endl
                <<                                                                                    std::endl
@@ -453,7 +458,7 @@ private:
                << "                                                     sort_id,"                 << std::endl
                << "                                                     (order = -order));"       << std::endl
                << "                                              });"                             << std::endl
-               << "              }(cell, cells[cell].getAttribute('data-column')))"               << std::endl
+               << "              }(cell, cells[cell].getAttribute('data-column')));"              << std::endl
                << "            }"                                                                 << std::endl
                << "          }"                                                                   << std::endl
                << "        }"                                                                     << std::endl
@@ -464,30 +469,109 @@ private:
                << "        var tables = node.getElementsByTagName('table');"                      << std::endl
                << "        var index = tables.length;"                                            << std::endl
                << "        while (--index >= 0) {"                                                << std::endl
-               << "          var fromSource = ' ' + tables[index].className + ' ';"               << std::endl
+               << "          var cssClasses = ' ' + tables[index].className + ' ';"               << std::endl
                << "          // Check for class 'sortable'"                                       << std::endl
                << "          // getElementsByClassName + checking the tag is also possible,"      << std::endl
                << "          // but has less browser support."                                    << std::endl
-               << "          if (fromSource.indexOf(' sortable ') > -1) {"                        << std::endl
+               << "          if (cssClasses.indexOf(' sortable ') > -1) {"                        << std::endl
                << "            makeTableSortable(tables[index]);"                                 << std::endl
                << "          }"                                                                   << std::endl
                << "        }"                                                                     << std::endl
-               << "      }"                                                                       << std::endl
-               << "    </script>"                                                                 << std::endl
+               << "      }"                                                                       << std::endl;
+        if (params.enable_checkboxes && params.javascript_checkboxes) {
+            header << "      function toggleDefaultHidden(node, visibleStyle) {"                      << std::endl
+                   << "        if (node.style.display === visibleStyle) {"                            << std::endl
+                   << "          node.style.display = 'none';"                                        << std::endl
+                   << "        } else {"                                                              << std::endl
+                   << "          node.style.display = visibleStyle;"                                  << std::endl
+                   << "        }"                                                                     << std::endl
+                   << "      }"                                                                       << std::endl
+                   << "      function toggleDefaultVisible(node, visibleStyle) {"                     << std::endl
+                   << "        if (node.style.display === 'none') {"                                  << std::endl
+                   << "          node.style.display = visibleStyle"                                   << std::endl
+                   << "        } else {"                                                              << std::endl
+                   << "          node.style.display = 'none';"                                        << std::endl
+                   << "        }"                                                                     << std::endl
+                   << "      }"                                                                       << std::endl
+                   << "      function applyToCheckboxTargets(node, targetClass, fn) {"                << std::endl
+                   << "          var headerCells = node.parentNode.getElementsByTagName('th');"       << std::endl
+                   << "          var headerIndex = headerCells.length;"                               << std::endl
+                   << "          while (--headerIndex >= 0) {"                                        << std::endl
+                   << "            var cssClasses = ' ' + headerCells[headerIndex].className + ' ';"  << std::endl
+                   << "            if (cssClasses.indexOf(' ' + targetClass + ' ') > -1) {"           << std::endl
+                   << "              fn(headerCells[headerIndex]);"                                   << std::endl
+                   << "            }"                                                                 << std::endl
+                   << "          }"                                                                   << std::endl
+                   << "          var bodyCells = node.parentNode.getElementsByTagName('td');"         << std::endl
+                   << "          var bodyIndex = bodyCells.length;"                                   << std::endl
+                   << "          while (--bodyIndex >= 0) {"                                          << std::endl
+                   << "            var cssClasses = ' ' + bodyCells[bodyIndex].className + ' ';"      << std::endl
+                   << "            if (cssClasses.indexOf(' ' + targetClass + ' ') > -1) {"           << std::endl
+                   << "              fn(bodyCells[bodyIndex]);"                                       << std::endl
+                   << "            }"                                                                 << std::endl
+                   << "          }"                                                                   << std::endl
+                   << "      }"                                                                       << std::endl
+                   << "      function makeCheckboxActive(node, targetClass, defaultOn) {"             << std::endl
+                   << "        applyToCheckboxTargets(node, targetClass, function (cell) {"           << std::endl
+                   << "          if (defaultOn) {"                                                    << std::endl
+                   << "            cell.style.display = 'table-cell';"                                << std::endl
+                   << "          } else {"                                                            << std::endl
+                   << "            cell.style.display = 'none';"                                      << std::endl
+                   << "          }"                                                                   << std::endl
+                   << "        });"                                                                   << std::endl
+                   << "        node.addEventListener('click', function () {"                          << std::endl
+                   << "          applyToCheckboxTargets(node, targetClass, function (cell) {"         << std::endl
+                   << "            if (defaultOn) {"                                                  << std::endl
+                   << "              toggleDefaultVisible(cell, 'table-cell');"                       << std::endl
+                   << "            } else {"                                                          << std::endl
+                   << "              toggleDefaultHidden(cell, 'table-cell');"                        << std::endl
+                   << "            }"                                                                 << std::endl
+                   << "          });"                                                                 << std::endl
+                   << "        });"                                                                   << std::endl
+                   << "      }"                                                                       << std::endl
+                   << "      function makeCheckboxesActive(node) {"                                   << std::endl
+                   << "        // Find all checkboxes"                                                << std::endl
+                   << "        var boxes = node.getElementsByTagName('input');"                       << std::endl
+                   << "        var index = boxes.length;"                                             << std::endl
+                   << "        while (--index >= 0) {"                                                << std::endl
+                   << "          var cssClasses = ' ' + boxes[index].className + ' ';"                << std::endl
+                   << "          // Check for class 'checkbox"                                        << std::endl
+                   << "          if (cssClasses.indexOf(' checkbox ') > -1) {"                        << std::endl
+                   << "            var defaultOn = boxes[index].hasAttribute('checked');"             << std::endl
+                   << "            if (cssClasses.indexOf(' int_cb ') > -1) {"                        << std::endl
+                   << "              makeCheckboxActive(boxes[index], 'interrupted', defaultOn);"     << std::endl
+                   << "            } else if (cssClasses.indexOf(' fail_cb ') > -1) {"                << std::endl
+                   << "              makeCheckboxActive(boxes[index], 'failure_cell', defaultOn);"    << std::endl
+                   << "            } else if (cssClasses.indexOf(' total_cb ') > -1) {"               << std::endl
+                   << "              makeCheckboxActive(boxes[index], 'total', defaultOn);"           << std::endl
+                   << "            }"                                                                 << std::endl
+                   << "          }"                                                                   << std::endl
+                   << "        }"                                                                     << std::endl
+                   << "      }"                                                                       << std::endl;
+        }
+        header << "    </script>"                                                                 << std::endl
                << "  </head>"                                                                     << std::endl
-               << "  <body onload=\"makeTablesSortable(document);\">"                             << std::endl
+               << "  <body onload=\"makeTablesSortable(document);"                                << std::endl;
+        if (params.enable_checkboxes && params.javascript_checkboxes) {
+            header << "                makeCheckboxesActive(document);"                              << std::endl;
+        }
+        header << "               \">"                                                            << std::endl
                << "    <div id=\"overlay_wrapper\" onclick=\"cancelOverlay();\">"                 << std::endl
                << "      <div id=\"overlay\" onclick=\"cancelEvent(arguments[0]);\"></div>"       << std::endl
-               << "    </div>"                                                                    << std::endl
-               << "    <div class=\"index\">"                                                     << std::endl
-               << "      <ul>"                                                                    << std::endl;
+               << "    </div>"                                                                    << std::endl;
+        if (params.show_menu) {
+            header << "    <div class=\"index\">"                                                     << std::endl
+                   << "      <ul>"                                                                    << std::endl;
+        }
     }
 
     void generate_body(parameters const& params)
     {
-        body << "      </ul>"                           << std::endl
-             << "    </div>"                            << std::endl
-             << "    <div id=\"content\">"              << std::endl
+        if (params.show_menu) {
+            body << "      </ul>"                           << std::endl
+                 << "    </div>"                            << std::endl;
+        }
+        body << "    <div id=\"content\">"              << std::endl
              << "      <h1>" << params.title << "</h1>" << std::endl;
     }
 
@@ -813,6 +897,7 @@ void begin_table(document & doc, parameters const& params, bool has_fails, bool 
     std::string check = " checked=\"checked\"";
     std::string check_failures = has_fails ? check : "";
     std::string check_interrupts = has_interrupts ? check : "";
+    std::string check_total = params.check_totals_by_default ? check : "";
     // The checkbox for total time will always be checked
 
     // Add checkboxes (if enabled) and table
@@ -822,7 +907,7 @@ void begin_table(document & doc, parameters const& params, bool has_fails, bool 
              << "        <span class=\"checkbox_label\">Failure time</span>"                                         << std::endl
              << "        <input type=\"checkbox\" class=\"checkbox int_cb\"" << check_interrupts << " />"            << std::endl
              << "        <span class=\"checkbox_label\">Interruption time</span>"                                    << std::endl
-             << "        <input type=\"checkbox\" class=\"checkbox total_cb\"" << check << " />"                     << std::endl
+             << "        <input type=\"checkbox\" class=\"checkbox total_cb\"" << check_total << " />"               << std::endl
              << "        <span class=\"checkbox_label\">Total time</span>"                                           << std::endl;
     }
     doc.body << "        <table class=\"sortable\">"                                                                 << std::endl
@@ -964,18 +1049,12 @@ void end_table(document & doc) {
 }
 
 // Function for formatting diagnostics types.
-// Placed outside of the 'formatter' class to allow template specialization.
-template <typename DataType>
-void format(document & /* doc */, std::size_t index, std::string const& section, parameters const& /* params */, DataType data) {
-    // static_assert does not work here, because the compiler may generate code for this method even if it is not used.
-    throw std::logic_error(std::string("Cannot format data of type ") + typeid(data).name() + " (in section '" + section + "' of index " + std::to_string(index) + ")");
-}
+// Overload this to use custom diagnostics types.
 
-// Formatting specializations for default diagnostics types
+// Formatting overloads for default diagnostics types
 
 // Diagnostics for currently running job
-template <>
-void format<scheduler_diagnostics::current_type>(document & doc, std::size_t /* index */, std::string const& section, parameters const& /* params */, scheduler_diagnostics::current_type data) {
+void format(document & doc, std::size_t /* index */, std::string const& section, parameters const& /* params */, scheduler_diagnostics::current_type data) {
     // Add heading
     doc.body << "      <h4>" << detail::escape_html(section) << "</h4>" << std::endl;
 
@@ -1045,8 +1124,7 @@ void format<scheduler_diagnostics::current_type>(document & doc, std::size_t /* 
 }
 
 // All diagnostics
-template <>
-void format<scheduler_diagnostics>(document & doc, std::size_t /* index */, std::string const& section, parameters const& params, scheduler_diagnostics data) {
+void format(document & doc, std::size_t /* index */, std::string const& section, parameters const& params, scheduler_diagnostics data) {
     // Add heading
     doc.body << "      <h4>" << section << "</h4>" << std::endl;
 
@@ -1067,8 +1145,7 @@ void format<scheduler_diagnostics>(document & doc, std::size_t /* index */, std:
 }
 
 // Summary diagnostics
-template <>
-void format<summary_diagnostics>(document & doc, std::size_t /* index */, std::string const& section, parameters const& params, summary_diagnostics data) {
+void format(document & doc, std::size_t /* index */, std::string const& section, parameters const& params, summary_diagnostics data) {
     // Add heading
     doc.body << "      <h4>" << section << "</h4>" << std::endl;
 
@@ -1085,8 +1162,7 @@ void format<summary_diagnostics>(document & doc, std::size_t /* index */, std::s
 }
 
 // No diagnostics - do not show output
-template <>
-void format<disable_diagnostics>(document & /* doc */, std::size_t /* index */, std::string const& /* section */, parameters const& /* params */, disable_diagnostics /* data */) { /* No diagnostics, no output. */ }
+void format(document & /* doc */, std::size_t /* index */, std::string const& /* section */, parameters const& /* params */, disable_diagnostics /* data */) { /* No diagnostics, no output. */ }
 
 // Diagnostic types must be default-constructible and copy-assignable
 // Diagnostic types must offer 'merge(boost::asynchronous::scheduler_diagnostics)'
@@ -1126,8 +1202,10 @@ public:
         if (name == "") name = "Scheduler " + std::to_string(index) + " (unnamed)";
         name = detail::escape_html(name);
 
-        // Add entry to menu
-        doc.header << "        <li onclick=\"this.children[0].click();\"><a href=\"#" << index << "\">" << name << "</a></li>" << std::endl;
+        if (m_params.show_menu) {
+            // Add entry to menu
+            doc.header << "        <li onclick=\"this.children[0].click();\"><a href=\"#" << index << "\">" << name << "</a></li>" << std::endl;
+        }
 
         // Add heading
         doc.body << "      <h2 id=\"" << index << "\">" << name << "</h2>" << std::endl;
@@ -1135,12 +1213,11 @@ public:
 
     // Add the queue sizes to the document
     template <typename QueueSizeType = std::vector<std::size_t>>
-    void queues(document & doc, std::size_t /* index */, QueueSizeType const& queue_sizes) {
+    void queues(document & doc, std::size_t /* index */, std::string const& title, QueueSizeType const& queue_sizes) {
         // Only add information if there are any queues
         if (queue_sizes.size() > 0) {
-            // Add heading with the proper singular/plural form
-            doc.body << "      <h4>Queue size" << (queue_sizes.size() == 1 ? "" : "s") << "</h4>" << std::endl
-                     << "      <table class=\"queues\">"                                          << std::endl;
+            doc.body << "      <h4>" << title << "</h4>" << std::endl
+                     << "      <table class=\"queues\">" << std::endl;
 
             // Add queue sizes
             for (std::size_t size : queue_sizes) {
@@ -1152,11 +1229,17 @@ public:
         }
     }
 
+    template <typename QueueSizeType = std::vector<std::size_t>>
+    void queues(document & doc, std::size_t index, QueueSizeType const& queue_sizes) {
+        // Add heading with the proper singular/plural form
+        queues(doc, index, std::string("Queue size") + (queue_sizes.size() == 1 ? "" : "s"), queue_sizes);
+    }
+
     // Add diagnostics to the document.
     template <typename DataType>
     void format(document & doc, std::size_t index, std::string const& section, DataType data) {
         using boost::asynchronous::html_formatter::format; // ADL
-        format<DataType>(doc, index, section, m_params, std::forward<DataType>(data));
+        format(doc, index, section, m_params, std::forward<DataType>(data));
     }
 
     // Formatting
@@ -1243,6 +1326,13 @@ public:
     void clear_all() {
         m_current_diagnostics.clear();
         m_all_diagnostics.clear();
+    }
+
+    parameters& params() {
+        return m_params;
+    }
+    parameters const& params() const {
+        return m_params;
     }
 };
 
