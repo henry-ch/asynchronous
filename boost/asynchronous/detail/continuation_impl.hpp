@@ -336,6 +336,58 @@ private:
     std::function<void(boost::asynchronous::expected<void>)> m_done_func;
 };
 
+template <class Func, class ReturnType>
+struct lambda_continuation_wrapper : public boost::asynchronous::continuation_task<ReturnType>
+{
+    lambda_continuation_wrapper(Func f, std::string const& name)
+        : boost::asynchronous::continuation_task<ReturnType>(name)
+        , myFunc(std::move(f))
+    {}
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<ReturnType> task_res = this->this_task_result();
+        try
+        {
+            task_res.set_value(myFunc());
+        }
+        catch (std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
+    }
+
+    Func myFunc;
+};
+template <class Func>
+struct lambda_continuation_wrapper<Func,void> : public boost::asynchronous::continuation_task<void>
+{
+    lambda_continuation_wrapper(Func f, std::string const& name)
+        : boost::asynchronous::continuation_task<void>(name)
+        , myFunc(std::move(f))
+    {}
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<void> task_res = this->this_task_result();
+        try
+        {
+            myFunc();
+            task_res.set_value();
+        }
+        catch (std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
+    }
+
+    Func myFunc;
+};
+
+template <class Func>
+auto make_lambda_continuation_wrapper(Func f, std::string const& name) -> lambda_continuation_wrapper<Func,decltype(f())>
+{
+    return lambda_continuation_wrapper<Func,decltype(f())>(std::move(f),name);
+}
+
 namespace detail {
 
 // the continuation task implementation
