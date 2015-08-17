@@ -11,10 +11,12 @@
 #define BOOST_ASYNC_SCHEDULER_SCHEDULER_HELPERS_HPP
 
 #include<string>
+#include <functional>
+
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/asynchronous/scheduler/detail/exceptions.hpp>
-#include <functional>
+#include <boost/asynchronous/scheduler/detail/processor_bind.hpp>
 
 #ifdef BOOST_ASYNCHRONOUS_PRCTL_SUPPORT
 #include <sys/prctl.h>

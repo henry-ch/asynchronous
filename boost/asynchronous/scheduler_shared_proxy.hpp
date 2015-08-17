@@ -150,6 +150,10 @@ public:
     {
         return m_scheduler->get_name();
     }
+    void processor_bind(unsigned int p)
+    {
+        m_scheduler->processor_bind(p);
+    }
     ~scheduler_shared_proxy_impl()
     {
         // stop scheduler and block until joined
@@ -285,6 +289,10 @@ public:
     std::string get_name()const
     {
         return m_impl->get_name();
+    }
+    void processor_bind(unsigned int p)
+    {
+        m_impl->processor_bind(p);
     }
     ~scheduler_shared_proxy()
     {

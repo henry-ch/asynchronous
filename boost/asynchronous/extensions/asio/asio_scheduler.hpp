@@ -150,6 +150,15 @@ public:
     {
         return boost::asynchronous::any_joinable (boost::asynchronous::detail::worker_wrap<boost::thread_group>(m_group));
     }
+    void processor_bind(unsigned int p)
+    {
+        for (size_t i = 1; i<= m_ioservices.size();++i)
+        {
+            boost::asynchronous::detail::processor_bind_task task(p+i-1);
+            job_type job(std::move(task));
+            this->post(std::move(job),i);
+        }
+    }
     
     std::vector<boost::thread::id> thread_ids()const
     {

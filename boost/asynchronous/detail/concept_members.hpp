@@ -38,6 +38,8 @@ BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_clear_diagnostics), clear_di
 
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_set_done_func), set_done_func, 1);
 
+BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_processor_bind), processor_bind, 1);
+
 #ifdef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
 #ifndef BOOST_NO_RVALUE_REFERENCES
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_post), post);

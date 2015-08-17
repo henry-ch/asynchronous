@@ -159,6 +159,15 @@ public:
     {
         return m_name;
     }
+    void processor_bind(unsigned int p)
+    {
+        for (size_t i = 0; i< m_thread_ids.size();++i)
+        {
+            boost::asynchronous::detail::processor_bind_task task(p+i);
+            boost::asynchronous::any_callable job(std::move(task));
+            m_private_queues[i]->push(std::move(job),std::numeric_limits<std::size_t>::max());
+        }
+    }
     void register_diagnostics_functor(std::function<void(boost::asynchronous::scheduler_diagnostics)> fct,
                                       boost::asynchronous::register_diagnostics_type =
                                                     boost::asynchronous::register_diagnostics_type())

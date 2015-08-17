@@ -45,6 +45,15 @@
 #include <boost/asynchronous/scheduler/detail/lockable_weak_scheduler.hpp>
 #include <boost/asynchronous/scheduler/detail/any_continuation.hpp>
 
+extern "C"
+{
+#include <windows.h>
+}
+
+#include <stdexcept>
+
+//#include <boost/config/abi_prefix.hpp>
+
 namespace boost { namespace asynchronous
 {
 
@@ -179,6 +188,15 @@ public:
     {
         return m_name;
     }
+    void processor_bind(unsigned int p)
+    {
+        for (size_t i = 0; i< m_thread_ids.size();++i)
+        {
+            boost::asynchronous::detail::processor_bind_task task(p+i);
+            boost::asynchronous::any_callable job(std::move(task));
+            m_private_queues[i]->push(std::move(job),std::numeric_limits<std::size_t>::max());
+        }
+    }
     // try to execute a job, return true
     static bool execute_one_job(std::vector<boost::shared_ptr<queue_type> > queues,size_t index,CPULoad& cpu_load,boost::shared_ptr<diag_type> diagnostics,
                                 std::list<boost::asynchronous::any_continuation>& waiting)
@@ -272,7 +290,6 @@ public:
 
         std::list<boost::asynchronous::any_continuation>& waiting =
                 boost::asynchronous::get_continuations(std::list<boost::asynchronous::any_continuation>(),true);
-
         CPULoad cpu_load;
         while(true)
         {

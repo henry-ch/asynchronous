@@ -146,6 +146,12 @@ public:
     {
         return m_name;
     }
+    void processor_bind(unsigned int p)
+    {
+        boost::asynchronous::detail::processor_bind_task task(p);
+        boost::asynchronous::any_callable job(std::move(task));
+        m_private_queue->push(std::move(job),std::numeric_limits<std::size_t>::max());
+    }
     void post(typename queue_type::job_type job, std::size_t prio)
     {
         boost::asynchronous::job_traits<typename queue_type::job_type>::set_posted_time(job);

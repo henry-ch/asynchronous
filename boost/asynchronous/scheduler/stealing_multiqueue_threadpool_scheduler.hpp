@@ -182,6 +182,16 @@ public:
 #endif
         }
     }
+    void processor_bind(unsigned int p)
+    {
+        for (size_t i = 0; i< m_thread_ids.size();++i)
+        {
+            boost::asynchronous::detail::processor_bind_task task(p+i);
+            boost::asynchronous::any_callable job(std::move(task));
+            m_private_queues[i]->push(std::move(job),std::numeric_limits<std::size_t>::max());
+        }
+    }
+
     std::string get_name()const
     {
         return m_name;

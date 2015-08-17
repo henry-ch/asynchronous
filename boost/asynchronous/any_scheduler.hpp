@@ -69,7 +69,8 @@ struct any_shared_scheduler_concept :
     boost::asynchronous::has_get_queue_size<std::vector<std::size_t>(), const boost::type_erasure::_a>,
     boost::asynchronous::has_get_diagnostics<boost::asynchronous::scheduler_diagnostics(),
                                           const boost::type_erasure::_a>,
-    boost::asynchronous::has_get_name<std::string(), const boost::type_erasure::_a>
+    boost::asynchronous::has_get_name<std::string(), const boost::type_erasure::_a>,
+    boost::asynchronous::has_processor_bind<void(unsigned int), boost::type_erasure::_a>
 > {};
 
 template <class T = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
@@ -99,6 +100,7 @@ struct any_shared_scheduler_concept
                                                     boost::asynchronous::register_diagnostics_type()) =0;
     virtual void clear_diagnostics() =0;
     virtual std::string get_name()const =0;
+    virtual void processor_bind(unsigned int p)=0;
 };
 template <class T = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 struct any_shared_scheduler_ptr: boost::shared_ptr<boost::asynchronous::any_shared_scheduler_concept<T> >
@@ -176,6 +178,10 @@ public:
     std::string get_name()const
     {
         return (*my_ptr).get_name();
+    }
+    void processor_bind(unsigned int p)
+    {
+        (*my_ptr).processor_bind(p);
     }
 private:
     any_shared_scheduler_ptr<JOB> my_ptr;

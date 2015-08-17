@@ -86,8 +86,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                    boost::asynchronous::multiqueue_threadpool_scheduler<
                                                            boost::asynchronous::lockfree_queue<>,
                                                            boost::asynchronous::default_find_position< boost::asynchronous::sequential_push_policy>,
-                                                           boost::asynchronous::no_cpu_load_saving
-                                                       >>(tpsize,tasks))
+                                                           boost::asynchronous::default_save_cpu_load<10,80000,1000>
+                                                           //boost::asynchronous::no_cpu_load_saving
+                                                       >>(tpsize,tasks/tpsize))
         , m_promise(new boost::promise<void>)
     {
     }
@@ -148,7 +149,32 @@ void ParallelAsyncPostCb(float a[], size_t n)
     }
 }
 
-    
+void ParallelAsyncPostFuture(float a[], size_t n)
+{
+    auto scheduler =  boost::asynchronous::make_shared_scheduler_proxy<
+            boost::asynchronous::multiqueue_threadpool_scheduler<
+                    boost::asynchronous::lockfree_queue<>,
+                    boost::asynchronous::default_find_position< boost::asynchronous::sequential_push_policy>,
+                    boost::asynchronous::no_cpu_load_saving
+                >>(tpsize,tasks/tpsize);
+    // set processor affinity to improve cache usage. We start at core 0, until tpsize-1
+    scheduler.processor_bind(0);
+
+    long tasksize = SIZE / tasks;
+    servant_time = boost::chrono::high_resolution_clock::now();
+    auto fu = boost::asynchronous::post_future(scheduler,
+               [a,n,tasksize]()
+               {
+                   return boost::asynchronous::parallel_for(a,a+n,
+                                                            [](float const& i)
+                                                            {
+                                                               const_cast<float&>(i) = Foo(i);
+                                                            },tasksize,"",0);
+               });
+    fu.get();
+    servant_intern += (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - servant_time).count() / 1000);
+}
+
 
 
 void test(void(*pf)(float [], size_t ))
@@ -160,13 +186,17 @@ void test(void(*pf)(float [], size_t ))
 
 int main( int argc, const char *argv[] ) 
 {   
+#ifdef WINVER
+    std::cout << "win"  << std::endl;
+#endif
+
     tpsize = (argc>1) ? strtol(argv[1],0,0) : boost::thread::hardware_concurrency();
     tasks = (argc>2) ? strtol(argv[2],0,0) : 500;
     std::cout << "tpsize=" << tpsize << std::endl;
     std::cout << "tasks=" << tasks << std::endl;
     for (int i=0;i<LOOP;++i)
     {     
-        test(ParallelAsyncPostCb);
+        test(ParallelAsyncPostFuture);
     }
     printf ("%24s: time = %.1f usec\n","parallel async cb intern", servant_intern);
     return 0;
