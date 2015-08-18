@@ -25,6 +25,7 @@
 #include <boost/asynchronous/scheduler/serializable_task.hpp>
 #include <boost/asynchronous/algorithm/detail/safe_advance.hpp>
 #include <boost/asynchronous/detail/metafunctions.hpp>
+#include <boost/asynchronous/detail/function_traits.hpp>
 
 #include <boost/range/begin.hpp>
 #include <boost/range/end.hpp>
@@ -37,6 +38,23 @@ namespace boost { namespace asynchronous
 // version for iterators => will return nothing
 namespace detail
 {
+template <int args, class Iterator, class Func, class Enable=void>
+struct for_each_helper
+{
+    void operator()(Iterator beg, Iterator end, Func const& func)
+    {
+        std::for_each(beg,end,func);
+    }
+};
+template <class Iterator, class Func>
+struct for_each_helper<2,Iterator,Func,void>
+{
+    void operator()(Iterator beg, Iterator end, Func const& func)
+    {
+        func(beg,end);
+    }
+};
+
 template <class Iterator, class Func, class Job>
 struct parallel_for_helper: public boost::asynchronous::continuation_task<void>
 {
@@ -53,7 +71,8 @@ struct parallel_for_helper: public boost::asynchronous::continuation_task<void>
         // if not at end, recurse, otherwise execute here
         if (it == end_)
         {
-            std::for_each(beg_,it,func_);
+            boost::asynchronous::detail::for_each_helper<
+                    boost::asynchronous::function_traits<Func>::arity,Iterator,Func>()(beg_,it,func_);
             task_res.set_value();
         }
         else
@@ -125,7 +144,8 @@ struct parallel_for_range_move_helper: public boost::asynchronous::continuation_
         // if not at end, recurse, otherwise execute here
         if (it == boost::end(*range))
         {
-            std::for_each(boost::begin(*range),it,func_);
+            boost::asynchronous::detail::for_each_helper<
+                    boost::asynchronous::function_traits<Func>::arity,decltype(it),Func>()(boost::begin(*range),it,func_);
             task_res.set_value(std::move(*range));
         }
         else
@@ -188,7 +208,8 @@ struct parallel_for_range_move_helper<Range,Func,Job,typename ::boost::enable_if
         // if not at end, recurse, otherwise execute here
         if (it == end_)
         {
-            std::for_each(begin_,it,func_);
+            boost::asynchronous::detail::for_each_helper<
+                    boost::asynchronous::function_traits<Func>::arity,decltype(it),Func>()(begin_,it,func_);
             Range res;
             std::move(begin_,it,std::back_inserter(res));
             task_res.set_value(std::move(res));
@@ -293,7 +314,8 @@ struct parallel_for_range_helper: public boost::asynchronous::continuation_task<
         // if not at end, recurse, otherwise execute here
         if (it == boost::end(range_))
         {
-            std::for_each(boost::begin(range_),it,func_);
+            boost::asynchronous::detail::for_each_helper<
+                    boost::asynchronous::function_traits<Func>::arity,decltype(it),Func>()(boost::begin(range_),it,func_);
             task_res.set_value();
         }
         else

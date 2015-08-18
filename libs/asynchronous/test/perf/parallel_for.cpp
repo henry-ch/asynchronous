@@ -66,11 +66,6 @@ float Foo(float f)
     return std::cos(std::tan(f*3.141592654 + 2.55756 * 0.42));
 }
 
-void SerialApplyFoo( float a[], size_t n ) {
-    for( size_t i=0; i!=n; ++i )
-        a[i]=Foo(a[i]);
-}
-
 typename boost::chrono::high_resolution_clock::time_point servant_time;
 double servant_intern=0.0;
 long tpsize = 12;
@@ -186,10 +181,6 @@ void test(void(*pf)(float [], size_t ))
 
 int main( int argc, const char *argv[] ) 
 {   
-#ifdef WINVER
-    std::cout << "win"  << std::endl;
-#endif
-
     tpsize = (argc>1) ? strtol(argv[1],0,0) : boost::thread::hardware_concurrency();
     tasks = (argc>2) ? strtol(argv[2],0,0) : 500;
     std::cout << "tpsize=" << tpsize << std::endl;
