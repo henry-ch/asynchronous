@@ -37,6 +37,23 @@ namespace boost { namespace asynchronous
 // version for iterators => will return nothing
 namespace detail
 {
+template <int args, class Iterator, class Func, class Enable=void>
+struct for_each_helper
+{
+    Func operator()(Iterator beg, Iterator end, Func&& func)
+    {
+        return std::for_each(beg,end,func);
+    }
+};
+template <class Iterator, class Func>
+struct for_each_helper<2,Iterator,Func,void>
+{
+    Func operator()(Iterator beg, Iterator end, Func&& func)
+    {
+        return func(beg,end);
+    }
+};
+
 template <class Iterator, class Func, class Job>
 struct parallel_for_each_helper: public boost::asynchronous::continuation_task<Func>
 {
@@ -45,7 +62,7 @@ struct parallel_for_each_helper: public boost::asynchronous::continuation_task<F
         : boost::asynchronous::continuation_task<Func>(task_name)
         , beg_(beg),end_(end),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
     {}
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<Func> task_res = this->this_task_result();
         // advance up to cutoff
@@ -53,7 +70,9 @@ struct parallel_for_each_helper: public boost::asynchronous::continuation_task<F
         // if not at end, recurse, otherwise execute here
         if (it == end_)
         {
-            task_res.set_value(std::move(std::for_each(beg_,it,std::move(func_))));
+            task_res.set_value(std::move(boost::asynchronous::detail::for_each_helper<
+                                         boost::asynchronous::function_traits<Func>::arity,Iterator,Func>()
+                                         (beg_,it,std::move(func_))));
         }
         else
         {

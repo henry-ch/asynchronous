@@ -39,7 +39,7 @@ namespace boost { namespace asynchronous
 namespace detail
 {
 template <int args, class Iterator, class Func, class Enable=void>
-struct for_each_helper
+struct for_helper
 {
     void operator()(Iterator beg, Iterator end, Func& func)
     {
@@ -50,7 +50,7 @@ struct for_each_helper
     }
 };
 template <class Iterator, class Func>
-struct for_each_helper<2,Iterator,Func,void>
+struct for_helper<2,Iterator,Func,void>
 {
     void operator()(Iterator beg, Iterator end, Func& func)
     {
@@ -74,7 +74,7 @@ struct parallel_for_helper: public boost::asynchronous::continuation_task<void>
         // if not at end, recurse, otherwise execute here
         if (it == end_)
         {
-            boost::asynchronous::detail::for_each_helper<
+            boost::asynchronous::detail::for_helper<
                     boost::asynchronous::function_traits<Func>::arity,Iterator,Func>()(beg_,it,func_);
             task_res.set_value();
         }
@@ -147,7 +147,7 @@ struct parallel_for_range_move_helper: public boost::asynchronous::continuation_
         // if not at end, recurse, otherwise execute here
         if (it == boost::end(*range))
         {
-            boost::asynchronous::detail::for_each_helper<
+            boost::asynchronous::detail::for_helper<
                     boost::asynchronous::function_traits<Func>::arity,decltype(it),Func>()(boost::begin(*range),it,func_);
             task_res.set_value(std::move(*range));
         }
@@ -211,7 +211,7 @@ struct parallel_for_range_move_helper<Range,Func,Job,typename ::boost::enable_if
         // if not at end, recurse, otherwise execute here
         if (it == end_)
         {
-            boost::asynchronous::detail::for_each_helper<
+            boost::asynchronous::detail::for_helper<
                     boost::asynchronous::function_traits<Func>::arity,decltype(it),Func>()(begin_,it,func_);
             Range res;
             std::move(begin_,it,std::back_inserter(res));
@@ -317,7 +317,7 @@ struct parallel_for_range_helper: public boost::asynchronous::continuation_task<
         // if not at end, recurse, otherwise execute here
         if (it == boost::end(range_))
         {
-            boost::asynchronous::detail::for_each_helper<
+            boost::asynchronous::detail::for_helper<
                     boost::asynchronous::function_traits<Func>::arity,decltype(it),Func>()(boost::begin(range_),it,func_);
             task_res.set_value();
         }
