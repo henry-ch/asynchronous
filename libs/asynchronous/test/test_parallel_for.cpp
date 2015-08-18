@@ -73,9 +73,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
 
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
                     return boost::asynchronous::parallel_for(this->m_data.begin(),this->m_data.end(),
-                                                      [](int const& i)
+                                                      [](int& i)
                                                       {
-                                                        const_cast<int&>(i) += 2;
+                                                        i += 2;
                                                       },1500);
                     },// work
            [aPromise,ids,this](boost::asynchronous::expected<void> res){
@@ -218,9 +218,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
 
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
                     return boost::asynchronous::parallel_for(std::move(this->m_data),
-                                                      [](int const& i)
+                                                      [](int& i)
                                                       {
-                                                        const_cast<int&>(i) += 2;
+                                                        i += 2;
                                                       },1500);
                     },// work
            [aPromise,ids,this](boost::asynchronous::expected<std::vector<int>> res){
@@ -310,17 +310,17 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
                     return boost::asynchronous::parallel_for(boost::asynchronous::parallel_for(boost::asynchronous::parallel_for(
                                                                  std::move(this->m_data),
-                                                                 [](int const& i)
+                                                                 [](int& i)
                                                                  {
-                                                                    const_cast<int&>(i) += 2;
+                                                                    i += 2;
                                                                  },1500),
-                                                              [](int const& i)
+                                                              [](int& i)
                                                               {
-                                                                const_cast<int&>(i) += 2;
+                                                                i += 2;
                                                               },1500),
-                                                             [](int const& i)
+                                                             [](int& i)
                                                              {
-                                                               const_cast<int&>(i) += 2;
+                                                               i += 2;
                                                              },1500);
                     },// work
            [aPromise,ids,this](boost::asynchronous::expected<std::vector<int>> res){
@@ -364,13 +364,13 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
                     return boost::asynchronous::parallel_for(boost::asynchronous::parallel_for(boost::asynchronous::parallel_for(
                                                                  std::move(this->m_data),
-                                                                 [](int const& i)
+                                                                 [](int& i)
                                                                  {
-                                                                    const_cast<int&>(i) += 2;
+                                                                    i += 2;
                                                                  },1500),
-                                                              [](int const& i)
+                                                              [](int& i)
                                                               {
-                                                                const_cast<int&>(i) += 2;
+                                                                i += 2;
                                                               },1500),
                                                              [](std::vector<int>::iterator beg, std::vector<int>::iterator end)
                                                              {

@@ -41,15 +41,18 @@ namespace detail
 template <int args, class Iterator, class Func, class Enable=void>
 struct for_each_helper
 {
-    void operator()(Iterator beg, Iterator end, Func const& func)
+    void operator()(Iterator beg, Iterator end, Func& func)
     {
-        std::for_each(beg,end,func);
+        for (; beg != end; ++beg)
+        {
+            func(*beg);
+        }
     }
 };
 template <class Iterator, class Func>
 struct for_each_helper<2,Iterator,Func,void>
 {
-    void operator()(Iterator beg, Iterator end, Func const& func)
+    void operator()(Iterator beg, Iterator end, Func& func)
     {
         func(beg,end);
     }
@@ -63,7 +66,7 @@ struct parallel_for_helper: public boost::asynchronous::continuation_task<void>
         : boost::asynchronous::continuation_task<void>(task_name)
         , beg_(beg),end_(end),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
     {}
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<void> task_res = this_task_result();
         // advance up to cutoff
@@ -135,7 +138,7 @@ struct parallel_for_range_move_helper: public boost::asynchronous::continuation_
     parallel_for_range_move_helper(parallel_for_range_move_helper const&)=delete;
     parallel_for_range_move_helper& operator=(parallel_for_range_move_helper const&)=delete;
 
-    void operator()()const
+    void operator()()
     {
         boost::shared_ptr<Range> range = std::move(range_);
         boost::asynchronous::continuation_result<Range> task_res = this->this_task_result();
@@ -200,7 +203,7 @@ struct parallel_for_range_move_helper<Range,Func,Job,typename ::boost::enable_if
         , end_(end)
     {
     }
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<Range> task_res = this->this_task_result();
         // advance up to cutoff
@@ -306,7 +309,7 @@ struct parallel_for_range_helper: public boost::asynchronous::continuation_task<
         :boost::asynchronous::continuation_task<void>(task_name)
         ,range_(range),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
     {}
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<void> task_res = this->this_task_result();
         // advance up to cutoff

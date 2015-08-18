@@ -104,9 +104,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
         post_callback(
                [a,n,tasksize](){
                         return boost::asynchronous::parallel_for(a,a+n,
-                                                                 [](float const& i)
+                                                                 [](float& i)
                                                                  {
-                                                                    const_cast<float&>(i) = Foo(i);
+                                                                    i = Foo(i);
                                                                  },tasksize,"",0);
                       },// work
                // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
@@ -161,9 +161,9 @@ void ParallelAsyncPostFuture(float a[], size_t n)
                [a,n,tasksize]()
                {
                    return boost::asynchronous::parallel_for(a,a+n,
-                                                            [](float const& i)
+                                                            [](float& i)
                                                             {
-                                                               const_cast<float&>(i) = Foo(i);
+                                                               i = Foo(i);
                                                             },tasksize,"",0);
                });
     fu.get();
