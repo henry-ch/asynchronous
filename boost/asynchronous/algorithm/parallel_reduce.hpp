@@ -24,6 +24,8 @@
 #include <boost/asynchronous/scheduler/serializable_task.hpp>
 #include <boost/asynchronous/algorithm/detail/safe_advance.hpp>
 #include <boost/asynchronous/detail/metafunctions.hpp>
+#include <boost/asynchronous/detail/function_traits.hpp>
+#include <boost/type_traits/is_same.hpp>
 
 #include <boost/range/begin.hpp>
 #include <boost/range/end.hpp>
@@ -45,21 +47,45 @@ ReturnType reduce(Iterator begin, Iterator end, Func fn) {
     }
     return t;
 }
+
+template <class Iterator, class Func, class ReturnType, class Enable=void>
+struct reduce_helper
+{
+    ReturnType operator()(Iterator beg, Iterator end, Func&& func)
+    {
+        return func(beg,end);
+    }
+};
+template <class Iterator, class Func, class ReturnType>
+struct reduce_helper<Iterator,Func,ReturnType,
+                     typename boost::enable_if<
+                        boost::is_same<
+                           typename std::remove_cv<
+                               typename std::remove_reference<
+                                    typename boost::asynchronous::function_traits<Func>::template arg_<0>::type>::type>::type,
+                           ReturnType>
+                     >::type>
+{
+    ReturnType operator()(Iterator beg, Iterator end, Func&& func)
+    {
+        return boost::asynchronous::detail::reduce<Iterator, Func, ReturnType>(beg,end,std::move(func));
+    }
+};
     
 }
 
 // version for iterators
 namespace detail
 {
-template <class Iterator, class Func, class ReturnType, class Job>
+template <class Iterator, class Func, class Func2, class ReturnType, class Job>
 struct parallel_reduce_helper: public boost::asynchronous::continuation_task<ReturnType>
 {
-    parallel_reduce_helper(Iterator beg, Iterator end,Func func,long cutoff,
+    parallel_reduce_helper(Iterator beg, Iterator end,Func func,Func2 func2,long cutoff,
                         const std::string& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<ReturnType>(task_name)
-        , beg_(beg),end_(end),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
+        , beg_(beg),end_(end),func_(std::move(func)),func2_(std::move(func2)),cutoff_(cutoff),prio_(prio)
     {}
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<ReturnType> task_res = this->this_task_result();
         // advance up to cutoff
@@ -67,17 +93,20 @@ struct parallel_reduce_helper: public boost::asynchronous::continuation_task<Ret
         // if not at end, recurse, otherwise execute here
         if (it == end_)
         {
-            task_res.set_value(std::move(reduce<Iterator, Func, ReturnType>(beg_,it,std::move(func_))));
+            task_res.set_value(std::move(boost::asynchronous::detail::reduce_helper<Iterator, Func, ReturnType>()(beg_,it,std::move(func_))));
         }
         else
         {
-            auto func = func_;
+            auto func = func2_;
             boost::asynchronous::create_callback_continuation_job<Job>(
                 // called when subtasks are done, set our result
-                [task_res, func](std::tuple<boost::asynchronous::expected<ReturnType>,boost::asynchronous::expected<ReturnType>> res)
+                [task_res, func](std::tuple<boost::asynchronous::expected<ReturnType>,boost::asynchronous::expected<ReturnType>> res) mutable
                 {
                     try
                     {
+                        //ReturnType r [2] = {std::move(std::get<0>(res).get()),std::move(std::get<1>(res).get())};
+                        //std::vector<ReturnType> r = {std::move(std::get<0>(res).get()),std::move(std::get<1>(res).get())};
+                        //task_res.set_value(std::move(boost::asynchronous::detail::reduce_helper<Iterator, Func, ReturnType>()(r.begin(),r.end(),std::move(func))));
                         ReturnType rt = std::get<0>(res).get();
                         rt = std::move(func(rt, std::get<1>(res).get()));
                         task_res.set_value(std::move(rt));
@@ -88,14 +117,15 @@ struct parallel_reduce_helper: public boost::asynchronous::continuation_task<Ret
                     }
                 },
                 // recursive tasks
-                parallel_reduce_helper<Iterator,Func,ReturnType,Job>(beg_,it,func_,cutoff_,this->get_name(),prio_),
-                parallel_reduce_helper<Iterator,Func,ReturnType,Job>(it,end_,func_,cutoff_,this->get_name(),prio_)
+                parallel_reduce_helper<Iterator,Func,Func2,ReturnType,Job>(beg_,it,func_,func2_,cutoff_,this->get_name(),prio_),
+                parallel_reduce_helper<Iterator,Func,Func2,ReturnType,Job>(it,end_,func_,func2_,cutoff_,this->get_name(),prio_)
             );
         }
     }
     Iterator beg_;
     Iterator end_;
     Func func_;
+    Func2 func2_;
     long cutoff_;
     std::size_t prio_;
 };
@@ -107,24 +137,41 @@ auto parallel_reduce(Iterator beg, Iterator end,Func func,long cutoff,
 #else
                      const std::string& task_name="", std::size_t prio=0)
 #endif
--> boost::asynchronous::detail::callback_continuation<decltype(func(std::declval<typename Iterator::value_type>(), std::declval<typename Iterator::value_type>())),Job>
+-> boost::asynchronous::detail::callback_continuation<decltype(func(std::declval<typename boost::asynchronous::function_traits<Func>::template arg_<0>::type>(),
+                                                                    std::declval<typename boost::asynchronous::function_traits<Func>::template arg_<1>::type>())),Job>
 {
-    typedef decltype(func(std::declval<typename Iterator::value_type>(), std::declval<typename Iterator::value_type>())) ReturnType;
+    typedef decltype(func(std::declval<typename boost::asynchronous::function_traits<Func>::template arg_<0>::type>(),
+                          std::declval<typename boost::asynchronous::function_traits<Func>::template arg_<1>::type>())) ReturnType;
     return boost::asynchronous::top_level_callback_continuation_job<ReturnType,Job>
-            (boost::asynchronous::detail::parallel_reduce_helper<Iterator,Func,ReturnType,Job>(beg,end,func,cutoff,task_name,prio));
+            (boost::asynchronous::detail::parallel_reduce_helper<Iterator,Func,Func,ReturnType,Job>(beg,end,func,func,cutoff,task_name,prio));
 }
-
+// reduce with 2 functors
+template <class Iterator, class Func, class Func2, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+auto parallel_reduce(Iterator beg, Iterator end,Func func,Func2 func2,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                     const std::string& task_name, std::size_t prio)
+#else
+                     const std::string& task_name="", std::size_t prio=0)
+#endif
+-> boost::asynchronous::detail::callback_continuation<decltype(func(std::declval<typename boost::asynchronous::function_traits<Func>::template arg_<0>::type>(),
+                                                                    std::declval<typename boost::asynchronous::function_traits<Func>::template arg_<1>::type>())),Job>
+{
+    typedef decltype(func(std::declval<typename boost::asynchronous::function_traits<Func>::template arg_<0>::type>(),
+                          std::declval<typename boost::asynchronous::function_traits<Func>::template arg_<1>::type>())) ReturnType;
+    return boost::asynchronous::top_level_callback_continuation_job<ReturnType,Job>
+            (boost::asynchronous::detail::parallel_reduce_helper<Iterator,Func,Func2,ReturnType,Job>(beg,end,func,func2,cutoff,task_name,prio));
+}
 // version for moved ranges
-template <class Range, class Func, class ReturnType, class Job,class Enable=void>
+template <class Range, class Func, class Func2,class ReturnType, class Job,class Enable=void>
 struct parallel_reduce_range_move_helper: public boost::asynchronous::continuation_task<ReturnType>
 {
     template <class Iterator>
-    parallel_reduce_range_move_helper(boost::shared_ptr<Range> range,Iterator, Iterator,Func func,long cutoff,
+    parallel_reduce_range_move_helper(boost::shared_ptr<Range> range,Iterator, Iterator,Func func,Func2 func2,long cutoff,
                         const std::string& task_name, std::size_t prio)
         :boost::asynchronous::continuation_task<ReturnType>(task_name)
-        ,range_(range),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
+        ,range_(range),func_(std::move(func)),func2_(std::move(func2)),cutoff_(cutoff),prio_(prio)
     {}
-    void operator()()const
+    void operator()()
     {
         boost::shared_ptr<Range> range = std::move(range_);
         boost::asynchronous::continuation_result<ReturnType> task_res = this->this_task_result();
@@ -133,12 +180,11 @@ struct parallel_reduce_range_move_helper: public boost::asynchronous::continuati
         // if not at end, recurse, otherwise execute here
         if (it == boost::end(*range))
         {
-            task_res.set_value(std::move(boost::asynchronous::detail::reduce<decltype(it), Func, ReturnType>
-                                                                        (boost::begin(*range),it,std::move(func_))));
+            task_res.set_value(std::move(boost::asynchronous::detail::reduce_helper<decltype(it), Func, ReturnType>()(boost::begin(*range),it,std::move(func_))));
         }
         else
         {
-            auto func = func_;
+            auto func = func2_;
             boost::asynchronous::create_callback_continuation_job<Job>(
                 // called when subtasks are done, set our result
                 [task_res, func,range](std::tuple<boost::asynchronous::expected<ReturnType>,boost::asynchronous::expected<ReturnType>> res)
@@ -155,21 +201,22 @@ struct parallel_reduce_range_move_helper: public boost::asynchronous::continuati
                     }
                 },
                 // recursive tasks
-                boost::asynchronous::detail::parallel_reduce_helper<decltype(boost::begin(*range_)),Func,ReturnType,Job>(
-                    boost::begin(*range),it,func_,cutoff_,this->get_name(),prio_),
-                boost::asynchronous::detail::parallel_reduce_helper<decltype(boost::begin(*range_)),Func,ReturnType,Job>(
-                    it,boost::end(*range),func_,cutoff_,this->get_name(),prio_)
+                boost::asynchronous::detail::parallel_reduce_helper<decltype(boost::begin(*range_)),Func,Func2,ReturnType,Job>(
+                    boost::begin(*range),it,func_,func2_,cutoff_,this->get_name(),prio_),
+                boost::asynchronous::detail::parallel_reduce_helper<decltype(boost::begin(*range_)),Func,Func2,ReturnType,Job>(
+                    it,boost::end(*range),func_,func2_,cutoff_,this->get_name(),prio_)
             );
         }
     }
     boost::shared_ptr<Range> range_;
     Func func_;
+    Func2 func2_;
     long cutoff_;
     std::size_t prio_;
 };
 
-template <class Range, class Func, class ReturnType, class Job>
-struct parallel_reduce_range_move_helper<Range,Func,ReturnType,Job,typename ::boost::enable_if<boost::asynchronous::detail::is_serializable<Func> >::type>
+template <class Range, class Func, class Func2, class ReturnType, class Job>
+struct parallel_reduce_range_move_helper<Range,Func,Func2,ReturnType,Job,typename ::boost::enable_if<boost::asynchronous::detail::is_serializable<Func> >::type>
         : public boost::asynchronous::continuation_task<ReturnType>
         , public boost::asynchronous::serializable_task
 {
@@ -178,13 +225,13 @@ struct parallel_reduce_range_move_helper<Range,Func,ReturnType,Job,typename ::bo
     {
     }
     template <class Iterator>
-    parallel_reduce_range_move_helper(boost::shared_ptr<Range> range,Iterator beg, Iterator end,Func func,long cutoff,
+    parallel_reduce_range_move_helper(boost::shared_ptr<Range> range,Iterator beg, Iterator end,Func func,Func2 func2,long cutoff,
                         const std::string& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<ReturnType>(task_name)
         , boost::asynchronous::serializable_task(func.get_task_name())
-        , range_(range),func_(std::move(func)),cutoff_(cutoff),task_name_(task_name),prio_(prio), begin_(beg), end_(end)
+        , range_(range),func_(std::move(func)),func2_(std::move(func2)),cutoff_(cutoff),task_name_(task_name),prio_(prio), begin_(beg), end_(end)
     {}
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<ReturnType> task_res = this->this_task_result();
         // advance up to cutoff
@@ -192,12 +239,11 @@ struct parallel_reduce_range_move_helper<Range,Func,ReturnType,Job,typename ::bo
         // if not at end, recurse, otherwise execute here
         if (it == end_)
         {
-            task_res.set_value(std::move(boost::asynchronous::detail::reduce<decltype(it), Func, ReturnType>
-                                                                            (begin_,it,std::move(func_))));
+            task_res.set_value(std::move(boost::asynchronous::detail::reduce_helper<decltype(it), Func, ReturnType>()(begin_,it,std::move(func_))));
         }
         else
         {
-            auto func = func_;
+            auto func = func2_;
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
                         [task_res, func](std::tuple<boost::asynchronous::expected<ReturnType>,boost::asynchronous::expected<ReturnType> > res)
@@ -214,12 +260,12 @@ struct parallel_reduce_range_move_helper<Range,Func,ReturnType,Job,typename ::bo
                             }
                         },
                         // recursive tasks
-                        parallel_reduce_range_move_helper<Range,Func,ReturnType,Job>(
+                        parallel_reduce_range_move_helper<Range,Func,Func2,ReturnType,Job>(
                                     range_,begin_,it,
-                                    func_,cutoff_,task_name_,prio_),
-                        parallel_reduce_range_move_helper<Range,Func,ReturnType,Job>(
+                                    func_,func2_,cutoff_,task_name_,prio_),
+                        parallel_reduce_range_move_helper<Range,Func,Func2,ReturnType,Job>(
                                     range_,it,end_,
-                                    func_,cutoff_,task_name_,prio_)
+                                    func_,func2_,cutoff_,task_name_,prio_)
             );
         }
     }
@@ -231,6 +277,7 @@ struct parallel_reduce_range_move_helper<Range,Func,ReturnType,Job,typename ::bo
         auto r = std::move(boost::copy_range< Range>(boost::make_iterator_range(begin_,end_)));
         ar & r;
         ar & func_;
+        ar & func2_;
         ar & cutoff_;
         ar & task_name_;
         ar & prio_;
@@ -241,6 +288,7 @@ struct parallel_reduce_range_move_helper<Range,Func,ReturnType,Job,typename ::bo
         range_ = boost::make_shared<Range>();
         ar & (*range_);
         ar & func_;
+        ar & func2_;
         ar & cutoff_;
         ar & task_name_;
         ar & prio_;
@@ -250,6 +298,7 @@ struct parallel_reduce_range_move_helper<Range,Func,ReturnType,Job,typename ::bo
     BOOST_SERIALIZATION_SPLIT_MEMBER()
     boost::shared_ptr<Range> range_;
     Func func_;
+    Func2 func2_;
     long cutoff_;
     std::string task_name_;
     std::size_t prio_;
@@ -271,22 +320,41 @@ auto parallel_reduce(Range&& range,Func func,long cutoff,
     auto beg = boost::begin(*r);
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<ReturnType,Job>
-            (boost::asynchronous::parallel_reduce_range_move_helper<Range,Func,ReturnType,Job>(
-                 r,beg,end,func,cutoff,task_name,prio));
+            (boost::asynchronous::parallel_reduce_range_move_helper<Range,Func,Func,ReturnType,Job>(
+                 r,beg,end,func,func,cutoff,task_name,prio));
+}
+
+// reduce with 2 functors
+template <class Range, class Func, class Func2, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+auto parallel_reduce(Range&& range,Func func,Func2 func2,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                     const std::string& task_name, std::size_t prio)
+#else
+                     const std::string& task_name="", std::size_t prio=0)
+#endif
+-> typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<decltype(func2(*(range.begin()), *(range.end()))),Job> >::type
+{
+    typedef decltype(func2(*(range.begin()), *(range.end()))) ReturnType;
+    auto r = boost::make_shared<Range>(std::forward<Range>(range));
+    auto beg = boost::begin(*r);
+    auto end = boost::end(*r);
+    return boost::asynchronous::top_level_callback_continuation_job<ReturnType,Job>
+            (boost::asynchronous::parallel_reduce_range_move_helper<Range,Func,Func2,ReturnType,Job>(
+                 r,beg,end,func,func2,cutoff,task_name,prio));
 }
 
 // version for ranges held only by reference
 namespace detail
 {
-template <class Range, class Func, class ReturnType, class Job>
+template <class Range, class Func, class Func2, class ReturnType, class Job>
 struct parallel_reduce_range_helper: public boost::asynchronous::continuation_task<ReturnType>
 {
-    parallel_reduce_range_helper(Range const& range,Func func,long cutoff,
+    parallel_reduce_range_helper(Range const& range,Func func,Func2 func2,long cutoff,
                         const std::string& task_name, std::size_t prio)
         :boost::asynchronous::continuation_task<ReturnType>(task_name)
-        ,range_(range),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
+        ,range_(range),func_(std::move(func)),func2_(std::move(func2)),cutoff_(cutoff),prio_(prio)
     {}
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<ReturnType> task_res = this->this_task_result();
         // advance up to cutoff
@@ -294,11 +362,11 @@ struct parallel_reduce_range_helper: public boost::asynchronous::continuation_ta
         // if not at end, recurse, otherwise execute here
         if (it == boost::end(range_))
         {
-            task_res.set_value(std::move(reduce<decltype(it), Func, ReturnType>(boost::begin(range_),it,std::move(func_))));
+            task_res.set_value(std::move(boost::asynchronous::detail::reduce_helper<decltype(it), Func, ReturnType>()(boost::begin(range_),it,std::move(func_))));
         }
         else
         {
-            auto func = func_;
+            auto func = func2_;
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
                         [task_res, func](std::tuple<boost::asynchronous::expected<ReturnType>,boost::asynchronous::expected<ReturnType>> res)
@@ -315,13 +383,16 @@ struct parallel_reduce_range_helper: public boost::asynchronous::continuation_ta
                             }
                         },
                         // recursive tasks
-                        parallel_reduce_helper<decltype(boost::begin(range_)),Func,ReturnType,Job>(boost::begin(range_),it,func_,cutoff_,this->get_name(),prio_),
-                        parallel_reduce_helper<decltype(boost::begin(range_)),Func,ReturnType,Job>(it,boost::end(range_),func_,cutoff_,this->get_name(),prio_)
+                        parallel_reduce_helper<decltype(boost::begin(range_)),Func,Func2,ReturnType,Job>
+                            (boost::begin(range_),it,func_,func2_,cutoff_,this->get_name(),prio_),
+                        parallel_reduce_helper<decltype(boost::begin(range_)),Func,Func2,ReturnType,Job>
+                            (it,boost::end(range_),func_,func2_,cutoff_,this->get_name(),prio_)
             );
         }
     }
     Range const& range_;
     Func func_;
+    Func2 func2_;
     long cutoff_;
     std::size_t prio_;
 };
@@ -337,33 +408,51 @@ auto parallel_reduce(Range const& range,Func func,long cutoff,
 {
     typedef decltype(func(*(range.begin()), *(range.end()))) ReturnType;
     return boost::asynchronous::top_level_callback_continuation_job<ReturnType,Job>
-            (boost::asynchronous::detail::parallel_reduce_range_helper<Range,Func,ReturnType,Job>(range,func,cutoff,task_name,prio));
+            (boost::asynchronous::detail::parallel_reduce_range_helper<Range,Func,Func,ReturnType,Job>(range,func,func,cutoff,task_name,prio));
+}
+
+// version with 2 functors
+template <class Range, class Func, class Func2, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+auto parallel_reduce(Range const& range,Func func,Func2 func2,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                     const std::string& task_name, std::size_t prio)
+#else
+                     const std::string& task_name="", std::size_t prio=0)
+#endif
+-> typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<decltype(func2(*(range.begin()), *(range.end()))),Job> >::type
+{
+    typedef decltype(func2(*(range.begin()), *(range.end()))) ReturnType;
+    return boost::asynchronous::top_level_callback_continuation_job<ReturnType,Job>
+            (boost::asynchronous::detail::parallel_reduce_range_helper<Range,Func,Func2,ReturnType,Job>(range,func,func2,cutoff,task_name,prio));
 }
 
 // version for ranges given as continuation
 namespace detail
 {
 // adapter to non-callback continuations
-template <class Continuation, class Func, class ReturnType, class Job,class Enable=void>
+template <class Continuation, class Func, class Func2, class ReturnType, class Job,class Enable=void>
 struct parallel_reduce_continuation_range_helper: public boost::asynchronous::continuation_task<ReturnType>
 {
-    parallel_reduce_continuation_range_helper(Continuation const& c,Func func,long cutoff,
+    parallel_reduce_continuation_range_helper(Continuation const& c,Func func,Func2 func2,long cutoff,
                         const std::string& task_name, std::size_t prio)
         :boost::asynchronous::continuation_task<ReturnType>(task_name)
-        ,cont_(c),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
+        ,cont_(c),func_(std::move(func)),func2_(std::move(func2)),cutoff_(cutoff),prio_(prio)
     {}
     void operator()()
     {
         boost::asynchronous::continuation_result<ReturnType> task_res = this->this_task_result();
         auto func(std::move(func_));
+        auto func2(std::move(func2_));
         auto cutoff = cutoff_;
         auto task_name = this->get_name();
         auto prio = prio_;
-        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res)
+        cont_.on_done([task_res,func,func2,cutoff,task_name,prio]
+                      (std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res)
         {
             try
             {
-                auto new_continuation = boost::asynchronous::parallel_reduce<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
+                auto new_continuation = boost::asynchronous::parallel_reduce<typename Continuation::return_type, Func, Func2,Job>
+                        (std::move(std::get<0>(continuation_res).get()),func,func2,cutoff,task_name,prio);
                 new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<ReturnType> >&& new_continuation_res)
                 {
                     task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
@@ -380,31 +469,35 @@ struct parallel_reduce_continuation_range_helper: public boost::asynchronous::co
     }
     Continuation cont_;
     Func func_;
+    Func2 func2_;
     long cutoff_;
     std::size_t prio_;
 };
 // Continuation is a callback continuation
-template <class Continuation, class Func, class ReturnType, class Job>
-struct parallel_reduce_continuation_range_helper<Continuation,Func,ReturnType,Job,typename ::boost::enable_if< has_is_callback_continuation_task<Continuation> >::type>
+template <class Continuation, class Func, class Func2, class ReturnType, class Job>
+struct parallel_reduce_continuation_range_helper<Continuation,Func,Func2,ReturnType,Job,typename ::boost::enable_if< has_is_callback_continuation_task<Continuation> >::type>
         : public boost::asynchronous::continuation_task<ReturnType>
 {
-  parallel_reduce_continuation_range_helper(Continuation const& c,Func func,long cutoff,
+  parallel_reduce_continuation_range_helper(Continuation const& c,Func func,Func2 func2,long cutoff,
                       const std::string& task_name, std::size_t prio)
       :boost::asynchronous::continuation_task<ReturnType>(task_name)
-      ,cont_(c),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
+      ,cont_(c),func_(std::move(func)),func2_(std::move(func2)),cutoff_(cutoff),prio_(prio)
   {}
   void operator()()
   {
       boost::asynchronous::continuation_result<ReturnType> task_res = this->this_task_result();
       auto func(std::move(func_));
+      auto func2(std::move(func2_));
       auto cutoff = cutoff_;
       auto task_name = this->get_name();
       auto prio = prio_;
-      cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
+      cont_.on_done([task_res,func,func2,cutoff,task_name,prio]
+                    (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
       {
           try
           {
-              auto new_continuation = boost::asynchronous::parallel_reduce<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
+              auto new_continuation = boost::asynchronous::parallel_reduce<typename Continuation::return_type, Func, Func2, Job>
+                      (std::move(std::get<0>(continuation_res).get()),func,func2,cutoff,task_name,prio);
               new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<ReturnType> >&& new_continuation_res)
               {
                   task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
@@ -419,6 +512,7 @@ struct parallel_reduce_continuation_range_helper<Continuation,Func,ReturnType,Jo
   }
   Continuation cont_;
   Func func_;
+  Func2 func2_;
   long cutoff_;
   std::size_t prio_;
 };
@@ -427,6 +521,7 @@ struct parallel_reduce_continuation_range_helper<Continuation,Func,ReturnType,Jo
 #define _VALUE_TYPE typename Range::return_type::value_type
 #define _VALUE std::declval<_VALUE_TYPE>()
 #define _FUNC_RETURN_TYPE decltype(func(_VALUE, _VALUE))
+#define _FUNC_RETURN_TYPE2 decltype(func2(_VALUE, _VALUE))
 
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 auto parallel_reduce(Range range,Func func,long cutoff,
@@ -439,8 +534,22 @@ auto parallel_reduce(Range range,Func func,long cutoff,
 {
     typedef _FUNC_RETURN_TYPE ReturnType;
     return boost::asynchronous::top_level_callback_continuation_job<ReturnType,Job>
-            (boost::asynchronous::detail::parallel_reduce_continuation_range_helper<Range,Func,ReturnType,Job>(range,func,cutoff,task_name,prio));
+            (boost::asynchronous::detail::parallel_reduce_continuation_range_helper<Range,Func,Func,ReturnType,Job>(range,func,func,cutoff,task_name,prio));
 }
 
+// version with 2 functors
+template <class Range, class Func, class Func2, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+auto parallel_reduce(Range range,Func func,Func2 func2,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                    const std::string& task_name, std::size_t prio)
+#else
+                    const std::string& task_name="", std::size_t prio=0)
+#endif
+ -> typename boost::enable_if<has_is_continuation_task<Range>, boost::asynchronous::detail::callback_continuation<_FUNC_RETURN_TYPE2, Job>>::type
+{
+   typedef _FUNC_RETURN_TYPE2 ReturnType;
+   return boost::asynchronous::top_level_callback_continuation_job<ReturnType,Job>
+           (boost::asynchronous::detail::parallel_reduce_continuation_range_helper<Range,Func,Func2,ReturnType,Job>(range,func,func2,cutoff,task_name,prio));
+}
 }}
 #endif // BOOST_ASYNCHRON_parallel_reduce_HPP

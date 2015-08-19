@@ -25,6 +25,7 @@
 #include <boost/asynchronous/scheduler/serializable_task.hpp>
 #include <boost/asynchronous/algorithm/detail/safe_advance.hpp>
 #include <boost/asynchronous/detail/metafunctions.hpp>
+#include <boost/asynchronous/detail/function_traits.hpp>
 
 #include <boost/range/begin.hpp>
 #include <boost/range/end.hpp>
