@@ -139,7 +139,11 @@ public:
         boost::asynchronous::servant_proxy<ServantProxy,Servant>(s)
     {}
     // caller will get a future
+#ifndef _MSC_VER
     BOOST_ASYNC_FUTURE_MEMBER(calc_algo)
+#else
+    BOOST_ASYNC_FUTURE_MEMBER_1(calc_algo)
+#endif
 };
 
 }

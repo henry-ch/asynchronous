@@ -28,9 +28,9 @@ public:
     typedef boost::asynchronous::diagnostic_item diagnostic_item_type;
     default_loggable_job(std::string const& name="")
         : m_name(name)
-        , m_posted(Clock::time_point::min())
-        , m_started(Clock::time_point::min())
-        , m_finished(Clock::time_point::min())
+        , m_posted(Clock::time_point())
+        , m_started(Clock::time_point())
+        , m_finished(Clock::time_point())
         , m_interrupted(false)
         , m_failed(false)
     {}
@@ -79,9 +79,9 @@ public:
     }
 private:
     std::string m_name;
-    typename Clock::time_point m_posted;
-    typename Clock::time_point m_started;
-    typename Clock::time_point m_finished;
+    Clock::time_point m_posted;
+    Clock::time_point m_started;
+    Clock::time_point m_finished;
     bool                       m_interrupted;
     bool                       m_failed;
 };
@@ -98,9 +98,9 @@ public:
     typedef boost::asynchronous::diagnostic_item diagnostic_item_type;
     default_loggable_job_extended(std::string const& name="")
         : m_name(name)
-        , m_posted(Clock::time_point::min())
-        , m_started(Clock::time_point::min())
-        , m_finished(Clock::time_point::min())
+        , m_posted(Clock::time_point())
+        , m_started(Clock::time_point())
+        , m_finished(Clock::time_point())
         , m_interrupted(false)
         , m_failed(false)
     {}
@@ -151,9 +151,9 @@ public:
     }
 private:
     std::string m_name;
-    typename Clock::time_point m_posted;
-    typename Clock::time_point m_started;
-    typename Clock::time_point m_finished;
+    Clock::time_point m_posted;
+    Clock::time_point m_started;
+    Clock::time_point m_finished;
     bool                       m_interrupted;
     bool                       m_failed;
 };

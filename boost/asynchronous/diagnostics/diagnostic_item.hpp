@@ -22,9 +22,9 @@ public:
     typedef boost::chrono::high_resolution_clock Clock;
 
     diagnostic_item():m_posted(),m_started(),m_finished(){}
-    diagnostic_item(typename Clock::time_point const& posted,
-                    typename Clock::time_point const& started,
-                    typename Clock::time_point const& finished,
+    diagnostic_item(Clock::time_point const& posted,
+                    Clock::time_point const& started,
+                    Clock::time_point const& finished,
                     bool interrupted,
                     bool failed)
         : m_posted(posted)
@@ -33,15 +33,15 @@ public:
         , m_interrupted(interrupted)
         , m_failed(failed)
     {}
-    typename Clock::time_point get_posted_time() const
+    Clock::time_point get_posted_time() const
     {
         return m_posted;
     }
-    typename Clock::time_point get_started_time() const
+    Clock::time_point get_started_time() const
     {
         return m_started;
     }
-    typename Clock::time_point get_finished_time() const
+    Clock::time_point get_finished_time() const
     {
         return m_finished;
     }
@@ -54,9 +54,9 @@ public:
         return m_failed;
     }
 private:
-    typename Clock::time_point m_posted;
-    typename Clock::time_point m_started;
-    typename Clock::time_point m_finished;
+    Clock::time_point m_posted;
+    Clock::time_point m_started;
+    Clock::time_point m_finished;
     bool                       m_interrupted;
     bool                       m_failed;
 };

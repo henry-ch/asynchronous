@@ -58,12 +58,12 @@ public:
     typedef Job job_type;
     typedef composite_threadpool_scheduler<Job,FindPosition> this_type;
     typedef int self_proxy_creation;
-
+#ifndef _MSC_VER
     composite_threadpool_scheduler(): FindPosition()
     {
         // just for default-init, use only if you are going to reset this object
     }
-
+#endif
 #ifndef BOOST_NO_CXX11_VARIADIC_TEMPLATES
     template<typename... Args>
     composite_threadpool_scheduler(Args... args): FindPosition()

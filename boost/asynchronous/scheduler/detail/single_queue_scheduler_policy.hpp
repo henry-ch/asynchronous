@@ -118,11 +118,13 @@ protected:
     {
     }
 #endif
+#ifndef _MSC_VER
     single_queue_scheduler_policy()
     {
         m_queue = boost::make_shared<queue_type>();
     }
-    
+#endif
+
     boost::shared_ptr<queue_type> m_queue;
 };
 

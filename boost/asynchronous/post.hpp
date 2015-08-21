@@ -516,14 +516,17 @@ auto post_future(S const& scheduler, F func,
 auto post_future(S const& scheduler, F const& func,
 #endif
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                 const std::string& task_name, std::size_t prio)
+                 const std::string& task_name, std::size_t prio,
+				 typename boost::disable_if< boost::mpl::or_<
+														boost::is_same<void,decltype(func())>,
+														has_is_continuation_task<decltype(func())>>>::type* dummy=0)
 #else
-                 const std::string& task_name="", std::size_t prio=0)
+                 const std::string& task_name="", std::size_t prio=0,
+				 typename boost::disable_if< boost::mpl::or_<
+														boost::is_same<void,decltype(func())>,
+														has_is_continuation_task<decltype(func())>>>::type* dummy=0)
 #endif
-    -> typename boost::disable_if< boost::mpl::or_<
-                                        boost::is_same<void,decltype(func())>,
-                                        has_is_continuation_task<decltype(func())>>,
-                                   boost::future<decltype(func())> >::type
+    -> boost::future<decltype(func())>
 {
     boost::promise<decltype(func())> p;
     boost::future<decltype(func())> fu(p.get_future());
@@ -555,6 +558,7 @@ auto post_future(S const& scheduler, F const& func,
 #endif
     return std::move(fu);
 }
+
 template <class F, class S>
 #ifndef BOOST_NO_RVALUE_REFERENCES
 auto post_future(S const& scheduler, F func,
@@ -562,14 +566,17 @@ auto post_future(S const& scheduler, F func,
 auto post_future(S const& scheduler, F const& func,
 #endif
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                 const std::string& task_name, std::size_t prio)
-#else
-                 const std::string& task_name="", std::size_t prio=0)
-#endif
-    -> typename boost::enable_if< boost::mpl::and_<
+                 const std::string& task_name, std::size_t prio,
+                 typename boost::enable_if< boost::mpl::and_<
                                     boost::is_same<void,decltype(func())>,
-                                    boost::mpl::not_<has_is_continuation_task<decltype(func())>>>,
-                                  boost::future<void> >::type
+                                    boost::mpl::not_<has_is_continuation_task<decltype(func())>>>>::type* dumnmy=0)
+#else
+                 const std::string& task_name="", std::size_t prio=0,
+                 typename boost::enable_if< boost::mpl::and_<
+                                    boost::is_same<void,decltype(func())>,
+                                    boost::mpl::not_<has_is_continuation_task<decltype(func())>>>>::type* dumnmy=0)
+#endif
+    -> boost::future<void>
 {
     boost::promise<void> p;
     boost::future<void> fu(p.get_future());
@@ -610,11 +617,14 @@ auto post_future(S const& scheduler, F func,
 auto post_future(S const& scheduler, F const& func,
 #endif
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                 const std::string& task_name, std::size_t prio)
+                 const std::string& task_name, std::size_t prio, typename has_is_continuation_task<decltype(func())>::type*=0)
 #else
-                 const std::string& task_name="", std::size_t prio=0)
+                 const std::string& task_name="", std::size_t prio=0, typename boost::enable_if<has_is_continuation_task<decltype(func())>>::type* dummy=0)
 #endif
-    -> typename boost::enable_if< has_is_continuation_task<decltype(func())>,boost::future<typename decltype(func())::return_type> >::type
+#ifndef _MSC_VER
+ -> boost::future<typename decltype(func())::return_type>
+#endif
+
 {
     boost::promise<typename decltype(func())::return_type> p;
     boost::future<typename decltype(func())::return_type> fu(p.get_future());
@@ -635,12 +645,17 @@ auto interruptible_post_future(S const& scheduler, F func,
 auto interruptible_post_future(S const& scheduler, F const& func,
 #endif
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                 const std::string& task_name, std::size_t prio)
+                 const std::string& task_name, std::size_t prio,
+				 typename boost::disable_if< boost::mpl::or_<
+					boost::is_same<void, decltype(func())>,
+					has_is_continuation_task<decltype(func()) >> >::type* dummy = 0)
 #else
-                 const std::string& task_name="", std::size_t prio=0)
+                 const std::string& task_name="", std::size_t prio=0,
+				 typename boost::disable_if< boost::mpl::or_<
+					boost::is_same<void, decltype(func())>,
+					has_is_continuation_task<decltype(func()) >> >::type* dummy = 0)
 #endif
-    -> typename boost::disable_if< boost::is_same<void,decltype(func())>,
-                                   std::tuple<boost::future<decltype(func())>,boost::asynchronous::any_interruptible > >::type
+    -> std::tuple<boost::future<decltype(func())>,boost::asynchronous::any_interruptible >
 {
     boost::promise<decltype(func())> p;
     boost::future<decltype(func())> fu(p.get_future());
@@ -671,12 +686,17 @@ auto interruptible_post_future(S const& scheduler, F func,
 auto interruptible_post_future(S const& scheduler, F const& func,
 #endif
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                 const std::string& task_name, std::size_t prio)
+                 const std::string& task_name, std::size_t prio, 
+				 typename boost::enable_if< boost::mpl::and_<
+				    boost::is_same<void, decltype(func())>,
+				    boost::mpl::not_<has_is_continuation_task<decltype(func())>> >> ::type* dumnmy = 0)
 #else
-                 const std::string& task_name="", std::size_t prio=0)
+                 const std::string& task_name="", std::size_t prio=0,
+				 typename boost::enable_if< boost::mpl::and_<
+					boost::is_same<void, decltype(func())>,
+					boost::mpl::not_<has_is_continuation_task<decltype(func())>> >> ::type* dumnmy = 0)
 #endif
-    -> typename boost::enable_if< boost::is_same<void,decltype(func())>,
-                                  std::tuple<boost::future<void>,boost::asynchronous::any_interruptible > >::type
+    -> std::tuple<boost::future<void>,boost::asynchronous::any_interruptible > 
 {
     boost::promise<void> p;
     boost::future<void> fu(p.get_future());
@@ -699,6 +719,34 @@ auto interruptible_post_future(S const& scheduler, F const& func,
     typename boost::asynchronous::job_traits<typename S::job_type>::wrapper_type w(std::move(fct));
     w.set_name(task_name);
     return std::make_tuple(std::move(fu),scheduler.interruptible_post(std::move(w),prio));
+}
+
+template <class F, class S>
+#ifndef BOOST_NO_RVALUE_REFERENCES
+auto interruptible_post_future(S const& scheduler, F func,
+#else
+auto interruptible_post_future(S const& scheduler, F const& func,
+#endif
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+	const std::string& task_name, std::size_t prio, typename has_is_continuation_task<decltype(func())>::type *= 0)
+#else
+const std::string& task_name = "", std::size_t prio = 0, typename boost::enable_if<has_is_continuation_task<decltype(func())>>::type* dummy = 0)
+#endif
+#ifndef _MSC_VER
+	->std::tuple<boost::future<typename decltype(func())::return_type>, boost::asynchronous::any_interruptible >
+#endif
+
+{
+	boost::promise<typename decltype(func())::return_type> p;
+	boost::future<typename decltype(func())::return_type> fu(p.get_future());
+
+	detail::post_future_helper_continuation<typename decltype(func())::return_type, F, typename S::job_type> fct
+		(std::move(p), std::move(func));
+	typename boost::asynchronous::job_traits<typename S::job_type>::wrapper_type w(std::move(fct));
+	w.set_name(task_name);
+	;
+
+	return std::make_tuple(std::move(fu),scheduler.interruptible_post(std::move(w), prio));
 }
 
 namespace detail

@@ -233,10 +233,17 @@ public:
     ServantProxy(Scheduler s):
         boost::asynchronous::servant_proxy<ServantProxy,Servant>(s)
     {}
+#ifndef _MSC_VER
+	// caller will get a future
+    BOOST_ASYNC_FUTURE_MEMBER_1(do_it)
+    BOOST_ASYNC_FUTURE_MEMBER_1(do_it2)
+    BOOST_ASYNC_FUTURE_MEMBER_1(do_it3)
+#else
     // caller will get a future
-    BOOST_ASYNC_FUTURE_MEMBER(do_it)
-    BOOST_ASYNC_FUTURE_MEMBER(do_it2)
-    BOOST_ASYNC_FUTURE_MEMBER(do_it3)
+    BOOST_ASYNC_FUTURE_MEMBER_1(do_it)
+    BOOST_ASYNC_FUTURE_MEMBER_1(do_it2)
+    BOOST_ASYNC_FUTURE_MEMBER_1(do_it3)
+#endif
 };
 }
 

@@ -292,11 +292,11 @@ struct job_traits
 template< >
 struct job_traits< boost::asynchronous::any_callable >
 {
-    typedef typename boost::asynchronous::default_loggable_job                      diagnostic_type;
+    typedef boost::asynchronous::default_loggable_job                      diagnostic_type;
     typedef boost::asynchronous::detail::base_job<
             diagnostic_type,boost::asynchronous::any_callable >                     wrapper_type;
 
-    typedef typename diagnostic_type::diagnostic_item_type                          diagnostic_item_type;
+    typedef diagnostic_type::diagnostic_item_type                          diagnostic_item_type;
     typedef boost::asynchronous::diagnostics_table<
             std::string,diagnostic_item_type>                                       diagnostic_table_type;
 
@@ -347,11 +347,11 @@ struct job_traits< boost::asynchronous::any_callable >
 template<>
 struct job_traits< boost::asynchronous::any_loggable>
 {
-    typedef typename boost::asynchronous::default_loggable_job_extended                 diagnostic_type;
+    typedef boost::asynchronous::default_loggable_job_extended                 diagnostic_type;
     typedef boost::asynchronous::detail::base_job<
             diagnostic_type,boost::asynchronous::any_loggable>                          wrapper_type;
 
-    typedef typename diagnostic_type::diagnostic_item_type                              diagnostic_item_type;
+    typedef diagnostic_type::diagnostic_item_type                              diagnostic_item_type;
     typedef boost::asynchronous::diagnostics_table<
             std::string,diagnostic_item_type>                                           diagnostic_table_type;
 
@@ -411,11 +411,11 @@ struct job_traits< boost::asynchronous::any_loggable>
 template< >
 struct job_traits< boost::asynchronous::any_serializable >
 {
-    typedef typename boost::asynchronous::default_loggable_job                          diagnostic_type;
+    typedef boost::asynchronous::default_loggable_job                          diagnostic_type;
     typedef boost::asynchronous::detail::serializable_base_job<
             diagnostic_type,boost::asynchronous::any_serializable >                     wrapper_type;
 
-    typedef typename diagnostic_type::diagnostic_item_type                              diagnostic_item_type;
+    typedef diagnostic_type::diagnostic_item_type                              diagnostic_item_type;
     typedef boost::asynchronous::diagnostics_table<
             std::string,diagnostic_item_type>                                           diagnostic_table_type;
 

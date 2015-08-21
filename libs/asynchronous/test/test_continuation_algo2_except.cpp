@@ -139,7 +139,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                             try{
                                 this->on_callback(res.get());
                             }
-                            catch(std::exception& e)
+                            catch(std::exception&)
                             {
                                 this->on_callback(-1);
                             }
@@ -159,7 +159,11 @@ public:
         boost::asynchronous::servant_proxy<ServantProxy,Servant>(s)
     {}
     // caller will get a future
+#ifndef _MSC_VER
     BOOST_ASYNC_FUTURE_MEMBER(calc_algo)
+#else
+    BOOST_ASYNC_FUTURE_MEMBER_1(calc_algo)
+#endif
 };
 
 }
