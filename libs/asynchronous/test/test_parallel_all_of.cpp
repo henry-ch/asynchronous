@@ -178,9 +178,15 @@ public:
     ServantProxy(Scheduler s):
         boost::asynchronous::servant_proxy<ServantProxy,Servant>(s)
     {}
+#ifndef _MSC_VER
     BOOST_ASYNC_FUTURE_MEMBER(start_parallel_all_of_true)
     BOOST_ASYNC_FUTURE_MEMBER(start_parallel_all_of_false)
     BOOST_ASYNC_FUTURE_MEMBER(start_parallel_all_of_continuation)
+#else
+    BOOST_ASYNC_FUTURE_MEMBER_1(start_parallel_all_of_true)
+    BOOST_ASYNC_FUTURE_MEMBER_1(start_parallel_all_of_false)
+    BOOST_ASYNC_FUTURE_MEMBER_1(start_parallel_all_of_continuation)
+#endif
 };
 
 }

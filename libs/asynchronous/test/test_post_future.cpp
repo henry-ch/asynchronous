@@ -96,7 +96,7 @@ BOOST_AUTO_TEST_CASE( test_interruptible_void_post_future )
     {
         //normal flow
     }
-    catch (std::exception& e)
+    catch (std::exception&)
     {
         // can happen if interrupt very fast, before we can start anything
     }
@@ -122,7 +122,7 @@ BOOST_AUTO_TEST_CASE( test_interruptible_int_post_future )
     {
         //normal flow
     }
-    catch (std::exception& e)
+    catch (std::exception&)
     {
         // can happen if interrupt very fast, before we can start anything
     }

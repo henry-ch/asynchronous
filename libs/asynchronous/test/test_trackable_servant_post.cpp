@@ -77,7 +77,11 @@ public:
 #ifdef BOOST_NO_CXX14_RETURN_TYPE_DEDUCTION
     using servant_type = typename boost::asynchronous::servant_proxy<ServantProxy<T>,Servant<T>>::servant_type;
 #endif
+#ifndef _MSC_VER
     BOOST_ASYNC_FUTURE_MEMBER(start_endless_async_work)
+#else
+    BOOST_ASYNC_FUTURE_MEMBER_1(start_endless_async_work)
+#endif
 };
 
 }

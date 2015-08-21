@@ -138,8 +138,13 @@ public:
         boost::asynchronous::servant_proxy<ServantProxy,Servant,servant_job>(s)
     {}
     // caller will get a future
-    BOOST_ASYNC_FUTURE_MEMBER_LOG(calc_fibonacci,"proxy::calc_fibonacci")
-    BOOST_ASYNC_FUTURE_MEMBER_LOG(get_diagnostics,"proxy::get_diagnostics")
+#ifndef _MSC_VER
+    BOOST_ASYNC_FUTURE_MEMBER_LOG(calc_fibonacci, "proxy::calc_fibonacci")
+        BOOST_ASYNC_FUTURE_MEMBER_LOG(get_diagnostics, "proxy::get_diagnostics")
+#else
+    BOOST_ASYNC_FUTURE_MEMBER_LOG_2(calc_fibonacci, "proxy::calc_fibonacci")
+        BOOST_ASYNC_FUTURE_MEMBER_LOG_2(get_diagnostics, "proxy::get_diagnostics")
+#endif
 };
 }
 

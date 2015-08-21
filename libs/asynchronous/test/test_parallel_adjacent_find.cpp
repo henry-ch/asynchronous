@@ -10,6 +10,7 @@
 
 #include <vector>
 #include <set>
+#include <random>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
@@ -151,8 +152,13 @@ public:
     ServantProxy(Scheduler s):
         boost::asynchronous::servant_proxy<ServantProxy,Servant>(s)
     {}
+#ifndef _MSC_VER
     BOOST_ASYNC_FUTURE_MEMBER(parallel_adjacent_find)
     BOOST_ASYNC_FUTURE_MEMBER(parallel_adjacent_find_if)
+#else
+    BOOST_ASYNC_FUTURE_MEMBER_1(parallel_adjacent_find)
+    BOOST_ASYNC_FUTURE_MEMBER_1(parallel_adjacent_find_if)
+#endif
 };
 
 }

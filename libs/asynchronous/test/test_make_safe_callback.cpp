@@ -87,7 +87,11 @@ public:
     ServantProxy(Scheduler s):
         boost::asynchronous::servant_proxy<ServantProxy,Servant,servant_job>(s)
     {}
+#ifndef _MSC_VER
     BOOST_ASYNC_FUTURE_MEMBER_LOG(start_async_work,"proxy::start_async_work")
+#else
+    BOOST_ASYNC_FUTURE_MEMBER_LOG_2(start_async_work, "proxy::start_async_work")
+#endif
 };
 
 }

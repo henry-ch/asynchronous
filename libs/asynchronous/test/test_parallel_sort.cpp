@@ -474,6 +474,7 @@ public:
     ServantProxy(Scheduler s):
         boost::asynchronous::servant_proxy<ServantProxy,Servant>(s)
     {}
+#ifndef _MSC_VER
     BOOST_ASYNC_FUTURE_MEMBER(start_parallel_sort)
     BOOST_ASYNC_FUTURE_MEMBER(start_parallel_stable_sort)
     BOOST_ASYNC_FUTURE_MEMBER(start_parallel_sort_moved_range)
@@ -486,6 +487,20 @@ public:
     BOOST_ASYNC_FUTURE_MEMBER(start_parallel_sort_continuation_inplace)
     BOOST_ASYNC_FUTURE_MEMBER(start_parallel_reverse_sorted)
     BOOST_ASYNC_FUTURE_MEMBER(start_parallel_already_sorted)
+#else
+    BOOST_ASYNC_FUTURE_MEMBER_1(start_parallel_sort)
+    BOOST_ASYNC_FUTURE_MEMBER_1(start_parallel_stable_sort)
+    BOOST_ASYNC_FUTURE_MEMBER_1(start_parallel_sort_moved_range)
+    BOOST_ASYNC_FUTURE_MEMBER_1(start_parallel_sort_continuation)
+    BOOST_ASYNC_FUTURE_MEMBER_1(start_parallel_sort_inplace)
+    BOOST_ASYNC_FUTURE_MEMBER_1(start_parallel_stable_sort_inplace)
+    BOOST_ASYNC_FUTURE_MEMBER_1(start_parallel_sort_range_inplace)
+    BOOST_ASYNC_FUTURE_MEMBER_1(start_parallel_stable_sort_range_inplace)
+    BOOST_ASYNC_FUTURE_MEMBER_1(start_parallel_sort_moved_range_inplace)
+    BOOST_ASYNC_FUTURE_MEMBER_1(start_parallel_sort_continuation_inplace)
+    BOOST_ASYNC_FUTURE_MEMBER_1(start_parallel_reverse_sorted)
+    BOOST_ASYNC_FUTURE_MEMBER_1(start_parallel_already_sorted)
+#endif
 };
 
 }

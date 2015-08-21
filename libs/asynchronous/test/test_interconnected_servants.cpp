@@ -74,8 +74,13 @@ public:
     ServantProxy2(Scheduler s, Scheduler2 s2):
         boost::asynchronous::servant_proxy<ServantProxy2,Servant2 >(s,s2)
     {}
+#ifndef _MSC_VER
     BOOST_ASYNC_FUTURE_MEMBER(foo)
     BOOST_ASYNC_FUTURE_MEMBER(foo2)
+#else
+    BOOST_ASYNC_FUTURE_MEMBER_1(foo)
+    BOOST_ASYNC_FUTURE_MEMBER_1(foo2)
+#endif
 };
 
 struct Servant1 : boost::asynchronous::trackable_servant<>
@@ -108,7 +113,11 @@ public:
     ServantProxy1(Scheduler s, ServantProxy2 sink):
         boost::asynchronous::servant_proxy<ServantProxy1,Servant1 >(s,sink)
     {}
+#ifndef _MSC_VER
     BOOST_ASYNC_FUTURE_MEMBER(foo)
+#else
+    BOOST_ASYNC_FUTURE_MEMBER_1(foo)
+#endif
 };
 
 struct outer_owner
