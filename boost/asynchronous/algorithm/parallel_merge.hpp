@@ -33,7 +33,7 @@ struct parallel_merge_helper: public boost::asynchronous::continuation_task<void
         : boost::asynchronous::continuation_task<void>(task_name),
           beg1_(beg1),end1_(end1),beg2_(beg2),end2_(end2),out_(out),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
     {}
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<void> task_res = this_task_result();
         auto length1 = std::distance(beg1_,end1_);
@@ -76,7 +76,7 @@ struct parallel_merge_helper: public boost::asynchronous::continuation_task<void
         *it3 = *it1;
         boost::asynchronous::create_callback_continuation_job<Job>(
                     // called when subtasks are done, set our result
-                    [task_res](std::tuple<boost::asynchronous::expected<void>,boost::asynchronous::expected<void> > res)
+                    [task_res](std::tuple<boost::asynchronous::expected<void>,boost::asynchronous::expected<void> > res) mutable
                     {
                         try
                         {

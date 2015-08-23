@@ -92,7 +92,8 @@ struct parallel_find_all_helper: public boost::asynchronous::continuation_task<R
         {
             boost::asynchronous::create_callback_continuation_job<Job>(
                 // called when subtasks are done, set our result
-                [task_res](std::tuple<boost::asynchronous::expected<ReturnRange>,boost::asynchronous::expected<ReturnRange>> res)
+                [task_res]
+                (std::tuple<boost::asynchronous::expected<ReturnRange>,boost::asynchronous::expected<ReturnRange>> res) mutable
                 {
                     try
                     {
@@ -144,7 +145,7 @@ struct parallel_find_all_range_helper: public boost::asynchronous::continuation_
         :boost::asynchronous::continuation_task<ReturnRange>(task_name)
         ,range_(range),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
     {}
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<ReturnRange> task_res = this->this_task_result();
         // advance up to cutoff
@@ -160,7 +161,8 @@ struct parallel_find_all_range_helper: public boost::asynchronous::continuation_
         {
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [task_res](std::tuple<boost::asynchronous::expected<ReturnRange>,boost::asynchronous::expected<ReturnRange>> res)
+                        [task_res]
+                        (std::tuple<boost::asynchronous::expected<ReturnRange>,boost::asynchronous::expected<ReturnRange>> res) mutable
                         {
                             try
                             {
@@ -210,7 +212,7 @@ struct parallel_find_all_range_move_helper: public boost::asynchronous::continua
         :boost::asynchronous::continuation_task<ReturnRange>(task_name)
         ,range_(range),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
     {}
-    void operator()()const
+    void operator()()
     {
         boost::shared_ptr<Range> range = std::move(range_);
         boost::asynchronous::continuation_result<ReturnRange> task_res = this->this_task_result();
@@ -227,7 +229,8 @@ struct parallel_find_all_range_move_helper: public boost::asynchronous::continua
         {
             boost::asynchronous::create_callback_continuation_job<Job>(
                 // called when subtasks are done, set our result
-                [task_res,range](std::tuple<boost::asynchronous::expected<ReturnRange>,boost::asynchronous::expected<ReturnRange>> res)
+                [task_res,range]
+                (std::tuple<boost::asynchronous::expected<ReturnRange>,boost::asynchronous::expected<ReturnRange>> res) mutable
                 {
                     try
                     {
@@ -270,7 +273,7 @@ struct parallel_find_all_range_move_helper<Range,Func,ReturnRange,Job,typename :
         , boost::asynchronous::serializable_task(func.get_task_name())
         , range_(range),func_(std::move(func)),cutoff_(cutoff),task_name_(task_name),prio_(prio), begin_(beg), end_(end)
     {}
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<ReturnRange> task_res = this->this_task_result();
         // advance up to cutoff
@@ -286,7 +289,8 @@ struct parallel_find_all_range_move_helper<Range,Func,ReturnRange,Job,typename :
         {
             boost::asynchronous::create_callback_continuation_job<Job>(
                 // called when subtasks are done, set our result
-                [task_res](std::tuple<boost::asynchronous::expected<ReturnRange>,boost::asynchronous::expected<ReturnRange>> res)
+                [task_res]
+                (std::tuple<boost::asynchronous::expected<ReturnRange>,boost::asynchronous::expected<ReturnRange>> res) mutable
                 {
                     try
                     {
@@ -376,7 +380,8 @@ struct parallel_find_all_continuation_range_helper: public boost::asynchronous::
         auto cutoff = cutoff_;
         auto task_name = this->get_name();
         auto prio = prio_;
-        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res)
+        cont_.on_done([task_res,func,cutoff,task_name,prio]
+                      (std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res) mutable
         {
             try
             {
@@ -417,7 +422,8 @@ struct parallel_find_all_continuation_range_helper<Continuation,Func,ReturnRange
         auto cutoff = cutoff_;
         auto task_name = this->get_name();
         auto prio = prio_;
-        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
+        cont_.on_done([task_res,func,cutoff,task_name,prio]
+                      (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res) mutable
         {
             try
             {

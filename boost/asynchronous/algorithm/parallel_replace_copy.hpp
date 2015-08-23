@@ -63,7 +63,7 @@ struct parallel_replace_copy_if_continuation_helper: public boost::asynchronous:
         auto task_name = this->get_name();
         auto prio = prio_;
         cont_.on_done([task_res,res_it,func,new_value,cutoff,task_name,prio]
-                      (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
+                      (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res) mutable
         {
             try
             {
@@ -160,7 +160,8 @@ struct parallel_replace_copy_continuation_helper: public boost::asynchronous::co
                 auto new_continuation = boost::asynchronous::parallel_replace_copy
                         <decltype(boost::begin(std::declval<typename Continuation::return_type>())), Iterator2,T, Job>
                             (boost::begin(*res),boost::end(*res),res_it,old_value,new_value,cutoff,task_name,prio);
-                new_continuation.on_done([res,task_res](std::tuple<boost::asynchronous::expected<Iterator2> >&& new_continuation_res)
+                new_continuation.on_done([res,task_res]
+                                         (std::tuple<boost::asynchronous::expected<Iterator2> >&& new_continuation_res) mutable
                 {
                     task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                 });

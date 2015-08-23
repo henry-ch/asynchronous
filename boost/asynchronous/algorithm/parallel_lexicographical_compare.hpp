@@ -49,7 +49,7 @@ struct parallel_lexicographical_compare_helper: public boost::asynchronous::cont
         , beg1_(beg1),end1_(end1), beg2_(beg2),end2_(end2)
         ,func_(std::move(func)),cutoff_(cutoff),prio_(prio)
     {}
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<bool> task_res = this->this_task_result();
         // advance up to cutoff
@@ -64,7 +64,7 @@ struct parallel_lexicographical_compare_helper: public boost::asynchronous::cont
         {
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [task_res](std::tuple<boost::asynchronous::expected<bool>,boost::asynchronous::expected<bool>> res)
+                        [task_res](std::tuple<boost::asynchronous::expected<bool>,boost::asynchronous::expected<bool>> res) mutable
                         {
                             try
                             {
@@ -105,7 +105,7 @@ struct parallel_lexicographical_compare_helper2: public boost::asynchronous::con
         , beg1_(beg1),end1_(end1), beg2_(beg2),end2_(end2)
         , cutoff_(cutoff),prio_(prio)
     {}
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<bool> task_res = this->this_task_result();
         // advance up to cutoff
@@ -120,7 +120,7 @@ struct parallel_lexicographical_compare_helper2: public boost::asynchronous::con
         {
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [task_res](std::tuple<boost::asynchronous::expected<bool>,boost::asynchronous::expected<bool>> res)
+                        [task_res](std::tuple<boost::asynchronous::expected<bool>,boost::asynchronous::expected<bool>> res) mutable
                         {
                             try
                             {

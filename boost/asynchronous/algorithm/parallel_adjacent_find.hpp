@@ -74,7 +74,7 @@ struct parallel_adjacent_find_helper : public boost::asynchronous::continuation_
             boost::asynchronous::create_callback_continuation_job<Job>(
                 // called when subtasks are done, set our result
                 [task_res,func,itprev,it]
-                (std::tuple<boost::asynchronous::expected<Iterator>, boost::asynchronous::expected<Iterator> > res)
+                (std::tuple<boost::asynchronous::expected<Iterator>, boost::asynchronous::expected<Iterator> > res) mutable
                 {
                     try
                     {

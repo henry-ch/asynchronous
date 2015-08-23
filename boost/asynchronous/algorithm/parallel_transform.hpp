@@ -116,7 +116,7 @@ struct parallel_transform_helper : public boost::asynchronous::continuation_task
         , prio_(prio)
     {}
 
-    void operator()() const
+    void operator()()
     {
         boost::asynchronous::continuation_result<ResultIterator> task_res = this->this_task_result();
 
@@ -137,7 +137,8 @@ struct parallel_transform_helper : public boost::asynchronous::continuation_task
             std::advance(result, dist);
             boost::asynchronous::create_callback_continuation_job<Job>(
                 // called when subtasks are done, set our result
-                [task_res](std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res)
+                [task_res]
+                (std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res) mutable
                 {
                     try
                     {
@@ -202,7 +203,7 @@ struct parallel_transform2_helper : public boost::asynchronous::continuation_tas
         , prio_(prio)
     {}
 
-    void operator()() const
+    void operator()()
     {
         boost::asynchronous::continuation_result<ResultIterator> task_res = this->this_task_result();
 
@@ -225,7 +226,8 @@ struct parallel_transform2_helper : public boost::asynchronous::continuation_tas
         {
             boost::asynchronous::create_callback_continuation_job<Job>(
                 // called when subtasks are done, set our result
-                [task_res](std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res)
+                [task_res]
+                (std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res) mutable
                 {
                     try
                     {
@@ -284,7 +286,7 @@ struct parallel_transform_range_helper : public boost::asynchronous::continuatio
         , prio_(prio)
     {}
 
-    void operator()() const
+    void operator()()
     {
         boost::asynchronous::continuation_result<ResultIterator> task_res = this->this_task_result();
 
@@ -303,7 +305,8 @@ struct parallel_transform_range_helper : public boost::asynchronous::continuatio
         {
             boost::asynchronous::create_callback_continuation_job<Job>(
                 // called when subtasks are done, set our result
-                [task_res](std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res)
+                [task_res]
+                (std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res) mutable
                 {
                     try
                     {
@@ -366,7 +369,7 @@ struct parallel_transform2_range_helper : public boost::asynchronous::continuati
         , prio_(prio)
     {}
 
-    void operator()() const
+    void operator()()
     {
         boost::asynchronous::continuation_result<ResultIterator> task_res = this->this_task_result();
 
@@ -388,7 +391,8 @@ struct parallel_transform2_range_helper : public boost::asynchronous::continuati
         {
             boost::asynchronous::create_callback_continuation_job<Job>(
                 // called when subtasks are done, set our result
-                [task_res](std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res)
+                [task_res]
+                (std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res) mutable
                 {
                     try
                     {
@@ -452,7 +456,7 @@ struct parallel_transform_any_iterators_helper : public boost::asynchronous::con
         , prio_(prio)
     {}
 
-    void operator()() const
+    void operator()()
     {
         boost::asynchronous::continuation_result<ResultIterator> task_res = this->this_task_result();
 
@@ -481,7 +485,8 @@ struct parallel_transform_any_iterators_helper : public boost::asynchronous::con
             // recurse
             boost::asynchronous::create_callback_continuation_job<Job>(
                 // called when subtasks are done, set our result
-                [task_res](std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res)
+                [task_res]
+                (std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res) mutable
                 {
                     try
                     {

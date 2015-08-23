@@ -79,7 +79,8 @@ struct parallel_for_each_helper: public boost::asynchronous::continuation_task<F
         {
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [task_res](std::tuple<boost::asynchronous::expected<Func>,boost::asynchronous::expected<Func> > res)
+                        [task_res]
+                        (std::tuple<boost::asynchronous::expected<Func>,boost::asynchronous::expected<Func> > res) mutable
                         {
                             try
                             {

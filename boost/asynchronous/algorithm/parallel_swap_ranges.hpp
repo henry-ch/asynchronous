@@ -49,7 +49,8 @@ struct parallel_swap_ranges_helper: public boost::asynchronous::continuation_tas
             std::advance(it2,std::distance(beg1_,it1));
             boost::asynchronous::create_callback_continuation_job<Job>(
                     // called when subtasks are done, set our result
-                    [task_res](std::tuple<boost::asynchronous::expected<Iterator2>,boost::asynchronous::expected<Iterator2> > res)
+                    [task_res]
+                    (std::tuple<boost::asynchronous::expected<Iterator2>,boost::asynchronous::expected<Iterator2> > res) mutable
                     {
                         try
                         {

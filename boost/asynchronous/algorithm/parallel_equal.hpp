@@ -49,7 +49,7 @@ struct parallel_equal_helper: public boost::asynchronous::continuation_task<bool
         , beg1_(beg1),end1_(end1), beg2_(beg2)
         ,func_(std::move(func)),cutoff_(cutoff),prio_(prio)
     {}
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<bool> task_res = this->this_task_result();
         // advance up to cutoff
@@ -65,7 +65,7 @@ struct parallel_equal_helper: public boost::asynchronous::continuation_task<bool
             std::advance(beg2,std::distance(beg1_,it));
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [task_res](std::tuple<boost::asynchronous::expected<bool>,boost::asynchronous::expected<bool>> res)
+                        [task_res](std::tuple<boost::asynchronous::expected<bool>,boost::asynchronous::expected<bool>> res) mutable
                         {
                             try
                             {
@@ -100,7 +100,7 @@ struct parallel_equal_helper2: public boost::asynchronous::continuation_task<boo
         , beg1_(beg1),end1_(end1), beg2_(beg2)
         ,cutoff_(cutoff),prio_(prio)
     {}
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<bool> task_res = this->this_task_result();
         // advance up to cutoff
@@ -116,7 +116,7 @@ struct parallel_equal_helper2: public boost::asynchronous::continuation_task<boo
             std::advance(beg2,std::distance(beg1_,it));
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [task_res](std::tuple<boost::asynchronous::expected<bool>,boost::asynchronous::expected<bool>> res)
+                        [task_res](std::tuple<boost::asynchronous::expected<bool>,boost::asynchronous::expected<bool>> res) mutable
                         {
                             try
                             {

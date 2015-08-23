@@ -138,7 +138,7 @@ struct parallel_copy_range_move_helper: public boost::asynchronous::continuation
     parallel_copy_range_move_helper(parallel_copy_range_move_helper const&)=delete;
     parallel_copy_range_move_helper& operator=(parallel_copy_range_move_helper const&)=delete;
 
-    void operator()()const
+    void operator()()
     {
         boost::shared_ptr<Range> range = std::move(range_);
         boost::asynchronous::continuation_result<Range> task_res = this->this_task_result();
@@ -155,7 +155,8 @@ struct parallel_copy_range_move_helper: public boost::asynchronous::continuation
         {
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [task_res,range](std::tuple<boost::asynchronous::expected<void>,boost::asynchronous::expected<void> > res)
+                        [task_res,range]
+                        (std::tuple<boost::asynchronous::expected<void>,boost::asynchronous::expected<void> > res) mutable
                         {
                             try
                             {

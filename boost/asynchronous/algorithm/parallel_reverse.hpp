@@ -55,7 +55,7 @@ struct parallel_reverse_helper: public boost::asynchronous::continuation_task<vo
         {
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [task_res](std::tuple<boost::asynchronous::expected<void>,boost::asynchronous::expected<void> > res)
+                        [task_res](std::tuple<boost::asynchronous::expected<void>,boost::asynchronous::expected<void> > res) mutable
                         {
                             try
                             {
@@ -139,7 +139,8 @@ struct parallel_reverse_continuation_range_helper: public boost::asynchronous::c
         auto cutoff = cutoff_;
         auto task_name = this->get_name();
         auto prio = prio_;
-        cont_.on_done([task_res,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res)
+        cont_.on_done([task_res,cutoff,task_name,prio]
+                      (std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res) mutable
         {
             try
             {
@@ -179,7 +180,8 @@ struct parallel_reverse_continuation_range_helper<Continuation,Job,typename ::bo
         auto cutoff = cutoff_;
         auto task_name = this->get_name();
         auto prio = prio_;
-        cont_.on_done([task_res,cutoff,task_name,prio](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
+        cont_.on_done([task_res,cutoff,task_name,prio]
+                      (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res) mutable
         {
             try
             {

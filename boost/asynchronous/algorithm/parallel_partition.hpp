@@ -51,6 +51,7 @@ struct partition_worker : public boost::asynchronous::continuation_task<std::pai
             boost::asynchronous::create_callback_continuation_job<JobType>(
             [task_res, sd]
             (std::tuple<boost::asynchronous::expected<std::pair<std::list<std::pair<iterator, iterator>>, std::list<std::pair<iterator, iterator>>>>,boost::asynchronous::expected<std::pair<std::list<std::pair<iterator, iterator>>, std::list<std::pair<iterator, iterator>>>> > res)
+            mutable
             {
                 try
                 {
@@ -223,6 +224,7 @@ struct parallel_partition_helper : public boost::asynchronous::continuation_task
         c.on_done(
            [task_res, msd,sd]
            (std::tuple<boost::asynchronous::expected<std::pair<std::list<std::pair<Iterator, Iterator>>, std::list<std::pair<Iterator, Iterator>>>> > res)
+            mutable
         {
 
             std::pair<std::list<std::pair<Iterator, Iterator>>, std::list<std::pair<Iterator, Iterator>>> R = std::move(std::get<0>(res).get());
@@ -327,7 +329,7 @@ struct parallel_partition_range_move_helper:
         auto cont = boost::asynchronous::parallel_partition<decltype(beg_),Func,Job>
                 (beg_,end_,std::move(func_),thread_num_,this->get_name(),prio_);
         cont.on_done([task_res,range]
-                      (std::tuple<boost::asynchronous::expected<Iterator> >&& continuation_res)
+                      (std::tuple<boost::asynchronous::expected<Iterator> >&& continuation_res) mutable
         {
             try
             {
@@ -403,7 +405,7 @@ struct parallel_partition_continuation_helper:
         auto prio = prio_;
         auto func= std::move(func_);
         cont_.on_done([task_res,func,thread_num,task_name,prio]
-                      (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
+                      (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res) mutable
         {
             try
             {

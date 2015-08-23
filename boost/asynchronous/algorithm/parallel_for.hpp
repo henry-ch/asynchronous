@@ -82,7 +82,7 @@ struct parallel_for_helper: public boost::asynchronous::continuation_task<void>
         {
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [task_res](std::tuple<boost::asynchronous::expected<void>,boost::asynchronous::expected<void> > res)
+                        [task_res](std::tuple<boost::asynchronous::expected<void>,boost::asynchronous::expected<void> > res) mutable
                         {
                             try
                             {
@@ -155,7 +155,8 @@ struct parallel_for_range_move_helper: public boost::asynchronous::continuation_
         {
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [task_res,range](std::tuple<boost::asynchronous::expected<void>,boost::asynchronous::expected<void> > res)
+                        [task_res,range]
+                        (std::tuple<boost::asynchronous::expected<void>,boost::asynchronous::expected<void> > res) mutable
                         {
                             try
                             {
@@ -221,7 +222,8 @@ struct parallel_for_range_move_helper<Range,Func,Job,typename ::boost::enable_if
         {
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [task_res](std::tuple<boost::asynchronous::expected<Range>,boost::asynchronous::expected<Range> > res)
+                        [task_res]
+                        (std::tuple<boost::asynchronous::expected<Range>,boost::asynchronous::expected<Range> > res) mutable
                         {
                             Range range;
                             try
@@ -325,7 +327,7 @@ struct parallel_for_range_helper: public boost::asynchronous::continuation_task<
         {
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [task_res](std::tuple<boost::asynchronous::expected<void>,boost::asynchronous::expected<void> > res)
+                        [task_res](std::tuple<boost::asynchronous::expected<void>,boost::asynchronous::expected<void> > res) mutable
                         {
                             try
                             {
@@ -383,7 +385,8 @@ struct parallel_for_continuation_range_helper: public boost::asynchronous::conti
         auto cutoff = cutoff_;
         auto task_name = this->get_name();
         auto prio = prio_;
-        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res)
+        cont_.on_done([task_res,func,cutoff,task_name,prio]
+                      (std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res) mutable
         {
             try
             {
@@ -424,7 +427,8 @@ struct parallel_for_continuation_range_helper<Continuation,Func,Job,typename ::b
         auto cutoff = cutoff_;
         auto task_name = this->get_name();
         auto prio = prio_;
-        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
+        cont_.on_done([task_res,func,cutoff,task_name,prio]
+                      (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res) mutable
         {
             try
             {

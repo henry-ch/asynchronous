@@ -44,7 +44,7 @@ struct parallel_search_n_helper: public boost::asynchronous::continuation_task<I
         , beg1_(beg1),end1_(end1),count_(count),value_(value),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
     {}
 
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<Iterator1> task_res = this->this_task_result();
         // advance up to cutoff
@@ -64,7 +64,7 @@ struct parallel_search_n_helper: public boost::asynchronous::continuation_task<I
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
                         [task_res,it,beg1,end1,count,value,func]
-                        (std::tuple<boost::asynchronous::expected<Iterator1>,boost::asynchronous::expected<Iterator1>> res)
+                        (std::tuple<boost::asynchronous::expected<Iterator1>,boost::asynchronous::expected<Iterator1>> res) mutable
                         {
                             try
                             {

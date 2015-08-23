@@ -43,7 +43,7 @@ struct parallel_copy_if_part1_helper: public boost::asynchronous::continuation_t
         : boost::asynchronous::continuation_task<boost::asynchronous::detail::copy_if_data>(task_name),
           beg_(beg),end_(end),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
     {}
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<boost::asynchronous::detail::copy_if_data> task_res = this_task_result();
         // advance up to cutoff
@@ -64,7 +64,7 @@ struct parallel_copy_if_part1_helper: public boost::asynchronous::continuation_t
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
                         [task_res](std::tuple<boost::asynchronous::expected<boost::asynchronous::detail::copy_if_data>,
-                                              boost::asynchronous::expected<boost::asynchronous::detail::copy_if_data> > res)
+                                              boost::asynchronous::expected<boost::asynchronous::detail::copy_if_data> > res) mutable
                         {
                             try
                             {
@@ -135,7 +135,7 @@ struct parallel_copy_if_part2_helper: public boost::asynchronous::continuation_t
         {
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [task_res](std::tuple<boost::asynchronous::expected<void>,boost::asynchronous::expected<void> > res)
+                        [task_res](std::tuple<boost::asynchronous::expected<void>,boost::asynchronous::expected<void> > res) mutable
                         {
                             try
                             {
@@ -196,7 +196,7 @@ struct parallel_copy_if_helper: public boost::asynchronous::continuation_task<It
         : boost::asynchronous::continuation_task<Iterator2>(task_name),
           beg_(beg),end_(end),out_(out),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
     {}
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<Iterator2> task_res = this->this_task_result();
         auto cont = boost::asynchronous::detail::parallel_copy_if_part1<Iterator,Func,Job>(beg_,end_,func_,cutoff_,this->get_name(),prio_);

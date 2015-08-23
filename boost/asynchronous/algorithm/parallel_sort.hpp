@@ -85,7 +85,7 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
                         [task_res,func,beg,end,it,beg2,end2,it2,depth,cutoff,merge_task_name,prio,merge_memory]
-                        (std::tuple<boost::asynchronous::expected<void>,boost::asynchronous::expected<void> > res)
+                        (std::tuple<boost::asynchronous::expected<void>,boost::asynchronous::expected<void> > res) mutable
                         {
                             try
                             {
@@ -135,7 +135,7 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
         }
     }
 
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<void> task_res = this_task_result();
         if (depth_ == 0)
@@ -156,7 +156,7 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
             cont.on_done([beg,end,depth,func,cutoff,task_name,prio,task_res]
 #endif
 
-                         (std::tuple<boost::asynchronous::expected<bool> >&& res)
+                         (std::tuple<boost::asynchronous::expected<bool> >&& res) mutable
             {
                 try
                 {
@@ -173,7 +173,7 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
 #else
                     cont2.on_done([beg,end,depth,func,cutoff,task_name,prio,task_res]
 #endif
-                                  (std::tuple<boost::asynchronous::expected<bool> >&& res)
+                                  (std::tuple<boost::asynchronous::expected<bool> >&& res) mutable
                     {
                         try
                         {
@@ -182,7 +182,7 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
                             {
                                 // reverse sorted
                                 auto cont3 = boost::asynchronous::parallel_reverse<Iterator,Job>(beg,end,cutoff,task_name+"_reverse",prio);
-                                cont3.on_done([task_res](std::tuple<boost::asynchronous::expected<void> >&& res)
+                                cont3.on_done([task_res](std::tuple<boost::asynchronous::expected<void> >&& res) mutable
                                 {
                                     try
                                     {
@@ -392,7 +392,8 @@ struct parallel_sort_range_move_helper_serializable
         {
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [full_range,task_res,it,cutoff,func,task_name,prio](std::tuple<boost::asynchronous::expected<Range>,boost::asynchronous::expected<Range> > res)
+                        [full_range,task_res,it,cutoff,func,task_name,prio]
+                        (std::tuple<boost::asynchronous::expected<Range>,boost::asynchronous::expected<Range> > res) mutable
                         {                            
                             try
                             {
@@ -442,7 +443,7 @@ struct parallel_sort_range_move_helper_serializable
         }
     }
 
-    void operator()()const
+    void operator()()
     {
         auto task_res = this->this_task_result();
         helper(range_,begin_,end_,depth_,std::move(func_),cutoff_,task_name_,prio_,task_res);
@@ -595,7 +596,8 @@ struct parallel_sort_range_move_helper2 : public boost::asynchronous::continuati
         {
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [full_range,task_res,it,cutoff,func,task_name,prio](std::tuple<boost::asynchronous::expected<Range>,boost::asynchronous::expected<Range> > res)
+                        [full_range,task_res,it,cutoff,func,task_name,prio](
+                        std::tuple<boost::asynchronous::expected<Range>,boost::asynchronous::expected<Range> > res) mutable
                         {
                             try
                             {
@@ -604,7 +606,8 @@ struct parallel_sort_range_move_helper2 : public boost::asynchronous::continuati
                                 boost::shared_ptr<Range> range = boost::make_shared<Range>(r1->size()+r2->size());
 
                                 // merge both sorted sub-ranges
-                                auto on_done_fct = [full_range,task_res,r1,r2,range](std::tuple<boost::asynchronous::expected<void> >&& merge_res)
+                                auto on_done_fct = [full_range,task_res,r1,r2,range]
+                                                   (std::tuple<boost::asynchronous::expected<void> >&& merge_res) mutable
                                 {
                                     try
                                     {
@@ -639,7 +642,7 @@ struct parallel_sort_range_move_helper2 : public boost::asynchronous::continuati
         }
     }
 
-    void operator()()const
+    void operator()()
     {
         auto task_res = this->this_task_result();
         if (depth_ == 0)
@@ -660,7 +663,7 @@ struct parallel_sort_range_move_helper2 : public boost::asynchronous::continuati
 #else
             cont.on_done([range,beg,end,depth,func,cutoff,task_name,prio,task_res]
 #endif
-                         (std::tuple<boost::asynchronous::expected<bool> >&& res)
+                         (std::tuple<boost::asynchronous::expected<bool> >&& res) mutable
             {
                 try
                 {
@@ -687,7 +690,7 @@ struct parallel_sort_range_move_helper2 : public boost::asynchronous::continuati
                                 // reverse sorted
                                 auto cont3 = boost::asynchronous::parallel_reverse<decltype(boost::begin(*range_)),Job>
                                         (beg,end,cutoff,task_name+"_reverse",prio);
-                                cont3.on_done([range,task_res](std::tuple<boost::asynchronous::expected<void> >&& res)
+                                cont3.on_done([range,task_res](std::tuple<boost::asynchronous::expected<void> >&& res) mutable
                                 {
                                     try
                                     {
@@ -808,7 +811,7 @@ struct parallel_sort_continuation_range_helper: public boost::asynchronous::cont
             try
             {
                 auto new_continuation = boost::asynchronous::parallel_sort<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
-                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res) mutable
                 {
                     task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                 });
@@ -849,7 +852,7 @@ struct parallel_sort_continuation_range_helper<Continuation,Func,Job,typename ::
             try
             {
                 auto new_continuation = boost::asynchronous::parallel_sort<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
-                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res) mutable
                 {
                     task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                 });
@@ -889,7 +892,7 @@ struct parallel_stable_sort_continuation_range_helper: public boost::asynchronou
             {
                 auto new_continuation = boost::asynchronous::parallel_stable_sort<typename Continuation::return_type,Func,Job>
                         (std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
-                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res) mutable
                 {
                     task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                 });
@@ -925,13 +928,13 @@ struct parallel_stable_sort_continuation_range_helper<Continuation,Func,Job,type
         auto cutoff = cutoff_;
         auto task_name = this->get_name();
         auto prio = prio_;
-        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
+        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res) mutable
         {
             try
             {
                 auto new_continuation = boost::asynchronous::parallel_stable_sort<typename Continuation::return_type,Func,Job>
                         (std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
-                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res) mutable
                 {
                     task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                 });
@@ -965,13 +968,13 @@ struct parallel_spreadsort_continuation_range_helper: public boost::asynchronous
         auto cutoff = cutoff_;
         auto task_name = this->get_name();
         auto prio = prio_;
-        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res)
+        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res) mutable
         {
             try
             {
                 auto new_continuation = boost::asynchronous::parallel_spreadsort<typename Continuation::return_type,Func,Job>
                         (std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
-                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res) mutable
                 {
                     task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                 });
@@ -1007,13 +1010,13 @@ struct parallel_spreadsort_continuation_range_helper<Continuation,Func,Job,typen
         auto cutoff = cutoff_;
         auto task_name = this->get_name();
         auto prio = prio_;
-        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
+        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res) mutable
         {
             try
             {
                 auto new_continuation = boost::asynchronous::parallel_spreadsort<typename Continuation::return_type,Func,Job>
                         (std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
-                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res) mutable
                 {
                     task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                 });
@@ -1091,12 +1094,12 @@ struct parallel_sort_continuation_range_helper2: public boost::asynchronous::con
         auto cutoff = cutoff_;
         auto task_name = this->get_name();
         auto prio = prio_;
-        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res)
+        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res) mutable
         {
             try
             {
                 auto new_continuation = boost::asynchronous::parallel_sort2<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
-                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res) mutable
                 {
                     task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                 });
@@ -1132,12 +1135,12 @@ struct parallel_sort_continuation_range_helper2<Continuation,Func,Job,typename :
         auto cutoff = cutoff_;
         auto task_name = this->get_name();
         auto prio = prio_;
-        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
+        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res) mutable
         {
             try
             {
                 auto new_continuation = boost::asynchronous::parallel_sort2<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
-                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res) mutable
                 {
                     task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                 });
@@ -1171,13 +1174,13 @@ struct parallel_stable_sort_continuation_range_helper2: public boost::asynchrono
         auto cutoff = cutoff_;
         auto task_name = this->get_name();
         auto prio = prio_;
-        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res)
+        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res) mutable
         {
             try
             {
                 auto new_continuation = boost::asynchronous::parallel_stable_sort2<typename Continuation::return_type,Func,Job>
                         (std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
-                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res) mutable
                 {
                     task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                 });
@@ -1213,13 +1216,13 @@ struct parallel_stable_sort_continuation_range_helper2<Continuation,Func,Job,typ
         auto cutoff = cutoff_;
         auto task_name = this->get_name();
         auto prio = prio_;
-        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
+        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res) mutable
         {
             try
             {
                 auto new_continuation = boost::asynchronous::parallel_stable_sort2<typename Continuation::return_type,Func,Job>
                         (std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
-                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res) mutable
                 {
                     task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                 });
@@ -1253,13 +1256,13 @@ struct parallel_spreadsort_continuation_range_helper2: public boost::asynchronou
         auto cutoff = cutoff_;
         auto task_name = this->get_name();
         auto prio = prio_;
-        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res)
+        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res) mutable
         {
             try
             {
                 auto new_continuation = boost::asynchronous::parallel_spreadsort2<typename Continuation::return_type,Func,Job>
                         (std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
-                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res) mutable
                 {
                     task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                 });
@@ -1295,13 +1298,13 @@ struct parallel_spreadsort_continuation_range_helper2<Continuation,Func,Job,type
         auto cutoff = cutoff_;
         auto task_name = this->get_name();
         auto prio = prio_;
-        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
+        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res) mutable
         {
             try
             {
                 auto new_continuation = boost::asynchronous::parallel_spreadsort2<typename Continuation::return_type,Func,Job>
                         (std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
-                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res) mutable
                 {
                     task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                 });

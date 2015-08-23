@@ -187,7 +187,7 @@ struct parallel_reduce_range_move_helper: public boost::asynchronous::continuati
             auto func = func2_;
             boost::asynchronous::create_callback_continuation_job<Job>(
                 // called when subtasks are done, set our result
-                [task_res, func,range](std::tuple<boost::asynchronous::expected<ReturnType>,boost::asynchronous::expected<ReturnType>> res)
+                [task_res, func,range](std::tuple<boost::asynchronous::expected<ReturnType>,boost::asynchronous::expected<ReturnType>> res) mutable
                 {
                     try
                     {
@@ -246,7 +246,8 @@ struct parallel_reduce_range_move_helper<Range,Func,Func2,ReturnType,Job,typenam
             auto func = func2_;
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [task_res, func](std::tuple<boost::asynchronous::expected<ReturnType>,boost::asynchronous::expected<ReturnType> > res)
+                        [task_res, func]
+                        (std::tuple<boost::asynchronous::expected<ReturnType>,boost::asynchronous::expected<ReturnType> > res) mutable
                         {
                             try
                             {
@@ -369,7 +370,8 @@ struct parallel_reduce_range_helper: public boost::asynchronous::continuation_ta
             auto func = func2_;
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [task_res, func](std::tuple<boost::asynchronous::expected<ReturnType>,boost::asynchronous::expected<ReturnType>> res)
+                        [task_res, func]
+                        (std::tuple<boost::asynchronous::expected<ReturnType>,boost::asynchronous::expected<ReturnType>> res) mutable
                         {
                             try
                             {
@@ -453,7 +455,8 @@ struct parallel_reduce_continuation_range_helper: public boost::asynchronous::co
             {
                 auto new_continuation = boost::asynchronous::parallel_reduce<typename Continuation::return_type, Func, Func2,Job>
                         (std::move(std::get<0>(continuation_res).get()),func,func2,cutoff,task_name,prio);
-                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<ReturnType> >&& new_continuation_res)
+                new_continuation.on_done([task_res]
+                                         (std::tuple<boost::asynchronous::expected<ReturnType> >&& new_continuation_res) mutable
                 {
                     task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                 });
@@ -492,7 +495,7 @@ struct parallel_reduce_continuation_range_helper<Continuation,Func,Func2,ReturnT
       auto task_name = this->get_name();
       auto prio = prio_;
       cont_.on_done([task_res,func,func2,cutoff,task_name,prio]
-                    (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
+                    (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res) mutable
       {
           try
           {

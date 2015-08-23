@@ -49,7 +49,7 @@ struct parallel_mismatch_helper: public boost::asynchronous::continuation_task<s
         , beg1_(beg1),end1_(end1), beg2_(beg2)
         ,func_(std::move(func)),cutoff_(cutoff),prio_(prio)
     {}
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<std::pair<Iterator1,Iterator2>> task_res = this->this_task_result();
         // advance up to cutoff
@@ -65,7 +65,8 @@ struct parallel_mismatch_helper: public boost::asynchronous::continuation_task<s
             std::advance(beg2,std::distance(beg1_,it));
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [task_res,it](std::tuple<boost::asynchronous::expected<std::pair<Iterator1,Iterator2>>,boost::asynchronous::expected<std::pair<Iterator1,Iterator2>>> res)
+                        [task_res,it]
+                        (std::tuple<boost::asynchronous::expected<std::pair<Iterator1,Iterator2>>,boost::asynchronous::expected<std::pair<Iterator1,Iterator2>>> res) mutable
                         {
                             try
                             {
@@ -100,7 +101,7 @@ struct parallel_mismatch_helper2: public boost::asynchronous::continuation_task<
         , beg1_(beg1),end1_(end1), beg2_(beg2)
         ,cutoff_(cutoff),prio_(prio)
     {}
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<std::pair<Iterator1,Iterator2>> task_res = this->this_task_result();
         // advance up to cutoff
@@ -116,7 +117,8 @@ struct parallel_mismatch_helper2: public boost::asynchronous::continuation_task<
             std::advance(beg2,std::distance(beg1_,it));
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [task_res,it](std::tuple<boost::asynchronous::expected<std::pair<Iterator1,Iterator2>>,boost::asynchronous::expected<std::pair<Iterator1,Iterator2>>> res)
+                        [task_res,it]
+                        (std::tuple<boost::asynchronous::expected<std::pair<Iterator1,Iterator2>>,boost::asynchronous::expected<std::pair<Iterator1,Iterator2>>> res) mutable
                         {
                             try
                             {

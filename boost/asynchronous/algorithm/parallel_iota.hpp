@@ -47,7 +47,7 @@ struct parallel_iota_inplace_helper : public boost::asynchronous::continuation_t
         , beg_(beg), end_(end), start_(start), cutoff_(cutoff), prio_(prio)
     {}
 
-    void operator()() const
+    void operator()()
     {
         boost::asynchronous::continuation_result<void> task_res = this_task_result();
         
@@ -64,7 +64,8 @@ struct parallel_iota_inplace_helper : public boost::asynchronous::continuation_t
             auto distance = std::distance(beg_, it);
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // Callback
-                        [task_res](std::tuple<boost::asynchronous::expected<void>, boost::asynchronous::expected<void> > res)
+                        [task_res]
+                        (std::tuple<boost::asynchronous::expected<void>, boost::asynchronous::expected<void> > res) mutable
                         {
                             try
                             {
@@ -141,7 +142,8 @@ struct parallel_iota_generate_helper : public boost::asynchronous::continuation_
             auto distance = std::distance(beg, it);
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // Callback
-                        [task_res, range](std::tuple<boost::asynchronous::expected<void>, boost::asynchronous::expected<void> > res)
+                        [task_res, range]
+                        (std::tuple<boost::asynchronous::expected<void>, boost::asynchronous::expected<void> > res) mutable
                         {
                             try
                             {

@@ -31,7 +31,7 @@ struct parallel_is_sorted_helper: public boost::asynchronous::continuation_task<
         : boost::asynchronous::continuation_task<bool>(task_name),
           beg_(beg),end_(end),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
     {}
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<bool> task_res = this_task_result();
         // advance up to cutoff
@@ -53,7 +53,7 @@ struct parallel_is_sorted_helper: public boost::asynchronous::continuation_task<
             }
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [task_res](std::tuple<boost::asynchronous::expected<bool>,boost::asynchronous::expected<bool> > res)
+                        [task_res](std::tuple<boost::asynchronous::expected<bool>,boost::asynchronous::expected<bool> > res) mutable
                         {
                             try
                             {

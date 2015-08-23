@@ -260,7 +260,7 @@ struct parallel_stable_partition_helper: public boost::asynchronous::continuatio
             {
                 boost::asynchronous::detail::partition_data data = std::move(std::get<0>(res).get());
                 std::size_t start_false = data.partition_true_;
-                auto p2_start = boost::chrono::high_resolution_clock::now();
+                //auto p2_start = boost::chrono::high_resolution_clock::now();
                 auto cont =
                         boost::asynchronous::detail::parallel_stable_partition_part2<Iterator,Iterator2,Func,Job>
                         (beg,end,out,std::move(func),start_false,0,0,std::move(data),cutoff,task_name,prio);

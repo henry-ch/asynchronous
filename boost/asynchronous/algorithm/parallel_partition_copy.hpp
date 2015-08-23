@@ -44,7 +44,7 @@ struct parallel_partition_copy_part1_helper: public boost::asynchronous::continu
         : boost::asynchronous::continuation_task<boost::asynchronous::detail::partition_copy_data>(task_name),
           beg_(beg),end_(end),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
     {}
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<boost::asynchronous::detail::partition_copy_data> task_res = this_task_result();
         // advance up to cutoff
@@ -70,7 +70,7 @@ struct parallel_partition_copy_part1_helper: public boost::asynchronous::continu
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
                         [task_res](std::tuple<boost::asynchronous::expected<boost::asynchronous::detail::partition_copy_data>,
-                                              boost::asynchronous::expected<boost::asynchronous::detail::partition_copy_data> > res)
+                                              boost::asynchronous::expected<boost::asynchronous::detail::partition_copy_data> > res) mutable
                         {
                             try
                             {
@@ -130,7 +130,7 @@ struct parallel_partition_copy_part2_helper: public boost::asynchronous::continu
           offset_true_(offset_true),offset_false_(offset_false),data_(std::move(data)),
           cutoff_(cutoff),prio_(prio)
     {}
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<std::pair<OutputIt1, OutputIt2>> task_res = this->this_task_result();
         // advance up to cutoff
@@ -165,7 +165,7 @@ struct parallel_partition_copy_part2_helper: public boost::asynchronous::continu
                         // called when subtasks are done, set our result
                         [task_res]
                         (std::tuple<boost::asynchronous::expected<std::pair<OutputIt1, OutputIt2>>,
-                                    boost::asynchronous::expected<std::pair<OutputIt1, OutputIt2>> > res)
+                                    boost::asynchronous::expected<std::pair<OutputIt1, OutputIt2>> > res) mutable
                         {
                             try
                             {
@@ -228,7 +228,7 @@ struct parallel_partition_copy_helper: public boost::asynchronous::continuation_
         : boost::asynchronous::continuation_task<std::pair<OutputIt1, OutputIt2>>(task_name),
           beg_(beg),end_(end),out_true_(out_true),out_false_(out_false),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
     {}
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<std::pair<OutputIt1, OutputIt2>> task_res = this->this_task_result();
         auto cont = boost::asynchronous::detail::parallel_partition_copy_part1<Iterator,Func,Job>
@@ -242,7 +242,7 @@ struct parallel_partition_copy_helper: public boost::asynchronous::continuation_
         auto prio = prio_;
         auto func = func_;
         cont.on_done([task_res,beg,end,out_true,out_false,func,cutoff,task_name,prio]
-                     (std::tuple<boost::asynchronous::expected<boost::asynchronous::detail::partition_copy_data> >&& res)
+                     (std::tuple<boost::asynchronous::expected<boost::asynchronous::detail::partition_copy_data> >&& res) mutable
         {
             try
             {

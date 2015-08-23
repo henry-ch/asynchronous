@@ -43,7 +43,7 @@ struct parallel_invoke_helper: public boost::asynchronous::continuation_task<Ret
         boost::asynchronous::continuation_result<ReturnType> task_res = this->this_task_result();
         boost::asynchronous::create_callback_continuation_job<Job>(
                     // called when subtasks are done, set our result
-                    [task_res](ReturnType res)
+                    [task_res](ReturnType res) mutable
                     {
                         task_res.set_value(std::move(res));
                     },
@@ -72,7 +72,7 @@ struct parallel_invoke_helper_timeout: public boost::asynchronous::continuation_
         boost::asynchronous::continuation_result<ReturnType> task_res = this->this_task_result();
         boost::asynchronous::create_callback_continuation_job_timeout<Job>(
                     // called when subtasks are done, set our result
-                    [task_res](ReturnType res)
+                    [task_res](ReturnType res) mutable
                     {
                         task_res.set_value(std::move(res));
                     },
@@ -94,7 +94,7 @@ template <class Return, class Func>
 struct continuation_task_wrapper : public boost::asynchronous::continuation_task<Return>
 {
     continuation_task_wrapper(Func&& f):func_(std::forward<Func>(f)){}
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<Return> task_res = this->this_task_result();
         try
@@ -117,7 +117,7 @@ template <class Func>
 struct continuation_task_wrapper<void,Func> : public boost::asynchronous::continuation_task<void>
 {
     continuation_task_wrapper(Func&& f):func_(std::forward<Func>(f)){}
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<void> task_res = this->this_task_result();
         try

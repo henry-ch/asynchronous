@@ -94,7 +94,8 @@ struct parallel_all_of_continuation_range_helper: public boost::asynchronous::co
                 auto new_continuation = boost::asynchronous::parallel_all_of
                         <decltype(boost::begin(std::declval<typename Continuation::return_type>())), Func, Job>
                             (boost::begin(*res),boost::end(*res),func,cutoff,task_name,prio);
-                new_continuation.on_done([res,task_res](std::tuple<boost::asynchronous::expected<bool> >&& new_continuation_res)
+                new_continuation.on_done([res,task_res]
+                                         (std::tuple<boost::asynchronous::expected<bool> >&& new_continuation_res) mutable
                 {
                     task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                 });

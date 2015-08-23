@@ -36,7 +36,7 @@ struct parallel_nth_element_helper: public boost::asynchronous::continuation_tas
         , beg_(beg),end_(end),nth_(nth),func_(std::move(func)),size_all_partitions_(size_all_partitions),original_size_(original_size)
         , cutoff_(cutoff),thread_num_(thread_num),prio_(prio)
     {}
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<void> task_res = this_task_result();
         // advance up to cutoff
@@ -67,7 +67,7 @@ struct parallel_nth_element_helper: public boost::asynchronous::continuation_tas
                 //std::cout << "switch to sorting" << std::endl;
                 auto cont = boost::asynchronous::parallel_sort
                          (beg,end,std::move(func),cutoff,task_name,prio);
-                cont.on_done([task_res](std::tuple<boost::asynchronous::expected<void> >&& sort_res)
+                cont.on_done([task_res](std::tuple<boost::asynchronous::expected<void> >&& sort_res) mutable
                 {
                     //std::cout << "end sorting" << std::endl;
                     try
@@ -98,7 +98,7 @@ struct parallel_nth_element_helper: public boost::asynchronous::continuation_tas
                 //std::cout << "start parallel_partition: " << end_ - beg_ << std::endl;
                 auto cont = boost::asynchronous::parallel_partition<Iterator,decltype(l),Job>(beg_,end_,std::move(l),thread_num_);
                 cont.on_done([task_res,beg,end,nth,func,size_all_partitions,original_size,cutoff,thread_num,task_name,prio]
-                             (std::tuple<boost::asynchronous::expected<Iterator> >&& continuation_res)
+                             (std::tuple<boost::asynchronous::expected<Iterator> >&& continuation_res) mutable
                 {
                     try
                     {
@@ -113,7 +113,7 @@ struct parallel_nth_element_helper: public boost::asynchronous::continuation_tas
                             auto cont = boost::asynchronous::top_level_callback_continuation_job<void,Job>
                                     (boost::asynchronous::detail::parallel_nth_element_helper<Iterator,Func,Job>
                                      (beg,res,nth,std::move(func),size_all_partitions+dist_beg_res,original_size,cutoff,thread_num,task_name,prio));
-                            cont.on_done([task_res](std::tuple<boost::asynchronous::expected<void> >&& nth_element_res)
+                            cont.on_done([task_res](std::tuple<boost::asynchronous::expected<void> >&& nth_element_res) mutable
                             {
                                 try
                                 {
@@ -134,7 +134,7 @@ struct parallel_nth_element_helper: public boost::asynchronous::continuation_tas
                             auto cont = boost::asynchronous::top_level_callback_continuation_job<void,Job>
                                     (boost::asynchronous::detail::parallel_nth_element_helper<Iterator,Func,Job>
                                      (res,end,nth,std::move(func),size_all_partitions+std::distance(res,end),original_size,cutoff,thread_num,task_name,prio));
-                            cont.on_done([task_res](std::tuple<boost::asynchronous::expected<void> >&& nth_element_res)
+                            cont.on_done([task_res](std::tuple<boost::asynchronous::expected<void> >&& nth_element_res) mutable
                             {
                                 try
                                 {

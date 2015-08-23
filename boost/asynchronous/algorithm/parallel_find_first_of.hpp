@@ -44,7 +44,7 @@ struct parallel_find_first_of_helper: public boost::asynchronous::continuation_t
         , beg1_(beg1),end1_(end1),beg2_(beg2),end2_(end2),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
     {}
 
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<Iterator1> task_res = this->this_task_result();
         // advance up to cutoff
@@ -59,7 +59,8 @@ struct parallel_find_first_of_helper: public boost::asynchronous::continuation_t
             auto end1 = end1_;
             boost::asynchronous::create_callback_continuation_job<Job>(
                         // called when subtasks are done, set our result
-                        [task_res,it,end1](std::tuple<boost::asynchronous::expected<Iterator1>,boost::asynchronous::expected<Iterator1> > res)
+                        [task_res,it,end1]
+                        (std::tuple<boost::asynchronous::expected<Iterator1>,boost::asynchronous::expected<Iterator1> > res) mutable
                         {
                             try
                             {
@@ -149,7 +150,7 @@ struct parallel_find_first_of_range_helper: public boost::asynchronous::continua
         auto beg1 = beg1_;
         auto end1 = end1_;
         cont_.on_done([task_res,beg1,end1,func,cutoff,task_name,prio]
-                      (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
+                      (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res) mutable
         {
             try
             {

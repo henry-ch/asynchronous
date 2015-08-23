@@ -72,7 +72,7 @@ struct parallel_is_partitioned_helper2:
                         // called when subtasks are done, set our result
                         [task_res]
                         (std::tuple<boost::asynchronous::expected<boost::asynchronous::detail::parallel_is_partitioned_state_pair>,
-                                    boost::asynchronous::expected<boost::asynchronous::detail::parallel_is_partitioned_state_pair> > res)
+                                    boost::asynchronous::expected<boost::asynchronous::detail::parallel_is_partitioned_state_pair> > res) mutable
                         {
                             try
                             {
@@ -127,14 +127,14 @@ struct parallel_is_partitioned_helper: public boost::asynchronous::continuation_
         : boost::asynchronous::continuation_task<bool>(task_name),
           beg_(beg),end_(end),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
     {}
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<bool> task_res = this_task_result();
 
         boost::asynchronous::create_callback_continuation_job<Job>(
                     // called when subtasks are done, set our result
                     [task_res]
-                    (std::tuple<boost::asynchronous::expected<boost::asynchronous::detail::parallel_is_partitioned_state_pair>> res)
+                    (std::tuple<boost::asynchronous::expected<boost::asynchronous::detail::parallel_is_partitioned_state_pair>> res) mutable
                     {
                         try
                         {
