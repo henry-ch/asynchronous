@@ -27,13 +27,14 @@ extern "C"
 }
 #endif
 
+#include <boost/thread/thread.hpp>
 
 namespace boost { namespace asynchronous { namespace detail
 {
 
 struct processor_bind_task
 {
-    processor_bind_task(unsigned int p):proc_(p){}
+    processor_bind_task(unsigned int p):proc_(p % boost::thread::hardware_concurrency()){}
     void operator()()const
     {
 # if defined(LINUX)
