@@ -291,11 +291,11 @@ private:
 
 template <class Iterator,class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<Iterator,Job>
-parallel_partition(Iterator beg, Iterator end, Func func,const uint32_t thread_num = 1,
-                   #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                   const std::string& task_name, std::size_t /*prio*/)
+parallel_partition(Iterator beg, Iterator end, Func func,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                   const uint32_t thread_num,const std::string& task_name, std::size_t /*prio*/)
 #else
-                   const std::string& task_name="", std::size_t /*prio*/=0)
+                   const uint32_t thread_num = boost::thread::hardware_concurrency(),const std::string& task_name="", std::size_t /*prio*/=0)
 #endif
 {
     return boost::asynchronous::top_level_callback_continuation_job<Iterator,Job>
@@ -352,11 +352,11 @@ struct parallel_partition_range_move_helper:
 
 
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-auto parallel_partition(Range&& range,Func func,const uint32_t thread_num = 1,
+auto parallel_partition(Range&& range,Func func,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-             const std::string& task_name, std::size_t prio)
+                        const uint32_t thread_num,const std::string& task_name, std::size_t prio)
 #else
-             const std::string& task_name="", std::size_t prio=0)
+                        const uint32_t thread_num = boost::thread::hardware_concurrency(),const std::string& task_name="", std::size_t prio=0)
 #endif
 -> typename boost::disable_if<
               has_is_continuation_task<Range>,
@@ -440,11 +440,11 @@ typename boost::enable_if<
               std::pair<typename Range::return_type,decltype(boost::begin(std::declval<typename Range::return_type&>()))>,
               Job>
 >::type
-parallel_partition(Range&& range,Func func,const uint32_t thread_num = 1,
+parallel_partition(Range&& range,Func func,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-             const std::string& task_name, std::size_t prio)
+                   const uint32_t thread_num,const std::string& task_name, std::size_t prio)
 #else
-             const std::string& task_name="", std::size_t prio=0)
+                   const uint32_t thread_num = boost::thread::hardware_concurrency(),const std::string& task_name="", std::size_t prio=0)
 #endif
 {
     return boost::asynchronous::top_level_callback_continuation_job<
