@@ -76,7 +76,7 @@ void ParallelAsyncPostCb(std::vector<SORTED_TYPE>& a)
     servant_time = boost::chrono::high_resolution_clock::now();
     auto fu = boost::asynchronous::post_future(
                 scheduler,
-                [vec](){
+                [vec]()mutable{
                          return boost::asynchronous::parallel_partition(std::move(*vec),
                                                                         [](SORTED_TYPE const& i)
                                                                         {
@@ -85,8 +85,8 @@ void ParallelAsyncPostCb(std::vector<SORTED_TYPE>& a)
                                                                            // expensive version to show parallelism
                                                                            //return i < test_cast<uint32_t,SORTED_TYPE>(NELEM/2);
                                                                         },tpsize,"",0);
-                       }
-                );
+                       },
+                "",0);
     auto res_pair = std::move(fu.get());
     servant_intern += (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - servant_time).count() / 1000000);
 

@@ -617,7 +617,7 @@ auto post_future(S const& scheduler, F func,
 auto post_future(S const& scheduler, F const& func,
 #endif
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                 const std::string& task_name, std::size_t prio, typename has_is_continuation_task<decltype(func())>::type*=0)
+                 const std::string& task_name, std::size_t prio, typename boost::enable_if<has_is_continuation_task<decltype(func())>>::type* = 0)
 #else
                  const std::string& task_name="", std::size_t prio=0, typename boost::enable_if<has_is_continuation_task<decltype(func())>>::type* dummy=0)
 #endif
@@ -728,7 +728,7 @@ auto interruptible_post_future(S const& scheduler, F func,
 auto interruptible_post_future(S const& scheduler, F const& func,
 #endif
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-	const std::string& task_name, std::size_t prio, typename has_is_continuation_task<decltype(func())>::type *= 0)
+    const std::string& task_name, std::size_t prio, typename boost::enable_if<has_is_continuation_task<decltype(func())>>::type* = 0)
 #else
 const std::string& task_name = "", std::size_t prio = 0, typename boost::enable_if<has_is_continuation_task<decltype(func())>>::type* dummy = 0)
 #endif
