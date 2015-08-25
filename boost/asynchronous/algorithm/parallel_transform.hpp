@@ -24,7 +24,6 @@
 #include <boost/asynchronous/scheduler/serializable_task.hpp>
 #include <boost/asynchronous/algorithm/detail/safe_advance.hpp>
 #include <boost/asynchronous/detail/metafunctions.hpp>
-#include <boost/asynchronous/detail/move_bind.hpp>
 
 #include <boost/mpl/has_xxx.hpp>
 
@@ -137,8 +136,7 @@ struct parallel_transform_helper : public boost::asynchronous::continuation_task
             std::advance(result, dist);
             boost::asynchronous::create_callback_continuation_job<Job>(
                 // called when subtasks are done, set our result
-                [task_res]
-                (std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res) mutable
+                [task_res](std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res) mutable
                 {
                     try
                     {
@@ -226,8 +224,7 @@ struct parallel_transform2_helper : public boost::asynchronous::continuation_tas
         {
             boost::asynchronous::create_callback_continuation_job<Job>(
                 // called when subtasks are done, set our result
-                [task_res]
-                (std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res) mutable
+                [task_res](std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res) mutable
                 {
                     try
                     {
@@ -305,8 +302,7 @@ struct parallel_transform_range_helper : public boost::asynchronous::continuatio
         {
             boost::asynchronous::create_callback_continuation_job<Job>(
                 // called when subtasks are done, set our result
-                [task_res]
-                (std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res) mutable
+                [task_res](std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res) mutable
                 {
                     try
                     {
@@ -391,8 +387,7 @@ struct parallel_transform2_range_helper : public boost::asynchronous::continuati
         {
             boost::asynchronous::create_callback_continuation_job<Job>(
                 // called when subtasks are done, set our result
-                [task_res]
-                (std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res) mutable
+                [task_res](std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res) mutable
                 {
                     try
                     {
@@ -485,8 +480,7 @@ struct parallel_transform_any_iterators_helper : public boost::asynchronous::con
             // recurse
             boost::asynchronous::create_callback_continuation_job<Job>(
                 // called when subtasks are done, set our result
-                [task_res]
-                (std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res) mutable
+                [task_res](std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res) mutable
                 {
                     try
                     {
@@ -531,6 +525,30 @@ parallel_transform(ResultIterator result, Func func, Iterator begin, Iterator en
 {
     return boost::asynchronous::top_level_callback_continuation_job<ResultIterator, Job>
             (boost::asynchronous::detail::parallel_transform_any_iterators_helper<Iterator, ResultIterator, Func, Job, boost::asynchronous::std_transform, Iterators...>(begin, end, std::forward_as_tuple(iterators...), result, func, cutoff, task_name, prio));
+}
+
+// version for any number of ranges (held by reference)
+template <class ResultIterator, class Func, class Job, class Range, class... Ranges>
+typename boost::disable_if<has_is_continuation_task<Range>, boost::asynchronous::detail::callback_continuation<ResultIterator, Job>>::type
+parallel_transform(ResultIterator result, Func func, Range & range, Ranges & ... ranges, long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                   const std::string& task_name, std::size_t prio)
+#else
+                   const std::string& task_name = "", std::size_t prio = 0)
+#endif
+{
+    return parallel_transform<ResultIterator,
+                              Func,
+                              Job,
+                              decltype(boost::begin(range)),
+                              decltype(boost::begin(ranges))...>(result,
+                                                                 func,
+                                                                 boost::begin(range),
+                                                                 boost::end(range),
+                                                                 boost::begin(ranges)...,
+                                                                 cutoff,
+                                                                 task_name,
+                                                                 prio);
 }
 
 }}
