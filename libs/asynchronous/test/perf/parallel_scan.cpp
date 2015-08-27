@@ -121,7 +121,7 @@ int main( int argc, const char *argv[] )
         container data;
         container res(SIZE,(element)0.0);
         generate(data,SIZE);
-        ParallelAsyncPostFuture(data.begin(),data.end(),res.begin(),0);
+        ParallelAsyncPostFuture(data.begin(),data.end(),res.begin(),(element)0.0);
     }
     for (int i=0;i<LOOP;++i)
     {
