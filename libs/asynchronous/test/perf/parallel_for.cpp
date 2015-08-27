@@ -20,11 +20,12 @@
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/trackable_servant.hpp>
 #include <boost/asynchronous/algorithm/parallel_for.hpp>
+#include <boost/asynchronous/algorithm/parallel_generate.hpp>
 
 using namespace std;
 
-#define SIZE 1000000
-#define LOOP 100
+#define SIZE 100000000
+#define LOOP 1
 
 float Foo(float f)
 {
@@ -36,17 +37,10 @@ double servant_intern=0.0;
 long tpsize = 12;
 long tasks = 48;
 
+boost::asynchronous::any_shared_scheduler_proxy<> scheduler;
+
 void ParallelAsyncPostFuture(float a[], size_t n)
 {
-    auto scheduler =  boost::asynchronous::make_shared_scheduler_proxy<
-            boost::asynchronous::multiqueue_threadpool_scheduler<
-                    boost::asynchronous::lockfree_queue<>,
-                    boost::asynchronous::default_find_position< boost::asynchronous::sequential_push_policy>,
-                    boost::asynchronous::no_cpu_load_saving
-                >>(tpsize,tasks/tpsize);
-    // set processor affinity to improve cache usage. We start at core 0, until tpsize-1
-    scheduler.processor_bind(0);
-
     long tasksize = SIZE / tasks;
     servant_time = boost::chrono::high_resolution_clock::now();
     auto fu = boost::asynchronous::post_future(scheduler,
@@ -67,7 +61,11 @@ void ParallelAsyncPostFuture(float a[], size_t n)
 void test(void(*pf)(float [], size_t ))
 {
     boost::shared_array<float> a (new float[SIZE]);
-    std::generate(a.get(), a.get()+SIZE,rand);
+    auto fu = boost::asynchronous::post_future(
+                scheduler,
+                [&]{return boost::asynchronous::parallel_generate(a.get(), a.get()+SIZE,rand,1024);});
+    fu.get();
+    //std::generate(a.get(), a.get()+SIZE,rand);
     (*pf)(a.get(),SIZE);
 }
 
@@ -77,6 +75,17 @@ int main( int argc, const char *argv[] )
     tasks = (argc>2) ? strtol(argv[2],0,0) : 500;
     std::cout << "tpsize=" << tpsize << std::endl;
     std::cout << "tasks=" << tasks << std::endl;
+
+    scheduler =  boost::asynchronous::make_shared_scheduler_proxy<
+            boost::asynchronous::multiqueue_threadpool_scheduler<
+                    boost::asynchronous::lockfree_queue<>,
+                    boost::asynchronous::default_find_position< boost::asynchronous::sequential_push_policy>,
+                    //boost::asynchronous::default_save_cpu_load<10,80000,1000>
+                    boost::asynchronous::no_cpu_load_saving
+                >>(tpsize,tasks/tpsize);
+    // set processor affinity to improve cache usage. We start at core 0, until tpsize-1
+    scheduler.processor_bind(0);
+
     for (int i=0;i<LOOP;++i)
     {     
         test(ParallelAsyncPostFuture);
