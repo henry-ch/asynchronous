@@ -53,12 +53,12 @@ void generate(container& data, unsigned elements)
                 });
     fu.get();
 }
-template <class Iterator,class OutIterator,class T,class Combine>
-OutIterator inclusive_scan(Iterator beg, Iterator end, OutIterator out, T init, Combine c)
+template <class Iterator,class OutIterator,class T>
+OutIterator inclusive_scan(Iterator beg, Iterator end, OutIterator out, T init)
 {
     for (;beg != end; ++beg)
     {
-        init = c(init,*beg);
+        init += *beg;
         *out++ = init;
     }
     return out;
@@ -86,7 +86,7 @@ void ParallelAsyncPostFuture(Iterator beg, Iterator end, Iterator out, element i
                                                              {
                                                                for (;beg != end; ++beg)
                                                                {
-                                                                   init = *beg + init;
+                                                                   init += *beg;
                                                                    *out++ = init;
                                                                };
                                                              },
@@ -130,7 +130,7 @@ int main( int argc, const char *argv[] )
         generate(data,SIZE);
          // serial version
         boost::chrono::high_resolution_clock::time_point start = boost::chrono::high_resolution_clock::now();
-        inclusive_scan(data.begin(),data.end(),res.begin(),(element)0.0,std::plus<element>());
+        inclusive_scan(data.begin(),data.end(),res.begin(),(element)0.0);
         serial_duration += (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000);
     }
     printf ("%24s: time = %.1f usec\n","parallel_scan", servant_intern);
