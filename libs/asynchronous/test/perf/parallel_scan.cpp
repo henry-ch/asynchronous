@@ -24,8 +24,8 @@
 
 using namespace std;
 
-#define SIZE 100000000
-#define LOOP 1
+#define SIZE 10000000
+#define LOOP 10
 
 boost::chrono::high_resolution_clock::time_point servant_time;
 double servant_intern=0.0;
@@ -39,18 +39,19 @@ using Iterator = std::vector<element>::iterator;
 
 boost::asynchronous::any_shared_scheduler_proxy<> scheduler;
 
-void generate(container& data, unsigned elements, unsigned /*dist*/)
+void generate(container& data, unsigned elements)
 {
-    data = container(elements,1);
-    //std::random_device rd;
-    //std::mt19937 mt(rd());
-    //std::mt19937 mt(static_cast<unsigned int>(std::time(nullptr)));
-    //std::uniform_int_distribution<> dis(0, dist);
+    data = container(elements,(element)1.0);
+
     auto fu = boost::asynchronous::post_future(
                 scheduler,
-                [&]{return boost::asynchronous::parallel_generate(data.begin(),data.end(),rand/*std::bind(dis, std::ref(mt))*/,1024);});
+                [&]
+                {
+                    return boost::asynchronous::parallel_generate(
+                                data.begin(),data.end(),
+                                [](){return static_cast <element> (rand()) / static_cast <element> (RAND_MAX);},1024);
+                });
     fu.get();
-    //std::generate(data.begin(), data.end(), std::bind(dis, std::ref(mt)));
 }
 template <class Iterator,class OutIterator,class T,class Combine>
 OutIterator inclusive_scan(Iterator beg, Iterator end, OutIterator out, T init, Combine c)
@@ -64,7 +65,7 @@ OutIterator inclusive_scan(Iterator beg, Iterator end, OutIterator out, T init, 
 }
 
 void ParallelAsyncPostFuture(Iterator beg, Iterator end, Iterator out, element init)
-{    
+{
     long tasksize = SIZE / tasks;
     servant_time = boost::chrono::high_resolution_clock::now();
     auto fu = boost::asynchronous::post_future(scheduler,
@@ -98,8 +99,8 @@ void ParallelAsyncPostFuture(Iterator beg, Iterator end, Iterator out, element i
 
 
 
-int main( int argc, const char *argv[] ) 
-{   
+int main( int argc, const char *argv[] )
+{
     tpsize = (argc>1) ? strtol(argv[1],0,0) : boost::thread::hardware_concurrency();
     tasks = (argc>2) ? strtol(argv[2],0,0) : 500;
     std::cout << "tpsize=" << tpsize << std::endl;
@@ -116,23 +117,24 @@ int main( int argc, const char *argv[] )
     scheduler.processor_bind(0);
 
     for (int i=0;i<LOOP;++i)
-    {     
+    {
         container data;
-        container res(SIZE,0);
-        generate(data,SIZE,SIZE/10);
-        container data2 = data;
-        container res2(SIZE,0);
-
+        container res(SIZE,(element)0.0);
+        generate(data,SIZE);
         ParallelAsyncPostFuture(data.begin(),data.end(),res.begin(),0);
-
-        // serial version
+    }
+    for (int i=0;i<LOOP;++i)
+    {
+        container data;
+        container res(SIZE,(element)0.0);
+        generate(data,SIZE);
+         // serial version
         boost::chrono::high_resolution_clock::time_point start = boost::chrono::high_resolution_clock::now();
-        inclusive_scan(data2.begin(),data2.end(),res2.begin(),0,std::plus<element>());
+        inclusive_scan(data.begin(),data.end(),res.begin(),(element)0.0,std::plus<element>());
         serial_duration += (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000);
-
-
     }
     printf ("%24s: time = %.1f usec\n","parallel_scan", servant_intern);
     printf ("%24s: time = %.1f usec\n","serial_scan", serial_duration);
+    std::cout << "speedup: " << serial_duration / servant_intern << std::endl;
     return 0;
 }
