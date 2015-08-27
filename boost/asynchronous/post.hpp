@@ -569,12 +569,12 @@ auto post_future(S const& scheduler, F const& func,
                  const std::string& task_name, std::size_t prio,
                  typename boost::enable_if< boost::mpl::and_<
                                     boost::is_same<void,decltype(func())>,
-                                    boost::mpl::not_<has_is_continuation_task<decltype(func())>>>>::type* dumnmy=0)
+                                    boost::mpl::not_<has_is_continuation_task<decltype(func())>>>>::type* =0)
 #else
                  const std::string& task_name="", std::size_t prio=0,
                  typename boost::enable_if< boost::mpl::and_<
                                     boost::is_same<void,decltype(func())>,
-                                    boost::mpl::not_<has_is_continuation_task<decltype(func())>>>>::type* dumnmy=0)
+                                    boost::mpl::not_<has_is_continuation_task<decltype(func())>>>>::type* =0)
 #endif
     -> boost::future<void>
 {
@@ -689,12 +689,12 @@ auto interruptible_post_future(S const& scheduler, F const& func,
                  const std::string& task_name, std::size_t prio, 
 				 typename boost::enable_if< boost::mpl::and_<
 				    boost::is_same<void, decltype(func())>,
-				    boost::mpl::not_<has_is_continuation_task<decltype(func())>> >> ::type* dumnmy = 0)
+                    boost::mpl::not_<has_is_continuation_task<decltype(func())>> >> ::type* = 0)
 #else
                  const std::string& task_name="", std::size_t prio=0,
 				 typename boost::enable_if< boost::mpl::and_<
 					boost::is_same<void, decltype(func())>,
-					boost::mpl::not_<has_is_continuation_task<decltype(func())>> >> ::type* dumnmy = 0)
+                    boost::mpl::not_<has_is_continuation_task<decltype(func())>> >> ::type* = 0)
 #endif
     -> std::tuple<boost::future<void>,boost::asynchronous::any_interruptible > 
 {
