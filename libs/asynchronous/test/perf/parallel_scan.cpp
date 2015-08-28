@@ -39,6 +39,10 @@ using Iterator = std::vector<element>::iterator;
 
 boost::asynchronous::any_shared_scheduler_proxy<> scheduler;
 
+float Foo(float f)
+{
+    return std::cos(std::tan(f*3.141592654 + 2.55756 * 0.42));
+}
 void generate(container& data, unsigned elements)
 {
     data = container(elements,(element)1.0);
@@ -58,7 +62,7 @@ OutIterator inclusive_scan(Iterator beg, Iterator end, OutIterator out, T init)
 {
     for (;beg != end; ++beg)
     {
-        init += *beg;
+        init += (*beg + Foo(*beg));
         *out++ = init;
     }
     return out;
@@ -77,7 +81,7 @@ void ParallelAsyncPostFuture(Iterator beg, Iterator end, Iterator out, element i
                                                                element r=0;
                                                                for (;beg != end; ++beg)
                                                                {
-                                                                   r = r + *beg;
+                                                                   r += (*beg + Foo(*beg));
                                                                }
                                                                return r;
                                                              },
@@ -86,7 +90,7 @@ void ParallelAsyncPostFuture(Iterator beg, Iterator end, Iterator out, element i
                                                              {
                                                                for (;beg != end; ++beg)
                                                                {
-                                                                   init += *beg;
+                                                                   init += (*beg + Foo(*beg));
                                                                    *out++ = init;
                                                                };
                                                              },
