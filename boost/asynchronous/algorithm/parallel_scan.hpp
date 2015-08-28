@@ -276,6 +276,5 @@ parallel_scan(Iterator beg, Iterator end, OutIterator out, T init,
                 (beg,end,out,std::move(init),std::move(r),std::move(c),std::move(s),cutoff,task_name,prio));
 
 }
-
 }}
 #endif // BOOST_ASYNCHRONOUS_PARALLEL_SCAN_HPP

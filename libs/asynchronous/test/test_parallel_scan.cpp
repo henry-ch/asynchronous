@@ -63,18 +63,19 @@ OutIterator inclusive_scan(Iterator beg, Iterator end, OutIterator out, T init, 
 template <class Iterator,class OutIterator,class T,class Combine>
 OutIterator exclusive_scan(Iterator beg, Iterator end, OutIterator out, T init, Combine c)
 {
-    /*for (;beg != end-1; ++beg)
+    for (;beg != end-1; ++beg)
     {
         *out++ = init;
         init = c(init,*beg);
     }
-    *out = init;*/
-    for (;beg != end; ++beg)
-    {
-        *out++ = init;
-        init = c(init,*beg);
-    }
+    *out++ = init;
     return out;
+//    for (;beg != end; ++beg)
+//    {
+//        *out++ = init;
+//        init = c(init,*beg);
+//    }
+//    return out;
 }
 
 struct Servant : boost::asynchronous::trackable_servant<>
@@ -93,7 +94,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         servant_dtor = true;
     }
 
-    boost::shared_future<void> test_inclusive_scan()
+    boost::shared_future<void> test_scan_inclusive_scan()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant async work not posted.");
         generate(m_data1,1000,700);
@@ -144,7 +145,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
-    boost::shared_future<void> test_inclusive_scan_init()
+    boost::shared_future<void> test_scan_inclusive_scan_init()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant async work not posted.");
         generate(m_data1,1000,700);
@@ -196,7 +197,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         return fu;
     }
 
-    boost::shared_future<void> test_exclusive_scan()
+    boost::shared_future<void> test_scan_exclusive_scan()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant async work not posted.");
         generate(m_data1,1000,700);
@@ -258,9 +259,9 @@ public:
     ServantProxy(Scheduler s):
         boost::asynchronous::servant_proxy<ServantProxy,Servant>(s)
     {}
-    BOOST_ASYNC_FUTURE_MEMBER(test_inclusive_scan)
-    BOOST_ASYNC_FUTURE_MEMBER(test_inclusive_scan_init)
-    BOOST_ASYNC_FUTURE_MEMBER(test_exclusive_scan)
+    BOOST_ASYNC_FUTURE_MEMBER(test_scan_inclusive_scan)
+    BOOST_ASYNC_FUTURE_MEMBER(test_scan_inclusive_scan_init)
+    BOOST_ASYNC_FUTURE_MEMBER(test_scan_exclusive_scan)
 };
 }
 
@@ -273,7 +274,7 @@ BOOST_AUTO_TEST_CASE( test_scan_inclusive_scan )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.test_inclusive_scan();
+        boost::shared_future<boost::shared_future<void> > fuv = proxy.test_scan_inclusive_scan();
         try
         {
             boost::shared_future<void> resfuv = fuv.get();
@@ -296,7 +297,7 @@ BOOST_AUTO_TEST_CASE( test_scan_inclusive_scan_init )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.test_inclusive_scan_init();
+        boost::shared_future<boost::shared_future<void> > fuv = proxy.test_scan_inclusive_scan_init();
         try
         {
             boost::shared_future<void> resfuv = fuv.get();
@@ -319,7 +320,7 @@ BOOST_AUTO_TEST_CASE( test_scan_exclusive_scan )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.test_exclusive_scan();
+        boost::shared_future<boost::shared_future<void> > fuv = proxy.test_scan_exclusive_scan();
         try
         {
             boost::shared_future<void> resfuv = fuv.get();
@@ -332,5 +333,4 @@ BOOST_AUTO_TEST_CASE( test_scan_exclusive_scan )
     }
     BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
 }
-
 
