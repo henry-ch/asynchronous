@@ -68,6 +68,7 @@ template
 >
 struct update_selection_map_fct
 {
+    enum {arity = 1};
     update_selection_map_fct(){}
     update_selection_map_fct(Geometry1 geometry1,
                              Geometry2 geometry2,

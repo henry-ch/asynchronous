@@ -37,7 +37,7 @@ struct processor_bind_task
     processor_bind_task(unsigned int p):proc_(p % boost::thread::hardware_concurrency()){}
     void operator()()const
     {
-# if defined(LINUX)
+#if defined(linux) || defined(__linux) || defined(__linux__)
         cpu_set_t cpuset;
         CPU_ZERO( & cpuset);
         CPU_SET( proc_, & cpuset);

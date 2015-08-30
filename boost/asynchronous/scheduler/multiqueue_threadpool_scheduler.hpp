@@ -45,14 +45,6 @@
 #include <boost/asynchronous/scheduler/detail/lockable_weak_scheduler.hpp>
 #include <boost/asynchronous/scheduler/detail/any_continuation.hpp>
 
-extern "C"
-{
-#include <windows.h>
-}
-
-#include <stdexcept>
-
-//#include <boost/config/abi_prefix.hpp>
 
 namespace boost { namespace asynchronous
 {

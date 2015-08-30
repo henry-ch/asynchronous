@@ -47,9 +47,18 @@ void ParallelAsyncPostFuture(float a[], size_t n)
                [a,n,tasksize]()
                {
                    return boost::asynchronous::parallel_for(a,a+n,
-                                                            [](float& i)
+                                                            // first version
+                                                            /*[](float& i)
                                                             {
                                                                i = Foo(i);
+                                                            },*/
+                                                            // second version
+                                                            [](float* beg, float* end)
+                                                            {
+                                                               for(;beg!=end;++beg)
+                                                               {
+                                                                    *beg = Foo(*beg);
+                                                               }
                                                             },tasksize,"",0);
                });
     fu.get();
@@ -61,11 +70,13 @@ void ParallelAsyncPostFuture(float a[], size_t n)
 void test(void(*pf)(float [], size_t ))
 {
     boost::shared_array<float> a (new float[SIZE]);
-    auto fu = boost::asynchronous::post_future(
+    /* in case we have a huge input or compßlicated generate function
+     long tasksize = SIZE / tasks;
+     auto fu = boost::asynchronous::post_future(
                 scheduler,
-                [&]{return boost::asynchronous::parallel_generate(a.get(), a.get()+SIZE,rand,1024);});
-    fu.get();
-    //std::generate(a.get(), a.get()+SIZE,rand);
+                [&]{return boost::asynchronous::parallel_generate(a.get(), a.get()+SIZE,rand,tasksize);});
+    fu.get();*/
+    std::generate(a.get(), a.get()+SIZE,rand);
     (*pf)(a.get(),SIZE);
 }
 

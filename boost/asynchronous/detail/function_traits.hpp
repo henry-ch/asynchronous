@@ -50,6 +50,25 @@ struct function_traits<ReturnType(ClassType::*)(Args...)>
     template <std::size_t i>
     using arg = typename arg_<i>::type;
 };
+
+
+template<class F>
+struct min_function_traits
+{
+    enum {arity = F::arity};
+};
+template <typename ClassType, typename ReturnType, typename... Args>
+struct min_function_traits<ReturnType(ClassType::*)(Args...)const>
+{
+    enum {arity = sizeof...(Args)};
+};
+template <typename ClassType, typename ReturnType, typename... Args>
+struct min_function_traits<ReturnType(ClassType::*)(Args...)>
+{
+    enum {arity = sizeof...(Args)};
+};
+
+
 template <class T>
 auto make_function(T t) -> typename boost::asynchronous::function_traits<T>::function_type
 {
