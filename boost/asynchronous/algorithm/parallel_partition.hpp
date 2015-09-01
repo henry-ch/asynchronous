@@ -14,6 +14,7 @@
 #include <list>
 #include <memory>
 #include <utility>
+#include <algorithm>
 
 #include <boost/utility/enable_if.hpp>
 #include <boost/asynchronous/callable_any.hpp>
@@ -174,7 +175,7 @@ struct parallel_partition_helper : public boost::asynchronous::continuation_task
     struct shared_data
     {
         shared_data(const Iterator left, const Iterator right, relation r, const uint32_t open_threads)
-            : m_r(std::move(r)), m_BS((right-left) / 1000), m_left(left), m_right(right)
+            : m_r(std::move(r)), m_BS(std::max((int)std::distance(left,right) / 1000, (int)1000)), m_left(left), m_right(right)
             , m_open_threads(open_threads), m_size(right-left), m_lmove(0), m_rmove(right-left), m_rtrue(0)
         {
             if (m_size < 10000)
