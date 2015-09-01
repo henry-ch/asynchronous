@@ -29,7 +29,8 @@ using namespace std;
 
 float Foo(float f)
 {
-    return std::cos(std::tan(f*3.141592654 + 2.55756 * 0.42));
+    //return std::cos(std::tan(f*3.141592654 + 2.55756 * 0.42));
+    return 0.42 * f*f*f + 2.3 * f*f + 5*f +1.4 /(f*f) +2.547 / f;
 }
 
 boost::chrono::high_resolution_clock::time_point servant_time;
@@ -55,6 +56,7 @@ void ParallelAsyncPostFuture(float a[], size_t n)
                                                             // second version
                                                             [](float* beg, float* end)
                                                             {
+//#pragma clang loop vectorize(disable)
                                                                for(;beg!=end;++beg)
                                                                {
                                                                     *beg = Foo(*beg);

@@ -211,11 +211,11 @@ public:
                   boost::asynchronous::any_interruptible >
     {
         // we want to log if possible
-        return std::move(boost::asynchronous::interruptible_post_future(
+        return boost::asynchronous::interruptible_post_future(
                                         m_scheduler.lock(),
                                         boost::asynchronous::check_alive_before_exec(std::move(func),m_tracking),
                                         task_name,
-                                        post_prio));
+                                        post_prio);
     }
     template <class F1>
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -243,11 +243,11 @@ public:
                    boost::asynchronous::any_interruptible >
     {
         // we want to log if possible
-        return std::move(boost::asynchronous::interruptible_post_future(
+        return boost::asynchronous::interruptible_post_future(
                                         m_worker,
                                         boost::asynchronous::check_alive_before_exec(std::move(func),m_tracking),
                                         task_name,
-                                        post_prio));
+                                        post_prio);
     }
     template <class Worker,class F1>
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -274,11 +274,11 @@ public:
                    boost::asynchronous::any_interruptible >
     {
         // we want to log if possible
-        return std::move(boost::asynchronous::interruptible_post_future(
+        return boost::asynchronous::interruptible_post_future(
                                         wscheduler,
                                         boost::asynchronous::check_alive_before_exec(std::move(func),m_tracking),
                                         task_name,
-                                        post_prio));
+                                        post_prio);
     }
     template <class CallerSched,class F1, class F2>
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -358,7 +358,7 @@ private:
                     boost::asynchronous::post_future(sched,
                                                      boost::asynchronous::move_bind( boost::asynchronous::check_alive([func_ptr](Args... args){(*func_ptr)(std::move(args)...);},tracking),
                                                                                      std::move(as)...),
-                                                     std::move(task_name),prio);
+                                                     task_name,prio);
                 }
             }
         };
