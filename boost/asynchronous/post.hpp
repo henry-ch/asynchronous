@@ -528,12 +528,13 @@ auto post_future(S const& scheduler, F const& func,
 #endif
     -> boost::future<decltype(func())>
 {
-    boost::promise<decltype(func())> p;
+    using promise_type = boost::promise<decltype(func())>;
+    promise_type p;
     boost::future<decltype(func())> fu(p.get_future());
 
     struct post_helper
     {
-        void operator()(boost::promise<decltype(func())>& sp, F& f)const
+        void operator()(promise_type& sp, F& f)const
         {
             try{sp.set_value(f());}
             catch(...){sp.set_exception(boost::current_exception());}
@@ -583,7 +584,7 @@ auto post_future(S const& scheduler, F const& func,
 
     struct post_helper
     {
-        void operator()(boost::promise<decltype(func())>& sp, F& f)const
+        void operator()(boost::promise<void>& sp, F& f)const
         {
             try{f();sp.set_value();}
             catch(...){sp.set_exception(boost::current_exception());}
@@ -657,12 +658,13 @@ auto interruptible_post_future(S const& scheduler, F const& func,
 #endif
     -> std::tuple<boost::future<decltype(func())>,boost::asynchronous::any_interruptible >
 {
-    boost::promise<decltype(func())> p;
+    using promise_type = boost::promise<decltype(func())>;
+    promise_type p;
     boost::future<decltype(func())> fu(p.get_future());
 
     struct post_helper
     {
-        void operator()(boost::promise<decltype(func())>& sp, F& f)const
+        void operator()(promise_type& sp, F& f)const
         {
             try{sp.set_value(f());}
             catch(boost::thread_interrupted&)
@@ -703,7 +705,7 @@ auto interruptible_post_future(S const& scheduler, F const& func,
 
     struct post_helper
     {
-        void operator()(boost::promise<decltype(func())>& sp, F& f)const
+        void operator()(boost::promise<void>& sp, F& f)const
         {
             try{f();sp.set_value();}
             catch(boost::thread_interrupted&)
@@ -1312,9 +1314,10 @@ auto post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_schedule
                                   ,void >::type
 {
     // abstract away the return value of work functor
+    using func_type = decltype(func());
     struct post_helper
     {
-        void operator()(move_task_helper<decltype(func()),F1,F2>& work,boost::asynchronous::expected<decltype(func())>& res)const
+        void operator()(move_task_helper<func_type,F1,F2>& work,boost::asynchronous::expected<decltype(func())>& res)const
         { 
             res.set_value(std::move(work.m_task()));
         }
@@ -1400,9 +1403,10 @@ auto interruptible_post_callback(S1 const& scheduler,F1 const& func,S2 const& we
                                       ,boost::asynchronous::any_interruptible >::type
 {
     // abstract away the return value of work functor
+    using func_type = decltype(func());
     struct post_helper
     {
-        void operator()(move_task_helper<decltype(func()),F1,F2>& work,boost::asynchronous::expected<decltype(func())>& res)const
+        void operator()(move_task_helper<func_type,F1,F2>& work,boost::asynchronous::expected<decltype(func())>& res)const
         {  
             res.set_value(std::move(work.m_task()));
         }

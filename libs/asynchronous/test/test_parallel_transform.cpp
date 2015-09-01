@@ -139,7 +139,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
 
         return fu;
     }
-
+#ifndef __INTEL_COMPILER
     boost::shared_future<void> start_parallel_transform_any_iterators()
     {
         BOOST_CHECK_MESSAGE(main_thread_id != boost::this_thread::get_id(), "servant async work not posted.");
@@ -193,7 +193,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
 
         return fu;
     }
-
+#endif
     boost::shared_future<void> start_parallel_transform_range()
     {
         BOOST_CHECK_MESSAGE(main_thread_id != boost::this_thread::get_id(), "servant async work not posted.");
@@ -268,7 +268,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
 
         return fu;
     }
-
+#ifndef __INTEL_COMPILER
     boost::shared_future<void> start_parallel_transform_any_range()
     {
         BOOST_CHECK_MESSAGE(main_thread_id != boost::this_thread::get_id(), "servant async work not posted.");
@@ -317,6 +317,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
 
         return fu;
     }
+#endif
 private:
     // helper, generate vectors
     void generate()
@@ -349,10 +350,12 @@ public:
 
     BOOST_ASYNC_FUTURE_MEMBER(start_parallel_transform)
     BOOST_ASYNC_FUTURE_MEMBER(start_parallel_transform2)
-    BOOST_ASYNC_FUTURE_MEMBER(start_parallel_transform_any_iterators)
     BOOST_ASYNC_FUTURE_MEMBER(start_parallel_transform_range)
     BOOST_ASYNC_FUTURE_MEMBER(start_parallel_transform2_range)
+#ifndef __INTEL_COMPILER
+    BOOST_ASYNC_FUTURE_MEMBER(start_parallel_transform_any_iterators)
     BOOST_ASYNC_FUTURE_MEMBER(start_parallel_transform_any_range)
+#endif
 };
 
 }
@@ -390,29 +393,6 @@ BOOST_AUTO_TEST_CASE( test_parallel_transform2 )
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
         boost::shared_future<boost::shared_future<void> > fuv = proxy.start_parallel_transform2();
-        try
-        {
-            boost::shared_future<void> resfuv = fuv.get();
-            resfuv.get();
-        }
-        catch(...)
-        {
-            BOOST_FAIL( "unexpected exception" );
-        }
-    }
-    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
-}
-
-BOOST_AUTO_TEST_CASE( test_parallel_transform_any_iterators )
-{
-    servant_dtor=false;
-    {
-        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
-                                                                            boost::asynchronous::lockfree_queue<>>>();
-
-        main_thread_id = boost::this_thread::get_id();
-        ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_parallel_transform_any_iterators();
         try
         {
             boost::shared_future<void> resfuv = fuv.get();
@@ -471,6 +451,29 @@ BOOST_AUTO_TEST_CASE( test_parallel_transform2_range )
     }
     BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
 }
+#ifndef __INTEL_COMPILER
+BOOST_AUTO_TEST_CASE( test_parallel_transform_any_iterators )
+{
+    servant_dtor=false;
+    {
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<>>>();
+
+        main_thread_id = boost::this_thread::get_id();
+        ServantProxy proxy(scheduler);
+        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_parallel_transform_any_iterators();
+        try
+        {
+            boost::shared_future<void> resfuv = fuv.get();
+            resfuv.get();
+        }
+        catch(...)
+        {
+            BOOST_FAIL( "unexpected exception" );
+        }
+    }
+    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
+}
 
 BOOST_AUTO_TEST_CASE( test_parallel_transform_any_range )
 {
@@ -494,3 +497,4 @@ BOOST_AUTO_TEST_CASE( test_parallel_transform_any_range )
     }
     BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
 }
+#endif

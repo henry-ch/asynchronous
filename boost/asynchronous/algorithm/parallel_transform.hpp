@@ -512,8 +512,8 @@ struct parallel_transform_any_iterators_helper : public boost::asynchronous::con
 
 }
 
-
-// version for any number of iterators
+#ifndef __INTEL_COMPILER
+// version for any number of iterators (not with ICC)
 template <class ResultIterator, class Func, class Job, class Iterator, class... Iterators>
 boost::asynchronous::detail::callback_continuation<ResultIterator, Job>
 parallel_transform(ResultIterator result, Func func, Iterator begin, Iterator end, Iterators... iterators, long cutoff,
@@ -527,7 +527,7 @@ parallel_transform(ResultIterator result, Func func, Iterator begin, Iterator en
             (boost::asynchronous::detail::parallel_transform_any_iterators_helper<Iterator, ResultIterator, Func, Job, boost::asynchronous::std_transform, Iterators...>(begin, end, std::forward_as_tuple(iterators...), result, func, cutoff, task_name, prio));
 }
 
-// version for any number of ranges (held by reference)
+// version for any number of ranges (held by reference) not with ICC
 template <class ResultIterator, class Func, class Job, class Range, class... Ranges>
 typename boost::disable_if<has_is_continuation_task<Range>, boost::asynchronous::detail::callback_continuation<ResultIterator, Job>>::type
 parallel_transform(ResultIterator result, Func func, Range & range, Ranges & ... ranges, long cutoff,
@@ -550,7 +550,7 @@ parallel_transform(ResultIterator result, Func func, Range & range, Ranges & ...
                                                                  task_name,
                                                                  prio);
 }
-
+#endif
 }}
 
 #endif // BOOST_ASYNCHRONOUS_PARALLEL_TRANSFORM_HPP
