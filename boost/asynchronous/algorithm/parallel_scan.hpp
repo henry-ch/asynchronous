@@ -276,5 +276,73 @@ parallel_scan(Iterator beg, Iterator end, OutIterator out, T init,
                 (beg,end,out,std::move(init),std::move(r),std::move(c),std::move(s),cutoff,task_name,prio));
 
 }
+// version for moved ranges => will return the ranges (input + output) as continuation
+template <class Range, class OutRange, class T, class Reduce, class Combine, class Scan, class Job,class Enable=void>
+struct parallel_scan_range_move_helper: public boost::asynchronous::continuation_task<std::pair<Range,OutRange>>
+{
+    parallel_scan_range_move_helper(boost::shared_ptr<Range> range,boost::shared_ptr<OutRange> out_range, T init,
+                                    Reduce r, Combine c, Scan s,
+                                    long cutoff, const std::string& task_name, std::size_t prio)
+        : boost::asynchronous::continuation_task<std::pair<Range,OutRange>>(task_name)
+        , range_(range), out_range_(out_range),init_(std::move(init))
+        , reduce_(std::move(r)), combine_(std::move(c)), scan_(std::move(s))
+        , cutoff_(cutoff),prio_(prio)
+    {}
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<std::pair<Range,OutRange>> task_res = this->this_task_result();
+        auto cont = boost::asynchronous::parallel_scan<
+                decltype(boost::begin(*range_)),
+                decltype(boost::begin(*out_range_)),
+                T,Reduce,Combine,Scan,Job>
+                (boost::begin(*range_),boost::end(*range_),boost::begin(*out_range_),std::move(init_),
+                 std::move(reduce_),std::move(combine_),std::move(scan_),cutoff_,this->get_name(),prio_);
+
+        auto range = range_;
+        auto out_range = out_range_;
+        cont.on_done([task_res,range,out_range]
+                      (std::tuple<boost::asynchronous::expected<decltype(boost::begin(*out_range_))>>&& continuation_res) mutable
+        {
+            try
+            {
+                // get to check that no exception
+                std::get<0>(continuation_res).get();
+                task_res.set_value(std::make_pair(std::move(*range),std::move(*out_range)));
+            }
+            catch(std::exception& e)
+            {
+                task_res.set_exception(boost::copy_exception(e));
+            }
+        }
+        );
+    }
+
+    boost::shared_ptr<Range> range_;
+    boost::shared_ptr<OutRange> out_range_;
+    T init_;
+    Reduce reduce_;
+    Combine combine_;
+    Scan scan_;
+    long cutoff_;
+    std::size_t prio_;
+};
+// version for moved range
+template <class Range, class OutRange, class T, class Reduce, class Combine, class Scan, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+typename boost::disable_if<has_is_continuation_task<Range>,
+                           boost::asynchronous::detail::callback_continuation<std::pair<Range,OutRange>,Job> >::type
+parallel_scan(Range&& range,OutRange&& out_range,T init,Reduce r, Combine c, Scan s,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+              const std::string& task_name, std::size_t prio)
+#else
+              const std::string& task_name="", std::size_t prio=0)
+#endif
+{
+    auto pr = boost::make_shared<Range>(std::forward<Range>(range));
+    auto pout = boost::make_shared<OutRange>(std::forward<OutRange>(out_range));
+    return boost::asynchronous::top_level_callback_continuation_job<std::pair<Range,OutRange>,Job>
+            (boost::asynchronous::parallel_scan_range_move_helper<Range,OutRange,T,Reduce,Combine,Scan,Job>
+                (pr,pout,std::move(init),std::move(r),std::move(c),std::move(s),cutoff,task_name,prio));
+}
+
 }}
 #endif // BOOST_ASYNCHRONOUS_PARALLEL_SCAN_HPP
