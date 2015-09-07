@@ -22,6 +22,7 @@
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/trackable_servant.hpp>
 #include <boost/asynchronous/algorithm/parallel_exclusive_scan.hpp>
+#include <boost/asynchronous/algorithm/parallel_for.hpp>
 
 #include "test_common.hpp"
 
@@ -33,6 +34,7 @@ namespace
 // main thread id
 boost::thread::id main_thread_id;
 bool servant_dtor=false;
+using container = std::vector<int>;
 using Iterator = std::vector<int>::iterator;
 struct my_exception : virtual boost::exception, virtual std::exception
 {
@@ -118,6 +120,42 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
+    boost::shared_future<void> test_exclusive_scan_moved_ranges()
+    {
+        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant async work not posted.");
+        generate(m_data1,1000,700);
+        m_data2 = std::vector<int>(1000,0);
+        auto data_copy = m_data1;
+        auto data_copy2 = m_data2;
+        // we need a promise to inform caller when we're done
+        boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
+        boost::shared_future<void> fu = aPromise->get_future();
+        boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
+        std::vector<boost::thread::id> ids = tp.thread_ids();
+        // start long tasks
+        post_callback(
+           [ids,this](){
+                    BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
+                    BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
+                    return boost::asynchronous::parallel_exclusive_scan(std::move(m_data1),std::move(m_data2),0,
+                                                                        std::plus<int>(),
+                                                                        100);
+                    },// work
+           [aPromise,ids,data_copy,data_copy2,this](boost::asynchronous::expected<std::pair<container,container>> res) mutable{
+                        BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
+                        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
+                        BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
+                        BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
+                        exclusive_scan(data_copy.begin(),data_copy.end(),data_copy2.begin(),0,std::plus<int>());
+
+                        auto container_pair = res.get();
+                        m_data2 = container_pair.second;
+                        BOOST_CHECK_MESSAGE(m_data2 == data_copy2,"parallel_scan gave a wrong value.");
+                        aPromise->set_value();
+           }// callback functor.
+        );
+        return fu;
+    }
 
 private:
     std::vector<int> m_data1;
@@ -131,6 +169,7 @@ public:
         boost::asynchronous::servant_proxy<ServantProxy,Servant>(s)
     {}
     BOOST_ASYNC_FUTURE_MEMBER(test_exclusive_scan)
+    BOOST_ASYNC_FUTURE_MEMBER(test_exclusive_scan_moved_ranges)
 };
 }
 
@@ -156,4 +195,28 @@ BOOST_AUTO_TEST_CASE( test_exclusive_scan )
     }
     BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
 }
+
+BOOST_AUTO_TEST_CASE( test_exclusive_scan_moved_ranges )
+{
+    servant_dtor=false;
+    {
+        auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::single_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<> >);
+
+        main_thread_id = boost::this_thread::get_id();
+        ServantProxy proxy(scheduler);
+        boost::shared_future<boost::shared_future<void> > fuv = proxy.test_exclusive_scan_moved_ranges();
+        try
+        {
+            boost::shared_future<void> resfuv = fuv.get();
+            resfuv.get();
+        }
+        catch(...)
+        {
+            BOOST_FAIL( "unexpected exception" );
+        }
+    }
+    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
+}
+
 
