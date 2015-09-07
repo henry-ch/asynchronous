@@ -435,7 +435,14 @@ struct parallel_for_continuation_range_helper<Continuation,Func,Job,typename ::b
                 auto new_continuation = boost::asynchronous::parallel_for<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
                 new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
                 {
-                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
+                    try
+                    {
+                        task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
+                    }
+                    catch(std::exception& e)
+                    {
+                        task_res.set_exception(boost::copy_exception(e));
+                    }
                 });
             }
             catch(std::exception& e)

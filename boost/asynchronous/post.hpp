@@ -846,20 +846,9 @@ namespace detail
         template <class S, class CB>
         void operator()(S const& s, CB&& cb,std::string const& name,std::size_t cb_prio)const
         {
-#ifndef BOOST_NO_RVALUE_REFERENCES
             typename boost::asynchronous::job_traits<typename S::job_type>::wrapper_type w(std::forward<CB>(cb));
             w.set_name(name);
             s.post(std::move(w),cb_prio);
-#else
-            if (name.empty())
-            {
-                s.post(cb);
-            }
-            else
-            {
-                s.post_log(cb,name);
-            }
-#endif
         }
     };
     // version for serializable tasks
