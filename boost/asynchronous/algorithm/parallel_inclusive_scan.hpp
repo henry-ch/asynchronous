@@ -47,6 +47,111 @@ parallel_inclusive_scan(Iterator beg, Iterator end, OutIterator out, T init,Func
 
 }
 
+// version for moved ranges
+template <class Range, class OutRange, class T, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+typename boost::disable_if<has_is_continuation_task<Range>,
+                           boost::asynchronous::detail::callback_continuation<std::pair<Range,OutRange>,Job> >::type
+parallel_inclusive_scan(Range&& range,OutRange&& out_range,T init,Func f,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+              const std::string& task_name, std::size_t prio)
+#else
+              const std::string& task_name="", std::size_t prio=0)
+#endif
+{
+    auto reduce = [f](decltype(boost::begin(range)) beg, decltype(boost::begin(range)) end)
+    {
+        int r = T();
+        for (;beg != end; ++beg)
+        {
+            r = f(r , *beg);
+        }
+        return r;
+    };
+    auto scan = [f](decltype(boost::begin(range)) beg, decltype(boost::begin(range)) end, decltype(boost::begin(range)) out, T init) mutable
+    {
+      for (;beg != end; ++beg)
+      {
+          init = f(init , *beg);
+          *out++ = init;
+      };
+    };
+
+    return boost::asynchronous::parallel_scan<Range,OutRange,T,decltype(reduce),Func,decltype(scan),Job>
+            (std::forward<Range>(range),std::forward<OutRange>(out_range),std::move(init),
+             std::move(reduce),f,std::move(scan),cutoff,task_name,prio);
+}
+
+// version for a single moved range (in/out) => will return the range as continuation
+template <class Range, class T, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+typename boost::disable_if<has_is_continuation_task<Range>,
+                           boost::asynchronous::detail::callback_continuation<Range,Job> >::type
+parallel_inclusive_scan(Range&& range,T init,Func f,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+              const std::string& task_name, std::size_t prio)
+#else
+              const std::string& task_name="", std::size_t prio=0)
+#endif
+{
+    auto reduce = [f](decltype(boost::begin(range)) beg, decltype(boost::begin(range)) end)
+    {
+        int r = T();
+        for (;beg != end; ++beg)
+        {
+            r = f(r , *beg);
+        }
+        return r;
+    };
+    auto scan = [f](decltype(boost::begin(range)) beg, decltype(boost::begin(range)) end, decltype(boost::begin(range)) out, T init) mutable
+    {
+      for (;beg != end; ++beg)
+      {
+          init = f(init , *beg);
+          *out++ = init;
+      };
+    };
+
+    return boost::asynchronous::parallel_scan<Range,T,decltype(reduce),Func,decltype(scan),Job>
+            (std::forward<Range>(range),std::move(init),
+             std::move(reduce),f,std::move(scan),cutoff,task_name,prio);
+}
+
+// version for ranges given as continuation => will return the range as continuation
+template <class Range, class T, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+typename boost::enable_if<has_is_continuation_task<Range>,
+                          boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
+parallel_inclusive_scan(Range range,T init,Func f,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+              const std::string& task_name, std::size_t prio)
+#else
+              const std::string& task_name="", std::size_t prio=0)
+#endif
+{
+    auto reduce = [f](decltype(boost::begin(std::declval<typename Range::return_type>())) beg,
+                      decltype(boost::begin(std::declval<typename Range::return_type>())) end)
+    {
+        int r = T();
+        for (;beg != end; ++beg)
+        {
+            r = f(r , *beg);
+        }
+        return r;
+    };
+    auto scan = [f](decltype(boost::begin(std::declval<typename Range::return_type>())) beg,
+                    decltype(boost::begin(std::declval<typename Range::return_type>())) end,
+                    decltype(std::declval<typename Range::return_type>().begin()) out, T init) mutable
+    {
+      for (;beg != end; ++beg)
+      {
+          init = f(init , *beg);
+          *out++ = init;
+      };
+    };
+
+    return boost::asynchronous::parallel_scan<Range,T,decltype(reduce),Func,decltype(scan),Job>
+            (std::forward<Range>(range),std::move(init),
+             std::move(reduce),f,std::move(scan),cutoff,task_name,prio);
+}
+
 }}
 
 #endif // BOOST_ASYNCHRONOUS_PARALLEL_INCLUSIVE_SCAN_HPP

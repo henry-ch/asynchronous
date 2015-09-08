@@ -326,7 +326,7 @@ struct parallel_scan_range_move_helper: public boost::asynchronous::continuation
     long cutoff_;
     std::size_t prio_;
 };
-// version for moved range
+// version for moved ranges
 template <class Range, class OutRange, class T, class Reduce, class Combine, class Scan, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::disable_if<has_is_continuation_task<Range>,
                            boost::asynchronous::detail::callback_continuation<std::pair<Range,OutRange>,Job> >::type
@@ -342,6 +342,157 @@ parallel_scan(Range&& range,OutRange&& out_range,T init,Reduce r, Combine c, Sca
     return boost::asynchronous::top_level_callback_continuation_job<std::pair<Range,OutRange>,Job>
             (boost::asynchronous::parallel_scan_range_move_helper<Range,OutRange,T,Reduce,Combine,Scan,Job>
                 (pr,pout,std::move(init),std::move(r),std::move(c),std::move(s),cutoff,task_name,prio));
+}
+
+// version for a single moved range (in/out) => will return the range as continuation
+template <class Range, class T, class Reduce, class Combine, class Scan, class Job,class Enable=void>
+struct parallel_scan_range_move_single_helper: public boost::asynchronous::continuation_task<Range>
+{
+    parallel_scan_range_move_single_helper(boost::shared_ptr<Range> range, T init,
+                                    Reduce r, Combine c, Scan s,
+                                    long cutoff, const std::string& task_name, std::size_t prio)
+        : boost::asynchronous::continuation_task<Range>(task_name)
+        , range_(range), init_(std::move(init))
+        , reduce_(std::move(r)), combine_(std::move(c)), scan_(std::move(s))
+        , cutoff_(cutoff),prio_(prio)
+    {}
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<Range> task_res = this->this_task_result();
+        auto cont = boost::asynchronous::parallel_scan<
+                decltype(boost::begin(*range_)),
+                decltype(boost::begin(*range_)),
+                T,Reduce,Combine,Scan,Job>
+                (boost::begin(*range_),boost::end(*range_),boost::begin(*range_),std::move(init_),
+                 std::move(reduce_),std::move(combine_),std::move(scan_),cutoff_,this->get_name(),prio_);
+
+        auto range = range_;
+        cont.on_done([task_res,range]
+                      (std::tuple<boost::asynchronous::expected<decltype(boost::begin(*range_))>>&& continuation_res) mutable
+        {
+            try
+            {
+                // get to check that no exception
+                std::get<0>(continuation_res).get();
+                task_res.set_value(std::move(*range));
+            }
+            catch(std::exception& e)
+            {
+                task_res.set_exception(boost::copy_exception(e));
+            }
+        }
+        );
+    }
+
+    boost::shared_ptr<Range> range_;
+    T init_;
+    Reduce reduce_;
+    Combine combine_;
+    Scan scan_;
+    long cutoff_;
+    std::size_t prio_;
+};
+// version for a single moved range (in/out) => will return the range as continuation
+template <class Range, class T, class Reduce, class Combine, class Scan, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+typename boost::disable_if<has_is_continuation_task<Range>,
+                           boost::asynchronous::detail::callback_continuation<Range,Job> >::type
+parallel_scan(Range&& range,T init,Reduce r, Combine c, Scan s,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+              const std::string& task_name, std::size_t prio)
+#else
+              const std::string& task_name="", std::size_t prio=0)
+#endif
+{
+    auto pr = boost::make_shared<Range>(std::forward<Range>(range));
+    return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
+            (boost::asynchronous::parallel_scan_range_move_single_helper<Range,T,Reduce,Combine,Scan,Job>
+                (pr,std::move(init),std::move(r),std::move(c),std::move(s),cutoff,task_name,prio));
+}
+
+
+namespace
+{
+// version for ranges given as continuation => will return the range as continuation
+template <class Continuation, class T, class Reduce, class Combine, class Scan, class Job,class Enable=void>
+struct parallel_scan_range_continuation_helper: public boost::asynchronous::continuation_task<typename Continuation::return_type>
+{
+    parallel_scan_range_continuation_helper(Continuation range, T init,
+                                    Reduce r, Combine c, Scan s,
+                                    long cutoff, const std::string& task_name, std::size_t prio)
+        : boost::asynchronous::continuation_task<typename Continuation::return_type>(task_name)
+        , cont_(std::move(range)), init_(std::move(init))
+        , reduce_(std::move(r)), combine_(std::move(c)), scan_(std::move(s))
+        , cutoff_(cutoff),prio_(prio)
+    {}
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<typename Continuation::return_type> task_res = this->this_task_result();
+
+        auto init(std::move(init_));
+        auto reduce(std::move(reduce_));
+        auto combine(std::move(combine_));
+        auto scan(std::move(scan_));
+        auto cutoff = cutoff_;
+        auto task_name = this->get_name();
+        auto prio = prio_;
+
+        cont_.on_done([task_res,init,reduce,combine,scan,cutoff,task_name,prio]
+                      (std::tuple<boost::asynchronous::expected<typename Continuation::return_type>>&& continuation_res) mutable
+        {
+            try
+            {
+                auto new_continuation = boost::asynchronous::parallel_scan<
+                        typename Continuation::return_type,
+                        T,
+                        Reduce,Combine,Scan,
+                        Job>
+                        (std::move(std::get<0>(continuation_res).get()),
+                         std::move(init),
+                         std::move(reduce),std::move(combine),std::move(scan),
+                         cutoff,task_name,prio);
+                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                {
+                    try
+                    {
+                        task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
+                    }
+                    catch(std::exception& e)
+                    {
+                        task_res.set_exception(boost::copy_exception(e));
+                    }
+                });
+            }
+            catch(std::exception& e)
+            {
+                task_res.set_exception(boost::copy_exception(e));
+            }
+        }
+        );
+    }
+
+    Continuation cont_;
+    T init_;
+    Reduce reduce_;
+    Combine combine_;
+    Scan scan_;
+    long cutoff_;
+    std::size_t prio_;
+};
+}
+// version for ranges given as continuation => will return the range as continuation
+template <class Range, class T, class Reduce, class Combine, class Scan, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+typename boost::enable_if<has_is_continuation_task<Range>,
+                          boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
+parallel_scan(Range range,T init,Reduce r, Combine c, Scan s,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+              const std::string& task_name, std::size_t prio)
+#else
+              const std::string& task_name="", std::size_t prio=0)
+#endif
+{
+    return boost::asynchronous::top_level_callback_continuation_job<typename Range::return_type,Job>
+            (boost::asynchronous::parallel_scan_range_continuation_helper<Range,T,Reduce,Combine,Scan,Job>
+                (std::move(range),std::move(init),std::move(r),std::move(c),std::move(s),cutoff,task_name,prio));
 }
 
 }}
