@@ -133,7 +133,8 @@ namespace detail
         }
         virtual bool get_failed()const
         {
-            return m_callable.get_failed();
+            bool failed = m_callable.get_failed();
+            return failed;
         }
         Fct m_callable;
     };

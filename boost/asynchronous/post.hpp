@@ -99,7 +99,11 @@ namespace detail
             ,m_promise(std::move(const_cast<post_future_helper_base&>(rhs).m_promise)),m_func(std::move(const_cast<post_future_helper_base&>(rhs).m_func)){}
         void operator()()
         {
-            OP()(m_promise,m_func);
+            try
+            {
+                OP()(m_promise,m_func);
+            }
+            catch(...){m_promise.set_exception(boost::current_exception());this->set_failed();}
         }
         boost::promise<R> m_promise;
         F m_func;
@@ -167,7 +171,11 @@ namespace detail
         BOOST_SERIALIZATION_SPLIT_MEMBER()
         void operator()()
         {
-            OP()(m_promise,m_func);
+            try
+            {
+                OP()(m_promise,m_func);
+            }
+            catch(...){m_promise.set_exception(boost::current_exception());this->set_failed();}
         }
         boost::promise<R> m_promise;
         F m_func;
@@ -218,7 +226,11 @@ namespace detail
         BOOST_SERIALIZATION_SPLIT_MEMBER()
         void operator()()
         {
-            OP()(m_promise,m_func);
+            try
+            {
+                OP()(m_promise,m_func);
+            }
+            catch(...){m_promise.set_exception(boost::current_exception());this->set_failed();}
         }
         boost::promise<R> m_promise;
         F m_func;
@@ -302,6 +314,7 @@ namespace detail
             catch(std::exception& e)
             {
                 m_promise.set_exception(boost::copy_exception(e));
+                this->set_failed();
             }
         }
         boost::promise<R> m_promise;
@@ -387,6 +400,7 @@ namespace detail
             catch(std::exception& e)
             {
                 m_promise.set_exception(boost::copy_exception(e));
+                this->set_failed();
             }
         }
         boost::promise<R> m_promise;
@@ -473,6 +487,7 @@ namespace detail
             catch(std::exception& e)
             {
                 m_promise.set_exception(boost::copy_exception(e));
+                this->set_failed();
             }
         }
         template <class Archive>
@@ -496,6 +511,7 @@ namespace detail
             else
             {
                 m_promise.set_exception(boost::copy_exception(payload.m_exception));
+                this->set_failed();
             }
         }
         std::string get_task_name()const
@@ -536,8 +552,7 @@ auto post_future(S const& scheduler, F const& func,
     {
         void operator()(promise_type& sp, F& f)const
         {
-            try{sp.set_value(f());}
-            catch(...){sp.set_exception(boost::current_exception());}
+            sp.set_value(f());
         }
     };
 
@@ -586,8 +601,8 @@ auto post_future(S const& scheduler, F const& func,
     {
         void operator()(boost::promise<void>& sp, F& f)const
         {
-            try{f();sp.set_value();}
-            catch(...){sp.set_exception(boost::current_exception());}
+            f();
+            sp.set_value();
         }
     };
 
@@ -666,13 +681,7 @@ auto interruptible_post_future(S const& scheduler, F const& func,
     {
         void operator()(promise_type& sp, F& f)const
         {
-            try{sp.set_value(f());}
-            catch(boost::thread_interrupted&)
-            {
-                boost::asynchronous::task_aborted_exception ta;
-                sp.set_exception(boost::copy_exception(ta));
-            }
-            catch(...){sp.set_exception(boost::current_exception());}
+            sp.set_value(f());
         }
     };
 
@@ -707,13 +716,8 @@ auto interruptible_post_future(S const& scheduler, F const& func,
     {
         void operator()(boost::promise<void>& sp, F& f)const
         {
-            try{f();sp.set_value();}
-            catch(boost::thread_interrupted&)
-            {
-                boost::asynchronous::task_aborted_exception ta;
-                sp.set_exception(boost::copy_exception(ta));
-            }
-            catch(...){sp.set_exception(boost::current_exception());}
+            f();
+            sp.set_value();
         }
     };
 
@@ -846,20 +850,9 @@ namespace detail
         template <class S, class CB>
         void operator()(S const& s, CB&& cb,std::string const& name,std::size_t cb_prio)const
         {
-#ifndef BOOST_NO_RVALUE_REFERENCES
             typename boost::asynchronous::job_traits<typename S::job_type>::wrapper_type w(std::forward<CB>(cb));
             w.set_name(name);
             s.post(std::move(w),cb_prio);
-#else
-            if (name.empty())
-            {
-                s.post(cb);
-            }
-            else
-            {
-                s.post_log(cb,name);
-            }
-#endif
         }
     };
     // version for serializable tasks

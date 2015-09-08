@@ -12,10 +12,15 @@
 #include <boost/asynchronous/queue/threadsafe_list.hpp>
 #include <boost/asynchronous/scheduler/threadpool_scheduler.hpp>
 #include <boost/asynchronous/post.hpp>
+#include <boost/asynchronous/diagnostics/any_loggable.hpp>
+
 #include <boost/test/unit_test.hpp>
 
 namespace
 {
+typedef boost::asynchronous::any_loggable servant_job;
+typedef std::map<std::string,std::list<boost::asynchronous::diagnostic_item> > diag_type;
+
 // main thread id
 boost::thread::id main_thread_id;
 bool called=false;
@@ -38,6 +43,26 @@ struct int_task
     int operator()()const
     {
         return 42;
+    }
+};
+struct my_exception : virtual boost::exception, virtual std::exception
+{
+    virtual const char* what() const throw()
+    {
+        return "my_exception";
+    }
+};
+struct throwing_int_task
+{
+    throwing_int_task()=default;
+    throwing_int_task(throwing_int_task&&)=default;
+    throwing_int_task& operator=(throwing_int_task&&)=default;
+    throwing_int_task(throwing_int_task const&)=delete;
+    throwing_int_task& operator=(throwing_int_task const&)=delete;
+
+    int operator()()const
+    {
+        throw my_exception();
     }
 };
 struct blocking_void_task
@@ -127,4 +152,37 @@ BOOST_AUTO_TEST_CASE( test_interruptible_int_post_future )
         // can happen if interrupt very fast, before we can start anything
     }
     BOOST_CHECK_MESSAGE(task_res == 0,"interruptible_post_future<int> called task.");
+}
+
+BOOST_AUTO_TEST_CASE( test_throw_int_post_future )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<servant_job>>>(1);
+    boost::shared_future<int> fui = boost::asynchronous::post_future(scheduler, throwing_int_task(),"throwing_int_task",0);
+    bool future_with_exception = false;
+    try
+    {
+        fui.get();
+    }
+    catch(std::exception&)
+    {
+        future_with_exception = true;
+    }
+    BOOST_CHECK_MESSAGE(future_with_exception,"post_future<throwing_int_task> did not throw.");
+    boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
+
+    // check if we found a throwing task
+    diag_type diag = scheduler.get_diagnostics().totals();
+
+    for (auto mit = diag.begin(); mit != diag.end() ; ++mit)
+    {
+        if ((*mit).first != "throwing_int_task")
+        {
+            continue;
+        }
+        for (auto jit = (*mit).second.begin(); jit != (*mit).second.end();++jit)
+        {
+            BOOST_CHECK_MESSAGE((*jit).is_failed(),"task should have been marked as failed.");
+        }
+    }
 }
