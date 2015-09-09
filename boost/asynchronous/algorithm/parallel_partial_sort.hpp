@@ -26,6 +26,7 @@ namespace boost { namespace asynchronous
 {
 namespace detail
 {
+
 template <class Iterator, class Func, class Job>
 struct parallel_partial_sort_helper: public boost::asynchronous::continuation_task<void>
 {
@@ -75,14 +76,13 @@ struct parallel_partial_sort_helper: public boost::asynchronous::continuation_ta
         }
         else
         {
-            // we "randomize" a little by taking the medium element of (beg,middle,end) as pivot for the next partition run
-            std::vector<typename std::remove_reference<decltype(*beg)>::type> temp = {*beg, *(beg+std::distance(beg,end)/2), *(end-1)};
-            std::nth_element(temp.begin(),temp.begin()+1,temp.end(),func_);
-            auto middleval = *(temp.begin()+1);
+            // we "randomize" by taking the median of medians as pivot for the next partition run
+            auto middleval = boost::asynchronous::detail::median_of_medians(beg,end,func);
+
             //std::cout << "*middle: " << middleval << std::endl;
-            auto l = [middleval](const typename std::iterator_traits<Iterator>::value_type& i)
+            auto l = [middleval, func](const typename std::iterator_traits<Iterator>::value_type& i)
             {
-                return i < middleval;
+                return func(i,middleval);
             };
 
             //std::cout << "start parallel_partition: " << end_ - beg_ << std::endl;
@@ -140,11 +140,11 @@ struct parallel_partial_sort_helper: public boost::asynchronous::continuation_ta
                     }
                     else
                     {
-                        // re-iterate on second part
+                        // bad luck, no progress can be done on this iteration, re-iterate on the whole range
                         //std::cout << "2nd part: " << end-res << std::endl;
                         auto cont = boost::asynchronous::top_level_callback_continuation_job<void,Job>
                                 (boost::asynchronous::detail::parallel_partial_sort_helper<Iterator,Func,Job>
-                                 (res,end,middle,std::move(func),size_all_partitions+std::distance(res,end),original_size,cutoff,thread_num,task_name,prio));
+                                 (beg,end,middle,std::move(func),size_all_partitions+std::distance(res,end),original_size,cutoff,thread_num,task_name,prio));
                         cont.on_done([task_res](std::tuple<boost::asynchronous::expected<void> >&& middle_element_res) mutable
                         {
                             try

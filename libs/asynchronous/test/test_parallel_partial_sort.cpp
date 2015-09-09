@@ -207,7 +207,7 @@ public:
 
 }
 
-/*BOOST_AUTO_TEST_CASE( test_parallel_partial_sort_it_small)
+BOOST_AUTO_TEST_CASE( test_parallel_partial_sort_it_small)
 {
     servant_dtor=false;
     {
@@ -228,8 +228,8 @@ public:
         }
     }
     BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
-}*/
-/*BOOST_AUTO_TEST_CASE( test_parallel_partial_sort_it_big)
+}
+BOOST_AUTO_TEST_CASE( test_parallel_partial_sort_it_big)
 {
     servant_dtor=false;
     {
@@ -250,8 +250,8 @@ public:
         }
     }
     BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
-}*/
-/*BOOST_AUTO_TEST_CASE( test_parallel_partial_sort_it_dense)
+}
+BOOST_AUTO_TEST_CASE( test_parallel_partial_sort_it_dense)
 {
     servant_dtor=false;
     {
@@ -272,4 +272,4 @@ public:
         }
     }
     BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
-}*/
+}

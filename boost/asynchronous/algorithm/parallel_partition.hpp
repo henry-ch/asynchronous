@@ -27,6 +27,38 @@ namespace boost { namespace asynchronous
 {
 namespace detail
 {
+// used by algorithms based on parallel_partitions
+template <class It, class Func>
+auto median_of_medians(It beg, It end, Func& func)
+-> typename std::remove_reference<decltype(*beg)>::type
+{
+    auto dist = std::distance(beg,end);
+    if (dist < 3)
+        return *beg;
+    if (dist < 16)
+    {
+        std::size_t offset = *(beg+dist/2);
+        std::vector<typename std::remove_reference<decltype(*beg)>::type> temp1 = {*beg, *(beg+offset), *(end-1)};
+        std::nth_element(temp1.begin(),temp1.begin()+1,temp1.end(),func);
+        return *(temp1.begin()+1);
+    }
+
+    std::size_t offset = dist/8;
+    std::vector<typename std::remove_reference<decltype(*beg)>::type> temp1 = {*beg, *(beg+offset), *(beg+offset*2)};
+    std::nth_element(temp1.begin(),temp1.begin()+1,temp1.end(),func);
+
+    std::vector<typename std::remove_reference<decltype(*beg)>::type> temp2 = {*(beg+ 3*offset), *(beg+offset*4), *(end-(3*offset+1))};
+    std::nth_element(temp2.begin(),temp2.begin()+1,temp2.end(),func);
+
+    std::vector<typename std::remove_reference<decltype(*beg)>::type> temp3 = {*(end-(2*offset+1)), *(end-(offset+1)), *(end-1)};
+    std::nth_element(temp3.begin(),temp3.begin()+1,temp3.end(),func);
+
+    std::vector<typename std::remove_reference<decltype(*beg)>::type> res = {*(temp1.begin()+1), *(temp2.begin()+1), *(temp3.begin()+1)};
+    std::nth_element(res.begin(),res.begin()+1,res.end(),func);
+
+    return *(res.begin()+1);
+}
+
 template <class iterator, class relation, class shared_data, class JobType>
 struct partition_worker : public boost::asynchronous::continuation_task<std::pair<std::list<std::pair<iterator, iterator>>, std::list<std::pair<iterator, iterator>>>>
 {

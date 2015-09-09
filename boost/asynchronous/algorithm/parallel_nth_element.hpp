@@ -85,14 +85,13 @@ struct parallel_nth_element_helper: public boost::asynchronous::continuation_tas
             else
             {
 
-                // we "randomize" a little by taking the medium element of (beg,middle,end) as pivot for the next partition run
-                std::vector<typename std::remove_reference<decltype(*beg)>::type> temp = {*beg, *(beg+std::distance(beg,end)/2), *(end-1)};
-                std::nth_element(temp.begin(),temp.begin()+1,temp.end(),func_);
-                auto nthval = *(temp.begin()+1);
+                // we "randomize" by taking the median of medians as pivot for the next partition run
+                auto nthval = boost::asynchronous::detail::median_of_medians(beg,end,func);
+
                 //std::cout << "*nth: " << nthval << std::endl;
-                auto l = [nthval](const typename std::iterator_traits<Iterator>::value_type& i)
+                auto l = [nthval,func](const typename std::iterator_traits<Iterator>::value_type& i)
                 {
-                    return i < nthval;
+                    return func(i,nthval);
                 };
 
                 //std::cout << "start parallel_partition: " << end_ - beg_ << std::endl;
