@@ -107,7 +107,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         bool sort_error = false;
                         for (auto it = middle+1; it != m_data1.end(); ++it)
                         {
-                            if (*it > *middle)
+                            if (*it < *middle)
                                 sort_error=true;
                         }
                         BOOST_CHECK_MESSAGE(!sort_error,"parallel_partial_sort did not sort correctly.");
@@ -154,7 +154,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         bool sort_error = false;
                         for (auto it = middle+1; it != m_data1.end(); ++it)
                         {
-                            if (*it > *middle)
+                            if (*it < *middle)
                                 sort_error=true;
                         }
                         BOOST_CHECK_MESSAGE(!sort_error,"parallel_partial_sort did not sort correctly.");
@@ -201,7 +201,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         bool sort_error = false;
                         for (auto it = middle+1; it != m_data1.end(); ++it)
                         {
-                            if (*it > *middle)
+                            if (*it < *middle)
                                 sort_error=true;
                         }
                         BOOST_CHECK_MESSAGE(!sort_error,"parallel_partial_sort did not sort correctly.");
