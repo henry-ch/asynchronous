@@ -104,6 +104,13 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         std::partial_sort(data_copy.begin(),middle2,data_copy.end(),
                                          [](int i,int j){return i < j;});
                         BOOST_CHECK_MESSAGE(std::is_sorted(m_data1.begin(),middle),"parallel_partial_sort did not sort.");
+                        bool sort_error = false;
+                        for (auto it = middle+1; it != m_data1.end(); ++it)
+                        {
+                            if (*it > *middle)
+                                sort_error=true;
+                        }
+                        BOOST_CHECK_MESSAGE(!sort_error,"parallel_partial_sort did not sort correctly.");
                         BOOST_CHECK_MESSAGE(std::equal(m_data1.begin(),middle,data_copy.begin()),"parallel_partial_sort gave the wrong result.");
                         aPromise->set_value();
            }// callback functor.
@@ -144,6 +151,13 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         std::partial_sort(data_copy.begin(),middle2,data_copy.end(),
                                          [](int i,int j){return i < j;});
                         BOOST_CHECK_MESSAGE(std::is_sorted(m_data1.begin(),middle),"parallel_partial_sort did not sort.");
+                        bool sort_error = false;
+                        for (auto it = middle+1; it != m_data1.end(); ++it)
+                        {
+                            if (*it > *middle)
+                                sort_error=true;
+                        }
+                        BOOST_CHECK_MESSAGE(!sort_error,"parallel_partial_sort did not sort correctly.");
                         BOOST_CHECK_MESSAGE(std::equal(m_data1.begin(),middle,data_copy.begin()),"parallel_partial_sort gave the wrong result.");
                         aPromise->set_value();
            }// callback functor.
@@ -184,6 +198,13 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         std::partial_sort(data_copy.begin(),middle2,data_copy.end(),
                                          [](int i,int j){return i < j;});
                         BOOST_CHECK_MESSAGE(std::is_sorted(m_data1.begin(),middle),"parallel_partial_sort did not sort.");
+                        bool sort_error = false;
+                        for (auto it = middle+1; it != m_data1.end(); ++it)
+                        {
+                            if (*it > *middle)
+                                sort_error=true;
+                        }
+                        BOOST_CHECK_MESSAGE(!sort_error,"parallel_partial_sort did not sort correctly.");
                         BOOST_CHECK_MESSAGE(std::equal(m_data1.begin(),middle,data_copy.begin()),"parallel_partial_sort gave the wrong result.");
                         aPromise->set_value();
            }// callback functor.
