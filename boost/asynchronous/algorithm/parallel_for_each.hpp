@@ -72,7 +72,7 @@ struct parallel_for_each_helper: public boost::asynchronous::continuation_task<F
         if (it == end_)
         {
             task_res.set_value(std::move(boost::asynchronous::detail::for_each_helper<
-                                         boost::asynchronous::min_function_traits<Func>::arity,Iterator,Func>()
+                                         boost::asynchronous::function_traits<Func>::arity,Iterator,Func>()
                                          (beg_,it,std::move(func_))));
         }
         else

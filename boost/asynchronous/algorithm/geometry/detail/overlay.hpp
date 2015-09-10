@@ -68,7 +68,6 @@ template
 >
 struct update_selection_map_fct
 {
-    enum {arity = 1};
     update_selection_map_fct(){}
     update_selection_map_fct(Geometry1 geometry1,
                              Geometry2 geometry2,
@@ -113,8 +112,7 @@ struct update_selection_map_fct
         selected_ring_properties_ = rhs.selected_ring_properties_;
         return *this;
     }
-    template <class T>
-    void operator()(T const& i)
+    void operator()(std::pair<ring_identifier,typename RingPropertyMap::mapped_type> const& i)
     {
         ring_identifier const& id = i.first;
 

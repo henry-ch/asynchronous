@@ -41,7 +41,6 @@ struct my_exception : virtual boost::exception, virtual std::exception
 
 struct test_functor
 {
-    enum {arity = 1};
     void operator()(int const& i)
     {
         total +=i;
@@ -58,7 +57,6 @@ struct test_functor
 };
 struct test_functor2
 {
-    enum {arity = 2};
     test_functor2 operator()(std::vector<int>::iterator beg, std::vector<int>::iterator end)
     {
         for(;beg != end; ++beg)
