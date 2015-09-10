@@ -64,7 +64,7 @@ struct partition_worker : public boost::asynchronous::continuation_task<std::pai
 {
 
     partition_worker(shared_data* sd)
-        : boost::asynchronous::continuation_task<std::pair<std::list<std::pair<iterator, iterator>>, std::list<std::pair<iterator, iterator>>>>("partition_worker"), m_sd(sd) { };
+        : boost::asynchronous::continuation_task<std::pair<std::list<std::pair<iterator, iterator>>, std::list<std::pair<iterator, iterator>>>>("partition_worker"), m_sd(sd) { }
 
     void operator()()
     {

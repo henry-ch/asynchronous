@@ -56,12 +56,10 @@ struct parallel_partial_sort_helper: public boost::asynchronous::continuation_ta
         // if we do not make enough progress, switch to sort
         if (size_all_partitions > (long)(4*original_size))
         {
-            //std::cout << "switch to sorting" << std::endl;
             auto cont = boost::asynchronous::parallel_sort
                      (beg,end,std::move(func),cutoff,task_name,prio);
             cont.on_done([task_res](std::tuple<boost::asynchronous::expected<void> >&& sort_res) mutable
             {
-                //std::cout << "end sorting" << std::endl;
                 try
                 {
                     // check for exceptions
@@ -79,13 +77,11 @@ struct parallel_partial_sort_helper: public boost::asynchronous::continuation_ta
             // we "randomize" by taking the median of medians as pivot for the next partition run
             auto middleval = boost::asynchronous::detail::median_of_medians(beg,end,func);
 
-            //std::cout << "*middle: " << middleval << std::endl;
             auto l = [middleval, func](const typename std::iterator_traits<Iterator>::value_type& i)
             {
                 return func(i,middleval);
             };
 
-            //std::cout << "start parallel_partition: " << end_ - beg_ << std::endl;
             auto cont = boost::asynchronous::parallel_partition<Iterator,decltype(l),Job>(beg_,end_,std::move(l),thread_num_);
             cont.on_done([task_res,beg,end,middle,func,size_all_partitions,original_size,cutoff,thread_num,task_name,prio]
                          (std::tuple<boost::asynchronous::expected<Iterator> >&& continuation_res) mutable
@@ -93,18 +89,16 @@ struct parallel_partial_sort_helper: public boost::asynchronous::continuation_ta
                 try
                 {
                     auto res = std::move(std::get<0>(continuation_res).get());
-                    //std::cout << "done parallel_partition: " << res-beg << " , " << middle-beg << " , " << size_all_partitions << std::endl;
                     auto dist_beg_res = std::distance(beg,res);
+                    auto dist_beg_middle = std::distance(beg,middle);
 
-                    // if we are close enough (20% of size of original container) to middle, also
-                    if ((std::size_t)(std::abs(std::distance(beg,middle) - dist_beg_res)) < (std::size_t) 20*original_size/100)
+                    // if we are close enough (20% above size of original container) to middle, also
+                    if ((dist_beg_res > dist_beg_middle) && ((std::size_t)(dist_beg_middle - dist_beg_res) < (std::size_t) 20*original_size/100))
                     {
-                        //std::cout << "switch to sorting" << std::endl;
                         auto cont = boost::asynchronous::parallel_sort
-                                 (beg,std::max(res,middle),std::move(func),cutoff,task_name,prio);
+                                 (beg,res,std::move(func),cutoff,task_name,prio);
                         cont.on_done([task_res](std::tuple<boost::asynchronous::expected<void> >&& sort_res) mutable
                         {
-                            //std::cout << "end sorting" << std::endl;
                             try
                             {
                                 // check for exceptions
@@ -120,7 +114,6 @@ struct parallel_partial_sort_helper: public boost::asynchronous::continuation_ta
                     else if (dist_beg_res >= std::distance(beg,middle))
                     {
                         // re-iterate on first part
-                        //std::cout << "1st part: " << res-beg << std::endl;
                         auto cont = boost::asynchronous::top_level_callback_continuation_job<void,Job>
                                 (boost::asynchronous::detail::parallel_partial_sort_helper<Iterator,Func,Job>
                                  (beg,res,middle,std::move(func),size_all_partitions+dist_beg_res,original_size,cutoff,thread_num,task_name,prio));
@@ -141,10 +134,9 @@ struct parallel_partial_sort_helper: public boost::asynchronous::continuation_ta
                     else
                     {
                         // bad luck, no progress can be done on this iteration, re-iterate on the whole range
-                        //std::cout << "2nd part: " << end-res << std::endl;
                         auto cont = boost::asynchronous::top_level_callback_continuation_job<void,Job>
                                 (boost::asynchronous::detail::parallel_partial_sort_helper<Iterator,Func,Job>
-                                 (beg,end,middle,std::move(func),size_all_partitions+std::distance(res,end),original_size,cutoff,thread_num,task_name,prio));
+                                 (beg,end,middle,std::move(func),size_all_partitions+std::distance(beg,end),original_size,cutoff,thread_num,task_name,prio));
                         cont.on_done([task_res](std::tuple<boost::asynchronous::expected<void> >&& middle_element_res) mutable
                         {
                             try
