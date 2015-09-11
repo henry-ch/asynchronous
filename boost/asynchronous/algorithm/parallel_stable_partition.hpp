@@ -72,19 +72,18 @@ struct parallel_stable_partition_part1_helper: public boost::asynchronous::conti
         {
             std::size_t count_true=0;
             std::size_t count_false=0;
-            std::vector<bool> values;
-            values.reserve(std::distance(beg_,end_));
-            for (auto it = beg_; it != end_; ++it)
+            std::vector<bool> values(std::distance(beg_,end_),true);
+            std::size_t i=0;
+            for (auto it = beg_; it != end_; ++it,++i)
             {
                 if (func_(*it))
                 {
-                    ++ count_true;
-                    values.push_back(true);
+                    ++count_true;
                 }
                 else
                 {
                     ++count_false;
-                    values.push_back(false);
+                    values[i]=false;
                 }
             }
             partition_data data(count_true,count_false,std::move(values));
