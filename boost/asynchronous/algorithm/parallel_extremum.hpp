@@ -35,7 +35,7 @@ template <typename Comparison, typename T>
 struct selector2 {
     Comparison c;
     selector2(Comparison cs) : c(cs) {}
-    T operator()(T a, T b) const {
+    T operator()(T const& a, T const& b) const {
         return c(a, b) ? a : b;
     }
 };
@@ -89,12 +89,12 @@ auto parallel_extremum(Range range, Comparison c, long cutoff,
                        const std::string& task_name="", std::size_t prio=0, typename boost::enable_if<has_is_continuation_task<Range>>::type* =0)
 #endif
     -> decltype(boost::asynchronous::parallel_reduce<decltype(range),
-                                                              decltype(detail::selector2<Comparison,typename boost::asynchronous::function_traits<Comparison>::template arg_<0>::type>(c)),
-                                                              Job>(range, detail::selector2<Comparison,typename boost::asynchronous::function_traits<Comparison>::template arg_<0>::type>(c), cutoff, task_name, prio))
+                                                              decltype(detail::selector2<Comparison,typename boost::asynchronous::function_traits<Comparison>::template remove_ref_cv_arg_<0>::type>(c)),
+                                                              Job>(range, detail::selector2<Comparison,typename boost::asynchronous::function_traits<Comparison>::template remove_ref_cv_arg_<0>::type>(c), cutoff, task_name, prio))
 {
     return boost::asynchronous::parallel_reduce<decltype(range),
-                                                decltype(detail::selector2<Comparison,typename boost::asynchronous::function_traits<Comparison>::template arg_<0>::type>(c)),
-                                                Job>(range, detail::selector2<Comparison,typename boost::asynchronous::function_traits<Comparison>::template arg_<0>::type>(c), cutoff, task_name, prio);
+                                                decltype(detail::selector2<Comparison,typename boost::asynchronous::function_traits<Comparison>::template remove_ref_cv_arg_<0>::type>(c)),
+                                                Job>(range, detail::selector2<Comparison,typename boost::asynchronous::function_traits<Comparison>::template remove_ref_cv_arg_<0>::type>(c), cutoff, task_name, prio);
 }
 
 // Iterators

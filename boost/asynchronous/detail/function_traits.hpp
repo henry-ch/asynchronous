@@ -33,6 +33,12 @@ struct function_traits<ReturnType(ClassType::*)(Args...)const>
         typedef typename std::tuple_element<i, std::tuple<Args...>>::type type;
     };
     template <std::size_t i>
+    struct remove_ref_cv_arg_
+    {
+        typedef typename std::remove_cv<
+                    typename std::remove_reference<typename std::tuple_element<i, std::tuple<Args...>>::type>::type>::type type;
+    };
+    template <std::size_t i>
     using arg = typename arg_<i>::type;
 };
 template <typename ClassType, typename ReturnType, typename... Args>
@@ -46,6 +52,12 @@ struct function_traits<ReturnType(ClassType::*)(Args...)>
     struct arg_
     {
         typedef typename std::tuple_element<i, std::tuple<Args...>>::type type;
+    };
+    template <std::size_t i>
+    struct remove_ref_cv_arg_
+    {
+        typedef typename std::remove_cv<
+                    typename std::remove_reference<typename std::tuple_element<i, std::tuple<Args...>>::type>::type>::type type;
     };
     template <std::size_t i>
     using arg = typename arg_<i>::type;

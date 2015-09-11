@@ -177,7 +177,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                                                                     {
                                                                                                       const_cast<int&>(i) *= 2;
                                                                                                     }, 20),
-                                                                  [](int a,int b){return a>b;}, 20);
+                                                                  [](int const& a,int const& b){return a>b;}, 20);
                     },// work
            [aPromise,ids,this](boost::asynchronous::expected<int> res){
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
