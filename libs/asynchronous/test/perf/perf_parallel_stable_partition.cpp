@@ -7,7 +7,6 @@
 #include <vector>
 //#include <stdlib.h>
 
-#include <boost/lexical_cast.hpp>
 #include <boost/type_traits/is_same.hpp>
 #include <boost/utility/enable_if.hpp>
 #include <boost/smart_ptr/shared_array.hpp>
@@ -27,7 +26,7 @@ using namespace std;
 #define LOOP 1
 
 #define NELEM 100000000
-#define SORTED_TYPE uint32_t
+#define SORTED_TYPE float
 
 //#define NELEM 10000000
 //#define SORTED_TYPE std::string
@@ -37,28 +36,8 @@ double servant_intern=0.0;
 long tpsize = 12;
 long tasks = 500;
 
-namespace boost {
-template<>
-inline std::string lexical_cast(const uint32_t& arg)
-{
-    return std::to_string(arg);
-}
-}
 
-template <class T, class U>
-typename boost::disable_if<boost::is_same<T,U>,U >::type
-test_cast(T const& t)
-{
-    return boost::lexical_cast<U>(t);
-}
-template <class T, class U>
-typename boost::enable_if<boost::is_same<T,U>,U >::type
-test_cast(T const& t)
-{
-    return t;
-}
-
-SORTED_TYPE compare_with = test_cast<uint32_t,SORTED_TYPE>(NELEM/2);
+SORTED_TYPE compare_with = NELEM/2;
 
 void ParallelAsyncPostCb(std::vector<SORTED_TYPE>& a)
 {
@@ -85,9 +64,9 @@ void ParallelAsyncPostCb(std::vector<SORTED_TYPE>& a)
                                                                         [](SORTED_TYPE const& i)
                                                                         {
                                                                            // cheap version
-                                                                           return i < compare_with;
-                                                                           // expensive version to show parallelism
-                                                                           //return i < test_cast<uint32_t,SORTED_TYPE>(NELEM/2);
+                                                                           //return i < compare_with;
+                                                                           // expensive version
+                                                                           return i/(i*i)/i/i < compare_with/(compare_with * compare_with)/compare_with/compare_with;
                                                                         },tasksize,"",0);
                        }
                 );
@@ -99,9 +78,9 @@ void ParallelAsyncPostCb(std::vector<SORTED_TYPE>& a)
         std::partition(a.begin(),a.end(),[](SORTED_TYPE const& i)
         {
             // cheap version
-            return i < compare_with;
+            //return i < compare_with;
             // expensive version
-            //return i < test_cast<uint32_t,SORTED_TYPE>(NELEM/2);
+            return i/(i*i)/i/i < compare_with/(compare_with * compare_with)/compare_with/compare_with;
         });
         auto seq_stop = boost::chrono::high_resolution_clock::now();
         double seq_time = (boost::chrono::nanoseconds(seq_stop - seq_start).count() / 1000000);
@@ -113,7 +92,7 @@ void test_sorted_elements(void(*pf)(std::vector<SORTED_TYPE>& ))
     std::vector<SORTED_TYPE> a(NELEM);
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
-        a[i] = test_cast<uint32_t,SORTED_TYPE>( i+NELEM) ;
+        a[i] = i+NELEM ;
     }
     (*pf)(a);
 }
@@ -122,7 +101,7 @@ void test_random_elements_many_repeated(void(*pf)(std::vector<SORTED_TYPE>& ))
     std::vector<SORTED_TYPE> a(NELEM);
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
-        a[i] = test_cast<uint32_t,SORTED_TYPE>(rand() % 10000) ;
+        a[i] = rand() % 10000 ;
     }
     (*pf)(a);
 }
@@ -131,7 +110,7 @@ void test_random_elements_few_repeated(void(*pf)(std::vector<SORTED_TYPE>& ))
     std::vector<SORTED_TYPE> a(NELEM);
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
-        a[i] = test_cast<uint32_t,SORTED_TYPE>(rand());
+        a[i] = rand();
     }
     (*pf)(a);
 }
@@ -140,7 +119,7 @@ void test_random_elements_quite_repeated(void(*pf)(std::vector<SORTED_TYPE>& ))
     std::vector<SORTED_TYPE> a(NELEM);
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
-        a[i] = test_cast<uint32_t,SORTED_TYPE>(rand() % (NELEM/2)) ;
+        a[i] = rand() % (NELEM/2) ;
     }
     (*pf)(a);
 }
@@ -149,7 +128,7 @@ void test_reversed_sorted_elements(void(*pf)(std::vector<SORTED_TYPE>& ))
     std::vector<SORTED_TYPE> a(NELEM);
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
-        a[i] = test_cast<uint32_t,SORTED_TYPE>((NELEM<<1) -i) ;
+        a[i] = (NELEM<<1) -i ;
     }
     (*pf)(a);
 }
@@ -158,7 +137,7 @@ void test_equal_elements(void(*pf)(std::vector<SORTED_TYPE>& ))
     std::vector<SORTED_TYPE> a(NELEM);
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
-        a[i] = test_cast<uint32_t,SORTED_TYPE>(NELEM) ;
+        a[i] = NELEM ;
     }
     (*pf)(a);
 }

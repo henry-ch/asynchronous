@@ -16,6 +16,9 @@
 #include <utility>
 #include <algorithm>
 
+#include <boost/range/begin.hpp>
+#include <boost/range/end.hpp>
+#include <boost/range/iterator_range.hpp>
 #include <boost/utility/enable_if.hpp>
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/continuation_task.hpp>

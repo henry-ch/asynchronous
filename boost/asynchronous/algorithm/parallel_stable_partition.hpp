@@ -13,6 +13,9 @@
 #include <algorithm>
 #include <vector>
 
+#include <boost/range/begin.hpp>
+#include <boost/range/end.hpp>
+#include <boost/range/iterator_range.hpp>
 #include <boost/utility/enable_if.hpp>
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/continuation_task.hpp>
@@ -31,8 +34,21 @@ struct partition_data
         : partition_true_(partition_true),partition_false_(partition_false),values_(std::move(values))
         , data_()
     {}
-    partition_data(partition_data&&)=default;
-    partition_data& operator=(partition_data&&)=default;
+    partition_data(partition_data&& rhs) noexcept
+        : partition_true_(rhs.partition_true_)
+        , partition_false_(rhs.partition_false_)
+        , values_(std::move(rhs.values_))
+        , data_(std::move(rhs.data_))
+    {
+    }
+    partition_data& operator=(partition_data&& rhs) noexcept
+    {
+        partition_true_ = std::move(rhs.partition_true_);
+        partition_false_ = std::move(rhs.partition_false_);
+        values_ = std::move(rhs.values_);
+        data_ = std::move(rhs.data_);
+        return *this;
+    }
     std::size_t partition_true_;
     std::size_t partition_false_;
     std::vector<bool> values_;
@@ -57,18 +73,18 @@ struct parallel_stable_partition_part1_helper: public boost::asynchronous::conti
             std::size_t count_true=0;
             std::size_t count_false=0;
             std::vector<bool> values;
-            //values.reserve(std::distance(beg_,end_));
+            values.reserve(std::distance(beg_,end_));
             for (auto it = beg_; it != end_; ++it)
             {
                 if (func_(*it))
                 {
                     ++ count_true;
-                    //values.push_back(true);
+                    values.push_back(true);
                 }
                 else
                 {
                     ++count_false;
-                    //values.push_back(false);
+                    values.push_back(false);
                 }
             }
             partition_data data(count_true,count_false,std::move(values));
@@ -151,11 +167,11 @@ struct parallel_stable_partition_part2_helper: public boost::asynchronous::conti
             auto beg = beg_;
             std::advance(out,offset_true_);
             auto out2 = out_+offset_false_+ start_false_;
-            //std::size_t values_counter=0;
+            std::size_t values_counter=0;
             while (beg != end_)
             {
-                if (func_(*beg))
-                //if (data_.values_[values_counter])
+                //if (func_(*beg))
+                if (data_.values_[values_counter])
                 {
                     *out++ = *beg;
                 }
@@ -164,7 +180,7 @@ struct parallel_stable_partition_part2_helper: public boost::asynchronous::conti
                     *out2++ = *beg;
                 }
                 ++beg;
-                //++values_counter;
+                ++values_counter;
             }
 
             // done
@@ -241,7 +257,9 @@ struct parallel_stable_partition_helper: public boost::asynchronous::continuatio
     void operator()()
     {
         boost::asynchronous::continuation_result<Iterator2> task_res = this->this_task_result();
-        //auto p1_start = boost::chrono::high_resolution_clock::now();
+#ifdef BOOST_ASYNCHRONOUS_TIMING
+        auto p1_start = boost::chrono::high_resolution_clock::now();
+#endif
         auto cont = boost::asynchronous::detail::parallel_stable_partition_part1<Iterator,Func,Job>(beg_,end_,func_,cutoff_,this->get_name(),prio_);
         auto beg = beg_;
         auto end = end_;
@@ -250,27 +268,39 @@ struct parallel_stable_partition_helper: public boost::asynchronous::continuatio
         auto task_name = this->get_name();
         auto prio = prio_;
         auto func = func_;
-        cont.on_done([task_res,beg,end,out,func,cutoff,task_name,prio/*,p1_start*/]
+        cont.on_done([task_res,beg,end,out,func,cutoff,task_name,prio
+#ifdef BOOST_ASYNCHRONOUS_TIMING
+                     ,p1_start
+#endif
+                     ]
                      (std::tuple<boost::asynchronous::expected<boost::asynchronous::detail::partition_data> >&& res)
         {
-            //auto p1_stop = boost::chrono::high_resolution_clock::now();
-            //double p1_time = (boost::chrono::nanoseconds(p1_stop - p1_start).count() / 1000000);
-            //printf ("%50s: time = %.1f msec\n","p1_time", p1_time);
+#ifdef BOOST_ASYNCHRONOUS_TIMING
+            auto p1_stop = boost::chrono::high_resolution_clock::now();
+            double p1_time = (boost::chrono::nanoseconds(p1_stop - p1_start).count() / 1000000);
+            printf ("%50s: time = %.1f msec\n","p1_time", p1_time);
+#endif
             try
             {
                 boost::asynchronous::detail::partition_data data = std::move(std::get<0>(res).get());
                 std::size_t start_false = data.partition_true_;
-                //auto p2_start = boost::chrono::high_resolution_clock::now();
+                auto p2_start = boost::chrono::high_resolution_clock::now();
                 auto cont =
                         boost::asynchronous::detail::parallel_stable_partition_part2<Iterator,Iterator2,Func,Job>
                         (beg,end,out,std::move(func),start_false,0,0,std::move(data),cutoff,task_name,prio);
                 Iterator2 ret = out;
                 std::advance(ret,start_false);
-                cont.on_done([task_res,ret/*,p2_start*/](std::tuple<boost::asynchronous::expected<void> >&& res)mutable
+                cont.on_done([task_res,ret
+#ifdef BOOST_ASYNCHRONOUS_TIMING
+                             ,p2_start
+#endif
+                             ](std::tuple<boost::asynchronous::expected<void> >&& res)mutable
                 {
-                    //auto p2_stop = boost::chrono::high_resolution_clock::now();
-                    //double p2_time = (boost::chrono::nanoseconds(p2_stop - p2_start).count() / 1000000);
-                    //printf ("%50s: time = %.1f msec\n","p2_time", p2_time);
+#ifdef BOOST_ASYNCHRONOUS_TIMING
+                    auto p2_stop = boost::chrono::high_resolution_clock::now();
+                    double p2_time = (boost::chrono::nanoseconds(p2_stop - p2_start).count() / 1000000);
+                    printf ("%50s: time = %.1f msec\n","p2_time", p2_time);
+#endif
                     try
                     {
                         // get to check that no exception
