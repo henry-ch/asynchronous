@@ -58,7 +58,7 @@ void ParallelAsyncPostCb(std::vector<SORTED_TYPE>& a)
     auto fu = boost::asynchronous::post_future(
                 scheduler,
                 [vec,vec_res,tasksize](){
-                         return boost::asynchronous::parallel_stable_partition(//std::move(*vec),
+                         return boost::asynchronous::parallel_stable_partition(
                                                                         (*vec).begin(),(*vec).end(),
                                                                         (*vec_res).begin(),
                                                                         [](SORTED_TYPE const& i)

@@ -40,7 +40,7 @@ auto median_of_medians(It beg, It end, Func& func)
         return *beg;
     if (dist < 16)
     {
-        std::size_t offset = *(beg+dist/2);
+        std::size_t offset = dist/2;
         std::vector<typename std::remove_reference<decltype(*beg)>::type> temp1 = {*beg, *(beg+offset), *(end-1)};
         std::nth_element(temp1.begin(),temp1.begin()+1,temp1.end(),func);
         return *(temp1.begin()+1);
