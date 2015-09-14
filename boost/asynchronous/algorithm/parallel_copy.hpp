@@ -57,42 +57,48 @@ struct parallel_copy_helper : public boost::asynchronous::continuation_task<void
     void operator()() const
     {
         boost::asynchronous::continuation_result<void> task_res = this_task_result();
-
-        // advance up to cutoff
-        Iterator it = boost::asynchronous::detail::find_cutoff(begin_, cutoff_, end_);
-
-        // distance between begin and it
-        std::size_t dist = std::distance(begin_, it);
-
-        // if not at end, recurse, otherwise execute here
-        if (it == end_)
+        try
         {
-            std::copy(begin_, it, result_);
-            task_res.set_value();
+            // advance up to cutoff
+            Iterator it = boost::asynchronous::detail::find_cutoff(begin_, cutoff_, end_);
+
+            // distance between begin and it
+            std::size_t dist = std::distance(begin_, it);
+
+            // if not at end, recurse, otherwise execute here
+            if (it == end_)
+            {
+                std::copy(begin_, it, result_);
+                task_res.set_value();
+            }
+            else
+            {
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                    // called when subtasks are done, set our result
+                    [task_res](std::tuple<boost::asynchronous::expected<void>, boost::asynchronous::expected<void> > res)
+                    {
+                        try
+                        {
+                            // get to check that no exception
+                            std::get<0>(res).get();
+                            std::get<1>(res).get();
+
+                            task_res.set_value();
+                        }
+                        catch (std::exception const & e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
+                    },
+                    // recursive tasks
+                    parallel_copy_helper<Iterator, ResultIterator, Job>(begin_, it, result_, cutoff_, task_name_, prio_),
+                    parallel_copy_helper<Iterator, ResultIterator, Job>(it, end_, result_ + dist, cutoff_, task_name_, prio_)
+                );
+            }
         }
-        else
+        catch(std::exception& e)
         {
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                // called when subtasks are done, set our result
-                [task_res](std::tuple<boost::asynchronous::expected<void>, boost::asynchronous::expected<void> > res)
-                {
-                    try
-                    {
-                        // get to check that no exception
-                        std::get<0>(res).get();
-                        std::get<1>(res).get();
-
-                        task_res.set_value();
-                    }
-                    catch (std::exception const & e)
-                    {
-                        task_res.set_exception(boost::copy_exception(e));
-                    }
-                },
-                // recursive tasks
-                parallel_copy_helper<Iterator, ResultIterator, Job>(begin_, it, result_, cutoff_, task_name_, prio_),
-                parallel_copy_helper<Iterator, ResultIterator, Job>(it, end_, result_ + dist, cutoff_, task_name_, prio_)
-            );
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
 
@@ -139,43 +145,50 @@ struct parallel_copy_range_move_helper: public boost::asynchronous::continuation
     parallel_copy_range_move_helper& operator=(parallel_copy_range_move_helper const&)=delete;
 
     void operator()()
-    {
-        boost::shared_ptr<Range> range = std::move(range_);
+    {        
         boost::asynchronous::continuation_result<Range> task_res = this->this_task_result();
-        // advance up to cutoff
-        auto it = boost::asynchronous::detail::find_cutoff(boost::begin(*range),cutoff_,boost::end(*range));
-        std::size_t dist = std::distance(boost::begin(*range), it);
-        // if not at end, recurse, otherwise execute here
-        if (it == boost::end(*range))
+        try
         {
-            std::copy(boost::begin(*range),it,out_);
-            task_res.set_value(std::move(*range));
+            boost::shared_ptr<Range> range = std::move(range_);
+            // advance up to cutoff
+            auto it = boost::asynchronous::detail::find_cutoff(boost::begin(*range),cutoff_,boost::end(*range));
+            std::size_t dist = std::distance(boost::begin(*range), it);
+            // if not at end, recurse, otherwise execute here
+            if (it == boost::end(*range))
+            {
+                std::copy(boost::begin(*range),it,out_);
+                task_res.set_value(std::move(*range));
+            }
+            else
+            {
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                            // called when subtasks are done, set our result
+                            [task_res,range]
+                            (std::tuple<boost::asynchronous::expected<void>,boost::asynchronous::expected<void> > res) mutable
+                            {
+                                try
+                                {
+                                    // get to check that no exception
+                                    std::get<0>(res).get();
+                                    std::get<1>(res).get();
+                                    task_res.set_value(std::move(*range));
+                                }
+                                catch(std::exception& e)
+                                {
+                                    task_res.set_exception(boost::copy_exception(e));
+                                }
+                            },
+                            // recursive tasks (via iterators)
+                            boost::asynchronous::detail::parallel_copy_helper<decltype(boost::begin(*range_)),ResultIterator,Job>
+                                (boost::begin(*range),it,out_,cutoff_,this->get_name(),prio_),
+                            boost::asynchronous::detail::parallel_copy_helper<decltype(boost::begin(*range_)),ResultIterator,Job>
+                                (it,boost::end(*range),out_ + dist,cutoff_,this->get_name(),prio_)
+                );
+            }
         }
-        else
+        catch(std::exception& e)
         {
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                        // called when subtasks are done, set our result
-                        [task_res,range]
-                        (std::tuple<boost::asynchronous::expected<void>,boost::asynchronous::expected<void> > res) mutable
-                        {
-                            try
-                            {
-                                // get to check that no exception
-                                std::get<0>(res).get();
-                                std::get<1>(res).get();
-                                task_res.set_value(std::move(*range));
-                            }
-                            catch(std::exception& e)
-                            {
-                                task_res.set_exception(boost::copy_exception(e));
-                            }
-                        },
-                        // recursive tasks (via iterators)
-                        boost::asynchronous::detail::parallel_copy_helper<decltype(boost::begin(*range_)),ResultIterator,Job>
-                            (boost::begin(*range),it,out_,cutoff_,this->get_name(),prio_),
-                        boost::asynchronous::detail::parallel_copy_helper<decltype(boost::begin(*range_)),ResultIterator,Job>
-                            (it,boost::end(*range),out_ + dist,cutoff_,this->get_name(),prio_)
-            );
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
     boost::shared_ptr<Range> range_;
@@ -220,28 +233,35 @@ struct parallel_copy_continuation_range_helper: public boost::asynchronous::cont
     void operator()()
     {
         boost::asynchronous::continuation_result<typename Continuation::return_type> task_res = this->this_task_result();
-        auto out = out_;
-        auto cutoff = cutoff_;
-        auto task_name = this->get_name();
-        auto prio = prio_;
-        cont_.on_done([task_res,out,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res)
+        try
         {
-            try
+            auto out = out_;
+            auto cutoff = cutoff_;
+            auto task_name = this->get_name();
+            auto prio = prio_;
+            cont_.on_done([task_res,out,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res)
             {
-                auto new_continuation = boost::asynchronous::parallel_copy<typename Continuation::return_type, ResultIterator, Job>(std::move(std::get<0>(continuation_res).get()),out,cutoff,task_name,prio);
-                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                try
                 {
-                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
-                });
+                    auto new_continuation = boost::asynchronous::parallel_copy<typename Continuation::return_type, ResultIterator, Job>(std::move(std::get<0>(continuation_res).get()),out,cutoff,task_name,prio);
+                    new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                    {
+                        task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
+                    });
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
             }
-            catch(std::exception& e)
-            {
-                task_res.set_exception(boost::copy_exception(e));
-            }
+            );
+            boost::asynchronous::any_continuation ac(std::move(cont_));
+            boost::asynchronous::get_continuations().emplace_front(std::move(ac));
         }
-        );
-        boost::asynchronous::any_continuation ac(std::move(cont_));
-        boost::asynchronous::get_continuations().emplace_front(std::move(ac));
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
     }
     Continuation cont_;
     ResultIterator out_;
@@ -262,26 +282,33 @@ struct parallel_copy_continuation_range_helper<Continuation, ResultIterator, Job
     void operator()()
     {
         boost::asynchronous::continuation_result<typename Continuation::return_type> task_res = this->this_task_result();
-        auto out = out_;
-        auto cutoff = cutoff_;
-        auto task_name = this->get_name();
-        auto prio = prio_;
-        cont_.on_done([task_res,out,cutoff,task_name,prio](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
+        try
         {
-            try
+            auto out = out_;
+            auto cutoff = cutoff_;
+            auto task_name = this->get_name();
+            auto prio = prio_;
+            cont_.on_done([task_res,out,cutoff,task_name,prio](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
             {
-                auto new_continuation = boost::asynchronous::parallel_copy<typename Continuation::return_type, ResultIterator, Job>(std::move(std::get<0>(continuation_res).get()),out,cutoff,task_name,prio);
-                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                try
                 {
-                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
-                });
+                    auto new_continuation = boost::asynchronous::parallel_copy<typename Continuation::return_type, ResultIterator, Job>(std::move(std::get<0>(continuation_res).get()),out,cutoff,task_name,prio);
+                    new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                    {
+                        task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
+                    });
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
             }
-            catch(std::exception& e)
-            {
-                task_res.set_exception(boost::copy_exception(e));
-            }
+            );
         }
-        );
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
     }
     Continuation cont_;
     ResultIterator out_;

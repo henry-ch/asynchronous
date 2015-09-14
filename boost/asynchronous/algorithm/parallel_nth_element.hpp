@@ -39,124 +39,130 @@ struct parallel_nth_element_helper: public boost::asynchronous::continuation_tas
     void operator()()
     {
         boost::asynchronous::continuation_result<void> task_res = this_task_result();
-        // advance up to cutoff
-        Iterator it = boost::asynchronous::detail::find_cutoff(beg_,cutoff_,end_);
-        // if not at end, recurse, otherwise execute here
-        if (it == end_)
+        try
         {
-            //std::cout << "start sequential nth_element" << std::endl;
-            std::nth_element(beg_,nth_,end_,func_);
-            task_res.set_value();
-        }
-        else
-        {
-            auto func(std::move(func_));
-            auto cutoff = cutoff_;
-            auto task_name = this->get_name();
-            auto prio = prio_;
-            auto thread_num = thread_num_;
-            auto beg = beg_;
-            auto end = end_;
-            auto nth=nth_;
-            auto size_all_partitions = size_all_partitions_;
-            auto original_size = original_size_;
-
-            // if we do not make enough progress, switch to sort
-            if (size_all_partitions > (long)(4*original_size))
+            // advance up to cutoff
+            Iterator it = boost::asynchronous::detail::find_cutoff(beg_,cutoff_,end_);
+            // if not at end, recurse, otherwise execute here
+            if (it == end_)
             {
-                //std::cout << "switch to sorting" << std::endl;
-                auto cont = boost::asynchronous::parallel_sort
-                         (beg,end,std::move(func),cutoff,task_name,prio);
-                cont.on_done([task_res](std::tuple<boost::asynchronous::expected<void> >&& sort_res) mutable
-                {
-                    //std::cout << "end sorting" << std::endl;
-                    try
-                    {
-                        // check for exceptions
-                        std::get<0>(sort_res).get();
-                        task_res.set_value();
-                    }
-                    catch(std::exception& e)
-                    {
-                        task_res.set_exception(boost::copy_exception(e));
-                    }
-                });
+                //std::cout << "start sequential nth_element" << std::endl;
+                std::nth_element(beg_,nth_,end_,func_);
+                task_res.set_value();
             }
             else
             {
+                auto func(std::move(func_));
+                auto cutoff = cutoff_;
+                auto task_name = this->get_name();
+                auto prio = prio_;
+                auto thread_num = thread_num_;
+                auto beg = beg_;
+                auto end = end_;
+                auto nth=nth_;
+                auto size_all_partitions = size_all_partitions_;
+                auto original_size = original_size_;
 
-                // we "randomize" by taking the median of medians as pivot for the next partition run
-                auto nthval = boost::asynchronous::detail::median_of_medians(beg,end,func);
-
-                //std::cout << "*nth: " << nthval << std::endl;
-                auto l = [nthval,func](const typename std::iterator_traits<Iterator>::value_type& i)
+                // if we do not make enough progress, switch to sort
+                if (size_all_partitions > (long)(4*original_size))
                 {
-                    return func(i,nthval);
-                };
-
-                //std::cout << "start parallel_partition: " << end_ - beg_ << std::endl;
-                auto cont = boost::asynchronous::parallel_partition<Iterator,decltype(l),Job>(beg_,end_,std::move(l),thread_num_);
-                cont.on_done([task_res,beg,end,nth,func,size_all_partitions,original_size,cutoff,thread_num,task_name,prio]
-                             (std::tuple<boost::asynchronous::expected<Iterator> >&& continuation_res) mutable
+                    //std::cout << "switch to sorting" << std::endl;
+                    auto cont = boost::asynchronous::parallel_sort
+                             (beg,end,std::move(func),cutoff,task_name,prio);
+                    cont.on_done([task_res](std::tuple<boost::asynchronous::expected<void> >&& sort_res) mutable
+                    {
+                        //std::cout << "end sorting" << std::endl;
+                        try
+                        {
+                            // check for exceptions
+                            std::get<0>(sort_res).get();
+                            task_res.set_value();
+                        }
+                        catch(std::exception& e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
+                    });
+                }
+                else
                 {
-                    try
-                    {
-                        auto res = std::move(std::get<0>(continuation_res).get());
-                        //std::cout << "done parallel_partition: " << res-beg << " , " << nth-beg << " , " << size_all_partitions << std::endl;
 
-                        auto dist_beg_res = std::distance(beg,res);
-                        if (dist_beg_res >= std::distance(beg,nth))
-                        {
-                            // re-iterate on first part
-                            //std::cout << "1st part: " << res-beg << std::endl;
-                            auto cont = boost::asynchronous::top_level_callback_continuation_job<void,Job>
-                                    (boost::asynchronous::detail::parallel_nth_element_helper<Iterator,Func,Job>
-                                     (beg,res,nth,std::move(func),size_all_partitions+dist_beg_res,original_size,cutoff,thread_num,task_name,prio));
-                            cont.on_done([task_res](std::tuple<boost::asynchronous::expected<void> >&& nth_element_res) mutable
-                            {
-                                try
-                                {
-                                    // check for exceptions
-                                    std::get<0>(nth_element_res).get();
-                                    task_res.set_value();
-                                }
-                                catch(std::exception& e)
-                                {
-                                    task_res.set_exception(boost::copy_exception(e));
-                                }
-                            });
-                        }
-                        else
-                        {
-                            // re-iterate on second part
-                            //std::cout << "2nd part: " << end-res << std::endl;
-                            auto cont = boost::asynchronous::top_level_callback_continuation_job<void,Job>
-                                    (boost::asynchronous::detail::parallel_nth_element_helper<Iterator,Func,Job>
-                                     (res,end,nth,std::move(func),size_all_partitions+std::distance(res,end),original_size,cutoff,thread_num,task_name,prio));
-                            cont.on_done([task_res](std::tuple<boost::asynchronous::expected<void> >&& nth_element_res) mutable
-                            {
-                                try
-                                {
-                                    // check for exceptions
-                                    std::get<0>(nth_element_res).get();
-                                    task_res.set_value();
-                                }
-                                catch(std::exception& e)
-                                {
-                                    task_res.set_exception(boost::copy_exception(e));
-                                }
-                            });
-                        }
+                    // we "randomize" by taking the median of medians as pivot for the next partition run
+                    auto nthval = boost::asynchronous::detail::median_of_medians(beg,end,func);
 
-                    }
-                    catch(std::exception& e)
+                    //std::cout << "*nth: " << nthval << std::endl;
+                    auto l = [nthval,func](const typename std::iterator_traits<Iterator>::value_type& i)
                     {
-                        task_res.set_exception(boost::copy_exception(e));
-                    }
-                });
+                        return func(i,nthval);
+                    };
+
+                    //std::cout << "start parallel_partition: " << end_ - beg_ << std::endl;
+                    auto cont = boost::asynchronous::parallel_partition<Iterator,decltype(l),Job>(beg_,end_,std::move(l),thread_num_);
+                    cont.on_done([task_res,beg,end,nth,func,size_all_partitions,original_size,cutoff,thread_num,task_name,prio]
+                                 (std::tuple<boost::asynchronous::expected<Iterator> >&& continuation_res) mutable
+                    {
+                        try
+                        {
+                            auto res = std::move(std::get<0>(continuation_res).get());
+                            //std::cout << "done parallel_partition: " << res-beg << " , " << nth-beg << " , " << size_all_partitions << std::endl;
+
+                            auto dist_beg_res = std::distance(beg,res);
+                            if (dist_beg_res >= std::distance(beg,nth))
+                            {
+                                // re-iterate on first part
+                                //std::cout << "1st part: " << res-beg << std::endl;
+                                auto cont = boost::asynchronous::top_level_callback_continuation_job<void,Job>
+                                        (boost::asynchronous::detail::parallel_nth_element_helper<Iterator,Func,Job>
+                                         (beg,res,nth,std::move(func),size_all_partitions+dist_beg_res,original_size,cutoff,thread_num,task_name,prio));
+                                cont.on_done([task_res](std::tuple<boost::asynchronous::expected<void> >&& nth_element_res) mutable
+                                {
+                                    try
+                                    {
+                                        // check for exceptions
+                                        std::get<0>(nth_element_res).get();
+                                        task_res.set_value();
+                                    }
+                                    catch(std::exception& e)
+                                    {
+                                        task_res.set_exception(boost::copy_exception(e));
+                                    }
+                                });
+                            }
+                            else
+                            {
+                                // re-iterate on second part
+                                //std::cout << "2nd part: " << end-res << std::endl;
+                                auto cont = boost::asynchronous::top_level_callback_continuation_job<void,Job>
+                                        (boost::asynchronous::detail::parallel_nth_element_helper<Iterator,Func,Job>
+                                         (res,end,nth,std::move(func),size_all_partitions+std::distance(res,end),original_size,cutoff,thread_num,task_name,prio));
+                                cont.on_done([task_res](std::tuple<boost::asynchronous::expected<void> >&& nth_element_res) mutable
+                                {
+                                    try
+                                    {
+                                        // check for exceptions
+                                        std::get<0>(nth_element_res).get();
+                                        task_res.set_value();
+                                    }
+                                    catch(std::exception& e)
+                                    {
+                                        task_res.set_exception(boost::copy_exception(e));
+                                    }
+                                });
+                            }
+
+                        }
+                        catch(std::exception& e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
+                    });
+                }
             }
         }
-
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
     }
     Iterator beg_;
     Iterator end_;

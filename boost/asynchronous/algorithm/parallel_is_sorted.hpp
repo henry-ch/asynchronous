@@ -34,45 +34,52 @@ struct parallel_is_sorted_helper: public boost::asynchronous::continuation_task<
     void operator()()
     {
         boost::asynchronous::continuation_result<bool> task_res = this_task_result();
-        // advance up to cutoff
-        Iterator it = boost::asynchronous::detail::find_cutoff(beg_,cutoff_,end_);
-        if (it == end_)
+        try
         {
-            task_res.set_value(std::is_sorted(beg_,end_,func_));
-        }
-        else
-        {
-            // optimize for not sorted range
-            auto it2 = it;
-            std::advance(it2,-1);
-            // TODO safe_advance must handle negative distance
-            if (func_(*it,*it2))
+            // advance up to cutoff
+            Iterator it = boost::asynchronous::detail::find_cutoff(beg_,cutoff_,end_);
+            if (it == end_)
             {
-                task_res.set_value(false);
-                return;
+                task_res.set_value(std::is_sorted(beg_,end_,func_));
             }
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                        // called when subtasks are done, set our result
-                        [task_res](std::tuple<boost::asynchronous::expected<bool>,boost::asynchronous::expected<bool> > res) mutable
-                        {
-                            try
+            else
+            {
+                // optimize for not sorted range
+                auto it2 = it;
+                std::advance(it2,-1);
+                // TODO safe_advance must handle negative distance
+                if (func_(*it,*it2))
+                {
+                    task_res.set_value(false);
+                    return;
+                }
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                            // called when subtasks are done, set our result
+                            [task_res](std::tuple<boost::asynchronous::expected<bool>,boost::asynchronous::expected<bool> > res) mutable
                             {
-                                // get to check that no exception
-                                bool res1 = std::get<0>(res).get();
-                                bool res2 = std::get<1>(res).get();
-                                task_res.set_value(res1 && res2);
-                            }
-                            catch(std::exception& e)
-                            {
-                                task_res.set_exception(boost::copy_exception(e));
-                            }
-                        },
-                        // recursive tasks
-                        parallel_is_sorted_helper<Iterator,Func,Job>
-                            (beg_,it,func_,cutoff_,this->get_name(),prio_),
-                        parallel_is_sorted_helper<Iterator,Func,Job>
-                            (it,end_,func_,cutoff_,this->get_name(),prio_)
-            );
+                                try
+                                {
+                                    // get to check that no exception
+                                    bool res1 = std::get<0>(res).get();
+                                    bool res2 = std::get<1>(res).get();
+                                    task_res.set_value(res1 && res2);
+                                }
+                                catch(std::exception& e)
+                                {
+                                    task_res.set_exception(boost::copy_exception(e));
+                                }
+                            },
+                            // recursive tasks
+                            parallel_is_sorted_helper<Iterator,Func,Job>
+                                (beg_,it,func_,cutoff_,this->get_name(),prio_),
+                            parallel_is_sorted_helper<Iterator,Func,Job>
+                                (it,end_,func_,cutoff_,this->get_name(),prio_)
+                );
+            }
+        }
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
     Iterator beg_;

@@ -33,46 +33,52 @@ struct if_then_else_continuation_helper :
     {}
     void operator()()
     {
-        boost::asynchronous::continuation_result<Return> task_res =
-                this->this_task_result();
-        auto if_clause = if_clause_;
-        auto then_clause = then_clause_;
-        auto else_clause = else_clause_;
-        // TODO C++14 move capture if possible
-        cont_.on_done(
-        [task_res,if_clause,then_clause,else_clause]
-        (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
+        boost::asynchronous::continuation_result<Return> task_res = this->this_task_result();
+        try
         {
-            try
+            auto if_clause = if_clause_;
+            auto then_clause = then_clause_;
+            auto else_clause = else_clause_;
+            // TODO C++14 move capture if possible
+            cont_.on_done(
+            [task_res,if_clause,then_clause,else_clause]
+            (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
             {
-                auto res = std::get<0>(continuation_res).get();
-                if (if_clause(res))
+                try
                 {
-                    auto then_cont = then_clause(std::move(res));
-                    then_cont.on_done(
-                        [task_res](std::tuple<boost::asynchronous::expected<Return> >&& then_res)
-                        {
-                            task_res.set_value(std::move(std::get<0>(then_res).get()));
-                        }
-                    );
+                    auto res = std::get<0>(continuation_res).get();
+                    if (if_clause(res))
+                    {
+                        auto then_cont = then_clause(std::move(res));
+                        then_cont.on_done(
+                            [task_res](std::tuple<boost::asynchronous::expected<Return> >&& then_res)
+                            {
+                                task_res.set_value(std::move(std::get<0>(then_res).get()));
+                            }
+                        );
+                    }
+                    else
+                    {
+                        auto else_cont = else_clause(std::move(res));
+                        else_cont.on_done(
+                            [task_res](std::tuple<boost::asynchronous::expected<Return> >&& then_res)
+                            {
+                                task_res.set_value(std::move(std::get<0>(then_res).get()));
+                            }
+                        );
+                    }
                 }
-                else
+                catch(std::exception& e)
                 {
-                    auto else_cont = else_clause(std::move(res));
-                    else_cont.on_done(
-                        [task_res](std::tuple<boost::asynchronous::expected<Return> >&& then_res)
-                        {
-                            task_res.set_value(std::move(std::get<0>(then_res).get()));
-                        }
-                    );
+                    task_res.set_exception(boost::copy_exception(e));
                 }
             }
-            catch(std::exception& e)
-            {
-                task_res.set_exception(boost::copy_exception(e));
-            }
+            );
         }
-        );
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
     }
     Continuation cont_;
     IfClause if_clause_;

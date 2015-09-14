@@ -36,34 +36,41 @@ struct parallel_merge_helper: public boost::asynchronous::continuation_task<void
     void operator()()
     {
         boost::asynchronous::continuation_result<void> task_res = this_task_result();
-        auto length1 = std::distance(beg1_,end1_);
-        auto length2 = std::distance(beg2_,end2_);
-        // if not at end, recurse, otherwise execute here
-        if ((length1+length2) <= cutoff_)
+        try
         {
-            std::merge(beg1_,end1_,beg2_,end2_,out_,func_);
-            task_res.set_value();
-        }
-        else
-        {
-            if (length1 >= length2)
+            auto length1 = std::distance(beg1_,end1_);
+            auto length2 = std::distance(beg2_,end2_);
+            // if not at end, recurse, otherwise execute here
+            if ((length1+length2) <= cutoff_)
             {
-                if (length1 == 0)
-                {
-                    task_res.set_value();
-                    return;
-                }
-                helper(beg1_,end1_,beg2_,end2_,out_,std::move(task_res));
+                std::merge(beg1_,end1_,beg2_,end2_,out_,func_);
+                task_res.set_value();
             }
             else
             {
-                if (length2 == 0)
+                if (length1 >= length2)
                 {
-                    task_res.set_value();
-                    return;
+                    if (length1 == 0)
+                    {
+                        task_res.set_value();
+                        return;
+                    }
+                    helper(beg1_,end1_,beg2_,end2_,out_,std::move(task_res));
                 }
-                helper(beg2_,end2_,beg1_,end1_,out_,std::move(task_res));
+                else
+                {
+                    if (length2 == 0)
+                    {
+                        task_res.set_value();
+                        return;
+                    }
+                    helper(beg2_,end2_,beg1_,end1_,out_,std::move(task_res));
+                }
             }
+        }
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
     template <class It1, class It2, class OutIt>
