@@ -47,53 +47,60 @@ struct parallel_partition_copy_part1_helper: public boost::asynchronous::continu
     void operator()()
     {
         boost::asynchronous::continuation_result<boost::asynchronous::detail::partition_copy_data> task_res = this_task_result();
-        // advance up to cutoff
-        Iterator it = boost::asynchronous::detail::find_cutoff(beg_,cutoff_,end_);
-        if (it == end_)
+        try
         {
-            std::size_t count_true=0;
-            std::size_t count_false=0;
-            for (auto it = beg_; it != end_; ++it)
+            // advance up to cutoff
+            Iterator it = boost::asynchronous::detail::find_cutoff(beg_,cutoff_,end_);
+            if (it == end_)
             {
-                if (func_(*it))
-                    ++ count_true;
-                else
-                    ++count_false;
+                std::size_t count_true=0;
+                std::size_t count_false=0;
+                for (auto it = beg_; it != end_; ++it)
+                {
+                    if (func_(*it))
+                        ++ count_true;
+                    else
+                        ++count_false;
+                }
+                partition_copy_data data(count_true,count_false);
+                //Iterator it_part = std::partition(beg_,end_,std::move(func_));
+                //partition_copy_data data(std::distance(beg_,it_part),std::distance(it_part,end_));
+                task_res.set_value(std::move(data));
             }
-            partition_copy_data data(count_true,count_false);
-            //Iterator it_part = std::partition(beg_,end_,std::move(func_));
-            //partition_copy_data data(std::distance(beg_,it_part),std::distance(it_part,end_));
-            task_res.set_value(std::move(data));
+            else
+            {
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                            // called when subtasks are done, set our result
+                            [task_res](std::tuple<boost::asynchronous::expected<boost::asynchronous::detail::partition_copy_data>,
+                                                  boost::asynchronous::expected<boost::asynchronous::detail::partition_copy_data> > res) mutable
+                            {
+                                try
+                                {
+                                    boost::asynchronous::detail::partition_copy_data res_left = std::move(std::get<0>(res).get());
+                                    boost::asynchronous::detail::partition_copy_data res_right = std::move(std::get<1>(res).get());
+                                    boost::asynchronous::detail::partition_copy_data res_all(res_left.partition_true_ + res_right.partition_true_,
+                                                                                             res_left.partition_false_ + res_right.partition_false_);
+                                    res_all.data_.reserve(2);
+                                    res_all.data_.push_back(std::move(res_left));
+                                    res_all.data_.push_back(std::move(res_right));
+                                    task_res.set_value(std::move(res_all));
+                                }
+                                catch(std::exception& e)
+                                {
+                                    task_res.set_exception(boost::copy_exception(e));
+                                }
+                            },
+                            // recursive tasks
+                            parallel_partition_copy_part1_helper<Iterator,Func,Job>
+                                (beg_,it,func_,cutoff_,this->get_name(),prio_),
+                            parallel_partition_copy_part1_helper<Iterator,Func,Job>
+                                (it,end_,func_,cutoff_,this->get_name(),prio_)
+                );
+            }
         }
-        else
+        catch(std::exception& e)
         {
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                        // called when subtasks are done, set our result
-                        [task_res](std::tuple<boost::asynchronous::expected<boost::asynchronous::detail::partition_copy_data>,
-                                              boost::asynchronous::expected<boost::asynchronous::detail::partition_copy_data> > res) mutable
-                        {
-                            try
-                            {
-                                boost::asynchronous::detail::partition_copy_data res_left = std::move(std::get<0>(res).get());
-                                boost::asynchronous::detail::partition_copy_data res_right = std::move(std::get<1>(res).get());
-                                boost::asynchronous::detail::partition_copy_data res_all(res_left.partition_true_ + res_right.partition_true_,
-                                                                                         res_left.partition_false_ + res_right.partition_false_);
-                                res_all.data_.reserve(2);
-                                res_all.data_.push_back(std::move(res_left));
-                                res_all.data_.push_back(std::move(res_right));
-                                task_res.set_value(std::move(res_all));
-                            }
-                            catch(std::exception& e)
-                            {
-                                task_res.set_exception(boost::copy_exception(e));
-                            }
-                        },
-                        // recursive tasks
-                        parallel_partition_copy_part1_helper<Iterator,Func,Job>
-                            (beg_,it,func_,cutoff_,this->get_name(),prio_),
-                        parallel_partition_copy_part1_helper<Iterator,Func,Job>
-                            (it,end_,func_,cutoff_,this->get_name(),prio_)
-            );
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
     Iterator beg_;
@@ -133,63 +140,70 @@ struct parallel_partition_copy_part2_helper: public boost::asynchronous::continu
     void operator()()
     {
         boost::asynchronous::continuation_result<std::pair<OutputIt1, OutputIt2>> task_res = this->this_task_result();
-        // advance up to cutoff
-        Iterator it = boost::asynchronous::detail::find_cutoff(beg_,cutoff_,end_);
-        if (it == end_)
+        try
         {
-            // write true part
-            auto out_true = out_true_;
-            auto beg = beg_;
-            std::advance(out_true,offset_true_);
-            auto out_false = out_false_;
-            std::advance(out_false,offset_false_);
-            while (beg != end_)
+            // advance up to cutoff
+            Iterator it = boost::asynchronous::detail::find_cutoff(beg_,cutoff_,end_);
+            if (it == end_)
             {
-                if (func_(*beg))
+                // write true part
+                auto out_true = out_true_;
+                auto beg = beg_;
+                std::advance(out_true,offset_true_);
+                auto out_false = out_false_;
+                std::advance(out_false,offset_false_);
+                while (beg != end_)
                 {
-                    *out_true++ = *beg;
+                    if (func_(*beg))
+                    {
+                        *out_true++ = *beg;
+                    }
+                    else
+                    {
+                        *out_false++ = *beg;
+                    }
+                    beg++;
                 }
-                else
-                {
-                    *out_false++ = *beg;
-                }
-                beg++;
-            }
 
-            // done
-            task_res.set_value(std::make_pair(out_true,out_false));
+                // done
+                task_res.set_value(std::make_pair(out_true,out_false));
+            }
+            else
+            {
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                            // called when subtasks are done, set our result
+                            [task_res]
+                            (std::tuple<boost::asynchronous::expected<std::pair<OutputIt1, OutputIt2>>,
+                                        boost::asynchronous::expected<std::pair<OutputIt1, OutputIt2>> > res) mutable
+                            {
+                                try
+                                {
+                                    // get to check that no exception
+                                    std::get<0>(res).get();
+                                    task_res.set_value(std::get<1>(res).get());
+                                }
+                                catch(std::exception& e)
+                                {
+                                    task_res.set_exception(boost::copy_exception(e));
+                                }
+                            },
+                            // recursive tasks
+                            parallel_partition_copy_part2_helper<Iterator,OutputIt1,OutputIt2,Func,Job>
+                                    (beg_,it,out_true_,out_false_,func_,
+                                     offset_true_,
+                                     offset_false_,
+                                     data_.data_[0],cutoff_,this->get_name(),prio_),
+                            parallel_partition_copy_part2_helper<Iterator,OutputIt1,OutputIt2,Func,Job>
+                                    (it,end_,out_true_,out_false_,func_,
+                                     offset_true_ + data_.data_[0].partition_true_,
+                                     offset_false_ + data_.data_[0].partition_false_,
+                                     data_.data_[1],cutoff_,this->get_name(),prio_)
+                );
+            }
         }
-        else
+        catch(std::exception& e)
         {
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                        // called when subtasks are done, set our result
-                        [task_res]
-                        (std::tuple<boost::asynchronous::expected<std::pair<OutputIt1, OutputIt2>>,
-                                    boost::asynchronous::expected<std::pair<OutputIt1, OutputIt2>> > res) mutable
-                        {
-                            try
-                            {
-                                // get to check that no exception
-                                std::get<0>(res).get();
-                                task_res.set_value(std::get<1>(res).get());
-                            }
-                            catch(std::exception& e)
-                            {
-                                task_res.set_exception(boost::copy_exception(e));
-                            }
-                        },
-                        // recursive tasks
-                        parallel_partition_copy_part2_helper<Iterator,OutputIt1,OutputIt2,Func,Job>
-                                (beg_,it,out_true_,out_false_,func_,
-                                 offset_true_,
-                                 offset_false_,
-                                 data_.data_[0],cutoff_,this->get_name(),prio_),
-                        parallel_partition_copy_part2_helper<Iterator,OutputIt1,OutputIt2,Func,Job>
-                                (it,end_,out_true_,out_false_,func_,
-                                 offset_true_ + data_.data_[0].partition_true_,
-                                 offset_false_ + data_.data_[0].partition_false_,
-                                 data_.data_[1],cutoff_,this->get_name(),prio_)
-            );
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
     Iterator beg_;
@@ -231,43 +245,49 @@ struct parallel_partition_copy_helper: public boost::asynchronous::continuation_
     void operator()()
     {
         boost::asynchronous::continuation_result<std::pair<OutputIt1, OutputIt2>> task_res = this->this_task_result();
-        auto cont = boost::asynchronous::detail::parallel_partition_copy_part1<Iterator,Func,Job>
-                        (beg_,end_,func_,cutoff_,this->get_name(),prio_);
-        auto beg = beg_;
-        auto end = end_;
-        auto out_true = out_true_;
-        auto out_false = out_false_;
-        auto cutoff = cutoff_;
-        auto task_name = this->get_name();
-        auto prio = prio_;
-        auto func = func_;
-        cont.on_done([task_res,beg,end,out_true,out_false,func,cutoff,task_name,prio]
-                     (std::tuple<boost::asynchronous::expected<boost::asynchronous::detail::partition_copy_data> >&& res) mutable
+        try
         {
-            try
+            auto cont = boost::asynchronous::detail::parallel_partition_copy_part1<Iterator,Func,Job>
+                            (beg_,end_,func_,cutoff_,this->get_name(),prio_);
+            auto beg = beg_;
+            auto end = end_;
+            auto out_true = out_true_;
+            auto out_false = out_false_;
+            auto cutoff = cutoff_;
+            auto task_name = this->get_name();
+            auto prio = prio_;
+            auto func = func_;
+            cont.on_done([task_res,beg,end,out_true,out_false,func,cutoff,task_name,prio]
+                         (std::tuple<boost::asynchronous::expected<boost::asynchronous::detail::partition_copy_data> >&& res) mutable
             {
-                boost::asynchronous::detail::partition_copy_data data = std::move(std::get<0>(res).get());
-                auto cont =
-                        boost::asynchronous::detail::parallel_partition_copy_part2<Iterator,OutputIt1,OutputIt2,Func,Job>
-                        (beg,end,out_true,out_false,std::move(func),0,0,std::move(data),cutoff,task_name,prio);
-                cont.on_done([task_res](std::tuple<boost::asynchronous::expected<std::pair<OutputIt1, OutputIt2>> >&& res)
+                try
                 {
-                    try
+                    boost::asynchronous::detail::partition_copy_data data = std::move(std::get<0>(res).get());
+                    auto cont =
+                            boost::asynchronous::detail::parallel_partition_copy_part2<Iterator,OutputIt1,OutputIt2,Func,Job>
+                            (beg,end,out_true,out_false,std::move(func),0,0,std::move(data),cutoff,task_name,prio);
+                    cont.on_done([task_res](std::tuple<boost::asynchronous::expected<std::pair<OutputIt1, OutputIt2>> >&& res)
                     {
-                        task_res.set_value(std::move(std::get<0>(res).get()));
-                    }
-                    catch(std::exception& e)
-                    {
-                        task_res.set_exception(boost::copy_exception(e));
-                    }
-                });
-            }
-            catch(std::exception& e)
-            {
-                task_res.set_exception(boost::copy_exception(e));
-            }
-        });
-
+                        try
+                        {
+                            task_res.set_value(std::move(std::get<0>(res).get()));
+                        }
+                        catch(std::exception& e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
+                    });
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
+            });
+        }
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
     }
     Iterator beg_;
     Iterator end_;

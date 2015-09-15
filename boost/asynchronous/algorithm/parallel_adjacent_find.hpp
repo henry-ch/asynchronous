@@ -57,51 +57,57 @@ struct parallel_adjacent_find_helper : public boost::asynchronous::continuation_
     void operator()() const
     {
         boost::asynchronous::continuation_result<Iterator> task_res = this->this_task_result();
-
-        // advance up to cutoff
-        // remember previous as we have to handle forward iterators
-        std::pair<Iterator,Iterator> itpair = boost::asynchronous::detail::find_cutoff_and_prev(begin_, cutoff_, end_);
-        auto it = itpair.second;
-        auto itprev = itpair.first;
-        // if not at end, recurse, otherwise execute here
-        if (it == end_)
+        try
         {
-            task_res.set_value(std::adjacent_find(begin_, end_, func_));
+            // advance up to cutoff
+            // remember previous as we have to handle forward iterators
+            std::pair<Iterator,Iterator> itpair = boost::asynchronous::detail::find_cutoff_and_prev(begin_, cutoff_, end_);
+            auto it = itpair.second;
+            auto itprev = itpair.first;
+            // if not at end, recurse, otherwise execute here
+            if (it == end_)
+            {
+                task_res.set_value(std::adjacent_find(begin_, end_, func_));
+            }
+            else
+            {
+                auto func = func_;
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                    // called when subtasks are done, set our result
+                    [task_res,func,itprev,it]
+                    (std::tuple<boost::asynchronous::expected<Iterator>, boost::asynchronous::expected<Iterator> > res) mutable
+                    {
+                        try
+                        {
+                            // get to check that no exception
+                            Iterator it1 = std::get<0>(res).get();
+                            if (it1 != it)
+                            {
+                                task_res.set_value(it1);
+                            }
+                            else if (func(*(itprev),*it1))
+                            {
+                                task_res.set_value(itprev);
+                            }
+                            else
+                            {
+                                task_res.set_value(std::get<1>(res).get());
+                            }
+                        }
+                        catch (std::exception const & e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
+                    },
+                    // recursive tasks
+                    parallel_adjacent_find_helper<Iterator, Func, Job>(begin_, it, func_, cutoff_, task_name_, prio_),
+                    parallel_adjacent_find_helper<Iterator, Func, Job>(it, end_, func_, cutoff_, task_name_, prio_)
+                );
+            }
         }
-        else
+        catch(std::exception& e)
         {
-            auto func = func_;
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                // called when subtasks are done, set our result
-                [task_res,func,itprev,it]
-                (std::tuple<boost::asynchronous::expected<Iterator>, boost::asynchronous::expected<Iterator> > res) mutable
-                {
-                    try
-                    {
-                        // get to check that no exception
-                        Iterator it1 = std::get<0>(res).get();
-                        if (it1 != it)
-                        {
-                            task_res.set_value(it1);
-                        }
-                        else if (func(*(itprev),*it1))
-                        {
-                            task_res.set_value(itprev);
-                        }
-                        else
-                        {
-                            task_res.set_value(std::get<1>(res).get());
-                        }
-                    }
-                    catch (std::exception const & e)
-                    {
-                        task_res.set_exception(boost::copy_exception(e));
-                    }
-                },
-                // recursive tasks
-                parallel_adjacent_find_helper<Iterator, Func, Job>(begin_, it, func_, cutoff_, task_name_, prio_),
-                parallel_adjacent_find_helper<Iterator, Func, Job>(it, end_, func_, cutoff_, task_name_, prio_)
-            );
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
 

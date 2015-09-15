@@ -56,31 +56,38 @@ struct parallel_replace_copy_if_continuation_helper: public boost::asynchronous:
     void operator()()
     {
         boost::asynchronous::continuation_result<Iterator2> task_res = this->this_task_result();
-        auto res_it = res_it_;
-        auto func(std::move(func_));
-        auto new_value = new_value_;
-        auto cutoff = cutoff_;
-        auto task_name = this->get_name();
-        auto prio = prio_;
-        cont_.on_done([task_res,res_it,func,new_value,cutoff,task_name,prio]
-                      (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res) mutable
+        try
         {
-            try
+            auto res_it = res_it_;
+            auto func(std::move(func_));
+            auto new_value = new_value_;
+            auto cutoff = cutoff_;
+            auto task_name = this->get_name();
+            auto prio = prio_;
+            cont_.on_done([task_res,res_it,func,new_value,cutoff,task_name,prio]
+                          (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res) mutable
             {
-                auto res = boost::make_shared<typename Continuation::return_type>(std::move(std::get<0>(continuation_res).get()));
-                auto new_continuation = boost::asynchronous::parallel_replace_copy_if
-                        <decltype(boost::begin(std::declval<typename Continuation::return_type>())), Iterator2,T,Func, Job>
-                            (boost::begin(*res),boost::end(*res),res_it,func,new_value,cutoff,task_name,prio);
-                new_continuation.on_done([res,task_res](std::tuple<boost::asynchronous::expected<Iterator2> >&& new_continuation_res)
+                try
                 {
-                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
-                });
-            }
-            catch(std::exception& e)
-            {
-                task_res.set_exception(boost::copy_exception(e));
-            }
-        });
+                    auto res = boost::make_shared<typename Continuation::return_type>(std::move(std::get<0>(continuation_res).get()));
+                    auto new_continuation = boost::asynchronous::parallel_replace_copy_if
+                            <decltype(boost::begin(std::declval<typename Continuation::return_type>())), Iterator2,T,Func, Job>
+                                (boost::begin(*res),boost::end(*res),res_it,func,new_value,cutoff,task_name,prio);
+                    new_continuation.on_done([res,task_res](std::tuple<boost::asynchronous::expected<Iterator2> >&& new_continuation_res)
+                    {
+                        task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
+                    });
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
+            });
+        }
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
     }
     Continuation cont_;
     Iterator2 res_it_;
@@ -145,32 +152,39 @@ struct parallel_replace_copy_continuation_helper: public boost::asynchronous::co
     void operator()()
     {
         boost::asynchronous::continuation_result<Iterator2> task_res = this->this_task_result();
-        auto res_it = res_it_;
-        auto old_value = old_value_;
-        auto new_value = new_value_;
-        auto cutoff = cutoff_;
-        auto task_name = this->get_name();
-        auto prio = prio_;
-        cont_.on_done([task_res,res_it,old_value,new_value,cutoff,task_name,prio]
-                      (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
+        try
         {
-            try
+            auto res_it = res_it_;
+            auto old_value = old_value_;
+            auto new_value = new_value_;
+            auto cutoff = cutoff_;
+            auto task_name = this->get_name();
+            auto prio = prio_;
+            cont_.on_done([task_res,res_it,old_value,new_value,cutoff,task_name,prio]
+                          (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
             {
-                auto res = boost::make_shared<typename Continuation::return_type>(std::move(std::get<0>(continuation_res).get()));
-                auto new_continuation = boost::asynchronous::parallel_replace_copy
-                        <decltype(boost::begin(std::declval<typename Continuation::return_type>())), Iterator2,T, Job>
-                            (boost::begin(*res),boost::end(*res),res_it,old_value,new_value,cutoff,task_name,prio);
-                new_continuation.on_done([res,task_res]
-                                         (std::tuple<boost::asynchronous::expected<Iterator2> >&& new_continuation_res) mutable
+                try
                 {
-                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
-                });
-            }
-            catch(std::exception& e)
-            {
-                task_res.set_exception(boost::copy_exception(e));
-            }
-        });
+                    auto res = boost::make_shared<typename Continuation::return_type>(std::move(std::get<0>(continuation_res).get()));
+                    auto new_continuation = boost::asynchronous::parallel_replace_copy
+                            <decltype(boost::begin(std::declval<typename Continuation::return_type>())), Iterator2,T, Job>
+                                (boost::begin(*res),boost::end(*res),res_it,old_value,new_value,cutoff,task_name,prio);
+                    new_continuation.on_done([res,task_res]
+                                             (std::tuple<boost::asynchronous::expected<Iterator2> >&& new_continuation_res) mutable
+                    {
+                        task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
+                    });
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
+            });
+        }
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
     }
     Continuation cont_;
     Iterator2 res_it_;

@@ -118,41 +118,47 @@ struct parallel_transform_helper : public boost::asynchronous::continuation_task
     void operator()()
     {
         boost::asynchronous::continuation_result<ResultIterator> task_res = this->this_task_result();
-
-        // advance up to cutoff
-        Iterator it = boost::asynchronous::detail::find_cutoff(begin_, cutoff_, end_);
-
-        // distance between begin and it
-        std::size_t dist = std::distance(begin_, it);
-
-        // if not at end, recurse, otherwise execute here
-        if (it == end_)
+        try
         {
-            task_res.set_value(Transform()(begin_, it, result_, func_));
+            // advance up to cutoff
+            Iterator it = boost::asynchronous::detail::find_cutoff(begin_, cutoff_, end_);
+
+            // distance between begin and it
+            std::size_t dist = std::distance(begin_, it);
+
+            // if not at end, recurse, otherwise execute here
+            if (it == end_)
+            {
+                task_res.set_value(Transform()(begin_, it, result_, func_));
+            }
+            else
+            {
+                ResultIterator result = result_;
+                std::advance(result, dist);
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                    // called when subtasks are done, set our result
+                    [task_res](std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res) mutable
+                    {
+                        try
+                        {
+                            // get to check that no exception
+                            std::get<0>(res).get();
+                            task_res.set_value(std::get<1>(res).get());
+                        }
+                        catch (std::exception const & e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
+                    },
+                    // recursive tasks
+                    parallel_transform_helper<Iterator, ResultIterator, Func, Job, Transform>(begin_, it, result_, func_, cutoff_, task_name_, prio_),
+                    parallel_transform_helper<Iterator, ResultIterator, Func, Job, Transform>(it, end_, result, func_, cutoff_, task_name_, prio_)
+                );
+            }
         }
-        else
+        catch(std::exception& e)
         {
-            ResultIterator result = result_;
-            std::advance(result, dist);
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                // called when subtasks are done, set our result
-                [task_res](std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res) mutable
-                {
-                    try
-                    {
-                        // get to check that no exception
-                        std::get<0>(res).get();
-                        task_res.set_value(std::get<1>(res).get());
-                    }
-                    catch (std::exception const & e)
-                    {
-                        task_res.set_exception(boost::copy_exception(e));
-                    }
-                },
-                // recursive tasks
-                parallel_transform_helper<Iterator, ResultIterator, Func, Job, Transform>(begin_, it, result_, func_, cutoff_, task_name_, prio_),
-                parallel_transform_helper<Iterator, ResultIterator, Func, Job, Transform>(it, end_, result, func_, cutoff_, task_name_, prio_)
-            );
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
 
@@ -204,43 +210,49 @@ struct parallel_transform2_helper : public boost::asynchronous::continuation_tas
     void operator()()
     {
         boost::asynchronous::continuation_result<ResultIterator> task_res = this->this_task_result();
-
-        // advance first up to cutoff
-        Iterator1 it1 = boost::asynchronous::detail::find_cutoff(begin1_, cutoff_, end1_);
-
-        // distance between begin and it
-        std::size_t dist = std::distance(begin1_, it1);
-
-        // advance second up to first cutoff
-        Iterator2 begin2 = begin2_;
-        Iterator2 it2 = begin2 + dist;
-
-        // if not at end, recurse, otherwise execute here
-        if (it1 == end1_)
+        try
         {
-            task_res.set_value(Transform()(begin1_, it1, begin2_, result_, func_));
+            // advance first up to cutoff
+            Iterator1 it1 = boost::asynchronous::detail::find_cutoff(begin1_, cutoff_, end1_);
+
+            // distance between begin and it
+            std::size_t dist = std::distance(begin1_, it1);
+
+            // advance second up to first cutoff
+            Iterator2 begin2 = begin2_;
+            Iterator2 it2 = begin2 + dist;
+
+            // if not at end, recurse, otherwise execute here
+            if (it1 == end1_)
+            {
+                task_res.set_value(Transform()(begin1_, it1, begin2_, result_, func_));
+            }
+            else
+            {
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                    // called when subtasks are done, set our result
+                    [task_res](std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res) mutable
+                    {
+                        try
+                        {
+                            // get to check that no exception
+                            std::get<0>(res).get();
+                            task_res.set_value(std::get<1>(res).get());
+                        }
+                        catch (std::exception const & e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
+                    },
+                    // recursive tasks
+                    parallel_transform2_helper<Iterator1, Iterator2, ResultIterator, Func, Job, Transform>(begin1_, it1, begin2_, result_, func_, cutoff_, task_name_, prio_),
+                    parallel_transform2_helper<Iterator1, Iterator2, ResultIterator, Func, Job, Transform>(it1, end1_, it2, result_ + dist, func_, cutoff_, task_name_, prio_)
+                );
+            }
         }
-        else
+        catch(std::exception& e)
         {
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                // called when subtasks are done, set our result
-                [task_res](std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res) mutable
-                {
-                    try
-                    {
-                        // get to check that no exception
-                        std::get<0>(res).get();
-                        task_res.set_value(std::get<1>(res).get());
-                    }
-                    catch (std::exception const & e)
-                    {
-                        task_res.set_exception(boost::copy_exception(e));
-                    }
-                },
-                // recursive tasks
-                parallel_transform2_helper<Iterator1, Iterator2, ResultIterator, Func, Job, Transform>(begin1_, it1, begin2_, result_, func_, cutoff_, task_name_, prio_),
-                parallel_transform2_helper<Iterator1, Iterator2, ResultIterator, Func, Job, Transform>(it1, end1_, it2, result_ + dist, func_, cutoff_, task_name_, prio_)
-            );
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
 
@@ -286,39 +298,45 @@ struct parallel_transform_range_helper : public boost::asynchronous::continuatio
     void operator()()
     {
         boost::asynchronous::continuation_result<ResultIterator> task_res = this->this_task_result();
-
-        // advance up to cutoff
-        auto it = boost::asynchronous::detail::find_cutoff(boost::begin(range_), cutoff_, boost::end(range_));
-
-        // distance between begin and it
-        std::size_t dist = std::distance(boost::begin(range_), it);
-
-        // if not at end, recurse, otherwise execute here
-        if (it == boost::end(range_))
+        try
         {
-            task_res.set_value(Transform()(boost::begin(range_), it, result_, func_));
+            // advance up to cutoff
+            auto it = boost::asynchronous::detail::find_cutoff(boost::begin(range_), cutoff_, boost::end(range_));
+
+            // distance between begin and it
+            std::size_t dist = std::distance(boost::begin(range_), it);
+
+            // if not at end, recurse, otherwise execute here
+            if (it == boost::end(range_))
+            {
+                task_res.set_value(Transform()(boost::begin(range_), it, result_, func_));
+            }
+            else
+            {
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                    // called when subtasks are done, set our result
+                    [task_res](std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res) mutable
+                    {
+                        try
+                        {
+                            // get to check that no exception
+                            std::get<0>(res).get();
+                            task_res.set_value(std::get<1>(res).get());
+                        }
+                        catch (std::exception const & e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
+                    },
+                    // recursive tasks
+                    parallel_transform_helper<decltype(boost::begin(range_)), ResultIterator, Func, Job, Transform>(boost::begin(range_), it, result_, func_, cutoff_, task_name_, prio_),
+                    parallel_transform_helper<decltype(boost::begin(range_)), ResultIterator, Func, Job, Transform>(it, boost::end(range_), result_ + dist, func_, cutoff_, task_name_, prio_)
+                );
+            }
         }
-        else
+        catch(std::exception& e)
         {
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                // called when subtasks are done, set our result
-                [task_res](std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res) mutable
-                {
-                    try
-                    {
-                        // get to check that no exception
-                        std::get<0>(res).get();
-                        task_res.set_value(std::get<1>(res).get());
-                    }
-                    catch (std::exception const & e)
-                    {
-                        task_res.set_exception(boost::copy_exception(e));
-                    }
-                },
-                // recursive tasks
-                parallel_transform_helper<decltype(boost::begin(range_)), ResultIterator, Func, Job, Transform>(boost::begin(range_), it, result_, func_, cutoff_, task_name_, prio_),
-                parallel_transform_helper<decltype(boost::begin(range_)), ResultIterator, Func, Job, Transform>(it, boost::end(range_), result_ + dist, func_, cutoff_, task_name_, prio_)
-            );
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
 
@@ -368,42 +386,48 @@ struct parallel_transform2_range_helper : public boost::asynchronous::continuati
     void operator()()
     {
         boost::asynchronous::continuation_result<ResultIterator> task_res = this->this_task_result();
-
-        // advance first up to cutoff
-        auto it1 = boost::asynchronous::detail::find_cutoff(boost::begin(range1_), cutoff_, boost::end(range1_));
-
-        // distance between begin and it
-        std::size_t dist = std::distance(boost::begin(range1_), it1);
-
-        // advance seconf up to first cutoff
-        auto it2 = boost::begin(range1_) + dist;
-
-        // if not at end, recurse, otherwise execute here
-        if (it1 == boost::end(range1_))
+        try
         {
-            task_res.set_value(Transform()(boost::begin(range1_), it1, boost::begin(range2_), result_, func_));
+            // advance first up to cutoff
+            auto it1 = boost::asynchronous::detail::find_cutoff(boost::begin(range1_), cutoff_, boost::end(range1_));
+
+            // distance between begin and it
+            std::size_t dist = std::distance(boost::begin(range1_), it1);
+
+            // advance seconf up to first cutoff
+            auto it2 = boost::begin(range1_) + dist;
+
+            // if not at end, recurse, otherwise execute here
+            if (it1 == boost::end(range1_))
+            {
+                task_res.set_value(Transform()(boost::begin(range1_), it1, boost::begin(range2_), result_, func_));
+            }
+            else
+            {
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                    // called when subtasks are done, set our result
+                    [task_res](std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res) mutable
+                    {
+                        try
+                        {
+                            // get to check that no exception
+                            std::get<0>(res).get();
+                            task_res.set_value(std::get<1>(res).get());
+                        }
+                        catch (std::exception const & e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
+                    },
+                    // recursive tasks
+                    parallel_transform2_helper<decltype(boost::begin(range1_)), decltype(boost::begin(range2_)), ResultIterator, Func, Job, Transform>(boost::begin(range1_), it1, boost::begin(range2_), result_, func_, cutoff_, task_name_, prio_),
+                    parallel_transform2_helper<decltype(boost::begin(range1_)), decltype(boost::begin(range2_)), ResultIterator, Func, Job, Transform>(it1, boost::end(range1_), it2, result_ + dist, func_, cutoff_, task_name_, prio_)
+                );
+            }
         }
-        else
+        catch(std::exception& e)
         {
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                // called when subtasks are done, set our result
-                [task_res](std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res) mutable
-                {
-                    try
-                    {
-                        // get to check that no exception
-                        std::get<0>(res).get();
-                        task_res.set_value(std::get<1>(res).get());
-                    }
-                    catch (std::exception const & e)
-                    {
-                        task_res.set_exception(boost::copy_exception(e));
-                    }
-                },
-                // recursive tasks
-                parallel_transform2_helper<decltype(boost::begin(range1_)), decltype(boost::begin(range2_)), ResultIterator, Func, Job, Transform>(boost::begin(range1_), it1, boost::begin(range2_), result_, func_, cutoff_, task_name_, prio_),
-                parallel_transform2_helper<decltype(boost::begin(range1_)), decltype(boost::begin(range2_)), ResultIterator, Func, Job, Transform>(it1, boost::end(range1_), it2, result_ + dist, func_, cutoff_, task_name_, prio_)
-            );
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
 
@@ -454,49 +478,55 @@ struct parallel_transform_any_iterators_helper : public boost::asynchronous::con
     void operator()()
     {
         boost::asynchronous::continuation_result<ResultIterator> task_res = this->this_task_result();
-
-        // advance first up to cutoff
-        Iterator it = boost::asynchronous::detail::find_cutoff(begin_, cutoff_, end_);
-
-        // if not at end, recurse, otherwise execute here
-        if (it == end_)
+        try
         {
-            task_res.set_value(Transform()(begin_, it, iterators_, result_, func_));
+            // advance first up to cutoff
+            Iterator it = boost::asynchronous::detail::find_cutoff(begin_, cutoff_, end_);
+
+            // if not at end, recurse, otherwise execute here
+            if (it == end_)
+            {
+                task_res.set_value(Transform()(begin_, it, iterators_, result_, func_));
+            }
+            else
+            {
+                // distance between begin and it
+                std::size_t dist = std::distance(begin_, it);
+
+                // advance other iterators up to first cutoff
+                std::tuple<Iterators...> cutoffs = iterators_;
+
+                boost::asynchronous::detail::advance_iterators(cutoffs, dist);
+
+                // advance result iterator
+                ResultIterator result_it = result_;
+                std::advance(result_it, dist);
+
+                // recurse
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                    // called when subtasks are done, set our result
+                    [task_res](std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res) mutable
+                    {
+                        try
+                        {
+                            // get to check that no exception happened
+                            std::get<0>(res).get();
+                            task_res.set_value(std::get<1>(res).get());
+                        }
+                        catch (std::exception const & e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
+                    },
+                    // recursive tasks
+                    parallel_transform_any_iterators_helper<Iterator, ResultIterator, Func, Job, Transform, Iterators...>(begin_, it, iterators_, result_, func_, cutoff_, task_name_, prio_),
+                    parallel_transform_any_iterators_helper<Iterator, ResultIterator, Func, Job, Transform, Iterators...>(it, end_, cutoffs, result_it, func_, cutoff_, task_name_, prio_)
+                );
+            }
         }
-        else
+        catch(std::exception& e)
         {
-            // distance between begin and it
-            std::size_t dist = std::distance(begin_, it);
-
-            // advance other iterators up to first cutoff
-            std::tuple<Iterators...> cutoffs = iterators_;
-
-            boost::asynchronous::detail::advance_iterators(cutoffs, dist);
-
-            // advance result iterator
-            ResultIterator result_it = result_;
-            std::advance(result_it, dist);
-
-            // recurse
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                // called when subtasks are done, set our result
-                [task_res](std::tuple<boost::asynchronous::expected<ResultIterator>, boost::asynchronous::expected<ResultIterator> > res) mutable
-                {
-                    try
-                    {
-                        // get to check that no exception happened
-                        std::get<0>(res).get();
-                        task_res.set_value(std::get<1>(res).get());
-                    }
-                    catch (std::exception const & e)
-                    {
-                        task_res.set_exception(boost::copy_exception(e));
-                    }
-                },
-                // recursive tasks
-                parallel_transform_any_iterators_helper<Iterator, ResultIterator, Func, Job, Transform, Iterators...>(begin_, it, iterators_, result_, func_, cutoff_, task_name_, prio_),
-                parallel_transform_any_iterators_helper<Iterator, ResultIterator, Func, Job, Transform, Iterators...>(it, end_, cutoffs, result_it, func_, cutoff_, task_name_, prio_)
-            );
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
 
@@ -537,18 +567,18 @@ parallel_transform(ResultIterator result, Func func, Range & range, Ranges & ...
                    const std::string& task_name = "", std::size_t prio = 0)
 #endif
 {
-    return parallel_transform<ResultIterator,
-                              Func,
-                              Job,
-                              decltype(boost::begin(range)),
-                              decltype(boost::begin(ranges))...>(result,
-                                                                 func,
-                                                                 boost::begin(range),
-                                                                 boost::end(range),
-                                                                 boost::begin(ranges)...,
-                                                                 cutoff,
-                                                                 task_name,
-                                                                 prio);
+    return boost::asynchronous::parallel_transform<ResultIterator,
+                                                   Func,
+                                                   Job,
+                                                   decltype(boost::begin(range)),
+                                                   decltype(boost::begin(ranges))...>(result,
+                                                                                      func,
+                                                                                      boost::begin(range),
+                                                                                      boost::end(range),
+                                                                                      boost::begin(ranges)...,
+                                                                                      cutoff,
+                                                                                      task_name,
+                                                                                      prio);
 }
 #endif
 }}

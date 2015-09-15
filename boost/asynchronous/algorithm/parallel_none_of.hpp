@@ -82,29 +82,36 @@ struct parallel_none_of_continuation_range_helper: public boost::asynchronous::c
     void operator()()
     {
         boost::asynchronous::continuation_result<bool> task_res = this->this_task_result();
-        auto func(std::move(func_));
-        auto cutoff = cutoff_;
-        auto task_name = this->get_name();
-        auto prio = prio_;
-        cont_.on_done([task_res,func,cutoff,task_name,prio]
-                      (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res) mutable
+        try
         {
-            try
+            auto func(std::move(func_));
+            auto cutoff = cutoff_;
+            auto task_name = this->get_name();
+            auto prio = prio_;
+            cont_.on_done([task_res,func,cutoff,task_name,prio]
+                          (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res) mutable
             {
-                auto res = boost::make_shared<typename Continuation::return_type>(std::move(std::get<0>(continuation_res).get()));
-                auto new_continuation = boost::asynchronous::parallel_none_of
-                        <decltype(boost::begin(std::declval<typename Continuation::return_type>())), Func, Job>
-                            (boost::begin(*res),boost::end(*res),func,cutoff,task_name,prio);
-                new_continuation.on_done([res,task_res](std::tuple<boost::asynchronous::expected<bool> >&& new_continuation_res)
+                try
                 {
-                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
-                });
-            }
-            catch(std::exception& e)
-            {
-                task_res.set_exception(boost::copy_exception(e));
-            }
-        });
+                    auto res = boost::make_shared<typename Continuation::return_type>(std::move(std::get<0>(continuation_res).get()));
+                    auto new_continuation = boost::asynchronous::parallel_none_of
+                            <decltype(boost::begin(std::declval<typename Continuation::return_type>())), Func, Job>
+                                (boost::begin(*res),boost::end(*res),func,cutoff,task_name,prio);
+                    new_continuation.on_done([res,task_res](std::tuple<boost::asynchronous::expected<bool> >&& new_continuation_res)
+                    {
+                        task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
+                    });
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
+            });
+        }
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
     }
     Continuation cont_;
     Func func_;

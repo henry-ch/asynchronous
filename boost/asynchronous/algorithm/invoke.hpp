@@ -41,21 +41,28 @@ struct invoke_helper: public boost::asynchronous::continuation_task<Return>
     void operator()()
     {
         boost::asynchronous::continuation_result<Return> task_res = this->this_task_result();
-        auto func(std::move(func_));
-        cont_.on_done([task_res,func](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
+        try
         {
-            try
+            auto func(std::move(func_));
+            cont_.on_done([task_res,func](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
             {
-                task_res.set_value(std::move(func(std::move(std::get<0>(continuation_res).get()))));
+                try
+                {
+                    task_res.set_value(std::move(func(std::move(std::get<0>(continuation_res).get()))));
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
             }
-            catch(std::exception& e)
-            {
-                task_res.set_exception(boost::copy_exception(e));
-            }
+            );
+            boost::asynchronous::any_continuation ac(std::move(cont_));
+            boost::asynchronous::get_continuations().emplace_front(std::move(ac));
         }
-        );
-        boost::asynchronous::any_continuation ac(std::move(cont_));
-        boost::asynchronous::get_continuations().emplace_front(std::move(ac));
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
     }
 private:
     Continuation cont_;
@@ -75,21 +82,28 @@ struct invoke_helper<Continuation,Func,Job,Return,typename ::boost::enable_if<bo
     void operator()()
     {
         boost::asynchronous::continuation_result<Return> task_res = this->this_task_result();
-        auto func(std::move(func_));
-        cont_.on_done([task_res,func](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
+        try
         {
-            try
+            auto func(std::move(func_));
+            cont_.on_done([task_res,func](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
             {
-                task_res.set_value(std::move(func(std::move(std::get<0>(continuation_res).get()))));
+                try
+                {
+                    task_res.set_value(std::move(func(std::move(std::get<0>(continuation_res).get()))));
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
             }
-            catch(std::exception& e)
-            {
-                task_res.set_exception(boost::copy_exception(e));
-            }
+            );
+            boost::asynchronous::any_continuation ac(std::move(cont_));
+            boost::asynchronous::get_continuations().emplace_front(std::move(ac));
         }
-        );
-        boost::asynchronous::any_continuation ac(std::move(cont_));
-        boost::asynchronous::get_continuations().emplace_front(std::move(ac));
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
     }
     template <class Archive>
     void serialize(Archive & ar, const unsigned int /*version*/)

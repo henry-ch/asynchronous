@@ -52,40 +52,47 @@ struct parallel_lexicographical_compare_helper: public boost::asynchronous::cont
     void operator()()
     {
         boost::asynchronous::continuation_result<bool> task_res = this->this_task_result();
-        // advance up to cutoff
-        Iterator1 it1 = boost::asynchronous::detail::find_cutoff(beg1_,cutoff_,end1_);
-        Iterator2 it2 = boost::asynchronous::detail::find_cutoff(beg2_,cutoff_,end2_);
-        // if not at end, recurse, otherwise execute here
-        if ((it1 == end1_) || (it2 == end2_))
+        try
         {
-            task_res.set_value(std::lexicographical_compare(beg1_,end1_,beg2_,end2_,func_));
+            // advance up to cutoff
+            Iterator1 it1 = boost::asynchronous::detail::find_cutoff(beg1_,cutoff_,end1_);
+            Iterator2 it2 = boost::asynchronous::detail::find_cutoff(beg2_,cutoff_,end2_);
+            // if not at end, recurse, otherwise execute here
+            if ((it1 == end1_) || (it2 == end2_))
+            {
+                task_res.set_value(std::lexicographical_compare(beg1_,end1_,beg2_,end2_,func_));
+            }
+            else
+            {
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                            // called when subtasks are done, set our result
+                            [task_res](std::tuple<boost::asynchronous::expected<bool>,boost::asynchronous::expected<bool>> res) mutable
+                            {
+                                try
+                                {
+                                    bool r1 = std::get<0>(res).get();
+                                    bool r2 = std::get<1>(res).get();
+                                    if (r1)
+                                        task_res.set_value(true);
+                                    else
+                                        task_res.set_value(r2);
+                                }
+                                catch(std::exception& e)
+                                {
+                                    task_res.set_exception(boost::copy_exception(e));
+                                }
+                            },
+                            // recursive tasks
+                            parallel_lexicographical_compare_helper<Iterator1,Iterator2,Func,Job>
+                                    (beg1_,it1,beg2_,it2,func_,cutoff_,this->get_name(),prio_),
+                            parallel_lexicographical_compare_helper<Iterator1,Iterator2,Func,Job>
+                                    (it1,end1_,it2,end2_,func_,cutoff_,this->get_name(),prio_)
+                );
+            }
         }
-        else
+        catch(std::exception& e)
         {
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                        // called when subtasks are done, set our result
-                        [task_res](std::tuple<boost::asynchronous::expected<bool>,boost::asynchronous::expected<bool>> res) mutable
-                        {
-                            try
-                            {
-                                bool r1 = std::get<0>(res).get();
-                                bool r2 = std::get<1>(res).get();
-                                if (r1)
-                                    task_res.set_value(true);
-                                else
-                                    task_res.set_value(r2);
-                            }
-                            catch(std::exception& e)
-                            {
-                                task_res.set_exception(boost::copy_exception(e));
-                            }
-                        },
-                        // recursive tasks
-                        parallel_lexicographical_compare_helper<Iterator1,Iterator2,Func,Job>
-                                (beg1_,it1,beg2_,it2,func_,cutoff_,this->get_name(),prio_),
-                        parallel_lexicographical_compare_helper<Iterator1,Iterator2,Func,Job>
-                                (it1,end1_,it2,end2_,func_,cutoff_,this->get_name(),prio_)
-            );
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
     Iterator1 beg1_;
@@ -108,40 +115,47 @@ struct parallel_lexicographical_compare_helper2: public boost::asynchronous::con
     void operator()()
     {
         boost::asynchronous::continuation_result<bool> task_res = this->this_task_result();
-        // advance up to cutoff
-        Iterator1 it1 = boost::asynchronous::detail::find_cutoff(beg1_,cutoff_,end1_);
-        Iterator2 it2 = boost::asynchronous::detail::find_cutoff(beg2_,cutoff_,end2_);
-        // if not at end, recurse, otherwise execute here
-        if ((it1 == end1_) || (it2 == end2_))
+        try
         {
-            task_res.set_value(std::lexicographical_compare(beg1_,end1_,beg2_,end2_));
+            // advance up to cutoff
+            Iterator1 it1 = boost::asynchronous::detail::find_cutoff(beg1_,cutoff_,end1_);
+            Iterator2 it2 = boost::asynchronous::detail::find_cutoff(beg2_,cutoff_,end2_);
+            // if not at end, recurse, otherwise execute here
+            if ((it1 == end1_) || (it2 == end2_))
+            {
+                task_res.set_value(std::lexicographical_compare(beg1_,end1_,beg2_,end2_));
+            }
+            else
+            {
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                            // called when subtasks are done, set our result
+                            [task_res](std::tuple<boost::asynchronous::expected<bool>,boost::asynchronous::expected<bool>> res) mutable
+                            {
+                                try
+                                {
+                                    bool r1 = std::get<0>(res).get();
+                                    bool r2 = std::get<1>(res).get();
+                                    if (r1)
+                                        task_res.set_value(true);
+                                    else
+                                        task_res.set_value(r2);
+                                }
+                                catch(std::exception& e)
+                                {
+                                    task_res.set_exception(boost::copy_exception(e));
+                                }
+                            },
+                            // recursive tasks
+                            parallel_lexicographical_compare_helper2<Iterator1,Iterator2,Job>
+                                    (beg1_,it1,beg2_,it2,cutoff_,this->get_name(),prio_),
+                            parallel_lexicographical_compare_helper2<Iterator1,Iterator2,Job>
+                                    (it1,end1_,it2,end2_,cutoff_,this->get_name(),prio_)
+                );
+            }
         }
-        else
+        catch(std::exception& e)
         {
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                        // called when subtasks are done, set our result
-                        [task_res](std::tuple<boost::asynchronous::expected<bool>,boost::asynchronous::expected<bool>> res) mutable
-                        {
-                            try
-                            {
-                                bool r1 = std::get<0>(res).get();
-                                bool r2 = std::get<1>(res).get();
-                                if (r1)
-                                    task_res.set_value(true);
-                                else
-                                    task_res.set_value(r2);
-                            }
-                            catch(std::exception& e)
-                            {
-                                task_res.set_exception(boost::copy_exception(e));
-                            }
-                        },
-                        // recursive tasks
-                        parallel_lexicographical_compare_helper2<Iterator1,Iterator2,Job>
-                                (beg1_,it1,beg2_,it2,cutoff_,this->get_name(),prio_),
-                        parallel_lexicographical_compare_helper2<Iterator1,Iterator2,Job>
-                                (it1,end1_,it2,end2_,cutoff_,this->get_name(),prio_)
-            );
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
     Iterator1 beg1_;

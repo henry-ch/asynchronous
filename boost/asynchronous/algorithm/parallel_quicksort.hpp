@@ -57,154 +57,161 @@ struct parallel_quicksort_helper: public boost::asynchronous::continuation_task<
     void operator()()
     {
         boost::asynchronous::continuation_result<void> task_res = this_task_result();
-        // advance up to cutoff
-        Iterator it = boost::asynchronous::detail::find_cutoff(beg_,cutoff_,end_);
-        // if not at end, recurse, otherwise sort here
-        if (it == end_)
+        try
         {
-            // if already reverse sorted, only reverse
-            if (std::is_sorted(beg_,it,boost::asynchronous::detail::reverse_sorted<Func>(func_)))
+            // advance up to cutoff
+            Iterator it = boost::asynchronous::detail::find_cutoff(beg_,cutoff_,end_);
+            // if not at end, recurse, otherwise sort here
+            if (it == end_)
             {
-                std::reverse(beg_,end_);
-            }
-            // if already sorted, done
-            else if (!std::is_sorted(beg_,it,func_))
-            {
-                Sort()(beg_,end_,func_);
-            }
-            task_res.set_value();
-        }
-        // if we do not make enough progress, also switch to parallel_sort
-        else if (size_all_partitions_ > (long)(std::log10(original_size_)*original_size_))
-        {
-            auto cont = boost::asynchronous::parallel_sort
-                     (beg_,end_,std::move(func_),cutoff_,this->get_name(),prio_);
-            cont.on_done([task_res](std::tuple<boost::asynchronous::expected<void> >&& sort_res) mutable
-            {
-                try
+                // if already reverse sorted, only reverse
+                if (std::is_sorted(beg_,it,boost::asynchronous::detail::reverse_sorted<Func>(func_)))
                 {
-                    // check for exceptions
-                    std::get<0>(sort_res).get();
-                    task_res.set_value();
+                    std::reverse(beg_,end_);
                 }
-                catch(std::exception& e)
+                // if already sorted, done
+                else if (!std::is_sorted(beg_,it,func_))
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    Sort()(beg_,end_,func_);
                 }
-            });
-        }
-        else
-        {
-            auto beg = beg_;
-            auto end = end_;
-            auto func = func_;
-            auto thread_num = thread_num_;
-            auto task_name = this->get_name();
-            auto prio = prio_;
-            auto cutoff = cutoff_;
-            auto size_all_partitions = size_all_partitions_;
-            auto original_size = original_size_;
-
-            // optimization for cases where we are already sorted
-            auto cont = boost::asynchronous::parallel_is_sorted<Iterator,Func,Job>(beg,end,func,cutoff,task_name+"_is_sorted",prio);
-            cont.on_done([task_res,beg,end,func,thread_num,size_all_partitions,original_size,cutoff,task_name,prio]
-                (std::tuple<boost::asynchronous::expected<bool> >&& res) mutable
+                task_res.set_value();
+            }
+            // if we do not make enough progress, also switch to parallel_sort
+            else if (size_all_partitions_ > (long)(std::log10(original_size_)*original_size_))
+            {
+                auto cont = boost::asynchronous::parallel_sort
+                         (beg_,end_,std::move(func_),cutoff_,this->get_name(),prio_);
+                cont.on_done([task_res](std::tuple<boost::asynchronous::expected<void> >&& sort_res) mutable
                 {
                     try
                     {
-                        bool sorted = std::get<0>(res).get();
-                        if (sorted)
-                        {
-                            task_res.set_value();
-                            return;
-                        }
+                        // check for exceptions
+                        std::get<0>(sort_res).get();
+                        task_res.set_value();
                     }
                     catch(std::exception& e)
                     {
                         task_res.set_exception(boost::copy_exception(e));
-                        return;
                     }
-                   //check if reverse sorted
-                    auto cont2 = boost::asynchronous::parallel_is_reverse_sorted<Iterator,Func,Job>
-                        (beg,end,func,cutoff,task_name+"_is_reverse_sorted",prio);
-                    cont2.on_done([task_res,beg,end,func,thread_num,size_all_partitions,original_size,cutoff,task_name,prio]
-                                  (std::tuple<boost::asynchronous::expected<bool> >&& res) mutable
+                });
+            }
+            else
+            {
+                auto beg = beg_;
+                auto end = end_;
+                auto func = func_;
+                auto thread_num = thread_num_;
+                auto task_name = this->get_name();
+                auto prio = prio_;
+                auto cutoff = cutoff_;
+                auto size_all_partitions = size_all_partitions_;
+                auto original_size = original_size_;
+
+                // optimization for cases where we are already sorted
+                auto cont = boost::asynchronous::parallel_is_sorted<Iterator,Func,Job>(beg,end,func,cutoff,task_name+"_is_sorted",prio);
+                cont.on_done([task_res,beg,end,func,thread_num,size_all_partitions,original_size,cutoff,task_name,prio]
+                    (std::tuple<boost::asynchronous::expected<bool> >&& res) mutable
                     {
                         try
                         {
                             bool sorted = std::get<0>(res).get();
                             if (sorted)
                             {
-                                // reverse sorted
-                                auto cont3 = boost::asynchronous::parallel_reverse<Iterator,Job>(beg,end,cutoff,task_name+"_reverse",prio);
-                                cont3.on_done([task_res](std::tuple<boost::asynchronous::expected<void> >&& res) mutable
+                                task_res.set_value();
+                                return;
+                            }
+                        }
+                        catch(std::exception& e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                            return;
+                        }
+                       //check if reverse sorted
+                        auto cont2 = boost::asynchronous::parallel_is_reverse_sorted<Iterator,Func,Job>
+                            (beg,end,func,cutoff,task_name+"_is_reverse_sorted",prio);
+                        cont2.on_done([task_res,beg,end,func,thread_num,size_all_partitions,original_size,cutoff,task_name,prio]
+                                      (std::tuple<boost::asynchronous::expected<bool> >&& res) mutable
+                        {
+                            try
+                            {
+                                bool sorted = std::get<0>(res).get();
+                                if (sorted)
+                                {
+                                    // reverse sorted
+                                    auto cont3 = boost::asynchronous::parallel_reverse<Iterator,Job>(beg,end,cutoff,task_name+"_reverse",prio);
+                                    cont3.on_done([task_res](std::tuple<boost::asynchronous::expected<void> >&& res) mutable
+                                    {
+                                        try
+                                        {
+                                            std::get<0>(res).get();
+                                            task_res.set_value();
+                                        }
+                                        catch(std::exception& e)
+                                        {
+                                            task_res.set_exception(boost::copy_exception(e));
+                                        }
+                                    });
+                                    return;
+                                }
+                                // we "randomize" by taking the median of medians as pivot for the next partition run
+                                auto middleval = boost::asynchronous::detail::median_of_medians(beg,end,func);
+
+                                auto l = [middleval, func](const typename std::iterator_traits<Iterator>::value_type& i)
+                                {
+                                    return func(i,middleval);
+                                };
+
+                                auto cont3 = boost::asynchronous::parallel_partition<Iterator,decltype(l),Job>(beg,end,std::move(l),thread_num);
+                                cont3.on_done([task_res,beg,end,func,thread_num,size_all_partitions,original_size,cutoff,task_name,prio]
+                                             (std::tuple<boost::asynchronous::expected<Iterator> >&& continuation_res)
                                 {
                                     try
                                     {
-                                        std::get<0>(res).get();
-                                        task_res.set_value();
+                                        // get our middle iterator
+                                        Iterator it = std::get<0>(continuation_res).get();
+                                        auto dist_beg_it = std::distance(beg,it);
+                                        auto dist_it_end = std::distance(it,end);
+                                        // partition our sub-partitions
+                                        boost::asynchronous::create_callback_continuation_job<Job>(
+                                            [task_res]
+                                            (std::tuple<boost::asynchronous::expected<void>,boost::asynchronous::expected<void> > res) mutable
+                                            {
+                                                try
+                                                {
+                                                    // get to check that no exception
+                                                    std::get<0>(res).get();
+                                                    std::get<1>(res).get();
+                                                    task_res.set_value();
+                                                }
+                                                catch(std::exception& e)
+                                                {
+                                                    task_res.set_exception(boost::copy_exception(e));
+                                                }
+                                            },
+                                            // recursive tasks
+                                            boost::asynchronous::detail::parallel_quicksort_helper<Iterator,Func,Job,Sort>
+                                                    (beg,it,func,thread_num,size_all_partitions+dist_beg_it,original_size,cutoff,task_name,prio),
+                                            boost::asynchronous::detail::parallel_quicksort_helper<Iterator,Func,Job,Sort>
+                                                    (it,end,func,thread_num,size_all_partitions+dist_it_end,original_size,cutoff,task_name,prio)
+                                        );
                                     }
                                     catch(std::exception& e)
                                     {
                                         task_res.set_exception(boost::copy_exception(e));
                                     }
                                 });
-                                return;
                             }
-                            // we "randomize" by taking the median of medians as pivot for the next partition run
-                            auto middleval = boost::asynchronous::detail::median_of_medians(beg,end,func);
-
-                            auto l = [middleval, func](const typename std::iterator_traits<Iterator>::value_type& i)
+                            catch(std::exception& e)
                             {
-                                return func(i,middleval);
-                            };
-
-                            auto cont3 = boost::asynchronous::parallel_partition<Iterator,decltype(l),Job>(beg,end,std::move(l),thread_num);
-                            cont3.on_done([task_res,beg,end,func,thread_num,size_all_partitions,original_size,cutoff,task_name,prio]
-                                         (std::tuple<boost::asynchronous::expected<Iterator> >&& continuation_res)
-                            {
-                                try
-                                {
-                                    // get our middle iterator
-                                    Iterator it = std::get<0>(continuation_res).get();
-                                    auto dist_beg_it = std::distance(beg,it);
-                                    auto dist_it_end = std::distance(it,end);
-                                    // partition our sub-partitions
-                                    boost::asynchronous::create_callback_continuation_job<Job>(
-                                        [task_res]
-                                        (std::tuple<boost::asynchronous::expected<void>,boost::asynchronous::expected<void> > res) mutable
-                                        {
-                                            try
-                                            {
-                                                // get to check that no exception
-                                                std::get<0>(res).get();
-                                                std::get<1>(res).get();
-                                                task_res.set_value();
-                                            }
-                                            catch(std::exception& e)
-                                            {
-                                                task_res.set_exception(boost::copy_exception(e));
-                                            }
-                                        },
-                                        // recursive tasks
-                                        boost::asynchronous::detail::parallel_quicksort_helper<Iterator,Func,Job,Sort>
-                                                (beg,it,func,thread_num,size_all_partitions+dist_beg_it,original_size,cutoff,task_name,prio),
-                                        boost::asynchronous::detail::parallel_quicksort_helper<Iterator,Func,Job,Sort>
-                                                (it,end,func,thread_num,size_all_partitions+dist_it_end,original_size,cutoff,task_name,prio)
-                                    );
-                                }
-                                catch(std::exception& e)
-                                {
-                                    task_res.set_exception(boost::copy_exception(e));
-                                }
-                            });
-                        }
-                        catch(std::exception& e)
-                        {
-                            task_res.set_exception(boost::copy_exception(e));
-                        }
-                    });
-            });
+                                task_res.set_exception(boost::copy_exception(e));
+                            }
+                        });
+                });
+            }
+        }
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
 

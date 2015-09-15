@@ -52,36 +52,43 @@ struct parallel_equal_helper: public boost::asynchronous::continuation_task<bool
     void operator()()
     {
         boost::asynchronous::continuation_result<bool> task_res = this->this_task_result();
-        // advance up to cutoff
-        Iterator1 it = boost::asynchronous::detail::find_cutoff(beg1_,cutoff_,end1_);
-        // if not at end, recurse, otherwise execute here
-        if (it == end1_)
+        try
         {
-            task_res.set_value(std::equal(beg1_,end1_,beg2_,func_));
+            // advance up to cutoff
+            Iterator1 it = boost::asynchronous::detail::find_cutoff(beg1_,cutoff_,end1_);
+            // if not at end, recurse, otherwise execute here
+            if (it == end1_)
+            {
+                task_res.set_value(std::equal(beg1_,end1_,beg2_,func_));
+            }
+            else
+            {
+                auto beg2 = beg2_;
+                std::advance(beg2,std::distance(beg1_,it));
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                            // called when subtasks are done, set our result
+                            [task_res](std::tuple<boost::asynchronous::expected<bool>,boost::asynchronous::expected<bool>> res) mutable
+                            {
+                                try
+                                {
+                                    bool r1 = std::get<0>(res).get();
+                                    bool r2 = std::get<1>(res).get();
+                                    task_res.set_value( r1 && r2);
+                                }
+                                catch(std::exception& e)
+                                {
+                                    task_res.set_exception(boost::copy_exception(e));
+                                }
+                            },
+                            // recursive tasks
+                            parallel_equal_helper<Iterator1,Iterator2,Func,Job>(beg1_,it,beg2_,func_,cutoff_,this->get_name(),prio_),
+                            parallel_equal_helper<Iterator1,Iterator2,Func,Job>(it,end1_,beg2,func_,cutoff_,this->get_name(),prio_)
+                );
+            }
         }
-        else
+        catch(std::exception& e)
         {
-            auto beg2 = beg2_;
-            std::advance(beg2,std::distance(beg1_,it));
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                        // called when subtasks are done, set our result
-                        [task_res](std::tuple<boost::asynchronous::expected<bool>,boost::asynchronous::expected<bool>> res) mutable
-                        {
-                            try
-                            {
-                                bool r1 = std::get<0>(res).get();
-                                bool r2 = std::get<1>(res).get();
-                                task_res.set_value( r1 && r2);
-                            }
-                            catch(std::exception& e)
-                            {
-                                task_res.set_exception(boost::copy_exception(e));
-                            }
-                        },
-                        // recursive tasks
-                        parallel_equal_helper<Iterator1,Iterator2,Func,Job>(beg1_,it,beg2_,func_,cutoff_,this->get_name(),prio_),
-                        parallel_equal_helper<Iterator1,Iterator2,Func,Job>(it,end1_,beg2,func_,cutoff_,this->get_name(),prio_)
-            );
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
     Iterator1 beg1_;
@@ -103,36 +110,43 @@ struct parallel_equal_helper2: public boost::asynchronous::continuation_task<boo
     void operator()()
     {
         boost::asynchronous::continuation_result<bool> task_res = this->this_task_result();
-        // advance up to cutoff
-        Iterator1 it = boost::asynchronous::detail::find_cutoff(beg1_,cutoff_,end1_);
-        // if not at end, recurse, otherwise execute here
-        if (it == end1_)
+        try
         {
-            task_res.set_value(std::equal(beg1_,end1_,beg2_));
+            // advance up to cutoff
+            Iterator1 it = boost::asynchronous::detail::find_cutoff(beg1_,cutoff_,end1_);
+            // if not at end, recurse, otherwise execute here
+            if (it == end1_)
+            {
+                task_res.set_value(std::equal(beg1_,end1_,beg2_));
+            }
+            else
+            {
+                auto beg2 = beg2_;
+                std::advance(beg2,std::distance(beg1_,it));
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                            // called when subtasks are done, set our result
+                            [task_res](std::tuple<boost::asynchronous::expected<bool>,boost::asynchronous::expected<bool>> res) mutable
+                            {
+                                try
+                                {
+                                    bool r1 = std::get<0>(res).get();
+                                    bool r2 = std::get<1>(res).get();
+                                    task_res.set_value( r1 && r2);
+                                }
+                                catch(std::exception& e)
+                                {
+                                    task_res.set_exception(boost::copy_exception(e));
+                                }
+                            },
+                            // recursive tasks
+                            parallel_equal_helper2<Iterator1,Iterator2,Job>(beg1_,it,beg2_,cutoff_,this->get_name(),prio_),
+                            parallel_equal_helper2<Iterator1,Iterator2,Job>(it,end1_,beg2,cutoff_,this->get_name(),prio_)
+                );
+            }
         }
-        else
+        catch(std::exception& e)
         {
-            auto beg2 = beg2_;
-            std::advance(beg2,std::distance(beg1_,it));
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                        // called when subtasks are done, set our result
-                        [task_res](std::tuple<boost::asynchronous::expected<bool>,boost::asynchronous::expected<bool>> res) mutable
-                        {
-                            try
-                            {
-                                bool r1 = std::get<0>(res).get();
-                                bool r2 = std::get<1>(res).get();
-                                task_res.set_value( r1 && r2);
-                            }
-                            catch(std::exception& e)
-                            {
-                                task_res.set_exception(boost::copy_exception(e));
-                            }
-                        },
-                        // recursive tasks
-                        parallel_equal_helper2<Iterator1,Iterator2,Job>(beg1_,it,beg2_,cutoff_,this->get_name(),prio_),
-                        parallel_equal_helper2<Iterator1,Iterator2,Job>(it,end1_,beg2,cutoff_,this->get_name(),prio_)
-            );
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
     Iterator1 beg1_;

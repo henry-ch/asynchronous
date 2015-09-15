@@ -72,34 +72,41 @@ struct parallel_count_helper: public boost::asynchronous::continuation_task<long
     void operator()()
     {
         boost::asynchronous::continuation_result<long> task_res = this->this_task_result();
-        // advance up to cutoff
-        Iterator it = boost::asynchronous::detail::find_cutoff(beg_,cutoff_,end_);
-        // if not at end, recurse, otherwise execute here
-        if (it == end_)
+        try
         {
-            task_res.set_value(std::move(boost::asynchronous::detail::count(boost::make_iterator_range(beg_, it),func_)));
+            // advance up to cutoff
+            Iterator it = boost::asynchronous::detail::find_cutoff(beg_,cutoff_,end_);
+            // if not at end, recurse, otherwise execute here
+            if (it == end_)
+            {
+                task_res.set_value(std::move(boost::asynchronous::detail::count(boost::make_iterator_range(beg_, it),func_)));
+            }
+            else
+            {
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                            // called when subtasks are done, set our result
+                            [task_res](std::tuple<boost::asynchronous::expected<long>,boost::asynchronous::expected<long>> res) mutable
+                            {
+                                try
+                                {
+                                    long rt = std::get<0>(res).get();
+                                    rt += std::get<1>(res).get();
+                                    task_res.set_value(std::move(rt));
+                                }
+                                catch(std::exception& e)
+                                {
+                                    task_res.set_exception(boost::copy_exception(e));
+                                }
+                            },
+                            // recursive tasks
+                            parallel_count_helper<Iterator,Func,Job>(beg_,it,func_,cutoff_,this->get_name(),prio_),
+                            parallel_count_helper<Iterator,Func,Job>(it,end_,func_,cutoff_,this->get_name(),prio_)
+                );
+            }
         }
-        else
+        catch(std::exception& e)
         {
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                        // called when subtasks are done, set our result
-                        [task_res](std::tuple<boost::asynchronous::expected<long>,boost::asynchronous::expected<long>> res) mutable
-                        {
-                            try
-                            {
-                                long rt = std::get<0>(res).get();
-                                rt += std::get<1>(res).get();
-                                task_res.set_value(std::move(rt));
-                            }
-                            catch(std::exception& e)
-                            {
-                                task_res.set_exception(boost::copy_exception(e));
-                            }
-                        },
-                        // recursive tasks
-                        parallel_count_helper<Iterator,Func,Job>(beg_,it,func_,cutoff_,this->get_name(),prio_),
-                        parallel_count_helper<Iterator,Func,Job>(it,end_,func_,cutoff_,this->get_name(),prio_)
-            );
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
     Iterator beg_;
@@ -154,34 +161,41 @@ struct parallel_count_range_helper: public boost::asynchronous::continuation_tas
     void operator()()
     {
         boost::asynchronous::continuation_result<long> task_res = this->this_task_result();
-        // advance up to cutoff
-        auto it = boost::asynchronous::detail::find_cutoff(boost::begin(range_),cutoff_,boost::end(range_));
-        // if not at end, recurse, otherwise execute here
-        if (it == boost::end(range_))
+        try
         {
-            task_res.set_value(std::move(boost::asynchronous::detail::count(boost::make_iterator_range(boost::begin(range_), it),std::move(func_))));
+            // advance up to cutoff
+            auto it = boost::asynchronous::detail::find_cutoff(boost::begin(range_),cutoff_,boost::end(range_));
+            // if not at end, recurse, otherwise execute here
+            if (it == boost::end(range_))
+            {
+                task_res.set_value(std::move(boost::asynchronous::detail::count(boost::make_iterator_range(boost::begin(range_), it),std::move(func_))));
+            }
+            else
+            {
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                            // called when subtasks are done, set our result
+                            [task_res](std::tuple<boost::asynchronous::expected<long>,boost::asynchronous::expected<long>> res) mutable
+                            {
+                                try
+                                {
+                                    long rt = std::get<0>(res).get();
+                                    rt += std::get<1>(res).get();
+                                    task_res.set_value(std::move(rt));
+                                }
+                                catch(std::exception& e)
+                                {
+                                    task_res.set_exception(boost::copy_exception(e));
+                                }
+                            },
+                            // recursive tasks
+                            parallel_count_helper<decltype(boost::begin(range_)),Func,Job>(boost::begin(range_),it,func_,cutoff_,this->get_name(),prio_),
+                            parallel_count_helper<decltype(boost::begin(range_)),Func,Job>(it,boost::end(range_),func_,cutoff_,this->get_name(),prio_)
+                );
+            }
         }
-        else
+        catch(std::exception& e)
         {
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                        // called when subtasks are done, set our result
-                        [task_res](std::tuple<boost::asynchronous::expected<long>,boost::asynchronous::expected<long>> res) mutable
-                        {
-                            try
-                            {
-                                long rt = std::get<0>(res).get();
-                                rt += std::get<1>(res).get();
-                                task_res.set_value(std::move(rt));
-                            }
-                            catch(std::exception& e)
-                            {
-                                task_res.set_exception(boost::copy_exception(e));
-                            }
-                        },
-                        // recursive tasks
-                        parallel_count_helper<decltype(boost::begin(range_)),Func,Job>(boost::begin(range_),it,func_,cutoff_,this->get_name(),prio_),
-                        parallel_count_helper<decltype(boost::begin(range_)),Func,Job>(it,boost::end(range_),func_,cutoff_,this->get_name(),prio_)
-            );
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
     Range const& range_;
@@ -215,38 +229,45 @@ struct parallel_count_range_move_helper: public boost::asynchronous::continuatio
     {}
     void operator()()
     {
-        boost::shared_ptr<Range> range = std::move(range_);        
         boost::asynchronous::continuation_result<long> task_res = this->this_task_result();
-        // advance up to cutoff
-        auto it = boost::asynchronous::detail::find_cutoff(boost::begin(*range),cutoff_,boost::end(*range));
-        // if not at end, recurse, otherwise execute here
-        if (it == boost::end(*range))
+        try
         {
-            task_res.set_value(std::move(boost::asynchronous::detail::count(boost::make_iterator_range(boost::begin(*range), it),std::move(func_))));
+            boost::shared_ptr<Range> range = std::move(range_);
+            // advance up to cutoff
+            auto it = boost::asynchronous::detail::find_cutoff(boost::begin(*range),cutoff_,boost::end(*range));
+            // if not at end, recurse, otherwise execute here
+            if (it == boost::end(*range))
+            {
+                task_res.set_value(std::move(boost::asynchronous::detail::count(boost::make_iterator_range(boost::begin(*range), it),std::move(func_))));
+            }
+            else
+            {
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                            // called when subtasks are done, set our result
+                            [task_res,range](std::tuple<boost::asynchronous::expected<long>,boost::asynchronous::expected<long>> res) mutable
+                            {
+                                try
+                                {
+                                    long rt = std::get<0>(res).get();
+                                    rt += std::get<1>(res).get();
+                                    task_res.set_value(std::move(rt));
+                                }
+                                catch(std::exception& e)
+                                {
+                                    task_res.set_exception(boost::copy_exception(e));
+                                }
+                            },
+                            // recursive tasks
+                            boost::asynchronous::detail::parallel_count_helper<decltype(boost::begin(*range_)),Func,Job>(
+                                boost::begin(*range),it,func_,cutoff_,this->get_name(),prio_),
+                            boost::asynchronous::detail::parallel_count_helper<decltype(boost::begin(*range_)),Func,Job>(
+                                it,boost::end(*range),func_,cutoff_,this->get_name(),prio_)
+                );
+            }
         }
-        else
+        catch(std::exception& e)
         {
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                        // called when subtasks are done, set our result
-                        [task_res,range](std::tuple<boost::asynchronous::expected<long>,boost::asynchronous::expected<long>> res) mutable
-                        {
-                            try
-                            {
-                                long rt = std::get<0>(res).get();
-                                rt += std::get<1>(res).get();
-                                task_res.set_value(std::move(rt));
-                            }
-                            catch(std::exception& e)
-                            {
-                                task_res.set_exception(boost::copy_exception(e));
-                            }
-                        },
-                        // recursive tasks
-                        boost::asynchronous::detail::parallel_count_helper<decltype(boost::begin(*range_)),Func,Job>(
-                            boost::begin(*range),it,func_,cutoff_,this->get_name(),prio_),
-                        boost::asynchronous::detail::parallel_count_helper<decltype(boost::begin(*range_)),Func,Job>(
-                            it,boost::end(*range),func_,cutoff_,this->get_name(),prio_)
-            );
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
     boost::shared_ptr<Range> range_;
@@ -274,38 +295,45 @@ struct parallel_count_range_move_helper<Range,Func,Job,typename ::boost::enable_
     void operator()()const
     {
         boost::asynchronous::continuation_result<long> task_res = this->this_task_result();
-        // advance up to cutoff
-        auto it = boost::asynchronous::detail::find_cutoff(begin_,cutoff_,end_);
-        // if not at end, recurse, otherwise execute here
-        if (it == end_)
+        try
         {
-            task_res.set_value(std::move(boost::asynchronous::detail::count(boost::make_iterator_range(begin_, it),std::move(func_))));
+            // advance up to cutoff
+            auto it = boost::asynchronous::detail::find_cutoff(begin_,cutoff_,end_);
+            // if not at end, recurse, otherwise execute here
+            if (it == end_)
+            {
+                task_res.set_value(std::move(boost::asynchronous::detail::count(boost::make_iterator_range(begin_, it),std::move(func_))));
+            }
+            else
+            {
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                            // called when subtasks are done, set our result
+                            [task_res](std::tuple<boost::asynchronous::expected<long>,boost::asynchronous::expected<long>> res) mutable
+                            {
+                                try
+                                {
+                                    long rt = std::get<0>(res).get();
+                                    rt += std::get<1>(res).get();
+                                    task_res.set_value(std::move(rt));
+                                }
+                                catch(std::exception& e)
+                                {
+                                    task_res.set_exception(boost::copy_exception(e));
+                                }
+                            },
+                            // recursive tasks
+                            boost::asynchronous::parallel_count_range_move_helper<Range,Func,Job>(
+                                        range_,begin_,it,
+                                        func_,cutoff_,task_name_,prio_),
+                            boost::asynchronous::parallel_count_range_move_helper<Range,Func,Job>(
+                                        range_,it,end_,
+                                        func_,cutoff_,task_name_,prio_)
+                );
+            }
         }
-        else
+        catch(std::exception& e)
         {
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                        // called when subtasks are done, set our result
-                        [task_res](std::tuple<boost::asynchronous::expected<long>,boost::asynchronous::expected<long>> res) mutable
-                        {
-                            try
-                            {
-                                long rt = std::get<0>(res).get();
-                                rt += std::get<1>(res).get();
-                                task_res.set_value(std::move(rt));
-                            }
-                            catch(std::exception& e)
-                            {
-                                task_res.set_exception(boost::copy_exception(e));
-                            }
-                        },
-                        // recursive tasks
-                        boost::asynchronous::parallel_count_range_move_helper<Range,Func,Job>(
-                                    range_,begin_,it,
-                                    func_,cutoff_,task_name_,prio_),
-                        boost::asynchronous::parallel_count_range_move_helper<Range,Func,Job>(
-                                    range_,it,end_,
-                                    func_,cutoff_,task_name_,prio_)
-            );
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
     template <class Archive>
@@ -392,29 +420,36 @@ struct parallel_count_continuation_range_helper: public boost::asynchronous::con
     void operator()()
     {
         boost::asynchronous::continuation_result<long> task_res = this->this_task_result();
-        auto func(std::move(func_));
-        auto cutoff = cutoff_;
-        auto task_name = this->get_name();
-        auto prio = prio_;
-        cont_.on_done([task_res,func,cutoff,task_name,prio]
-                      (std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res) mutable
+        try
         {
-            try
+            auto func(std::move(func_));
+            auto cutoff = cutoff_;
+            auto task_name = this->get_name();
+            auto prio = prio_;
+            cont_.on_done([task_res,func,cutoff,task_name,prio]
+                          (std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res) mutable
             {
-                auto new_continuation = boost::asynchronous::parallel_count_if<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
-                new_continuation.on_done([task_res](std::tuple<boost::future<long> >&& new_continuation_res)
+                try
                 {
-                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
-                });
+                    auto new_continuation = boost::asynchronous::parallel_count_if<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
+                    new_continuation.on_done([task_res](std::tuple<boost::future<long> >&& new_continuation_res)
+                    {
+                        task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
+                    });
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
             }
-            catch(std::exception& e)
-            {
-                task_res.set_exception(boost::copy_exception(e));
-            }
+            );
+            boost::asynchronous::any_continuation ac(cont_);
+            boost::asynchronous::get_continuations().push_front(ac);
         }
-        );
-        boost::asynchronous::any_continuation ac(cont_);
-        boost::asynchronous::get_continuations().push_front(ac);
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
     }
     Continuation cont_;
     Func func_;
@@ -434,26 +469,33 @@ struct parallel_count_continuation_range_helper<Continuation,Func,Job,typename :
     void operator()()
     {
         boost::asynchronous::continuation_result<long> task_res = this->this_task_result();
-        auto func(std::move(func_));
-        auto cutoff = cutoff_;
-        auto task_name = this->get_name();
-        auto prio = prio_;
-        cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
+        try
         {
-            try
+            auto func(std::move(func_));
+            auto cutoff = cutoff_;
+            auto task_name = this->get_name();
+            auto prio = prio_;
+            cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
             {
-                auto new_continuation = boost::asynchronous::parallel_count_if<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
-                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<long> >&& new_continuation_res) mutable
+                try
                 {
-                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
-                });
+                    auto new_continuation = boost::asynchronous::parallel_count_if<typename Continuation::return_type, Func, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
+                    new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<long> >&& new_continuation_res) mutable
+                    {
+                        task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
+                    });
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
             }
-            catch(std::exception& e)
-            {
-                task_res.set_exception(boost::copy_exception(e));
-            }
+            );
         }
-        );
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
     }
     Continuation cont_;
     Func func_;

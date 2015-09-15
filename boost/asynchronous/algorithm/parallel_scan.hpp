@@ -51,41 +51,48 @@ struct parallel_scan_part1_helper: public boost::asynchronous::continuation_task
     void operator()()
     {
         boost::asynchronous::continuation_result<boost::asynchronous::detail::scan_data<T>> task_res = this->this_task_result();
-        // advance up to cutoff
-        Iterator it = boost::asynchronous::detail::find_cutoff(beg_,cutoff_,end_);
-        if (it == end_)
+        try
         {
-            task_res.set_value(boost::asynchronous::detail::scan_data<T>(std::move(reduce_(beg_,end_))));
+            // advance up to cutoff
+            Iterator it = boost::asynchronous::detail::find_cutoff(beg_,cutoff_,end_);
+            if (it == end_)
+            {
+                task_res.set_value(boost::asynchronous::detail::scan_data<T>(std::move(reduce_(beg_,end_))));
+            }
+            else
+            {
+                auto c = combine_;
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                            // called when subtasks are done, set our result
+                            [task_res,c](std::tuple<boost::asynchronous::expected<boost::asynchronous::detail::scan_data<T>>,
+                                                    boost::asynchronous::expected<boost::asynchronous::detail::scan_data<T>> > res)mutable
+                            {
+                                try
+                                {
+                                    boost::asynchronous::detail::scan_data<T> res_left = std::move(std::get<0>(res).get());
+                                    boost::asynchronous::detail::scan_data<T> res_right = std::move(std::get<1>(res).get());
+                                    boost::asynchronous::detail::scan_data<T> res_all(c(res_left.value_ , res_right.value_));
+                                    res_all.data_.reserve(2);
+                                    res_all.data_.emplace_back(std::move(res_left));
+                                    res_all.data_.emplace_back(std::move(res_right));
+                                    task_res.set_value(std::move(res_all));
+                                }
+                                catch(std::exception& e)
+                                {
+                                    task_res.set_exception(boost::copy_exception(e));
+                                }
+                            },
+                            // recursive tasks
+                            parallel_scan_part1_helper<Iterator,T,Reduce,Combine,Job>
+                                (beg_,it,reduce_,combine_,cutoff_,this->get_name(),prio_),
+                            parallel_scan_part1_helper<Iterator,T,Reduce,Combine,Job>
+                                (it,end_,reduce_,combine_,cutoff_,this->get_name(),prio_)
+                );
+            }
         }
-        else
+        catch(std::exception& e)
         {
-            auto c = combine_;
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                        // called when subtasks are done, set our result
-                        [task_res,c](std::tuple<boost::asynchronous::expected<boost::asynchronous::detail::scan_data<T>>,
-                                                boost::asynchronous::expected<boost::asynchronous::detail::scan_data<T>> > res)mutable
-                        {
-                            try
-                            {
-                                boost::asynchronous::detail::scan_data<T> res_left = std::move(std::get<0>(res).get());
-                                boost::asynchronous::detail::scan_data<T> res_right = std::move(std::get<1>(res).get());
-                                boost::asynchronous::detail::scan_data<T> res_all(c(res_left.value_ , res_right.value_));
-                                res_all.data_.reserve(2);
-                                res_all.data_.emplace_back(std::move(res_left));
-                                res_all.data_.emplace_back(std::move(res_right));
-                                task_res.set_value(std::move(res_all));
-                            }
-                            catch(std::exception& e)
-                            {
-                                task_res.set_exception(boost::copy_exception(e));
-                            }
-                        },
-                        // recursive tasks
-                        parallel_scan_part1_helper<Iterator,T,Reduce,Combine,Job>
-                            (beg_,it,reduce_,combine_,cutoff_,this->get_name(),prio_),
-                        parallel_scan_part1_helper<Iterator,T,Reduce,Combine,Job>
-                            (it,end_,reduce_,combine_,cutoff_,this->get_name(),prio_)
-            );
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
 
@@ -127,43 +134,50 @@ struct parallel_scan_part2_helper: public boost::asynchronous::continuation_task
     void operator()()
     {
         boost::asynchronous::continuation_result<OutIterator> task_res = this->this_task_result();
-        // advance up to cutoff
-        Iterator it = boost::asynchronous::detail::find_cutoff(beg_,cutoff_,end_);
-        auto out = out_;
-        std::advance(out,std::distance(beg_,it));
-        if (it == end_)
+        try
         {
-            scan_(beg_,end_,out_,init_);
-            task_res.set_value(out);
+            // advance up to cutoff
+            Iterator it = boost::asynchronous::detail::find_cutoff(beg_,cutoff_,end_);
+            auto out = out_;
+            std::advance(out,std::distance(beg_,it));
+            if (it == end_)
+            {
+                scan_(beg_,end_,out_,init_);
+                task_res.set_value(out);
+            }
+            else
+            {
+                // init of right side => init
+                // init of left side = init + value of current node.left
+                auto init_right = combine_(init_,data_.data_[0].value_);
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                            // called when subtasks are done, set our result
+                            [task_res](std::tuple<boost::asynchronous::expected<OutIterator>,
+                                                  boost::asynchronous::expected<OutIterator>> res)mutable
+                            {
+                                try
+                                {
+                                    // we are not interested in the first iterator, we just get() in case of an exception
+                                    std::move(std::get<0>(res).get());
+                                    OutIterator right = std::move(std::get<1>(res).get());;
+                                    task_res.set_value(std::move(right));
+                                }
+                                catch(std::exception& e)
+                                {
+                                    task_res.set_exception(boost::copy_exception(e));
+                                }
+                            },
+                            // recursive tasks
+                            parallel_scan_part2_helper<Iterator,OutIterator,T,Scan,Combine,Job>
+                                    (beg_,it,out_,init_,scan_,combine_,std::move(data_.data_[0]),cutoff_,this->get_name(),prio_),
+                            parallel_scan_part2_helper<Iterator,OutIterator,T,Scan,Combine,Job>
+                                    (it,end_,out,init_right,scan_,combine_,std::move(data_.data_[1]),cutoff_,this->get_name(),prio_)
+                );
+            }
         }
-        else
+        catch(std::exception& e)
         {
-            // init of right side => init
-            // init of left side = init + value of current node.left
-            auto init_right = combine_(init_,data_.data_[0].value_);
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                        // called when subtasks are done, set our result
-                        [task_res](std::tuple<boost::asynchronous::expected<OutIterator>,
-                                              boost::asynchronous::expected<OutIterator>> res)mutable
-                        {
-                            try
-                            {
-                                // we are not interested in the first iterator, we just get() in case of an exception
-                                std::move(std::get<0>(res).get());
-                                OutIterator right = std::move(std::get<1>(res).get());;
-                                task_res.set_value(std::move(right));
-                            }
-                            catch(std::exception& e)
-                            {
-                                task_res.set_exception(boost::copy_exception(e));
-                            }
-                        },
-                        // recursive tasks
-                        parallel_scan_part2_helper<Iterator,OutIterator,T,Scan,Combine,Job>
-                                (beg_,it,out_,init_,scan_,combine_,std::move(data_.data_[0]),cutoff_,this->get_name(),prio_),
-                        parallel_scan_part2_helper<Iterator,OutIterator,T,Scan,Combine,Job>
-                                (it,end_,out,init_right,scan_,combine_,std::move(data_.data_[1]),cutoff_,this->get_name(),prio_)
-            );
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
 
@@ -208,42 +222,49 @@ struct parallel_scan_helper: public boost::asynchronous::continuation_task<OutIt
     void operator()()
     {
         boost::asynchronous::continuation_result<OutIterator> task_res = this->this_task_result();
-        auto cont = boost::asynchronous::detail::parallel_scan_part1<Iterator,T,Reduce,Combine,Job>
-                (beg_,end_,init_,reduce_,combine_,cutoff_,this->get_name()+"_part1",prio_);
-        auto beg = beg_;
-        auto end = end_;
-        auto out = out_;
-        auto cutoff = cutoff_;
-        auto task_name = this->get_name();
-        auto prio = prio_;
-        auto scan = scan_;
-        auto init = init_;
-        auto combine = combine_;
-        cont.on_done([task_res,beg,end,out,init,scan,combine,cutoff,task_name,prio]
-                     (std::tuple<boost::asynchronous::expected<boost::asynchronous::detail::scan_data<T>>>&& res)mutable
+        try
         {
-            try
+            auto cont = boost::asynchronous::detail::parallel_scan_part1<Iterator,T,Reduce,Combine,Job>
+                    (beg_,end_,init_,reduce_,combine_,cutoff_,this->get_name()+"_part1",prio_);
+            auto beg = beg_;
+            auto end = end_;
+            auto out = out_;
+            auto cutoff = cutoff_;
+            auto task_name = this->get_name();
+            auto prio = prio_;
+            auto scan = scan_;
+            auto init = init_;
+            auto combine = combine_;
+            cont.on_done([task_res,beg,end,out,init,scan,combine,cutoff,task_name,prio]
+                         (std::tuple<boost::asynchronous::expected<boost::asynchronous::detail::scan_data<T>>>&& res)mutable
             {
-                boost::asynchronous::detail::scan_data<T> data = std::move(std::get<0>(res).get());
-                auto cont = boost::asynchronous::detail::parallel_scan_part2<Iterator,OutIterator,T,Scan,Combine,Job>
-                        (beg,end,out,std::move(init),std::move(scan),std::move(combine),std::move(data),cutoff,task_name,prio);
-                cont.on_done([task_res](std::tuple<boost::asynchronous::expected<OutIterator> >&& res)mutable
+                try
                 {
-                    try
+                    boost::asynchronous::detail::scan_data<T> data = std::move(std::get<0>(res).get());
+                    auto cont = boost::asynchronous::detail::parallel_scan_part2<Iterator,OutIterator,T,Scan,Combine,Job>
+                            (beg,end,out,std::move(init),std::move(scan),std::move(combine),std::move(data),cutoff,task_name,prio);
+                    cont.on_done([task_res](std::tuple<boost::asynchronous::expected<OutIterator> >&& res)mutable
                     {
-                        task_res.set_value(std::move(std::get<0>(res).get()));
-                    }
-                    catch(std::exception& e)
-                    {
-                        task_res.set_exception(boost::copy_exception(e));
-                    }
-                });
-            }
-            catch(std::exception& e)
-            {
-                task_res.set_exception(boost::copy_exception(e));
-            }
-        });
+                        try
+                        {
+                            task_res.set_value(std::move(std::get<0>(res).get()));
+                        }
+                        catch(std::exception& e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
+                    });
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
+            });
+        }
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
     }
 
     Iterator beg_;
@@ -291,30 +312,37 @@ struct parallel_scan_range_move_helper: public boost::asynchronous::continuation
     void operator()()
     {
         boost::asynchronous::continuation_result<std::pair<Range,OutRange>> task_res = this->this_task_result();
-        auto cont = boost::asynchronous::parallel_scan<
-                decltype(boost::begin(*range_)),
-                decltype(boost::begin(*out_range_)),
-                T,Reduce,Combine,Scan,Job>
-                (boost::begin(*range_),boost::end(*range_),boost::begin(*out_range_),std::move(init_),
-                 std::move(reduce_),std::move(combine_),std::move(scan_),cutoff_,this->get_name(),prio_);
-
-        auto range = range_;
-        auto out_range = out_range_;
-        cont.on_done([task_res,range,out_range]
-                      (std::tuple<boost::asynchronous::expected<decltype(boost::begin(*out_range_))>>&& continuation_res) mutable
+        try
         {
-            try
+            auto cont = boost::asynchronous::parallel_scan<
+                    decltype(boost::begin(*range_)),
+                    decltype(boost::begin(*out_range_)),
+                    T,Reduce,Combine,Scan,Job>
+                    (boost::begin(*range_),boost::end(*range_),boost::begin(*out_range_),std::move(init_),
+                     std::move(reduce_),std::move(combine_),std::move(scan_),cutoff_,this->get_name(),prio_);
+
+            auto range = range_;
+            auto out_range = out_range_;
+            cont.on_done([task_res,range,out_range]
+                          (std::tuple<boost::asynchronous::expected<decltype(boost::begin(*out_range_))>>&& continuation_res) mutable
             {
-                // get to check that no exception
-                std::get<0>(continuation_res).get();
-                task_res.set_value(std::make_pair(std::move(*range),std::move(*out_range)));
+                try
+                {
+                    // get to check that no exception
+                    std::get<0>(continuation_res).get();
+                    task_res.set_value(std::make_pair(std::move(*range),std::move(*out_range)));
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
             }
-            catch(std::exception& e)
-            {
-                task_res.set_exception(boost::copy_exception(e));
-            }
+            );
         }
-        );
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
     }
 
     boost::shared_ptr<Range> range_;
@@ -359,29 +387,36 @@ struct parallel_scan_range_move_single_helper: public boost::asynchronous::conti
     void operator()()
     {
         boost::asynchronous::continuation_result<Range> task_res = this->this_task_result();
-        auto cont = boost::asynchronous::parallel_scan<
-                decltype(boost::begin(*range_)),
-                decltype(boost::begin(*range_)),
-                T,Reduce,Combine,Scan,Job>
-                (boost::begin(*range_),boost::end(*range_),boost::begin(*range_),std::move(init_),
-                 std::move(reduce_),std::move(combine_),std::move(scan_),cutoff_,this->get_name(),prio_);
-
-        auto range = range_;
-        cont.on_done([task_res,range]
-                      (std::tuple<boost::asynchronous::expected<decltype(boost::begin(*range_))>>&& continuation_res) mutable
+        try
         {
-            try
+            auto cont = boost::asynchronous::parallel_scan<
+                    decltype(boost::begin(*range_)),
+                    decltype(boost::begin(*range_)),
+                    T,Reduce,Combine,Scan,Job>
+                    (boost::begin(*range_),boost::end(*range_),boost::begin(*range_),std::move(init_),
+                     std::move(reduce_),std::move(combine_),std::move(scan_),cutoff_,this->get_name(),prio_);
+
+            auto range = range_;
+            cont.on_done([task_res,range]
+                          (std::tuple<boost::asynchronous::expected<decltype(boost::begin(*range_))>>&& continuation_res) mutable
             {
-                // get to check that no exception
-                std::get<0>(continuation_res).get();
-                task_res.set_value(std::move(*range));
+                try
+                {
+                    // get to check that no exception
+                    std::get<0>(continuation_res).get();
+                    task_res.set_value(std::move(*range));
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
             }
-            catch(std::exception& e)
-            {
-                task_res.set_exception(boost::copy_exception(e));
-            }
+            );
         }
-        );
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
     }
 
     boost::shared_ptr<Range> range_;
@@ -427,47 +462,53 @@ struct parallel_scan_range_continuation_helper: public boost::asynchronous::cont
     void operator()()
     {
         boost::asynchronous::continuation_result<typename Continuation::return_type> task_res = this->this_task_result();
-
-        auto init(std::move(init_));
-        auto reduce(std::move(reduce_));
-        auto combine(std::move(combine_));
-        auto scan(std::move(scan_));
-        auto cutoff = cutoff_;
-        auto task_name = this->get_name();
-        auto prio = prio_;
-
-        cont_.on_done([task_res,init,reduce,combine,scan,cutoff,task_name,prio]
-                      (std::tuple<boost::asynchronous::expected<typename Continuation::return_type>>&& continuation_res) mutable
+        try
         {
-            try
+            auto init(std::move(init_));
+            auto reduce(std::move(reduce_));
+            auto combine(std::move(combine_));
+            auto scan(std::move(scan_));
+            auto cutoff = cutoff_;
+            auto task_name = this->get_name();
+            auto prio = prio_;
+
+            cont_.on_done([task_res,init,reduce,combine,scan,cutoff,task_name,prio]
+                          (std::tuple<boost::asynchronous::expected<typename Continuation::return_type>>&& continuation_res) mutable
             {
-                auto new_continuation = boost::asynchronous::parallel_scan<
-                        typename Continuation::return_type,
-                        T,
-                        Reduce,Combine,Scan,
-                        Job>
-                        (std::move(std::get<0>(continuation_res).get()),
-                         std::move(init),
-                         std::move(reduce),std::move(combine),std::move(scan),
-                         cutoff,task_name,prio);
-                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
+                try
                 {
-                    try
+                    auto new_continuation = boost::asynchronous::parallel_scan<
+                            typename Continuation::return_type,
+                            T,
+                            Reduce,Combine,Scan,
+                            Job>
+                            (std::move(std::get<0>(continuation_res).get()),
+                             std::move(init),
+                             std::move(reduce),std::move(combine),std::move(scan),
+                             cutoff,task_name,prio);
+                    new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
                     {
-                        task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
-                    }
-                    catch(std::exception& e)
-                    {
-                        task_res.set_exception(boost::copy_exception(e));
-                    }
-                });
+                        try
+                        {
+                            task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
+                        }
+                        catch(std::exception& e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
+                    });
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
             }
-            catch(std::exception& e)
-            {
-                task_res.set_exception(boost::copy_exception(e));
-            }
+            );
         }
-        );
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
     }
 
     Continuation cont_;

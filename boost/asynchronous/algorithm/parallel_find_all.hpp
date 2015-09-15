@@ -79,37 +79,44 @@ struct parallel_find_all_helper: public boost::asynchronous::continuation_task<R
     void operator()()const
     {
         boost::asynchronous::continuation_result<ReturnRange> task_res = this->this_task_result();
-        // advance up to cutoff
-        Iterator it = boost::asynchronous::detail::find_cutoff(beg_,cutoff_,end_);
-        // if not at end, recurse, otherwise execute here
-        if (it == end_)
+        try
         {
-            ReturnRange ret(beg_,it);
-            boost::asynchronous::detail::find_all(ret,func_);
-            task_res.set_value(std::move(ret));
+            // advance up to cutoff
+            Iterator it = boost::asynchronous::detail::find_cutoff(beg_,cutoff_,end_);
+            // if not at end, recurse, otherwise execute here
+            if (it == end_)
+            {
+                ReturnRange ret(beg_,it);
+                boost::asynchronous::detail::find_all(ret,func_);
+                task_res.set_value(std::move(ret));
+            }
+            else
+            {
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                    // called when subtasks are done, set our result
+                    [task_res]
+                    (std::tuple<boost::asynchronous::expected<ReturnRange>,boost::asynchronous::expected<ReturnRange>> res) mutable
+                    {
+                        try
+                        {
+                            ReturnRange rt = std::move(std::get<0>(res).get());
+                            boost::range::push_back(rt, std::move(std::get<1>(res).get()));
+                            task_res.set_value(std::move(rt));
+                        }
+                        catch(std::exception& e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
+                    },
+                    // recursive tasks
+                    parallel_find_all_helper<Iterator,Func,ReturnRange,Job>(beg_,it,func_,cutoff_,this->get_name(),prio_),
+                    parallel_find_all_helper<Iterator,Func,ReturnRange,Job>(it,end_,func_,cutoff_,this->get_name(),prio_)
+                );
+            }
         }
-        else
+        catch(std::exception& e)
         {
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                // called when subtasks are done, set our result
-                [task_res]
-                (std::tuple<boost::asynchronous::expected<ReturnRange>,boost::asynchronous::expected<ReturnRange>> res) mutable
-                {
-                    try
-                    {
-                        ReturnRange rt = std::move(std::get<0>(res).get());
-                        boost::range::push_back(rt, std::move(std::get<1>(res).get()));
-                        task_res.set_value(std::move(rt));
-                    }
-                    catch(std::exception& e)
-                    {
-                        task_res.set_exception(boost::copy_exception(e));
-                    }
-                },
-                // recursive tasks
-                parallel_find_all_helper<Iterator,Func,ReturnRange,Job>(beg_,it,func_,cutoff_,this->get_name(),prio_),
-                parallel_find_all_helper<Iterator,Func,ReturnRange,Job>(it,end_,func_,cutoff_,this->get_name(),prio_)
-            );
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
     Iterator beg_;
@@ -148,39 +155,46 @@ struct parallel_find_all_range_helper: public boost::asynchronous::continuation_
     void operator()()
     {
         boost::asynchronous::continuation_result<ReturnRange> task_res = this->this_task_result();
-        // advance up to cutoff
-        auto it = boost::asynchronous::detail::find_cutoff(boost::begin(range_),cutoff_,boost::end(range_));
-        // if not at end, recurse, otherwise execute here
-        if (it == boost::end(range_))
+        try
         {
-            ReturnRange ret(boost::begin(range_),it);
-            boost::asynchronous::detail::find_all(ret,func_);
-            task_res.set_value(std::move(ret));
+            // advance up to cutoff
+            auto it = boost::asynchronous::detail::find_cutoff(boost::begin(range_),cutoff_,boost::end(range_));
+            // if not at end, recurse, otherwise execute here
+            if (it == boost::end(range_))
+            {
+                ReturnRange ret(boost::begin(range_),it);
+                boost::asynchronous::detail::find_all(ret,func_);
+                task_res.set_value(std::move(ret));
+            }
+            else
+            {
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                            // called when subtasks are done, set our result
+                            [task_res]
+                            (std::tuple<boost::asynchronous::expected<ReturnRange>,boost::asynchronous::expected<ReturnRange>> res) mutable
+                            {
+                                try
+                                {
+                                    ReturnRange rt = std::move(std::get<0>(res).get());
+                                    boost::range::push_back(rt, std::move(std::get<1>(res).get()));
+                                    task_res.set_value(std::move(rt));
+                                }
+                                catch(std::exception& e)
+                                {
+                                    task_res.set_exception(boost::copy_exception(e));
+                                }
+                            },
+                            // recursive tasks
+                            parallel_find_all_helper<decltype(boost::begin(range_)),Func,ReturnRange,Job>(
+                                        boost::begin(range_),it,func_,cutoff_,this->get_name(),prio_),
+                            parallel_find_all_helper<decltype(boost::begin(range_)),Func,ReturnRange,Job>(
+                                        it,boost::end(range_),func_,cutoff_,this->get_name(),prio_)
+                        );
+            }
         }
-        else
+        catch(std::exception& e)
         {
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                        // called when subtasks are done, set our result
-                        [task_res]
-                        (std::tuple<boost::asynchronous::expected<ReturnRange>,boost::asynchronous::expected<ReturnRange>> res) mutable
-                        {
-                            try
-                            {
-                                ReturnRange rt = std::move(std::get<0>(res).get());
-                                boost::range::push_back(rt, std::move(std::get<1>(res).get()));
-                                task_res.set_value(std::move(rt));
-                            }
-                            catch(std::exception& e)
-                            {
-                                task_res.set_exception(boost::copy_exception(e));
-                            }
-                        },
-                        // recursive tasks
-                        parallel_find_all_helper<decltype(boost::begin(range_)),Func,ReturnRange,Job>(
-                                    boost::begin(range_),it,func_,cutoff_,this->get_name(),prio_),
-                        parallel_find_all_helper<decltype(boost::begin(range_)),Func,ReturnRange,Job>(
-                                    it,boost::end(range_),func_,cutoff_,this->get_name(),prio_)
-                    );
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
     Range const& range_;
@@ -214,41 +228,48 @@ struct parallel_find_all_range_move_helper: public boost::asynchronous::continua
     {}
     void operator()()
     {
-        boost::shared_ptr<Range> range = std::move(range_);
         boost::asynchronous::continuation_result<ReturnRange> task_res = this->this_task_result();
-        // advance up to cutoff
-        auto it = boost::asynchronous::detail::find_cutoff(boost::begin(*range),cutoff_,boost::end(*range));
-        // if not at end, recurse, otherwise execute here
-        if (it == boost::end(*range))
+        try
         {
-            ReturnRange ret(boost::begin(*range),it);
-            boost::asynchronous::detail::find_all(ret,func_);
-            task_res.set_value(std::move(ret));
+            boost::shared_ptr<Range> range = std::move(range_);
+            // advance up to cutoff
+            auto it = boost::asynchronous::detail::find_cutoff(boost::begin(*range),cutoff_,boost::end(*range));
+            // if not at end, recurse, otherwise execute here
+            if (it == boost::end(*range))
+            {
+                ReturnRange ret(boost::begin(*range),it);
+                boost::asynchronous::detail::find_all(ret,func_);
+                task_res.set_value(std::move(ret));
+            }
+            else
+            {
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                    // called when subtasks are done, set our result
+                    [task_res,range]
+                    (std::tuple<boost::asynchronous::expected<ReturnRange>,boost::asynchronous::expected<ReturnRange>> res) mutable
+                    {
+                        try
+                        {
+                            ReturnRange rt = std::move(std::get<0>(res).get());
+                            boost::range::push_back(rt, std::move(std::get<1>(res).get()));
+                            task_res.set_value(std::move(rt));
+                        }
+                        catch(std::exception& e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
+                    },
+                    // recursive tasks
+                    boost::asynchronous::detail::parallel_find_all_helper<decltype(boost::begin(*range)),Func,ReturnRange,Job>(
+                                boost::begin(*range),it,func_,cutoff_,this->get_name(),prio_),
+                    boost::asynchronous::detail::parallel_find_all_helper<decltype(boost::begin(*range)),Func,ReturnRange,Job>(
+                                it,boost::end(*range),func_,cutoff_,this->get_name(),prio_)
+                );
+            }
         }
-        else
+        catch(std::exception& e)
         {
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                // called when subtasks are done, set our result
-                [task_res,range]
-                (std::tuple<boost::asynchronous::expected<ReturnRange>,boost::asynchronous::expected<ReturnRange>> res) mutable
-                {
-                    try
-                    {
-                        ReturnRange rt = std::move(std::get<0>(res).get());
-                        boost::range::push_back(rt, std::move(std::get<1>(res).get()));
-                        task_res.set_value(std::move(rt));
-                    }
-                    catch(std::exception& e)
-                    {
-                        task_res.set_exception(boost::copy_exception(e));
-                    }
-                },
-                // recursive tasks
-                boost::asynchronous::detail::parallel_find_all_helper<decltype(boost::begin(*range)),Func,ReturnRange,Job>(
-                            boost::begin(*range),it,func_,cutoff_,this->get_name(),prio_),
-                boost::asynchronous::detail::parallel_find_all_helper<decltype(boost::begin(*range)),Func,ReturnRange,Job>(
-                            it,boost::end(*range),func_,cutoff_,this->get_name(),prio_)
-            );
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
     boost::shared_ptr<Range> range_;
@@ -276,41 +297,48 @@ struct parallel_find_all_range_move_helper<Range,Func,ReturnRange,Job,typename :
     void operator()()
     {
         boost::asynchronous::continuation_result<ReturnRange> task_res = this->this_task_result();
-        // advance up to cutoff
-        auto it = boost::asynchronous::detail::find_cutoff(begin_,cutoff_,end_);
-        // if not at end, recurse, otherwise execute here
-        if (it == end_)
+        try
         {
-            ReturnRange ret(begin_,it);
-            boost::asynchronous::detail::find_all(ret,func_);
-            task_res.set_value(std::move(ret));
+            // advance up to cutoff
+            auto it = boost::asynchronous::detail::find_cutoff(begin_,cutoff_,end_);
+            // if not at end, recurse, otherwise execute here
+            if (it == end_)
+            {
+                ReturnRange ret(begin_,it);
+                boost::asynchronous::detail::find_all(ret,func_);
+                task_res.set_value(std::move(ret));
+            }
+            else
+            {
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                    // called when subtasks are done, set our result
+                    [task_res]
+                    (std::tuple<boost::asynchronous::expected<ReturnRange>,boost::asynchronous::expected<ReturnRange>> res) mutable
+                    {
+                        try
+                        {
+                            ReturnRange rt = std::move(std::get<0>(res).get());
+                            boost::range::push_back(rt, std::move(std::get<1>(res).get()));
+                            task_res.set_value(std::move(rt));
+                        }
+                        catch(std::exception& e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
+                    },
+                    // recursive tasks
+                    parallel_find_all_range_move_helper<Range,Func,ReturnRange,Job>(
+                                range_,begin_,it,
+                                func_,cutoff_,task_name_,prio_),
+                    parallel_find_all_range_move_helper<Range,Func,ReturnRange,Job>(
+                                range_,it,end_,
+                                func_,cutoff_,task_name_,prio_)
+                );
+            }
         }
-        else
+        catch(std::exception& e)
         {
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                // called when subtasks are done, set our result
-                [task_res]
-                (std::tuple<boost::asynchronous::expected<ReturnRange>,boost::asynchronous::expected<ReturnRange>> res) mutable
-                {
-                    try
-                    {
-                        ReturnRange rt = std::move(std::get<0>(res).get());
-                        boost::range::push_back(rt, std::move(std::get<1>(res).get()));
-                        task_res.set_value(std::move(rt));
-                    }
-                    catch(std::exception& e)
-                    {
-                        task_res.set_exception(boost::copy_exception(e));
-                    }
-                },
-                // recursive tasks
-                parallel_find_all_range_move_helper<Range,Func,ReturnRange,Job>(
-                            range_,begin_,it,
-                            func_,cutoff_,task_name_,prio_),
-                parallel_find_all_range_move_helper<Range,Func,ReturnRange,Job>(
-                            range_,it,end_,
-                            func_,cutoff_,task_name_,prio_)
-            );
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
     template <class Archive>
@@ -376,29 +404,36 @@ struct parallel_find_all_continuation_range_helper: public boost::asynchronous::
     void operator()()
     {
         boost::asynchronous::continuation_result<ReturnRange> task_res = this->this_task_result();
-        auto func(std::move(func_));
-        auto cutoff = cutoff_;
-        auto task_name = this->get_name();
-        auto prio = prio_;
-        cont_.on_done([task_res,func,cutoff,task_name,prio]
-                      (std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res) mutable
+        try
         {
-            try
+            auto func(std::move(func_));
+            auto cutoff = cutoff_;
+            auto task_name = this->get_name();
+            auto prio = prio_;
+            cont_.on_done([task_res,func,cutoff,task_name,prio]
+                          (std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res) mutable
             {
-                auto new_continuation = boost::asynchronous::parallel_find_all<typename Continuation::return_type, Func, ReturnRange, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
-                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<ReturnRange> >&& new_continuation_res)
+                try
                 {
-                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
-                });
+                    auto new_continuation = boost::asynchronous::parallel_find_all<typename Continuation::return_type, Func, ReturnRange, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
+                    new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<ReturnRange> >&& new_continuation_res)
+                    {
+                        task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
+                    });
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
             }
-            catch(std::exception& e)
-            {
-                task_res.set_exception(boost::copy_exception(e));
-            }
+            );
+            boost::asynchronous::any_continuation ac(std::move(cont_));
+            boost::asynchronous::get_continuations().emplace_front(std::move(ac));
         }
-        );
-        boost::asynchronous::any_continuation ac(std::move(cont_));
-        boost::asynchronous::get_continuations().emplace_front(std::move(ac));
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
     }
     Continuation cont_;
     Func func_;
@@ -418,27 +453,34 @@ struct parallel_find_all_continuation_range_helper<Continuation,Func,ReturnRange
     void operator()()
     {
         boost::asynchronous::continuation_result<ReturnRange> task_res = this->this_task_result();
-        auto func(std::move(func_));
-        auto cutoff = cutoff_;
-        auto task_name = this->get_name();
-        auto prio = prio_;
-        cont_.on_done([task_res,func,cutoff,task_name,prio]
-                      (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res) mutable
+        try
         {
-            try
+            auto func(std::move(func_));
+            auto cutoff = cutoff_;
+            auto task_name = this->get_name();
+            auto prio = prio_;
+            cont_.on_done([task_res,func,cutoff,task_name,prio]
+                          (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res) mutable
             {
-                auto new_continuation = boost::asynchronous::parallel_find_all<typename Continuation::return_type, Func, ReturnRange, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
-                new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<ReturnRange> >&& new_continuation_res)
+                try
                 {
-                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
-                });
+                    auto new_continuation = boost::asynchronous::parallel_find_all<typename Continuation::return_type, Func, ReturnRange, Job>(std::move(std::get<0>(continuation_res).get()),func,cutoff,task_name,prio);
+                    new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<ReturnRange> >&& new_continuation_res)
+                    {
+                        task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
+                    });
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
             }
-            catch(std::exception& e)
-            {
-                task_res.set_exception(boost::copy_exception(e));
-            }
+            );
         }
-        );
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
     }
     Continuation cont_;
     Func func_;

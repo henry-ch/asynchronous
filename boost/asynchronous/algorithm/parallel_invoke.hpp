@@ -41,15 +41,22 @@ struct parallel_invoke_helper: public boost::asynchronous::continuation_task<Ret
     void operator()()
     {
         boost::asynchronous::continuation_result<ReturnType> task_res = this->this_task_result();
-        boost::asynchronous::create_callback_continuation_job<Job>(
-                    // called when subtasks are done, set our result
-                    [task_res](ReturnType res) mutable
-                    {
-                        task_res.set_value(std::move(res));
-                    },
-                    std::move(m_expected_tuple),
-                    // recursive tasks
-                    std::move(m_tuple));
+        try
+        {
+            boost::asynchronous::create_callback_continuation_job<Job>(
+                        // called when subtasks are done, set our result
+                        [task_res](ReturnType res) mutable
+                        {
+                            task_res.set_value(std::move(res));
+                        },
+                        std::move(m_expected_tuple),
+                        // recursive tasks
+                        std::move(m_tuple));
+        }
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
     }
     template <class Archive>
     void serialize(Archive & /*ar*/, const unsigned int /*version*/)
@@ -70,16 +77,23 @@ struct parallel_invoke_helper_timeout: public boost::asynchronous::continuation_
     void operator()()
     {
         boost::asynchronous::continuation_result<ReturnType> task_res = this->this_task_result();
-        boost::asynchronous::create_callback_continuation_job_timeout<Job>(
-                    // called when subtasks are done, set our result
-                    [task_res](ReturnType res) mutable
-                    {
-                        task_res.set_value(std::move(res));
-                    },
-                    m_duration,
-                    std::move(m_expected_tuple),
-                    // recursive tasks
-                    std::move(m_tuple));
+        try
+        {
+            boost::asynchronous::create_callback_continuation_job_timeout<Job>(
+                        // called when subtasks are done, set our result
+                        [task_res](ReturnType res) mutable
+                        {
+                            task_res.set_value(std::move(res));
+                        },
+                        m_duration,
+                        std::move(m_expected_tuple),
+                        // recursive tasks
+                        std::move(m_tuple));
+        }
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
     }
     template <class Archive>
     void serialize(Archive & /*ar*/, const unsigned int /*version*/)

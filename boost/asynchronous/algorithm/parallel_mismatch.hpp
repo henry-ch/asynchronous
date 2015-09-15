@@ -52,37 +52,44 @@ struct parallel_mismatch_helper: public boost::asynchronous::continuation_task<s
     void operator()()
     {
         boost::asynchronous::continuation_result<std::pair<Iterator1,Iterator2>> task_res = this->this_task_result();
-        // advance up to cutoff
-        Iterator1 it = boost::asynchronous::detail::find_cutoff(beg1_,cutoff_,end1_);
-        // if not at end, recurse, otherwise execute here
-        if (it == end1_)
+        try
         {
-            task_res.set_value(std::mismatch(beg1_,end1_,beg2_,func_));
+            // advance up to cutoff
+            Iterator1 it = boost::asynchronous::detail::find_cutoff(beg1_,cutoff_,end1_);
+            // if not at end, recurse, otherwise execute here
+            if (it == end1_)
+            {
+                task_res.set_value(std::mismatch(beg1_,end1_,beg2_,func_));
+            }
+            else
+            {
+                auto beg2 = beg2_;
+                std::advance(beg2,std::distance(beg1_,it));
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                            // called when subtasks are done, set our result
+                            [task_res,it]
+                            (std::tuple<boost::asynchronous::expected<std::pair<Iterator1,Iterator2>>,boost::asynchronous::expected<std::pair<Iterator1,Iterator2>>> res) mutable
+                            {
+                                try
+                                {
+                                    std::pair<Iterator1,Iterator2> r1 = std::get<0>(res).get();
+                                    if (r1.first == it) task_res.set_value(std::get<1>(res).get());
+                                    else task_res.set_value(r1);
+                                }
+                                catch(std::exception& e)
+                                {
+                                    task_res.set_exception(boost::copy_exception(e));
+                                }
+                            },
+                            // recursive tasks
+                            parallel_mismatch_helper<Iterator1,Iterator2,Func,Job>(beg1_,it,beg2_,func_,cutoff_,this->get_name(),prio_),
+                            parallel_mismatch_helper<Iterator1,Iterator2,Func,Job>(it,end1_,beg2,func_,cutoff_,this->get_name(),prio_)
+                );
+            }
         }
-        else
+        catch(std::exception& e)
         {
-            auto beg2 = beg2_;
-            std::advance(beg2,std::distance(beg1_,it));
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                        // called when subtasks are done, set our result
-                        [task_res,it]
-                        (std::tuple<boost::asynchronous::expected<std::pair<Iterator1,Iterator2>>,boost::asynchronous::expected<std::pair<Iterator1,Iterator2>>> res) mutable
-                        {
-                            try
-                            {
-                                std::pair<Iterator1,Iterator2> r1 = std::get<0>(res).get();
-                                if (r1.first == it) task_res.set_value(std::get<1>(res).get());
-                                else task_res.set_value(r1);
-                            }
-                            catch(std::exception& e)
-                            {
-                                task_res.set_exception(boost::copy_exception(e));
-                            }
-                        },
-                        // recursive tasks
-                        parallel_mismatch_helper<Iterator1,Iterator2,Func,Job>(beg1_,it,beg2_,func_,cutoff_,this->get_name(),prio_),
-                        parallel_mismatch_helper<Iterator1,Iterator2,Func,Job>(it,end1_,beg2,func_,cutoff_,this->get_name(),prio_)
-            );
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
     Iterator1 beg1_;
@@ -104,37 +111,44 @@ struct parallel_mismatch_helper2: public boost::asynchronous::continuation_task<
     void operator()()
     {
         boost::asynchronous::continuation_result<std::pair<Iterator1,Iterator2>> task_res = this->this_task_result();
-        // advance up to cutoff
-        Iterator1 it = boost::asynchronous::detail::find_cutoff(beg1_,cutoff_,end1_);
-        // if not at end, recurse, otherwise execute here
-        if (it == end1_)
+        try
         {
-            task_res.set_value(std::mismatch(beg1_,end1_,beg2_));
+            // advance up to cutoff
+            Iterator1 it = boost::asynchronous::detail::find_cutoff(beg1_,cutoff_,end1_);
+            // if not at end, recurse, otherwise execute here
+            if (it == end1_)
+            {
+                task_res.set_value(std::mismatch(beg1_,end1_,beg2_));
+            }
+            else
+            {
+                auto beg2 = beg2_;
+                std::advance(beg2,std::distance(beg1_,it));
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                            // called when subtasks are done, set our result
+                            [task_res,it]
+                            (std::tuple<boost::asynchronous::expected<std::pair<Iterator1,Iterator2>>,boost::asynchronous::expected<std::pair<Iterator1,Iterator2>>> res) mutable
+                            {
+                                try
+                                {
+                                    std::pair<Iterator1,Iterator2> r1 = std::get<0>(res).get();
+                                    if (r1.first == it) task_res.set_value(std::get<1>(res).get());
+                                    else task_res.set_value(r1);
+                                }
+                                catch(std::exception& e)
+                                {
+                                    task_res.set_exception(boost::copy_exception(e));
+                                }
+                            },
+                            // recursive tasks
+                            parallel_mismatch_helper2<Iterator1,Iterator2,Job>(beg1_,it,beg2_,cutoff_,this->get_name(),prio_),
+                            parallel_mismatch_helper2<Iterator1,Iterator2,Job>(it,end1_,beg2,cutoff_,this->get_name(),prio_)
+                );
+            }
         }
-        else
+        catch(std::exception& e)
         {
-            auto beg2 = beg2_;
-            std::advance(beg2,std::distance(beg1_,it));
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                        // called when subtasks are done, set our result
-                        [task_res,it]
-                        (std::tuple<boost::asynchronous::expected<std::pair<Iterator1,Iterator2>>,boost::asynchronous::expected<std::pair<Iterator1,Iterator2>>> res) mutable
-                        {
-                            try
-                            {
-                                std::pair<Iterator1,Iterator2> r1 = std::get<0>(res).get();
-                                if (r1.first == it) task_res.set_value(std::get<1>(res).get());
-                                else task_res.set_value(r1);
-                            }
-                            catch(std::exception& e)
-                            {
-                                task_res.set_exception(boost::copy_exception(e));
-                            }
-                        },
-                        // recursive tasks
-                        parallel_mismatch_helper2<Iterator1,Iterator2,Job>(beg1_,it,beg2_,cutoff_,this->get_name(),prio_),
-                        parallel_mismatch_helper2<Iterator1,Iterator2,Job>(it,end1_,beg2,cutoff_,this->get_name(),prio_)
-            );
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
     Iterator1 beg1_;

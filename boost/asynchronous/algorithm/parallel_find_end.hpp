@@ -47,71 +47,78 @@ struct parallel_find_end_helper: public boost::asynchronous::continuation_task<I
     void operator()()
     {
         boost::asynchronous::continuation_result<Iterator1> task_res = this->this_task_result();
-        // advance up to cutoff
-        Iterator1 it = boost::asynchronous::detail::find_cutoff(beg1_,cutoff_,end1_);
-        // if not at end, recurse, otherwise execute here
-        if (it == end1_)
+        try
         {
-            task_res.set_value(std::find_end(beg1_,end1_,beg2_,end2_,func_));
-        }
-        else
-        {
-            auto beg1 = beg1_;
-            auto end1 = end1_;
-            auto beg2 = end2_;
-            auto end2 = end2_;
-            auto func = std::move(func_);
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                        // called when subtasks are done, set our result
-                        [task_res,it,beg1,end1,beg2,end2,func]
-                        (std::tuple<boost::asynchronous::expected<Iterator1>,boost::asynchronous::expected<Iterator1>> res) mutable
-                        {
-                            try
+            // advance up to cutoff
+            Iterator1 it = boost::asynchronous::detail::find_cutoff(beg1_,cutoff_,end1_);
+            // if not at end, recurse, otherwise execute here
+            if (it == end1_)
+            {
+                task_res.set_value(std::find_end(beg1_,end1_,beg2_,end2_,func_));
+            }
+            else
+            {
+                auto beg1 = beg1_;
+                auto end1 = end1_;
+                auto beg2 = end2_;
+                auto end2 = end2_;
+                auto func = std::move(func_);
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                            // called when subtasks are done, set our result
+                            [task_res,it,beg1,end1,beg2,end2,func]
+                            (std::tuple<boost::asynchronous::expected<Iterator1>,boost::asynchronous::expected<Iterator1>> res) mutable
                             {
-                                auto r1 = std::move(std::get<0>(res).get());
-                                auto r2 = std::move(std::get<1>(res).get());
-                                if (r2 != end1)
+                                try
                                 {
-                                    // found in last part => take it
-                                    task_res.set_value(std::move(r2));
-                                }
-                                else
-                                {
-                                    // check in overlap region
-                                    auto itbeg = beg1;
-                                    auto itend = it;
-                                    auto dist2 = std::distance(beg2,end2);
-
-                                    std::advance(itbeg, std::distance(beg1,it) - dist2);
-                                    std::advance(itend, dist2);
-                                    auto itoverlap = std::find_end(itbeg,itend,beg2,end2,func);
-                                    if(itoverlap != itend)
+                                    auto r1 = std::move(std::get<0>(res).get());
+                                    auto r2 = std::move(std::get<1>(res).get());
+                                    if (r2 != end1)
                                     {
-                                        task_res.set_value(std::move(itoverlap));
+                                        // found in last part => take it
+                                        task_res.set_value(std::move(r2));
                                     }
-                                    // check in first part
-                                    else if (r1 != it)
-                                    {
-                                        task_res.set_value(std::move(r1));
-                                    }
-                                    // nowhere found => end
                                     else
                                     {
-                                        task_res.set_value(std::move(end1));
+                                        // check in overlap region
+                                        auto itbeg = beg1;
+                                        auto itend = it;
+                                        auto dist2 = std::distance(beg2,end2);
+
+                                        std::advance(itbeg, std::distance(beg1,it) - dist2);
+                                        std::advance(itend, dist2);
+                                        auto itoverlap = std::find_end(itbeg,itend,beg2,end2,func);
+                                        if(itoverlap != itend)
+                                        {
+                                            task_res.set_value(std::move(itoverlap));
+                                        }
+                                        // check in first part
+                                        else if (r1 != it)
+                                        {
+                                            task_res.set_value(std::move(r1));
+                                        }
+                                        // nowhere found => end
+                                        else
+                                        {
+                                            task_res.set_value(std::move(end1));
+                                        }
                                     }
                                 }
-                            }
-                            catch(std::exception& e)
-                            {
-                                task_res.set_exception(boost::copy_exception(e));
-                            }
-                        },
-                        // recursive tasks
-                        parallel_find_end_helper<Iterator1,Iterator2,Func,Job>
-                                (beg1_,it,beg2_,end2_,func_,cutoff_,this->get_name(),prio_),
-                        parallel_find_end_helper<Iterator1,Iterator2,Func,Job>
-                                (it,end1_,beg2_,end2_,func_,cutoff_,this->get_name(),prio_)
-               );
+                                catch(std::exception& e)
+                                {
+                                    task_res.set_exception(boost::copy_exception(e));
+                                }
+                            },
+                            // recursive tasks
+                            parallel_find_end_helper<Iterator1,Iterator2,Func,Job>
+                                    (beg1_,it,beg2_,end2_,func_,cutoff_,this->get_name(),prio_),
+                            parallel_find_end_helper<Iterator1,Iterator2,Func,Job>
+                                    (it,end1_,beg2_,end2_,func_,cutoff_,this->get_name(),prio_)
+                   );
+            }
+        }
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
 
@@ -174,34 +181,41 @@ struct parallel_find_end_range_helper: public boost::asynchronous::continuation_
     void operator()()
     {
         boost::asynchronous::continuation_result<Iterator1> task_res = this->this_task_result();
-        auto func(std::move(func_));
-        auto cutoff = cutoff_;
-        auto task_name = this->get_name();
-        auto prio = prio_;
-        auto beg1 = beg1_;
-        auto end1 = end1_;
-        cont_.on_done([task_res,beg1,end1,func,cutoff,task_name,prio]
-                      (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res) mutable
+        try
         {
-            try
+            auto func(std::move(func_));
+            auto cutoff = cutoff_;
+            auto task_name = this->get_name();
+            auto prio = prio_;
+            auto beg1 = beg1_;
+            auto end1 = end1_;
+            cont_.on_done([task_res,beg1,end1,func,cutoff,task_name,prio]
+                          (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res) mutable
             {
-                auto res = boost::make_shared<typename Continuation::return_type>(std::move(std::get<0>(continuation_res).get()));
-                auto new_continuation = boost::asynchronous::parallel_find_end
-                        <Iterator1,
-                        decltype(boost::begin(std::declval<typename Continuation::return_type>())),
-                        Func,
-                        Job>
-                            (beg1,end1,boost::begin(*res),boost::end(*res),func,cutoff,task_name,prio);
-                new_continuation.on_done([res,task_res](std::tuple<boost::asynchronous::expected<Iterator1> >&& new_continuation_res)
+                try
                 {
-                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
-                });
-            }
-            catch(std::exception& e)
-            {
-                task_res.set_exception(boost::copy_exception(e));
-            }
-        });
+                    auto res = boost::make_shared<typename Continuation::return_type>(std::move(std::get<0>(continuation_res).get()));
+                    auto new_continuation = boost::asynchronous::parallel_find_end
+                            <Iterator1,
+                            decltype(boost::begin(std::declval<typename Continuation::return_type>())),
+                            Func,
+                            Job>
+                                (beg1,end1,boost::begin(*res),boost::end(*res),func,cutoff,task_name,prio);
+                    new_continuation.on_done([res,task_res](std::tuple<boost::asynchronous::expected<Iterator1> >&& new_continuation_res)
+                    {
+                        task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
+                    });
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
+            });
+        }
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
     }
 
     Iterator1 beg1_;

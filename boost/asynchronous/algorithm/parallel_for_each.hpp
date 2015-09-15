@@ -66,39 +66,46 @@ struct parallel_for_each_helper: public boost::asynchronous::continuation_task<F
     void operator()()
     {
         boost::asynchronous::continuation_result<Func> task_res = this->this_task_result();
-        // advance up to cutoff
-        Iterator it = boost::asynchronous::detail::find_cutoff(beg_,cutoff_,end_);
-        // if not at end, recurse, otherwise execute here
-        if (it == end_)
+        try
         {
-            task_res.set_value(std::move(boost::asynchronous::detail::for_each_helper<
-                                         boost::asynchronous::function_traits<Func>::arity,Iterator,Func>()
-                                         (beg_,it,std::move(func_))));
+            // advance up to cutoff
+            Iterator it = boost::asynchronous::detail::find_cutoff(beg_,cutoff_,end_);
+            // if not at end, recurse, otherwise execute here
+            if (it == end_)
+            {
+                task_res.set_value(std::move(boost::asynchronous::detail::for_each_helper<
+                                             boost::asynchronous::function_traits<Func>::arity,Iterator,Func>()
+                                             (beg_,it,std::move(func_))));
+            }
+            else
+            {
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                            // called when subtasks are done, set our result
+                            [task_res]
+                            (std::tuple<boost::asynchronous::expected<Func>,boost::asynchronous::expected<Func> > res) mutable
+                            {
+                                try
+                                {
+                                    // get to check that no exception
+                                    Func f1 (std::move(std::get<0>(res).get()));
+                                    Func f2 (std::move(std::get<1>(res).get()));
+                                    f1.merge(f2);
+                                    task_res.set_value(std::move(f1));
+                                }
+                                catch(std::exception& e)
+                                {
+                                    task_res.set_exception(boost::copy_exception(e));
+                                }
+                            },
+                            // recursive tasks
+                            parallel_for_each_helper<Iterator,Func,Job>(beg_,it,func_,cutoff_,this->get_name(),prio_),
+                            parallel_for_each_helper<Iterator,Func,Job>(it,end_,func_,cutoff_,this->get_name(),prio_)
+                   );
+            }
         }
-        else
+        catch(std::exception& e)
         {
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                        // called when subtasks are done, set our result
-                        [task_res]
-                        (std::tuple<boost::asynchronous::expected<Func>,boost::asynchronous::expected<Func> > res) mutable
-                        {
-                            try
-                            {
-                                // get to check that no exception
-                                Func f1 (std::move(std::get<0>(res).get()));
-                                Func f2 (std::move(std::get<1>(res).get()));
-                                f1.merge(f2);
-                                task_res.set_value(std::move(f1));
-                            }
-                            catch(std::exception& e)
-                            {
-                                task_res.set_exception(boost::copy_exception(e));
-                            }
-                        },
-                        // recursive tasks
-                        parallel_for_each_helper<Iterator,Func,Job>(beg_,it,func_,cutoff_,this->get_name(),prio_),
-                        parallel_for_each_helper<Iterator,Func,Job>(it,end_,func_,cutoff_,this->get_name(),prio_)
-               );
+            task_res.set_exception(boost::copy_exception(e));
         }
     }
     Iterator beg_;
