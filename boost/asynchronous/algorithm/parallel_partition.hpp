@@ -72,76 +72,94 @@ struct partition_worker : public boost::asynchronous::continuation_task<std::pai
     void operator()()
     {
         boost::asynchronous::continuation_result<std::pair<std::list<std::pair<iterator, iterator>>, std::list<std::pair<iterator, iterator>>>> task_res = this->this_task_result();
-
-        int threads_left = m_sd->m_open_threads.fetch_sub(1);
-        if (threads_left < 1 || m_sd->m_size < 0)
+        try
         {
-            m_sd->m_open_threads.fetch_add(1);
-            auto L = part_parallel();
-            task_res.set_value(std::move(L));
-            return;
-        }
-        else
-        {
-            auto sd = m_sd;
-            boost::asynchronous::create_callback_continuation_job<JobType>(
-            [task_res, sd]
-            (std::tuple<boost::asynchronous::expected<std::pair<std::list<std::pair<iterator, iterator>>, std::list<std::pair<iterator, iterator>>>>,boost::asynchronous::expected<std::pair<std::list<std::pair<iterator, iterator>>, std::list<std::pair<iterator, iterator>>>> > res)
-            mutable
+            int threads_left = m_sd->m_open_threads.fetch_sub(1);
+            if (threads_left < 1 || m_sd->m_size < 0)
             {
-                try
+                m_sd->m_open_threads.fetch_add(1);
+                auto L = part_parallel();
+                task_res.set_value(std::move(L));
+                return;
+            }
+            else
+            {
+                auto sd = m_sd;
+                boost::asynchronous::create_callback_continuation_job<JobType>(
+                [task_res, sd]
+                (std::tuple<boost::asynchronous::expected<std::pair<std::list<std::pair<iterator, iterator>>, std::list<std::pair<iterator, iterator>>>>,boost::asynchronous::expected<std::pair<std::list<std::pair<iterator, iterator>>, std::list<std::pair<iterator, iterator>>>> > res)
+                mutable
                 {
-                    //MERGE
-                    std::pair<std::list<std::pair<iterator, iterator>>, std::list<std::pair<iterator, iterator>>> LR = std::move(std::get<0>(res).get());
-                    std::list<std::pair<iterator, iterator>> l_rest = std::move(LR.first);
-                    std::list<std::pair<iterator, iterator>> r_rest = std::move(LR.second);
-                    std::pair<std::list<std::pair<iterator, iterator>>, std::list<std::pair<iterator, iterator>>> RR = std::move(std::get<1>(res).get());
-                    l_rest.splice(l_rest.end(), RR.first);
-                    r_rest.splice(r_rest.end(), RR.second);
-
-                    iterator lbs = sd->m_left, rbs = sd->m_right, lbe = sd->m_left, rbe = sd->m_right;
-                    while((!r_rest.empty() || rbs != rbe) && (!l_rest.empty() || lbs != lbe))
+                    try
                     {
-                        if (rbs == rbe)
-                        {
-                            rbs = r_rest.front().first;
-                            rbe = r_rest.front().second;
-                            r_rest.pop_front();
-                        }
-                        if (lbs == lbe)
-                        {
-                            lbs = l_rest.front().first;
-                            lbe = l_rest.front().second;
-                            l_rest.pop_front();
-                        }
+                        //MERGE
+                        std::pair<std::list<std::pair<iterator, iterator>>, std::list<std::pair<iterator, iterator>>> LR = std::move(std::get<0>(res).get());
+                        std::list<std::pair<iterator, iterator>> l_rest = std::move(LR.first);
+                        std::list<std::pair<iterator, iterator>> r_rest = std::move(LR.second);
+                        std::pair<std::list<std::pair<iterator, iterator>>, std::list<std::pair<iterator, iterator>>> RR = std::move(std::get<1>(res).get());
+                        l_rest.splice(l_rest.end(), RR.first);
+                        r_rest.splice(r_rest.end(), RR.second);
 
-                        for(;;)
+                        iterator lbs = sd->m_left, rbs = sd->m_right, lbe = sd->m_left, rbe = sd->m_right;
+                        while((!r_rest.empty() || rbs != rbe) && (!l_rest.empty() || lbs != lbe))
                         {
-                            while (lbs < lbe && sd->m_r(*(lbs))) ++lbs;
-                            while (rbs < rbe && !sd->m_r(*(rbs))) ++rbs;
-                            if (lbs == lbe || rbs == rbe) break;
-                            std::swap(*lbs,*rbs);
+                            if (rbs == rbe)
+                            {
+                                rbs = r_rest.front().first;
+                                rbe = r_rest.front().second;
+                                r_rest.pop_front();
+                            }
+                            if (lbs == lbe)
+                            {
+                                lbs = l_rest.front().first;
+                                lbe = l_rest.front().second;
+                                l_rest.pop_front();
+                            }
+
+                            for(;;)
+                            {
+                                //while (lbs < lbe && sd->m_r(*(lbs))) ++lbs;
+                                //while (rbs < rbe && !sd->m_r(*(rbs))) ++rbs;
+                                for(auto i = lbs; i != lbe;++i)
+                                {
+                                    if (!sd->m_r(*(i)))
+                                        break;
+                                    ++lbs;
+
+                                }
+                                for(auto i = rbs; i != rbe;++i)
+                                {
+                                    if (sd->m_r(*(i)))
+                                        break;
+                                    ++rbs;
+                                }
+                                if (lbs == lbe || rbs == rbe) break;
+                                std::swap(*lbs,*rbs);
+                            }
                         }
+                        if (lbs != lbe)
+                            l_rest.push_back(std::make_pair(lbs,lbe));
+                        if (rbs != rbe)
+                            r_rest.push_back(std::make_pair(rbs,rbe));
+                        task_res.set_value(std::make_pair(std::move(l_rest), std::move(r_rest)));
+                        return;
                     }
-                    if (lbs != lbe)
-                        l_rest.push_back(std::make_pair(lbs,lbe));
-                    if (rbs != rbe)
-                        r_rest.push_back(std::make_pair(rbs,rbe));
-                    task_res.set_value(std::make_pair(std::move(l_rest), std::move(r_rest)));
-                    return;
-                }
-                catch (std::exception& e)
-                {
-                    task_res.set_exception(boost::copy_exception(e));
-                    return;
-                }
-            },
-            // future results of recursive tasks
-            partition_worker<iterator, relation, shared_data, JobType>(m_sd),
-            partition_worker<iterator, relation, shared_data, JobType>(m_sd)
-            );
+                    catch (std::exception& e)
+                    {
+                        task_res.set_exception(boost::copy_exception(e));
+                        return;
+                    }
+                },
+                // future results of recursive tasks
+                partition_worker<iterator, relation, shared_data, JobType>(m_sd),
+                partition_worker<iterator, relation, shared_data, JobType>(m_sd)
+                );
+            }
         }
-        return;
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
     }
 
 private:
@@ -178,8 +196,21 @@ private:
 
             for(;;)
             {
-                while (lbs < lbe && m_sd->m_r(*(lbs))) {++myrtrue; ++lbs;}
-                while (rbs > rbe && !m_sd->m_r(*(rbs))) --rbs;
+                //while (lbs < lbe && m_sd->m_r(*(lbs))) {++myrtrue; ++lbs;}
+                //while (rbs > rbe && !m_sd->m_r(*(rbs))) --rbs;
+                for(auto i = lbs; i != lbe;++i)
+                {
+                    if (!m_sd->m_r(*(i)))
+                        break;
+                    ++myrtrue;
+                    ++lbs;
+                }
+                for(auto i = rbs; i != rbe;--i)
+                {
+                    if (m_sd->m_r(*(i)))
+                        break;
+                    --rbs;
+                }
                 if (lbs == lbe || rbs == rbe) break;
                 std::swap(*lbs,*rbs);
             }
@@ -244,81 +275,87 @@ struct parallel_partition_helper : public boost::asynchronous::continuation_task
     void operator()()
     {
         boost::asynchronous::continuation_result<Iterator> task_res = this->this_task_result();
-
-        if (m_sd->m_right - m_sd->m_left == 0)
+        try
         {
-            task_res.set_value(m_sd->m_right);
-            return;
+            if (m_sd->m_right - m_sd->m_left == 0)
+            {
+                task_res.set_value(m_sd->m_right);
+                return;
+            }
+
+            auto c = boost::asynchronous::top_level_callback_continuation_job<std::pair<std::list<std::pair<Iterator, Iterator>>, std::list<std::pair<Iterator, Iterator>>>, JobType>
+                    (boost::asynchronous::detail::partition_worker<Iterator, relation, shared_data, JobType>(m_sd.get()));
+
+            shared_data* sd= m_sd.get();
+            auto msd = m_sd;
+
+            c.on_done(
+               [task_res, msd,sd]
+               (std::tuple<boost::asynchronous::expected<std::pair<std::list<std::pair<Iterator, Iterator>>, std::list<std::pair<Iterator, Iterator>>>> > res)
+                mutable
+            {
+
+                std::pair<std::list<std::pair<Iterator, Iterator>>, std::list<std::pair<Iterator, Iterator>>> R = std::move(std::get<0>(res).get());
+                std::list<std::pair<Iterator, Iterator>> l_rest = std::move(R.first);
+                std::list<std::pair<Iterator, Iterator>> r_rest = std::move(R.second);
+
+                auto it_left_plus_rtrue = sd->m_left;
+                auto it_left_plus_lmove = sd->m_left;
+                std::advance(it_left_plus_rtrue,sd->m_rtrue.load());
+                std::advance(it_left_plus_lmove,sd->m_lmove.load());
+
+                if (sd->m_lmove < sd->m_rtrue)
+                {
+                    for(auto& r : r_rest)
+                    {
+                        if(r.first < it_left_plus_rtrue) r.first = it_left_plus_rtrue;
+                        if(r.second < it_left_plus_rtrue) r.second = it_left_plus_rtrue;
+                    }
+                    l_rest.push_back(std::make_pair(it_left_plus_lmove,it_left_plus_rtrue));
+                }
+                if (sd->m_lmove > sd->m_rtrue)
+                {
+                    for(auto& l : l_rest)
+                    {
+                        if(l.first > it_left_plus_rtrue) l.first = it_left_plus_rtrue;
+                        if(l.second > it_left_plus_rtrue) l.second = it_left_plus_rtrue;
+                    }
+                    r_rest.push_back(std::make_pair(it_left_plus_rtrue,it_left_plus_lmove));
+                }
+
+                Iterator lbs = sd->m_left, rbs = sd->m_right, lbe = sd->m_left, rbe = sd->m_right;
+                while((!r_rest.empty() || rbs != rbe) && (!l_rest.empty() || lbs != lbe))
+                {
+                    if (rbs == rbe)
+                    {
+                        rbs = r_rest.front().first;
+                        rbe = r_rest.front().second;
+                        r_rest.pop_front();
+                    }
+                    if (lbs == lbe)
+                    {
+                        lbs = l_rest.front().first;
+                        lbe = l_rest.front().second;
+                        l_rest.pop_front();
+                    }
+
+                    for(;;)
+                    {
+                        while (lbs < lbe && sd->m_r(*(lbs))) ++lbs;
+                        while (rbs < rbe && !sd->m_r(*(rbs))) ++rbs;
+                        if (lbs == lbe || rbs == rbe) break;
+                        std::swap(*lbs,*rbs);
+                    }
+                }
+
+                task_res.set_value(it_left_plus_rtrue);
+                return;
+            });
         }
-
-        auto c = boost::asynchronous::top_level_callback_continuation_job<std::pair<std::list<std::pair<Iterator, Iterator>>, std::list<std::pair<Iterator, Iterator>>>, JobType>
-                (boost::asynchronous::detail::partition_worker<Iterator, relation, shared_data, JobType>(m_sd.get()));
-
-        shared_data* sd= m_sd.get();
-        auto msd = m_sd;
-
-        c.on_done(
-           [task_res, msd,sd]
-           (std::tuple<boost::asynchronous::expected<std::pair<std::list<std::pair<Iterator, Iterator>>, std::list<std::pair<Iterator, Iterator>>>> > res)
-            mutable
+        catch(std::exception& e)
         {
-
-            std::pair<std::list<std::pair<Iterator, Iterator>>, std::list<std::pair<Iterator, Iterator>>> R = std::move(std::get<0>(res).get());
-            std::list<std::pair<Iterator, Iterator>> l_rest = std::move(R.first);
-            std::list<std::pair<Iterator, Iterator>> r_rest = std::move(R.second);
-
-            auto it_left_plus_rtrue = sd->m_left;
-            auto it_left_plus_lmove = sd->m_left;
-            std::advance(it_left_plus_rtrue,sd->m_rtrue.load());
-            std::advance(it_left_plus_lmove,sd->m_lmove.load());
-
-            if (sd->m_lmove < sd->m_rtrue)
-            {
-                for(auto& r : r_rest)
-                {
-                    if(r.first < it_left_plus_rtrue) r.first = it_left_plus_rtrue;
-                    if(r.second < it_left_plus_rtrue) r.second = it_left_plus_rtrue;
-                }
-                l_rest.push_back(std::make_pair(it_left_plus_lmove,it_left_plus_rtrue));
-            }
-            if (sd->m_lmove > sd->m_rtrue)
-            {
-                for(auto& l : l_rest)
-                {
-                    if(l.first > it_left_plus_rtrue) l.first = it_left_plus_rtrue;
-                    if(l.second > it_left_plus_rtrue) l.second = it_left_plus_rtrue;
-                }
-                r_rest.push_back(std::make_pair(it_left_plus_rtrue,it_left_plus_lmove));
-            }
-
-            Iterator lbs = sd->m_left, rbs = sd->m_right, lbe = sd->m_left, rbe = sd->m_right;
-            while((!r_rest.empty() || rbs != rbe) && (!l_rest.empty() || lbs != lbe))
-            {
-                if (rbs == rbe)
-                {
-                    rbs = r_rest.front().first;
-                    rbe = r_rest.front().second;
-                    r_rest.pop_front();
-                }
-                if (lbs == lbe)
-                {
-                    lbs = l_rest.front().first;
-                    lbe = l_rest.front().second;
-                    l_rest.pop_front();
-                }
-
-                for(;;)
-                {
-                    while (lbs < lbe && sd->m_r(*(lbs))) ++lbs;
-                    while (rbs < rbe && !sd->m_r(*(rbs))) ++rbs;
-                    if (lbs == lbe || rbs == rbe) break;
-                    std::swap(*lbs,*rbs);
-                }
-            }
-
-            task_res.set_value(it_left_plus_rtrue);
-            return;
-        });
+            task_res.set_exception(boost::copy_exception(e));
+        }
     }
 private:
     std::shared_ptr<shared_data> m_sd;
@@ -359,24 +396,30 @@ struct parallel_partition_range_move_helper:
 
     void operator()()
     {
-        boost::shared_ptr<Range> range = range_;
-        // TODO better ctor?
         boost::asynchronous::continuation_result<std::pair<Range,Iterator>> task_res = this->this_task_result();
-        auto cont = boost::asynchronous::parallel_partition<decltype(beg_),Func,Job>
-                (beg_,end_,std::move(func_),thread_num_,this->get_name(),prio_);
-        cont.on_done([task_res,range]
-                      (std::tuple<boost::asynchronous::expected<Iterator> >&& continuation_res) mutable
+        try
         {
-            try
+            boost::shared_ptr<Range> range = range_;
+            // TODO better ctor?
+            auto cont = boost::asynchronous::parallel_partition<decltype(beg_),Func,Job>
+                    (beg_,end_,std::move(func_),thread_num_,this->get_name(),prio_);
+            cont.on_done([task_res,range]
+                          (std::tuple<boost::asynchronous::expected<Iterator> >&& continuation_res) mutable
             {
-                task_res.set_value(std::make_pair(std::move(*range),std::get<0>(continuation_res).get()));
-            }
-            catch(std::exception& e)
-            {
-                task_res.set_exception(boost::copy_exception(e));
-            }
-        });
-
+                try
+                {
+                    task_res.set_value(std::make_pair(std::move(*range),std::get<0>(continuation_res).get()));
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
+            });
+        }
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
     }
     boost::shared_ptr<Range> range_;
     Iterator beg_;
@@ -436,31 +479,38 @@ struct parallel_partition_continuation_helper:
             Iterator>;
 
         boost::asynchronous::continuation_result<return_type> task_res = this->this_task_result();
-        auto thread_num = thread_num_;
-        auto task_name = this->get_name();
-        auto prio = prio_;
-        auto func= std::move(func_);
-        cont_.on_done([task_res,func,thread_num,task_name,prio]
-                      (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res) mutable
+        try
         {
-            try
+            auto thread_num = thread_num_;
+            auto task_name = this->get_name();
+            auto prio = prio_;
+            auto func= std::move(func_);
+            cont_.on_done([task_res,func,thread_num,task_name,prio]
+                          (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res) mutable
             {
-                auto new_continuation =
-                   boost::asynchronous::parallel_partition<typename Continuation::return_type, Func, Job>
-                        (std::move(std::get<0>(continuation_res).get()),std::move(func),thread_num,task_name,prio);
-                new_continuation.on_done(
-                [task_res]
-                (std::tuple<boost::asynchronous::expected<return_type> >&& new_continuation_res)
+                try
                 {
-                    task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
-                });
+                    auto new_continuation =
+                       boost::asynchronous::parallel_partition<typename Continuation::return_type, Func, Job>
+                            (std::move(std::get<0>(continuation_res).get()),std::move(func),thread_num,task_name,prio);
+                    new_continuation.on_done(
+                    [task_res]
+                    (std::tuple<boost::asynchronous::expected<return_type> >&& new_continuation_res)
+                    {
+                        task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
+                    });
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
             }
-            catch(std::exception& e)
-            {
-                task_res.set_exception(boost::copy_exception(e));
-            }
+            );
         }
-        );
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
     }
     Continuation cont_;
     Func func_;
