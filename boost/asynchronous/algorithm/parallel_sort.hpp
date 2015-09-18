@@ -29,6 +29,7 @@
 #include <boost/asynchronous/algorithm/parallel_is_sorted.hpp>
 #include <boost/asynchronous/algorithm/parallel_reverse.hpp>
 #include <boost/asynchronous/algorithm/detail/parallel_sort_helper.hpp>
+#include <boost/asynchronous/algorithm/parallel_placement.hpp>
 
 #include <boost/mpl/or.hpp>
 #include <boost/mpl/and.hpp>
@@ -43,12 +44,33 @@ namespace boost { namespace asynchronous
 // fast version for iterators (double memory costs) => will return nothing
 namespace detail
 {
+template <class T>
+struct merge_memory_holder
+{
+    merge_memory_holder(std::size_t s, char* d):size_(s),data_(d){}
+    merge_memory_holder(merge_memory_holder const&)=delete;
+    merge_memory_holder(merge_memory_holder &&)=delete;
+    merge_memory_holder& operator=(merge_memory_holder const&)=delete;
+    merge_memory_holder& operator=(merge_memory_holder &&)=delete;
+    ~merge_memory_holder()
+    {
+        for (std::size_t i = 0; i < size_; ++i)
+        {
+            ((T*)(data_)+i)->~T();
+        }
+        delete[] data_;
+    }
+
+    std::size_t size_;
+    char* data_;
+};
+
 template <class Iterator,class Func, class Job, class Sort>
 struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<void>
 {
     typedef typename std::iterator_traits<Iterator>::value_type value_type;
 
-    parallel_sort_fast_helper(Iterator beg, Iterator end,unsigned int depth,boost::shared_array<value_type> merge_memory,
+    parallel_sort_fast_helper(Iterator beg, Iterator end,unsigned int depth,boost::shared_ptr<boost::asynchronous::detail::merge_memory_holder<value_type>> merge_memory,
                               value_type* beg2, value_type* end2,
                               Func func,long cutoff,const std::string& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<void>(task_name),
@@ -56,7 +78,7 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
         , merge_beg_( beg2), merge_end_(end2)
     {
     }
-    static void helper(Iterator beg, Iterator end,unsigned int depth,boost::shared_array<value_type> merge_memory,
+    static void helper(Iterator beg, Iterator end,unsigned int depth,boost::shared_ptr<boost::asynchronous::detail::merge_memory_holder<value_type>> merge_memory,
                        value_type* beg2, value_type* end2,
                        Func func,long cutoff,const std::string& task_name, std::size_t prio,
                        boost::asynchronous::continuation_result<void> task_res)
@@ -200,10 +222,45 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
                                 }
                                 // create extra memory for merge
                                 auto size = std::distance(beg,end);
-                                boost::shared_array<value_type> merge_memory(
-                                            new typename std::iterator_traits<Iterator>::value_type[size]);
+#ifdef BOOST_ASYNCHRONOUS_TIMING
+                                auto alloc_start = boost::chrono::high_resolution_clock::now();
+#endif
+                                char* merge_memory_ =
+                                            new char[size * sizeof(typename std::iterator_traits<Iterator>::value_type)];
 
-                                helper(beg,end,depth,merge_memory,merge_memory.get(),merge_memory.get()+size,func,cutoff,task_name,prio,task_res);
+#ifdef BOOST_ASYNCHRONOUS_TIMING
+                                auto alloc_stop = boost::chrono::high_resolution_clock::now();
+                                double alloc_time = (boost::chrono::nanoseconds(alloc_stop - alloc_start).count() / 1000000);
+                                printf ("%50s: time = %.1f msec\n","alloc_time", alloc_time);
+                                auto placement_start = boost::chrono::high_resolution_clock::now();
+#endif
+                                auto cont = boost::asynchronous::parallel_placement<value_type,Job>
+                                        (0,size,merge_memory_,cutoff,task_name+"_placement",prio);
+                                cont.on_done([
+#ifdef BOOST_ASYNCHRONOUS_TIMING
+                                             placement_start,
+#endif
+                                             task_res,merge_memory_,size,beg,end,depth,func,cutoff,task_name,prio]
+                                              (std::tuple<boost::asynchronous::expected<void> >&& continuation_res) mutable
+                                {
+#ifdef BOOST_ASYNCHRONOUS_TIMING
+                                    auto placement_stop = boost::chrono::high_resolution_clock::now();
+                                    double placement_time = (boost::chrono::nanoseconds(placement_stop - placement_start).count() / 1000000);
+                                    printf ("%50s: time = %.1f msec\n","placement_time", placement_time);
+#endif
+                                    try
+                                    {
+                                        // get to check that no exception
+                                        std::get<0>(continuation_res).get();
+                                        auto merge_memory =
+                                                boost::make_shared<boost::asynchronous::detail::merge_memory_holder<value_type>>(size,merge_memory_);
+                                        helper(beg,end,depth,merge_memory,(value_type*)merge_memory_,((value_type*)merge_memory_)+size,func,cutoff,task_name,prio,task_res);
+                                    }
+                                    catch(std::exception& e)
+                                    {
+                                        task_res.set_exception(boost::copy_exception(e));
+                                    }
+                                });
                             }
                             catch(std::exception& e)
                             {
@@ -231,7 +288,7 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
     Func func_;
     long cutoff_;
     std::size_t prio_;
-    boost::shared_array<value_type> merge_memory_;
+    boost::shared_ptr<boost::asynchronous::detail::merge_memory_holder<value_type>> merge_memory_;
     value_type* merge_beg_;
     value_type* merge_end_;
 };
@@ -248,7 +305,7 @@ parallel_sort(Iterator beg, Iterator end,Func func,long cutoff,
 {
     return boost::asynchronous::top_level_callback_continuation_job<void,Job>
             (boost::asynchronous::detail::parallel_sort_fast_helper<Iterator,Func,Job,boost::asynchronous::std_sort>
-              (beg,end,0, boost::shared_array<typename std::iterator_traits<Iterator>::value_type>(),
+              (beg,end,0, boost::shared_ptr<boost::asynchronous::detail::merge_memory_holder<typename std::iterator_traits<Iterator>::value_type>>(),
                nullptr,nullptr,std::move(func),cutoff,task_name,prio));
 }
 
@@ -263,7 +320,7 @@ parallel_stable_sort(Iterator beg, Iterator end,Func func,long cutoff,
 {
     return boost::asynchronous::top_level_callback_continuation_job<void,Job>
             (boost::asynchronous::detail::parallel_sort_fast_helper<Iterator,Func,Job,boost::asynchronous::std_stable_sort>
-               (beg,end,0,boost::shared_array<typename std::iterator_traits<Iterator>::value_type>(),
+               (beg,end,0,boost::shared_ptr<boost::asynchronous::detail::merge_memory_holder<typename std::iterator_traits<Iterator>::value_type>>(),
                 nullptr,nullptr,std::move(func),cutoff,task_name,prio));
 }
 
@@ -279,7 +336,7 @@ parallel_spreadsort(Iterator beg, Iterator end,Func func,long cutoff,
 {
     return boost::asynchronous::top_level_callback_continuation_job<void,Job>
             (boost::asynchronous::detail::parallel_sort_fast_helper<Iterator,Func,Job,boost::asynchronous::boost_spreadsort>
-               (beg,end,0,boost::shared_array<typename std::iterator_traits<Iterator>::value_type>(),
+               (beg,end,0,boost::shared_ptr<boost::asynchronous::detail::merge_memory_holder<typename std::iterator_traits<Iterator>::value_type>>(),
                 nullptr,nullptr,std::move(func),cutoff,task_name,prio));
 }
 #endif
@@ -461,7 +518,7 @@ struct parallel_sort_range_move_helper_serializable
     {
         auto task_res = this->this_task_result();
         helper(range_,begin_,end_,depth_,std::move(func_),cutoff_,task_name_,prio_,task_res);
-    }    
+    }
 
     template <class Archive>
     void save(Archive & ar, const unsigned int /*version*/)const

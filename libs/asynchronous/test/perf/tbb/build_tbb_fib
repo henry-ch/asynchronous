@@ -1,0 +1,5 @@
+#!/bin/bash
+# Builds the entire application from scratch
+# All objects are deleted 
+
+g++ -O2 -o tbb_fib.out -std=c++11 -march=corei7 -I /data/boost_1_55_0/ -I ~/tbb/tbb43_20140724oss/include/  -L ~/tbb/tbb43_20140724oss/lib/intel64/gcc4.4/ -ltbb -ltbbmalloc -lrt Fibonacci.cpp

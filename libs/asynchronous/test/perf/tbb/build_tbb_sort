@@ -1,0 +1,5 @@
+#!/bin/bash
+# Builds the entire application from scratch
+# All objects are deleted 
+
+g++ -O3 -o tbb_parallel_sort.out -std=c++11 -march=corei7 -I /data/ext/boost_1_57_0/ -I /data/11.4/home/hyc/tbb/tbb43_20140724oss/include/  -L /data/11.4/home/hyc/tbb/tbb43_20140724oss/lib/intel64/gcc4.4/ /data/11.4/usr/local/lib64/libtcmalloc.a /data/11.4/usr/local/lib64/libunwind.a -ltbb -lrt tbb_parallel_sort.cpp
