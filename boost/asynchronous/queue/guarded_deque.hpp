@@ -39,12 +39,14 @@ public:
     std::vector<std::size_t> get_queue_size() const
     {
         std::vector<std::size_t> res;
+        lock_type lock(const_cast<this_type&>(*this).m_mutex);
         res.push_back(m_jobs.size());
         return res;
     }
 
     bool is_not_empty() const
     {
+        lock_type lock(const_cast<this_type&>(*this).m_mutex);
         return !m_jobs.empty();
     }
 #ifndef BOOST_NO_RVALUE_REFERENCES
