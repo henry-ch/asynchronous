@@ -220,7 +220,7 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
                                              placement_start,
 #endif
                                              task_res,merge_memory_,size,beg,end,depth,func,cutoff,task_name,prio]
-                                              (std::tuple<boost::asynchronous::expected<void> >&& continuation_res) mutable
+                                              (std::tuple<boost::asynchronous::expected<boost::asynchronous::detail::parallel_placement_helper_result> >&& continuation_res) mutable
                                 {
 #ifdef BOOST_ASYNCHRONOUS_TIMING
                                     auto placement_stop = boost::chrono::high_resolution_clock::now();
@@ -230,10 +230,17 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
                                     try
                                     {
                                         // get to check that no exception
-                                        std::get<0>(continuation_res).get();
-                                        auto merge_memory =
-                                                boost::make_shared<boost::asynchronous::placement_deleter<value_type,Job>>(size,merge_memory_,cutoff,task_name,prio);
-                                        helper(beg,end,depth,merge_memory,(value_type*)merge_memory_,((value_type*)merge_memory_)+size,func,cutoff,task_name,prio,task_res);
+                                        auto res = std::get<0>(continuation_res).get();
+                                        if (res.first != boost::asynchronous::detail::parallel_placement_helper_enum::success)
+                                        {
+                                            task_res.set_exception(res.second);
+                                        }
+                                        else
+                                        {
+                                            auto merge_memory =
+                                                    boost::make_shared<boost::asynchronous::placement_deleter<value_type,Job>>(size,merge_memory_,cutoff,task_name,prio);
+                                            helper(beg,end,depth,merge_memory,(value_type*)merge_memory_,((value_type*)merge_memory_)+size,func,cutoff,task_name,prio,task_res);
+                                        }
                                     }
                                     catch(std::exception& e)
                                     {
