@@ -46,7 +46,6 @@ public:
 
     bool is_not_empty() const
     {
-        lock_type lock(const_cast<this_type&>(*this).m_mutex);
         return !m_jobs.empty();
     }
 #ifndef BOOST_NO_RVALUE_REFERENCES
