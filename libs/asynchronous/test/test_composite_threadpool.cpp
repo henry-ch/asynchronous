@@ -87,7 +87,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                },// callback functor.
                "",1,0
         );
-        return std::move(fu);
+        return fu;
     }
 private:
 // for testing

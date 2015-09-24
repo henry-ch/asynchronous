@@ -147,7 +147,7 @@ private:
 //        {
 //        }
         m_data_cond.wait(head_lock,[&]{return (this->m_head.get()!= this->get_tail());});
-        return std::move(head_lock);
+        return head_lock;
     }
 
     std::unique_ptr<node> wait_pop_head()

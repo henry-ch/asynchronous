@@ -623,7 +623,7 @@ auto post_future(S const& scheduler, F const& func,
     }
 #endif
 
-    return std::move(fu);
+    return fu;
 }
 
 template <class F, class S>
