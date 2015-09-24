@@ -44,13 +44,13 @@ struct my_exception : virtual boost::exception, virtual std::exception
 };
 struct BadType
 {
-    BadType(int data):data_(data)
-    {
-    }
     // this one is called during sort and must throw
-    BadType():data_(0)
+    BadType(int data=0):data_(data)
     {
-        BOOST_THROW_EXCEPTION( my_exception());
+        if (data_ == 0)
+        {
+            BOOST_THROW_EXCEPTION( my_exception());
+        }
     }
     int data_=0;
 };
@@ -69,6 +69,9 @@ void generate(std::vector<int>& data)
 void generate(std::vector<BadType>& data)
 {
     data = std::vector<BadType>(10000,1);
+    std::mt19937 mt(static_cast<unsigned int>(std::time(nullptr)));
+    std::uniform_int_distribution<> dis(0, 1000);
+    std::generate(data.begin(), data.end(), std::bind(dis, std::ref(mt)));
 }
 struct Servant : boost::asynchronous::trackable_servant<>
 {
@@ -489,7 +492,6 @@ struct Servant : boost::asynchronous::trackable_servant<>
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         generate(this->m_data2);
-        auto data_copy = m_data2;
         // start long tasks
         post_callback(
            [ids,this](){
@@ -498,7 +500,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
                     return boost::asynchronous::parallel_sort(this->m_data2.begin(),this->m_data2.end(),std::less<BadType>(),1500);
                     },// work
-           [aPromise,ids,data_copy,this](boost::asynchronous::expected<void> res) mutable{
+           [aPromise,ids,this](boost::asynchronous::expected<void> res) mutable{
                         BOOST_CHECK_MESSAGE(res.has_exception(),"servant work should throw an exception.");
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
@@ -861,7 +863,7 @@ BOOST_AUTO_TEST_CASE( test_parallel_sort_post_future_inplace )
         BOOST_FAIL( "unexpected exception" );
     }
 }
-/*
+
 BOOST_AUTO_TEST_CASE( test_parallel_sort_exception )
 {
     servant_dtor=false;
@@ -890,4 +892,4 @@ BOOST_AUTO_TEST_CASE( test_parallel_sort_exception )
     }
     BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
 }
-*/
+
