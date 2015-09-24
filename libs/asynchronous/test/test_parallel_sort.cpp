@@ -887,6 +887,11 @@ BOOST_AUTO_TEST_CASE( test_parallel_sort_exception )
         {
             got_exception=true;
         }
+        catch ( std::exception& e)
+        {
+            //TODO do we get my_exception or another one?
+            got_exception=true;
+        }
         catch(...)
         {
             BOOST_FAIL( "unexpected exception" );
