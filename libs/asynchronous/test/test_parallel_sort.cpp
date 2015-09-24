@@ -42,18 +42,20 @@ struct my_exception : virtual boost::exception, virtual std::exception
         return "my_exception";
     }
 };
+std::atomic<int> counter_;
 struct BadType
 {
     // this one is called during sort and must throw
     BadType(int data=0):data_(data)
     {
-        if (data_ == 0)
+        if (data_ == 0 && (++counter_%10 == 0))
         {
             BOOST_THROW_EXCEPTION( my_exception());
         }
     }
     int data_=0;
 };
+
 inline bool operator< (const BadType& lhs, const BadType& rhs){ return rhs.data_ < lhs.data_; }
 
 void generate(std::vector<int>& data)
@@ -485,6 +487,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     }
     boost::shared_future<void> start_parallel_sort_exception()
     {
+        counter_=0;
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant async work not posted.");
         // we need a promise to inform caller when we're done
         boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
