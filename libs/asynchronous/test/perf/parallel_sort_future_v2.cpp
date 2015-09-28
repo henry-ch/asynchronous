@@ -64,11 +64,31 @@ using namespace std;
 
 #define LOOP 1
 
-//#define NELEM 200000000
-//#define SORTED_TYPE uint32_t
+struct LongOne
+{
+    LongOne(uint32_t i = 0)
+        :data(10,0)
+    {
+        data[0]=i;
+    }
+    LongOne& operator= (LongOne const& rhs)
+    {
+        data = rhs.data;
+        return *this;
+    }
 
-#define NELEM 10000000
-#define SORTED_TYPE std::string
+    std::vector<long> data;
+};
+inline bool operator< (const LongOne& lhs, const LongOne& rhs){ return rhs.data[0] < lhs.data[0]; }
+//#define NELEM 10000000
+//#define SORTED_TYPE LongOne
+//#define NO_SPREADSORT
+
+#define NELEM 200000000
+#define SORTED_TYPE uint32_t
+
+//#define NELEM 10000000
+//#define SORTED_TYPE std::string
 
 //#define NELEM 200000000
 //#define SORTED_TYPE double
@@ -79,13 +99,19 @@ long tpsize = 12;
 long tasks = 48;
 
 template <class T, class U>
-typename boost::disable_if<boost::is_same<T,U>,U >::type
+typename boost::disable_if<boost::mpl::or_<boost::is_same<T,U>,boost::is_same<LongOne,U>>,U >::type
 test_cast(T const& t)
 {
     return boost::lexical_cast<U>(t);
 }
 template <class T, class U>
 typename boost::enable_if<boost::is_same<T,U>,U >::type
+test_cast(T const& t)
+{
+    return t;
+}
+template <class T, class U>
+typename boost::enable_if<boost::is_same<LongOne,U>,U >::type
 test_cast(T const& t)
 {
     return t;
@@ -132,14 +158,16 @@ void ParallelAsyncPostCb(std::vector<SORTED_TYPE> a, size_t n)
     boost::future<std::vector<SORTED_TYPE>> fu = boost::asynchronous::post_future(pool,
     [a=std::move(a),n,tasksize]()mutable
     {
-        return boost::asynchronous::parallel_sort_move(std::move(a),SORT_FCT(),tasksize,"",0);
+        return boost::asynchronous::parallel_sort2(std::move(a),SORT_FCT(),tasksize,"",0);
     }
     ,"",0);
-    fu.get();
+    fu.wait();
     servant_intern += (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - servant_time).count() / 1000000);           
 }
 void ParallelAsyncPostCbSpreadsort(std::vector<SORTED_TYPE> a, size_t n)
 {
+#ifndef NO_SPREADSORT
+
     auto pool = boost::asynchronous::create_shared_scheduler_proxy(
                 new boost::asynchronous::multiqueue_threadpool_scheduler<
                         boost::asynchronous::lockfree_queue<>,
@@ -152,11 +180,12 @@ void ParallelAsyncPostCbSpreadsort(std::vector<SORTED_TYPE> a, size_t n)
     boost::future<std::vector<SORTED_TYPE>> fu = boost::asynchronous::post_future(pool,
     [a=std::move(a),n,tasksize]()mutable
     {
-        return boost::asynchronous::parallel_spreadsort_move(std::move(a),SORT_FCT(),tasksize,"",0);
+        return boost::asynchronous::parallel_spreadsort2(std::move(a),SORT_FCT(),tasksize,"",0);
     }
     ,"",0);
-    fu.get();
+    fu.wait();
     servant_intern += (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - servant_time).count() / 1000000); 
+#endif
 }
     
 
