@@ -205,8 +205,8 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
 #ifdef BOOST_ASYNCHRONOUS_TIMING
                                 auto alloc_start = boost::chrono::high_resolution_clock::now();
 #endif
-                                char* merge_memory_ =
-                                            new char[size * sizeof(typename std::iterator_traits<Iterator>::value_type)];
+                                boost::shared_array<char> merge_memory_ (
+                                            new char[size * sizeof(typename std::iterator_traits<Iterator>::value_type)]);
 
 #ifdef BOOST_ASYNCHRONOUS_TIMING
                                 auto alloc_stop = boost::chrono::high_resolution_clock::now();
@@ -235,21 +235,17 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
                                         if (res.first != boost::asynchronous::detail::parallel_placement_helper_enum::success)
                                         {
                                             task_res.set_exception(res.second);
-                                            // free memory
-                                            delete[] merge_memory_;
                                         }
                                         else
                                         {
                                             auto merge_memory =
                                                     boost::make_shared<boost::asynchronous::placement_deleter<value_type,Job>>(size,merge_memory_,cutoff,task_name,prio);
-                                            helper(beg,end,depth,merge_memory,(value_type*)merge_memory_,((value_type*)merge_memory_)+size,func,cutoff,task_name,prio,task_res);
+                                            helper(beg,end,depth,merge_memory,(value_type*)merge_memory_.get(),((value_type*)merge_memory_.get())+size,func,cutoff,task_name,prio,task_res);
                                         }
                                     }
                                     catch(std::exception& e)
                                     {
                                         task_res.set_exception(boost::copy_exception(e));
-                                        // free memory
-                                        delete[] merge_memory_;
                                     }
                                 });
                             }

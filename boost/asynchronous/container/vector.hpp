@@ -81,7 +81,7 @@ public:
         , m_task_name(task_name)
         , m_prio(prio)
     {
-        char* raw = new char[n * sizeof(T)];
+        boost::shared_array<char> raw (new char[n * sizeof(T)]);
         auto fu = boost::asynchronous::post_future(scheduler,
         [n,raw,cutoff,task_name,prio]()mutable
         {
@@ -114,22 +114,22 @@ public:
 
     iterator begin()
     {
-        return (iterator) (m_data->data_);
+        return (iterator) (m_data->data_.get());
     }
 
     const_iterator begin() const
     {
-        return (const_iterator) (m_data->data_);
+        return (const_iterator) (m_data->data_.get());
     }
 
     iterator end()
     {
-        return ((iterator) (m_data->data_)) + m_data->size_;
+        return ((iterator) (m_data->data_.get())) + m_data->size_;
     }
 
     const_iterator end() const
     {
-        return ((const_iterator) (m_data->data_)) + m_data->size_;
+        return ((const_iterator) (m_data->data_.get())) + m_data->size_;
     }
 
     reference operator[] (size_type n)
@@ -163,7 +163,7 @@ void make_asynchronous_range_task<Range,Job>::operator()()
     try
     {
         auto v = boost::make_shared<Range>(m_cutoff,m_task_name,m_prio);
-        char* raw = new char[m_size * sizeof(typename Range::value_type)];
+        boost::shared_array<char> raw (new char[m_size * sizeof(typename Range::value_type)]);
         auto n = m_size;
         auto cutoff = m_cutoff;
         auto task_name = m_task_name;
@@ -180,8 +180,6 @@ void make_asynchronous_range_task<Range,Job>::operator()()
                 if (res.first != boost::asynchronous::detail::parallel_placement_helper_enum::success)
                 {
                     task_res.set_exception(res.second);
-                    // free memory
-                    delete[] raw;
                 }
                 else
                 {
@@ -192,8 +190,6 @@ void make_asynchronous_range_task<Range,Job>::operator()()
             catch(std::exception& e)
             {
                 task_res.set_exception(boost::copy_exception(e));
-                // free memory
-                delete[] raw;
             }
         });
     }

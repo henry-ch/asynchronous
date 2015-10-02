@@ -35,7 +35,7 @@ using parallel_placement_helper_result = std::pair<boost::asynchronous::detail::
 template <class T, class Job>
 struct parallel_placement_helper: public boost::asynchronous::continuation_task<boost::asynchronous::detail::parallel_placement_helper_result>
 {
-    parallel_placement_helper(std::size_t beg, std::size_t end, char* data,long cutoff,const std::string& task_name, std::size_t prio)
+    parallel_placement_helper(std::size_t beg, std::size_t end,boost::shared_array<char> data,long cutoff,const std::string& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<boost::asynchronous::detail::parallel_placement_helper_result>(task_name),
           beg_(beg),end_(end),data_(data),cutoff_(cutoff),prio_(prio)
     {
@@ -54,14 +54,14 @@ struct parallel_placement_helper: public boost::asynchronous::continuation_task<
                 {
                     try
                     {
-                        new (((T*)data_)+ (i+beg_)) T;
+                        new (((T*)data_.get())+ (i+beg_)) T;
                     }
                     catch (std::exception& e)
                     {
                         // we need to cleanup
                         for (std::size_t j = 0; j < i; ++j)
                         {
-                            ((T*)(data_)+(j+beg_))->~T();
+                            ((T*)(data_.get())+(j+beg_))->~T();
                         }
                         task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,boost::copy_exception(e)));
                     }
@@ -70,7 +70,7 @@ struct parallel_placement_helper: public boost::asynchronous::continuation_task<
                         // we need to cleanup
                         for (std::size_t j = 0; j < i; ++j)
                         {
-                            ((T*)(data_)+(j+beg_))->~T();
+                            ((T*)(data_.get())+(j+beg_))->~T();
                         }
                         task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,boost::current_exception()));
                     }
@@ -109,7 +109,7 @@ struct parallel_placement_helper: public boost::asynchronous::continuation_task<
                                     {
                                         for (std::size_t j = 0; j < (end-it); ++j)
                                         {
-                                            ((T*)(data)+(j+beg))->~T();
+                                            ((T*)(data.get())+(j+beg))->~T();
                                         }
                                         task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_handled,res1.second));
                                     }
@@ -118,7 +118,7 @@ struct parallel_placement_helper: public boost::asynchronous::continuation_task<
                                     {
                                         for (std::size_t j = 0; j < (it-beg); ++j)
                                         {
-                                            ((T*)(data)+(j+beg))->~T();
+                                            ((T*)(data.get())+(j+beg))->~T();
                                         }
                                         task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_handled,res2.second));
                                     }
@@ -147,7 +147,7 @@ struct parallel_placement_helper: public boost::asynchronous::continuation_task<
     }
     std::size_t beg_;
     std::size_t end_;
-    char* data_;
+    boost::shared_array<char> data_;
     long cutoff_;
     std::size_t prio_;
 };
@@ -155,7 +155,7 @@ struct parallel_placement_helper: public boost::asynchronous::continuation_task<
 
 template <class T, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<boost::asynchronous::detail::parallel_placement_helper_result,Job>
-parallel_placement(std::size_t beg, std::size_t end, char* data,long cutoff,
+parallel_placement(std::size_t beg, std::size_t end, boost::shared_array<char> data,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
              const std::string& task_name, std::size_t prio)
 #else
@@ -247,7 +247,7 @@ parallel_placement_delete(boost::shared_array<char> data,std::size_t size,long c
 template <class T, class Job>
 struct placement_deleter
 {
-    placement_deleter(std::size_t s, char* d,long cutoff,const std::string& task_name, std::size_t prio):size_(s),data_(d),cutoff_(cutoff),task_name_(task_name),prio_(prio){}
+    placement_deleter(std::size_t s, boost::shared_array<char> d,long cutoff,const std::string& task_name, std::size_t prio):size_(s),data_(d),cutoff_(cutoff),task_name_(task_name),prio_(prio){}
     placement_deleter(placement_deleter const&)=delete;
     placement_deleter(placement_deleter &&)=delete;
     placement_deleter& operator=(placement_deleter const&)=delete;
@@ -264,7 +264,7 @@ struct placement_deleter
     }
 
     std::size_t size_;
-    char* data_;
+    boost::shared_array<char> data_;
     long cutoff_;
     std::string task_name_;
     std::size_t prio_;
