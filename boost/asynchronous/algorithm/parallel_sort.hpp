@@ -30,6 +30,7 @@
 #include <boost/asynchronous/algorithm/parallel_reverse.hpp>
 #include <boost/asynchronous/algorithm/detail/parallel_sort_helper.hpp>
 #include <boost/asynchronous/algorithm/parallel_placement.hpp>
+#include <boost/asynchronous/container/vector.hpp>
 
 #include <boost/mpl/or.hpp>
 #include <boost/mpl/and.hpp>
@@ -234,6 +235,8 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
                                         if (res.first != boost::asynchronous::detail::parallel_placement_helper_enum::success)
                                         {
                                             task_res.set_exception(res.second);
+                                            // free memory
+                                            delete[] merge_memory_;
                                         }
                                         else
                                         {
@@ -245,6 +248,8 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
                                     catch(std::exception& e)
                                     {
                                         task_res.set_exception(boost::copy_exception(e));
+                                        // free memory
+                                        delete[] merge_memory_;
                                     }
                                 });
                             }
@@ -645,9 +650,20 @@ struct parallel_sort_range_move_helper2 : public boost::asynchronous::continuati
             {
                 Sort()(beg,it,func);
             }
-            Range res (std::distance(beg,end));
-            std::move(beg,it,boost::begin(res));
-            task_res.set_value(std::move(res));
+            auto cont = boost::asynchronous::make_asynchronous_range<Range,Job> (std::distance(beg,end),cutoff);
+            cont.on_done([task_res,beg,it](std::tuple<boost::asynchronous::expected<boost::shared_ptr<Range>>>&& continuation_res)
+            {
+                try
+                {
+                    auto res = std::get<0>(continuation_res).get();
+                    std::move(beg,it,boost::begin(*res));
+                    task_res.set_value(std::move(*res));
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
+            });
         }
         else
         {
@@ -660,28 +676,39 @@ struct parallel_sort_range_move_helper2 : public boost::asynchronous::continuati
                             {
                                 boost::shared_ptr<Range> r1 =  boost::make_shared<Range>(std::move(std::get<0>(res).get()));
                                 boost::shared_ptr<Range> r2 =  boost::make_shared<Range>(std::move(std::get<1>(res).get()));
-                                boost::shared_ptr<Range> range = boost::make_shared<Range>(r1->size()+r2->size());
-
-                                // merge both sorted sub-ranges
-                                auto on_done_fct = [full_range,task_res,r1,r2,range]
-                                                   (std::tuple<boost::asynchronous::expected<void> >&& merge_res) mutable
+                                auto vec_cont = boost::asynchronous::make_asynchronous_range<Range,Job>(r1->size()+r2->size(),cutoff);
+                                vec_cont.on_done([full_range,task_res,it,cutoff,func,task_name,prio,r1,r2]
+                                                 (std::tuple<boost::asynchronous::expected<boost::shared_ptr<Range>>>&& vec_res)
                                 {
                                     try
                                     {
-                                        // get to check that no exception
-                                        std::get<0>(merge_res).get();
-                                        task_res.set_value(std::move(*range));
+                                        auto range = std::get<0>(vec_res).get();
+                                        // merge both sorted sub-ranges
+                                        auto on_done_fct = [full_range,task_res,r1,r2,range]
+                                                           (std::tuple<boost::asynchronous::expected<void> >&& merge_res) mutable
+                                        {
+                                            try
+                                            {
+                                                // get to check that no exception
+                                                std::get<0>(merge_res).get();
+                                                task_res.set_value(std::move(*range));
+                                            }
+                                            catch(std::exception& e)
+                                            {
+                                                task_res.set_exception(boost::copy_exception(e));
+                                            }
+                                        };
+                                        auto c = boost::asynchronous::parallel_merge<decltype(boost::begin(*r1)),decltype(boost::begin(*r1)),
+                                                                                     decltype(boost::begin(*range)),Func,Job>
+                                                (boost::begin(*r1),boost::end(*r1),boost::begin(*r2),boost::end(*r2), boost::begin(*range),func,
+                                                 cutoff,task_name+"_merge",prio);
+                                        c.on_done(std::move(on_done_fct));
                                     }
                                     catch(std::exception& e)
                                     {
                                         task_res.set_exception(boost::copy_exception(e));
                                     }
-                                };
-                                auto c = boost::asynchronous::parallel_merge<decltype(boost::begin(*r1)),decltype(boost::begin(*r1)),
-                                                                             decltype(boost::begin(*range)),Func,Job>
-                                        (boost::begin(*r1),boost::end(*r1),boost::begin(*r2),boost::end(*r2), boost::begin(*range),func,
-                                         cutoff,task_name+"_merge",prio);
-                                c.on_done(std::move(on_done_fct));
+                                });
                             }
                             catch(std::exception& e)
                             {

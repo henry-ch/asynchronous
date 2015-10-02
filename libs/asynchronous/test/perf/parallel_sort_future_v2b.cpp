@@ -24,6 +24,7 @@
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/trackable_servant.hpp>
 #include <boost/asynchronous/algorithm/parallel_sort.hpp>
+#include <boost/asynchronous/container/vector.hpp>
 
 using namespace std;
 
@@ -62,6 +63,8 @@ typename boost::chrono::high_resolution_clock::time_point servant_time;
 double servant_intern=0.0;
 long tpsize = 12;
 long tasks = 48;
+boost::asynchronous::any_shared_scheduler_proxy<> pool;
+long tasksize = NELEM / tasks;
 
 template <class T, class U>
 typename boost::disable_if<boost::mpl::or_<boost::is_same<T,U>,boost::is_same<LongOne,U>>,U >::type
@@ -109,19 +112,11 @@ struct increasing_sort_subtask
 #endif
 
 
-void ParallelAsyncPostCb(std::vector<SORTED_TYPE> a, size_t n)
-{
-    auto pool = boost::asynchronous::create_shared_scheduler_proxy(
-                new boost::asynchronous::multiqueue_threadpool_scheduler<
-                        boost::asynchronous::lockfree_queue<>,
-                        boost::asynchronous::default_find_position< boost::asynchronous::sequential_push_policy>,
-                        boost::asynchronous::no_cpu_load_saving
-                    >(tpsize,tasks));
-    
-    long tasksize = NELEM / tasks;
+void ParallelAsyncPostCb(boost::asynchronous::vector<SORTED_TYPE> a, size_t n)
+{        
     servant_time = boost::chrono::high_resolution_clock::now();
-    boost::future<std::vector<SORTED_TYPE>> fu = boost::asynchronous::post_future(pool,
-    [a=std::move(a),n,tasksize]()mutable
+    boost::future<boost::asynchronous::vector<SORTED_TYPE>> fu = boost::asynchronous::post_future(pool,
+    [a=std::move(a),n,tasksize=tasksize]()mutable
     {
         return boost::asynchronous::parallel_sort2(std::move(a),SORT_FCT(),tasksize,"",0);
     }
@@ -129,21 +124,12 @@ void ParallelAsyncPostCb(std::vector<SORTED_TYPE> a, size_t n)
     fu.wait();
     servant_intern += (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - servant_time).count() / 1000000);           
 }
-void ParallelAsyncPostCbSpreadsort(std::vector<SORTED_TYPE> a, size_t n)
+void ParallelAsyncPostCbSpreadsort(boost::asynchronous::vector<SORTED_TYPE> a, size_t n)
 {
-#ifndef NO_SPREADSORT
-
-    auto pool = boost::asynchronous::create_shared_scheduler_proxy(
-                new boost::asynchronous::multiqueue_threadpool_scheduler<
-                        boost::asynchronous::lockfree_queue<>,
-                        boost::asynchronous::default_find_position< boost::asynchronous::sequential_push_policy>,
-                        boost::asynchronous::no_cpu_load_saving
-                    >(tpsize,tasks));
-    
-    long tasksize = NELEM / tasks;
+#ifndef NO_SPREADSORT    
     servant_time = boost::chrono::high_resolution_clock::now();
-    boost::future<std::vector<SORTED_TYPE>> fu = boost::asynchronous::post_future(pool,
-    [a=std::move(a),n,tasksize]()mutable
+    boost::future<boost::asynchronous::vector<SORTED_TYPE>> fu = boost::asynchronous::post_future(pool,
+    [a=std::move(a),n,tasksize=tasksize]()mutable
     {
         return boost::asynchronous::parallel_spreadsort2(std::move(a),SORT_FCT(),tasksize,"",0);
     }
@@ -155,54 +141,54 @@ void ParallelAsyncPostCbSpreadsort(std::vector<SORTED_TYPE> a, size_t n)
     
 
 
-void test_sorted_elements(void(*pf)(std::vector<SORTED_TYPE>, size_t ))
+void test_sorted_elements(void(*pf)(boost::asynchronous::vector<SORTED_TYPE>, size_t ))
 {
-    std::vector<SORTED_TYPE> a (NELEM);
+    boost::asynchronous::vector<SORTED_TYPE> a (pool,NELEM,tasksize);
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
         a[i] = test_cast<uint32_t,SORTED_TYPE>( i+NELEM) ;
     }
     (*pf)(std::move(a),NELEM);
 }
-void test_random_elements_many_repeated(void(*pf)(std::vector<SORTED_TYPE>, size_t ))
+void test_random_elements_many_repeated(void(*pf)(boost::asynchronous::vector<SORTED_TYPE>, size_t ))
 {
-    std::vector<SORTED_TYPE> a (NELEM);
+    boost::asynchronous::vector<SORTED_TYPE> a (pool,NELEM,tasksize);
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
         a[i] = test_cast<uint32_t,SORTED_TYPE>(rand() % 10000) ;
     }
     (*pf)(std::move(a),NELEM);
 }
-void test_random_elements_few_repeated(void(*pf)(std::vector<SORTED_TYPE>, size_t ))
+void test_random_elements_few_repeated(void(*pf)(boost::asynchronous::vector<SORTED_TYPE>, size_t ))
 {
-    std::vector<SORTED_TYPE> a (NELEM);
+    boost::asynchronous::vector<SORTED_TYPE> a (pool,NELEM,tasksize);
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
         a[i] = test_cast<uint32_t,SORTED_TYPE>(rand());
     }
     (*pf)(std::move(a),NELEM);
 }
-void test_random_elements_quite_repeated(void(*pf)(std::vector<SORTED_TYPE>, size_t ))
+void test_random_elements_quite_repeated(void(*pf)(boost::asynchronous::vector<SORTED_TYPE>, size_t ))
 {
-    std::vector<SORTED_TYPE> a (NELEM);
+    boost::asynchronous::vector<SORTED_TYPE> a (pool,NELEM,tasksize);
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
         a[i] = test_cast<uint32_t,SORTED_TYPE>(rand() % (NELEM/2)) ;
     }
     (*pf)(std::move(a),NELEM);
 }
-void test_reversed_sorted_elements(void(*pf)(std::vector<SORTED_TYPE>, size_t ))
+void test_reversed_sorted_elements(void(*pf)(boost::asynchronous::vector<SORTED_TYPE>, size_t ))
 {
-    std::vector<SORTED_TYPE> a (NELEM);
+    boost::asynchronous::vector<SORTED_TYPE> a (pool,NELEM,tasksize);
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
         a[i] = test_cast<uint32_t,SORTED_TYPE>((NELEM<<1) -i) ;
     }
     (*pf)(std::move(a),NELEM);
 }
-void test_equal_elements(void(*pf)(std::vector<SORTED_TYPE>, size_t ))
+void test_equal_elements(void(*pf)(boost::asynchronous::vector<SORTED_TYPE>, size_t ))
 {
-    std::vector<SORTED_TYPE> a (NELEM);
+    boost::asynchronous::vector<SORTED_TYPE> a (pool,NELEM,tasksize);
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
         a[i] = test_cast<uint32_t,SORTED_TYPE>(NELEM) ;
@@ -215,7 +201,15 @@ int main( int argc, const char *argv[] )
     tasks = (argc>2) ? strtol(argv[2],0,0) : 500;
     std::cout << "tpsize=" << tpsize << std::endl;
     std::cout << "tasks=" << tasks << std::endl;   
-    
+    tasksize = NELEM / tasks;
+
+    pool = boost::asynchronous::create_shared_scheduler_proxy(
+                    new boost::asynchronous::multiqueue_threadpool_scheduler<
+                            boost::asynchronous::lockfree_queue<>,
+                            boost::asynchronous::default_find_position< boost::asynchronous::sequential_push_policy>,
+                            boost::asynchronous::no_cpu_load_saving
+                        >(tpsize,tasks));
+
     servant_intern=0.0;
     for (int i=0;i<LOOP;++i)
     {     

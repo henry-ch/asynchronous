@@ -461,6 +461,7 @@ struct continuation
         boost::asynchronous::any_weak_scheduler<Job> weak_scheduler = boost::asynchronous::get_thread_scheduler<Job>();
         boost::asynchronous::any_shared_scheduler<Job> locked_scheduler = weak_scheduler.lock();
         std::vector<boost::asynchronous::any_interruptible> interruptibles;
+        // TODO what if not valid?
         if (locked_scheduler.is_valid())
         {
             continuation_ctor_helper(locked_scheduler,interruptibles,std::forward<Args>(args)...);
