@@ -102,7 +102,7 @@ struct Servant2 : boost::asynchronous::trackable_servant<>
                             p->set_value();
                       }
         );
-        return std::move(fu);
+        return fu;
     }
 private:
     ServantProxy m_worker;
