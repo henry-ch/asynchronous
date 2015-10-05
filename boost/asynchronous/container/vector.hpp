@@ -25,6 +25,32 @@ template<typename T, typename Job, typename Alloc>
 class vector;
 namespace detail
 {
+// helper for destructors, avoids c++14 move lambda
+template <class T>
+struct move_only
+{
+    move_only(T&& data):m_data(std::forward<T>(data)){}
+    move_only(move_only&& rhs)noexcept
+        : m_data(std::move(rhs.m_data)){}
+
+    move_only& operator= (move_only&& rhs) noexcept
+    {
+        std::swap(m_data,rhs.m_data);
+        return *this;
+    }
+    move_only(move_only const& rhs)noexcept
+        : m_data(std::move(const_cast<move_only&>(rhs).m_data)){}
+    move_only& operator= (move_only const& rhs) noexcept
+    {
+        std::swap(m_data,const_cast<move_only&>(rhs).m_data);
+        return *this;
+    }
+    void operator()()const{} //dummy
+
+private:
+    T m_data;
+
+};
 
 template<typename Range, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 struct make_asynchronous_range_task: public boost::asynchronous::continuation_task<boost::shared_ptr<Range>>
@@ -57,6 +83,7 @@ public:
     : m_data()
     {}
 
+    // only for use inside a threadpool using make_asynchronous_range
     vector(long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
            const std::string& task_name, std::size_t prio)
@@ -69,8 +96,8 @@ public:
     {
     }
 
-    vector(boost::asynchronous::any_shared_scheduler_proxy<Job> scheduler,size_type n,
-           long cutoff,
+    vector(boost::asynchronous::any_shared_scheduler_proxy<Job> scheduler,long cutoff,
+           size_type n,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
            const std::string& task_name, std::size_t prio)
 #else
@@ -92,6 +119,7 @@ public:
         fu.get();
         m_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,raw,cutoff,task_name,prio);
     }
+
     ~vector()
     {
         // if in threadpool (algorithms) already, nothing to do, placement deleter will handle dtors and freeing of memory
@@ -101,11 +129,9 @@ public:
             // TODO solution for not C++14?
             try
             {
-                auto fu = boost::asynchronous::post_future(m_scheduler,
-                [data = std::move(m_data)]()mutable
-                {
-                },
-                m_task_name+"_dtor",m_prio);
+                boost::asynchronous::post_future(m_scheduler,
+                                                 boost::asynchronous::detail::move_only<boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>(std::move(m_data)),
+                                                 m_task_name+"_dtor",m_prio);
             }
             catch(std::exception&)
             {}
@@ -133,6 +159,23 @@ public:
     }
 
     reference operator[] (size_type n)
+    {
+        return *(begin()+n);
+    }
+    const_reference operator[] (size_type n) const
+    {
+        return *(begin()+n);
+    }
+
+    reference at (size_type n)
+    {
+        if (n >= size())
+        {
+            throw std::out_of_range("boost::asynchronous::vector: at() out of range");
+        }
+        return *(begin()+n);
+    }
+    const_reference at (size_type n) const
     {
         return *(begin()+n);
     }
