@@ -60,6 +60,7 @@ BOOST_AUTO_TEST_CASE( test_vector_ctor_size_job )
 
     boost::asynchronous::vector<int,servant_job> v(scheduler, 100 /* cutoff */, 10000 /* number of elements */);
     BOOST_CHECK_MESSAGE(v.size()==10000,"vector size should be 10000.");
+    BOOST_CHECK_MESSAGE(!v.empty(),"vector should not be empty.");
 }
 
 BOOST_AUTO_TEST_CASE( test_vector_access )
@@ -101,4 +102,17 @@ BOOST_AUTO_TEST_CASE( test_vector_at_nok )
         caught = true;
     }
     BOOST_CHECK_MESSAGE(caught,"vector::at should have thrown");
+}
+
+BOOST_AUTO_TEST_CASE( test_vector_front_back )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(8);
+
+    boost::asynchronous::vector<some_type> v(scheduler, 100 /* cutoff */, 10000 /* number of elements */);
+    BOOST_CHECK_MESSAGE(v.size()==10000,"vector size should be 10000.");
+    v[0].data = 10;
+    v[9999].data = 11;
+    BOOST_CHECK_MESSAGE(v.front().data == 10,"vector.front() should have value 10.");
+    BOOST_CHECK_MESSAGE(v.back().data == 11,"vector.back() should have value 11.");
 }

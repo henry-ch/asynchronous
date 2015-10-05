@@ -10,7 +10,8 @@
 #ifndef BOOST_ASYNCHRONOUS_CONTAINER_VECTOR_HPP
 #define BOOST_ASYNCHRONOUS_CONTAINER_VECTOR_HPP
 
-#include <vector>
+//#include <vector>
+#include <limits>
 
 #include <boost/shared_ptr.hpp>
 #include <boost/asynchronous/algorithm/parallel_placement.hpp>
@@ -78,6 +79,9 @@ public:
     typedef T&                          reference;
     typedef T const&                    const_reference;
     typedef T					        value_type;
+    typedef T*                          pointer;
+    typedef const T*                    const_pointer;
+    typedef boost::asynchronous::vector<T,Job,Alloc> this_type;
     // TODO with allocator
     vector()
     : m_data()
@@ -142,8 +146,11 @@ public:
     {
         return (iterator) (m_data->data_.get());
     }
-
     const_iterator begin() const
+    {
+        return (const_iterator) (m_data->data_.get());
+    }
+    const_iterator cbegin() const
     {
         return (const_iterator) (m_data->data_.get());
     }
@@ -152,8 +159,11 @@ public:
     {
         return ((iterator) (m_data->data_.get())) + m_data->size_;
     }
-
     const_iterator end() const
+    {
+        return ((const_iterator) (m_data->data_.get())) + m_data->size_;
+    }
+    const_iterator cend() const
     {
         return ((const_iterator) (m_data->data_.get())) + m_data->size_;
     }
@@ -177,13 +187,55 @@ public:
     }
     const_reference at (size_type n) const
     {
+        if (n >= size())
+        {
+            throw std::out_of_range("boost::asynchronous::vector: at() out of range");
+        }
         return *(begin()+n);
+    }
+
+    reference front()
+    {
+        return *(begin());
+    }
+    const_reference front() const
+    {
+        return *(begin());
+    }
+    reference back()
+    {
+        return *(begin()+ (m_data->size_ - 1) );
+    }
+    const_reference back() const
+    {
+        return *(begin()+ (m_data->size_ - 1) );
+    }
+    pointer data()
+    {
+        return (pointer) (m_data->data_.get());
+    }
+    const_pointer data() const
+    {
+        return (const_pointer) (m_data->data_.get());
     }
 
     size_type size() const
     {
         return m_data->size_;
     }
+    bool empty() const
+    {
+        return size() == 0;
+    }
+    size_type max_size() const
+    {
+        return std::numeric_limits<size_type>::max();
+    }
+    void swap( this_type& other )
+    {
+        std::swap(m_data,other.m_data);
+    }
+
 private:
 
     template <class _Range, class _Job>
