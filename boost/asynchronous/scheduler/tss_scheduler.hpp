@@ -27,6 +27,8 @@ boost::asynchronous::any_weak_scheduler<Job> get_thread_scheduler(boost::asynchr
     {
         s_scheduler.reset(new boost::asynchronous::tss_any_weak_scheduler_wrapper<Job>(wscheduler));
     }
+    if (!s_scheduler.get())
+        return boost::asynchronous::any_weak_scheduler<Job>();
     return s_scheduler.get()->m_scheduler;
 }
 

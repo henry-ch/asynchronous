@@ -19,6 +19,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/chrono.hpp>
 #include <boost/thread/mutex.hpp>
+#include <boost/type_erasure/is_empty.hpp>
 
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/post.hpp>
@@ -579,6 +580,29 @@ struct continuation
 
 };
 
+#define BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES(Job)                         \
+auto weak_scheduler = boost::asynchronous::get_thread_scheduler<Job>();     \
+if (!boost::type_erasure::is_empty(weak_scheduler))                         \
+{                                                                           \
+    auto locked_scheduler = weak_scheduler.lock();                          \
+    if (locked_scheduler.is_valid())                                        \
+    {                                                                       \
+        continuation_ctor_helper<0>                                         \
+            (locked_scheduler,interruptibles,std::forward<Args>(args)...);  \
+    }                                                                       \
+}
+#define BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES2(Job)                        \
+auto weak_scheduler = boost::asynchronous::get_thread_scheduler<Job>();     \
+if (!boost::type_erasure::is_empty(weak_scheduler))                         \
+{                                                                           \
+    auto locked_scheduler = weak_scheduler.lock();                          \
+    if (locked_scheduler.is_valid())                                        \
+    {                                                                       \
+        continuation_ctor_helper_tuple<0>                                   \
+            (locked_scheduler,interruptibles,args);                         \
+    }                                                                       \
+}
+
 template <class Return, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB, typename Tuple=std::tuple<boost::asynchronous::expected<Return> > , typename Duration = boost::chrono::milliseconds >
 struct callback_continuation
 {
@@ -640,14 +664,16 @@ struct callback_continuation
         m_start = boost::chrono::high_resolution_clock::now();
 
         on_done(std::move(f));
-
-        boost::asynchronous::any_weak_scheduler<Job> weak_scheduler = boost::asynchronous::get_thread_scheduler<Job>();
-        boost::asynchronous::any_shared_scheduler<Job> locked_scheduler = weak_scheduler.lock();
         std::vector<boost::asynchronous::any_interruptible> interruptibles;
-        if (locked_scheduler.is_valid())
+
+        BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES(Job)
+        else
         {
-            continuation_ctor_helper<0>
-                (locked_scheduler,interruptibles,std::forward<Args>(args)...);
+            BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES(boost::asynchronous::any_callable)
+            else
+            {
+                BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES(boost::asynchronous::any_loggable)
+            }
         }
         if (m_state)
             m_state->add_subs(interruptibles.begin(),interruptibles.end());
@@ -664,13 +690,16 @@ struct callback_continuation
         // remember when we started
         m_start = boost::chrono::high_resolution_clock::now();
 
-        boost::asynchronous::any_weak_scheduler<Job> weak_scheduler = boost::asynchronous::get_thread_scheduler<Job>();
-        boost::asynchronous::any_shared_scheduler<Job> locked_scheduler = weak_scheduler.lock();
         std::vector<boost::asynchronous::any_interruptible> interruptibles;
-        if (locked_scheduler.is_valid())
+
+        BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES(Job)
+        else
         {
-            continuation_ctor_helper<0>
-                (locked_scheduler,interruptibles,std::forward<Args>(args)...);
+            BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES(boost::asynchronous::any_callable)
+            else
+            {
+                BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES(boost::asynchronous::any_loggable)
+            }
         }
         if (m_state)
             m_state->add_subs(interruptibles.begin(),interruptibles.end());
@@ -687,14 +716,16 @@ struct callback_continuation
         m_start = boost::chrono::high_resolution_clock::now();
 
         on_done(std::move(f));
-
-        boost::asynchronous::any_weak_scheduler<Job> weak_scheduler = boost::asynchronous::get_thread_scheduler<Job>();
-        boost::asynchronous::any_shared_scheduler<Job> locked_scheduler = weak_scheduler.lock();
         std::vector<boost::asynchronous::any_interruptible> interruptibles;
-        if (locked_scheduler.is_valid())
+
+        BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES2(Job)
+        else
         {
-            continuation_ctor_helper_tuple<0>
-                (locked_scheduler,interruptibles,args);
+            BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES2(boost::asynchronous::any_callable)
+            else
+            {
+                BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES2(boost::asynchronous::any_loggable)
+            }
         }
         if (m_state)
             m_state->add_subs(interruptibles.begin(),interruptibles.end());

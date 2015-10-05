@@ -323,7 +323,7 @@ BOOST_AUTO_TEST_CASE( test_parallel_sort_post_future2 )
                 [data]() mutable {return boost::asynchronous::parallel_sort2(std::move(data),std::less<int>(),1500);});
     try
     {
-        std::vector<int> res = std::move(fu.get());
+        std::vector<int> res = fu.get();
         std::sort(data.begin(),data.end(),std::less<int>());
         BOOST_CHECK_MESSAGE(std::is_sorted(res.begin(),res.end(),std::less<int>()),"parallel_sort did not sort.");
         BOOST_CHECK_MESSAGE(res == data,"parallel_sort gave a wrong value.");
