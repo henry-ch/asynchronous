@@ -143,7 +143,7 @@ void ParallelAsyncPostCbSpreadsort(boost::asynchronous::vector<SORTED_TYPE> a, s
 
 void test_sorted_elements(void(*pf)(boost::asynchronous::vector<SORTED_TYPE>, size_t ))
 {
-    boost::asynchronous::vector<SORTED_TYPE> a (pool,NELEM,tasksize);
+    boost::asynchronous::vector<SORTED_TYPE> a (pool,tasksize,NELEM);
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
         a[i] = test_cast<uint32_t,SORTED_TYPE>( i+NELEM) ;
@@ -152,7 +152,7 @@ void test_sorted_elements(void(*pf)(boost::asynchronous::vector<SORTED_TYPE>, si
 }
 void test_random_elements_many_repeated(void(*pf)(boost::asynchronous::vector<SORTED_TYPE>, size_t ))
 {
-    boost::asynchronous::vector<SORTED_TYPE> a (pool,NELEM,tasksize);
+    boost::asynchronous::vector<SORTED_TYPE> a (pool,tasksize,NELEM);
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
         a[i] = test_cast<uint32_t,SORTED_TYPE>(rand() % 10000) ;
@@ -161,7 +161,7 @@ void test_random_elements_many_repeated(void(*pf)(boost::asynchronous::vector<SO
 }
 void test_random_elements_few_repeated(void(*pf)(boost::asynchronous::vector<SORTED_TYPE>, size_t ))
 {
-    boost::asynchronous::vector<SORTED_TYPE> a (pool,NELEM,tasksize);
+    boost::asynchronous::vector<SORTED_TYPE> a (pool,tasksize,NELEM);
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
         a[i] = test_cast<uint32_t,SORTED_TYPE>(rand());
@@ -170,7 +170,7 @@ void test_random_elements_few_repeated(void(*pf)(boost::asynchronous::vector<SOR
 }
 void test_random_elements_quite_repeated(void(*pf)(boost::asynchronous::vector<SORTED_TYPE>, size_t ))
 {
-    boost::asynchronous::vector<SORTED_TYPE> a (pool,NELEM,tasksize);
+    boost::asynchronous::vector<SORTED_TYPE> a (pool,tasksize,NELEM);
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
         a[i] = test_cast<uint32_t,SORTED_TYPE>(rand() % (NELEM/2)) ;
@@ -179,7 +179,7 @@ void test_random_elements_quite_repeated(void(*pf)(boost::asynchronous::vector<S
 }
 void test_reversed_sorted_elements(void(*pf)(boost::asynchronous::vector<SORTED_TYPE>, size_t ))
 {
-    boost::asynchronous::vector<SORTED_TYPE> a (pool,NELEM,tasksize);
+    boost::asynchronous::vector<SORTED_TYPE> a (pool,tasksize,NELEM);
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
         a[i] = test_cast<uint32_t,SORTED_TYPE>((NELEM<<1) -i) ;
@@ -188,7 +188,7 @@ void test_reversed_sorted_elements(void(*pf)(boost::asynchronous::vector<SORTED_
 }
 void test_equal_elements(void(*pf)(boost::asynchronous::vector<SORTED_TYPE>, size_t ))
 {
-    boost::asynchronous::vector<SORTED_TYPE> a (pool,NELEM,tasksize);
+    boost::asynchronous::vector<SORTED_TYPE> a (pool,tasksize,NELEM);
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
         a[i] = test_cast<uint32_t,SORTED_TYPE>(NELEM) ;
