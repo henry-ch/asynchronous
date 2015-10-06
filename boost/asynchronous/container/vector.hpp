@@ -88,7 +88,7 @@ public:
     {}
 
     // only for use inside a threadpool using make_asynchronous_range
-    vector(long cutoff,
+    vector(long cutoff,size_type n,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
            const std::string& task_name, std::size_t prio)
 #else
@@ -97,6 +97,8 @@ public:
         : m_cutoff(cutoff)
         , m_task_name(task_name)
         , m_prio(prio)
+        , m_size(n)
+        , m_capacity(n)
     {
     }
 
@@ -111,6 +113,8 @@ public:
         , m_cutoff(cutoff)
         , m_task_name(task_name)
         , m_prio(prio)
+        , m_size(n)
+        , m_capacity(n)
     {
         boost::shared_array<char> raw (new char[n * sizeof(T)]);
         auto fu = boost::asynchronous::post_future(scheduler,
@@ -124,13 +128,30 @@ public:
         m_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,raw,cutoff,task_name,prio);
     }
 
+    vector(boost::asynchronous::any_shared_scheduler_proxy<Job> scheduler,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+           const std::string& task_name, std::size_t prio)
+#else
+           const std::string& task_name="", std::size_t prio=0)
+#endif
+        : m_scheduler(scheduler)
+        , m_cutoff(cutoff)
+        , m_task_name(task_name)
+        , m_prio(prio)
+        , m_size(0)
+        , m_capacity(default_capacity)
+    {
+        boost::shared_array<char> raw (new char[default_capacity * sizeof(T)]);
+
+        m_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(0,raw,cutoff,task_name,prio);
+    }
+
     ~vector()
     {
         // if in threadpool (algorithms) already, nothing to do, placement deleter will handle dtors and freeing of memory
         // else we need to handle destruction
         if (m_scheduler.is_valid())
         {
-            // TODO solution for not C++14?
             try
             {
                 boost::asynchronous::post_future(m_scheduler,
@@ -144,28 +165,28 @@ public:
 
     iterator begin()
     {
-        return (iterator) (m_data->data_.get());
+        return (iterator) (m_data->data());
     }
     const_iterator begin() const
     {
-        return (const_iterator) (m_data->data_.get());
+        return (const_iterator) (m_data->data());
     }
     const_iterator cbegin() const
     {
-        return (const_iterator) (m_data->data_.get());
+        return (const_iterator) (m_data->data());
     }
 
     iterator end()
     {
-        return ((iterator) (m_data->data_.get())) + m_data->size_;
+        return ((iterator) (m_data->data())) + m_size;
     }
     const_iterator end() const
     {
-        return ((const_iterator) (m_data->data_.get())) + m_data->size_;
+        return ((const_iterator) (m_data->data())) + m_size;
     }
     const_iterator cend() const
     {
-        return ((const_iterator) (m_data->data_.get())) + m_data->size_;
+        return ((const_iterator) (m_data->data())) + m_size;
     }
 
     reference operator[] (size_type n)
@@ -204,24 +225,28 @@ public:
     }
     reference back()
     {
-        return *(begin()+ (m_data->size_ - 1) );
+        return *(begin()+ (m_size - 1) );
     }
     const_reference back() const
     {
-        return *(begin()+ (m_data->size_ - 1) );
+        return *(begin()+ (m_size - 1) );
     }
     pointer data()
     {
-        return (pointer) (m_data->data_.get());
+        return (pointer) (m_data->data());
     }
     const_pointer data() const
     {
-        return (const_pointer) (m_data->data_.get());
+        return (const_pointer) (m_data->data());
     }
 
-    size_type size() const
+    size_type capacity() const
     {
-        return m_data->size_;
+        return m_capacity;
+    }
+    size_type size() const
+    {        
+        return m_size;
     }
     bool empty() const
     {
@@ -236,8 +261,33 @@ public:
         std::swap(m_data,other.m_data);
     }
 
-private:
+    void clear()
+    {
+        if (m_scheduler.is_valid())
+        {
+            boost::asynchronous::post_future(m_scheduler,
+                                             boost::asynchronous::detail::move_only<boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>(std::move(m_data)),
+                                             m_task_name+"_clear",m_prio);
+        }
+        m_size=0;
+    }
 
+    void push_back( const T& value )
+    {
+        if (m_capacity >=1 )
+        {
+            --m_capacity;
+            ++m_size;
+            ++m_data->size_;
+            new (end()) T;
+            back() = value;
+        }
+        // todo realloc
+    }
+
+    enum { default_capacity = 10 };
+
+private:
     template <class _Range, class _Job>
     friend struct boost::asynchronous::detail::make_asynchronous_range_task;
     // only used from "outside" (i.e. not algorithms)
@@ -246,6 +296,8 @@ private:
     long m_cutoff;
     std::string m_task_name;
     std::size_t m_prio;
+    std::size_t m_size;
+    std::size_t m_capacity;
 };
 
 namespace detail
@@ -257,7 +309,7 @@ void make_asynchronous_range_task<Range,Job>::operator()()
     boost::asynchronous::continuation_result<boost::shared_ptr<Range>> task_res = this->this_task_result();
     try
     {
-        auto v = boost::make_shared<Range>(m_cutoff,m_task_name,m_prio);
+        auto v = boost::make_shared<Range>(m_cutoff,m_size,m_task_name,m_prio);
         boost::shared_array<char> raw (new char[m_size * sizeof(typename Range::value_type)]);
         auto n = m_size;
         auto cutoff = m_cutoff;

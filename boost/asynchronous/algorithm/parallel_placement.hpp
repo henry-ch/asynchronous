@@ -262,6 +262,14 @@ struct placement_deleter
               // ignore
              });
     }
+    char* data()
+    {
+        return data_.get();
+    }
+    char* data() const
+    {
+        return data_.get();
+    }
 
     std::size_t size_;
     boost::shared_array<char> data_;
