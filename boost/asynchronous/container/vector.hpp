@@ -260,6 +260,8 @@ public:
     void swap( this_type& other )
     {
         std::swap(m_data,other.m_data);
+        std::swap(m_size,other.m_size);
+        std::swap(m_capacity,other.m_capacity);
     }
 
     void clear()
@@ -275,61 +277,113 @@ public:
 
     void push_back( const T& value )
     {
-        if (m_capacity >= 1 )
+        if (m_size + 1 <= m_capacity )
         {
-            new (end()) T;
-            --m_capacity;
+            new (end()) T(value);
             ++m_size;
             ++m_data->size_;            
-            back() = value;
         }
         else
         {
             // reallocate memory
-            auto new_memory = (m_size *2) + 10;
-            boost::shared_array<char> raw (new char[new_memory * sizeof(T)]);
-
-            // create our current number of objects with placement new
-            auto n = m_size;
-            auto cutoff = m_cutoff;
-            auto task_name = m_task_name;
-            auto prio = m_prio;
-            auto fu = boost::asynchronous::post_future(m_scheduler,
-            [n,raw,cutoff,task_name,prio]()mutable
-            {
-                return boost::asynchronous::parallel_placement<T,Job>(0,n,raw,cutoff,task_name+"push_back_placement",prio);
-            },
-            task_name+"_push_back_placement",prio);
-            // if exception, will be forwarded
-            fu.get();
-            auto new_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
-
-            auto beg_it = begin();
-            auto end_it = end();
-
-            // move our data to new memory
-            auto fu2 = boost::asynchronous::post_future(m_scheduler,
-            [new_data,beg_it,end_it,cutoff,task_name,prio]()mutable
-            {
-                return boost::asynchronous::parallel_move<iterator,iterator,Job>(beg_it,end_it,(iterator)(new_data->data()),cutoff,task_name+"push_back_copy",prio);
-            },
-            task_name+"_push_back_placement",prio);
-            // if exception, will be forwarded
-            fu2.get();
-            // destroy our old data (no need to wait until done)
-            boost::asynchronous::post_future(m_scheduler,
-                                             boost::asynchronous::detail::move_only<boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>(std::move(m_data)),
-                                             m_task_name+"push_back_delete",m_prio);;
-            std::swap(m_data,new_data);
+            auto new_memory = reallocate_helper();
             // add new element, update size and capacity
-            m_capacity = new_memory - m_size;
+            m_capacity = new_memory;
             push_back(value);
         }
+    }
+    void push_back( T&& value )
+    {
+        if (m_size + 1 <= m_capacity )
+        {
+            new (end()) T(std::forward<T>(value));
+            ++m_size;
+            ++m_data->size_;
+        }
+        else
+        {
+            // reallocate memory
+            auto new_memory = reallocate_helper();
+            // add new element, update size and capacity
+            m_capacity = new_memory;
+            push_back(std::forward<T>(value));
+        }
+    }
+    template< class... Args >
+    void emplace_back( Args&&... args )
+    {
+        if (m_size + 1 <= m_capacity )
+        {
+            new (end()) T(std::forward<Args...>(args...));
+            ++m_size;
+            ++m_data->size_;
+        }
+        else
+        {
+            // reallocate memory
+            auto new_memory = reallocate_helper();
+            // add new element, update size and capacity
+            m_capacity = new_memory;
+            push_back(std::forward<Args...>(args...));
+        }
+    }
+    void pop_back()
+    {
+        ((T*)(begin()))->~T();
+        --m_size;
+        --m_data->size_;
     }
 
     enum { default_capacity = 10 };
 
 private:
+
+    std::size_t reallocate_helper()
+    {
+        auto new_memory = (m_size *2) + 10;
+        boost::shared_array<char> raw (new char[new_memory * sizeof(T)]);
+
+        // create our current number of objects with placement new
+        auto n = m_size;
+        auto cutoff = m_cutoff;
+        auto task_name = m_task_name;
+        auto prio = m_prio;
+        auto fu = boost::asynchronous::post_future(m_scheduler,
+        [n,raw,cutoff,task_name,prio]()mutable
+        {
+            return boost::asynchronous::parallel_placement<T,Job>(0,n,raw,cutoff,task_name+"push_back_placement",prio);
+        },
+        task_name+"_push_back_placement",prio);
+        // if exception, will be forwarded
+        auto placement_result = fu.get();
+        if (placement_result.first != boost::asynchronous::detail::parallel_placement_helper_enum::success)
+        {
+            boost::rethrow_exception(placement_result.second);
+        }
+
+        auto new_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
+
+        auto beg_it = begin();
+        auto end_it = end();
+
+        // move our data to new memory
+        auto fu2 = boost::asynchronous::post_future(m_scheduler,
+        [new_data,beg_it,end_it,cutoff,task_name,prio]()mutable
+        {
+            return boost::asynchronous::parallel_move<iterator,iterator,Job>(beg_it,end_it,(iterator)(new_data->data()),cutoff,task_name+"push_back_copy",prio);
+        },
+        task_name+"_push_back_placement",prio);
+        // if exception, will be forwarded
+        fu2.get();
+        // destroy our old data (no need to wait until done)
+        boost::asynchronous::post_future(m_scheduler,
+                                         boost::asynchronous::detail::move_only<boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>(std::move(m_data)),
+                                         m_task_name+"push_back_delete",m_prio);;
+        std::swap(m_data,new_data);
+
+        return new_memory;
+    }
+
     template <class _Range, class _Job>
     friend struct boost::asynchronous::detail::make_asynchronous_range_task;
     // only used from "outside" (i.e. not algorithms)

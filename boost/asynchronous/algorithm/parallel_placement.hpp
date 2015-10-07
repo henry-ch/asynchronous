@@ -10,7 +10,7 @@
 #ifndef BOOST_ASYNCHRONOUS_PARALLEL_PLACEMENT_HPP
 #define BOOST_ASYNCHRONOUS_PARALLEL_PLACEMENT_HPP
 
-
+#include <new>
 #include <boost/utility/enable_if.hpp>
 #include <boost/shared_array.hpp>
 

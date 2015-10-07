@@ -141,13 +141,20 @@ BOOST_AUTO_TEST_CASE( test_vector_push_back_no_realloc )
     v.push_back(some_type(42));
     BOOST_CHECK_MESSAGE(v[0].data == 42,"vector[0] should have value 42.");
     BOOST_CHECK_MESSAGE(v.size()==1,"vector size should be 1.");
-    BOOST_CHECK_MESSAGE(v.capacity()== v.default_capacity - 1,"vector capacity should be 9.");
 
     v.push_back(some_type(41));
     BOOST_CHECK_MESSAGE(v[0].data == 42,"vector[0] should have value 42.");
     BOOST_CHECK_MESSAGE(v[1].data == 41,"vector[1] should have value 41.");
     BOOST_CHECK_MESSAGE(v.size()==2,"vector size should be 2.");
-    BOOST_CHECK_MESSAGE(v.capacity()== v.default_capacity - 2,"vector capacity should be 8.");
+    BOOST_CHECK_MESSAGE(v.capacity()== v.default_capacity,"vector capacity should be 10.");
+
+    // test pop_back
+    v.pop_back();
+    BOOST_CHECK_MESSAGE(v.size()==1,"vector size should be 1.");
+    v.pop_back();
+    BOOST_CHECK_MESSAGE(v.size()==0,"vector size should be 0.");
+    BOOST_CHECK_MESSAGE(v.empty(),"vector.empty() should be true.");
+    BOOST_CHECK_MESSAGE(v.capacity()== v.default_capacity ,"vector capacity should be 10.");
 }
 
 BOOST_AUTO_TEST_CASE( test_vector_push_back_realloc )
@@ -164,7 +171,7 @@ BOOST_AUTO_TEST_CASE( test_vector_push_back_realloc )
         v.push_back(some_type(i));
         BOOST_CHECK_MESSAGE(v[i].data == i,"vector[i] should have value i.");
         BOOST_CHECK_MESSAGE(v.size()==(std::size_t)i+1,"vector size should be i+1.");
-        BOOST_CHECK_MESSAGE(v.capacity()== (std::size_t)(v.default_capacity - (i+1)),"vector capacity should be 10 - (i+1).");
+        BOOST_CHECK_MESSAGE(v.capacity()== (std::size_t)(v.default_capacity),"vector capacity should be 10.");
     }
     // realloc happens now
     v.push_back(some_type(10));
@@ -174,6 +181,47 @@ BOOST_AUTO_TEST_CASE( test_vector_push_back_realloc )
     }
     BOOST_CHECK_MESSAGE(v[10].data == 10,"vector[10] should have value 10.");
     BOOST_CHECK_MESSAGE(v.size()==11,"vector size should be 11.");
-    BOOST_CHECK_MESSAGE(v.capacity()== 19,"vector capacity should be 19.");
+    BOOST_CHECK_MESSAGE(v.capacity()== 30,"vector capacity should be 30.");
 }
 
+BOOST_AUTO_TEST_CASE( test_vector_emplace_back_no_realloc )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(8);
+
+    boost::asynchronous::vector<some_type> v(scheduler, 100 /* cutoff */);
+    BOOST_CHECK_MESSAGE(v.size()==0,"vector size should be 0.");
+    BOOST_CHECK_MESSAGE(v.capacity()== v.default_capacity,"vector capacity should be 10.");
+
+    v.emplace_back(42);
+    BOOST_CHECK_MESSAGE(v[0].data == 42,"vector[0] should have value 42.");
+    BOOST_CHECK_MESSAGE(v.size()==1,"vector size should be 1.");
+
+    v.emplace_back(41);
+    BOOST_CHECK_MESSAGE(v[0].data == 42,"vector[0] should have value 42.");
+    BOOST_CHECK_MESSAGE(v[1].data == 41,"vector[1] should have value 41.");
+    BOOST_CHECK_MESSAGE(v.size()==2,"vector size should be 2.");
+    BOOST_CHECK_MESSAGE(v.capacity()== v.default_capacity,"vector capacity should be 10.");
+}
+
+BOOST_AUTO_TEST_CASE( test_vector_swap )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(8);
+
+    boost::asynchronous::vector<some_type> v(scheduler, 100 /* cutoff */);
+
+    v.push_back(some_type(42));
+    v.push_back(some_type(41));
+    // test swap
+    boost::asynchronous::vector<some_type> v2(scheduler, 100 /* cutoff */);
+    v.swap(v2);
+
+    BOOST_CHECK_MESSAGE(v2[0].data == 42,"vector[0] should have value 42.");
+    BOOST_CHECK_MESSAGE(v2[1].data == 41,"vector[1] should have value 41.");
+    BOOST_CHECK_MESSAGE(v2.size()==2,"vector size should be 2.");
+    BOOST_CHECK_MESSAGE(v2.capacity()== v2.default_capacity,"vector capacity should be 10.");
+
+    BOOST_CHECK_MESSAGE(v.size()==0,"vector size should be 0.");
+    BOOST_CHECK_MESSAGE(v.capacity()== v.default_capacity,"vector capacity should be 10.");
+}
