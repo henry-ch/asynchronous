@@ -83,6 +83,9 @@ public:
     typedef T*                          pointer;
     typedef const T*                    const_pointer;
     typedef boost::asynchronous::vector<T,Job,Alloc> this_type;
+
+    enum { default_capacity = 10 };
+
     // TODO with allocator
     vector()
     : m_data()
@@ -286,7 +289,7 @@ public:
         else
         {
             // reallocate memory
-            auto new_memory = reallocate_helper();
+            auto new_memory = reallocate_helper(calc_new_capacity());
             // add new element, update size and capacity
             m_capacity = new_memory;
             push_back(value);
@@ -303,7 +306,7 @@ public:
         else
         {
             // reallocate memory
-            auto new_memory = reallocate_helper();
+            auto new_memory = reallocate_helper(calc_new_capacity());
             // add new element, update size and capacity
             m_capacity = new_memory;
             push_back(std::forward<T>(value));
@@ -321,7 +324,7 @@ public:
         else
         {
             // reallocate memory
-            auto new_memory = reallocate_helper();
+            auto new_memory = reallocate_helper(calc_new_capacity());
             // add new element, update size and capacity
             m_capacity = new_memory;
             push_back(std::forward<Args...>(args...));
@@ -334,13 +337,36 @@ public:
         --m_data->size_;
     }
 
-    enum { default_capacity = 10 };
+    void reserve( size_type new_cap )
+    {
+        if (new_cap <= m_capacity)
+            return;
+        // increase capacity, move our elements
+        auto new_memory = reallocate_helper(new_cap);
+        // add new element, update size and capacity
+        m_capacity = new_memory;
+    }
+    void shrink_to_fit()
+    {
+        if (m_size == m_capacity)
+            // nothing to do
+            return;
+        // reallocate, move our elements
+        auto new_size = reallocate_helper(m_size);
+        assert(new_size == m_size);
+        assert(new_size == m_data->size_);
+        m_capacity = new_size;
+    }
 
 private:
 
-    std::size_t reallocate_helper()
+    std::size_t calc_new_capacity() const
     {
-        auto new_memory = (m_size *2) + 10;
+        return (m_size *2) + 10;
+    }
+
+    std::size_t reallocate_helper(size_type new_memory)
+    {
         boost::shared_array<char> raw (new char[new_memory * sizeof(T)]);
 
         // create our current number of objects with placement new

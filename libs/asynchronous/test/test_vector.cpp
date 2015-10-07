@@ -225,3 +225,40 @@ BOOST_AUTO_TEST_CASE( test_vector_swap )
     BOOST_CHECK_MESSAGE(v.size()==0,"vector size should be 0.");
     BOOST_CHECK_MESSAGE(v.capacity()== v.default_capacity,"vector capacity should be 10.");
 }
+
+BOOST_AUTO_TEST_CASE( test_vector_reserve )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(8);
+
+    boost::asynchronous::vector<some_type> v(scheduler, 100 /* cutoff */);
+    v.push_back(some_type(41));
+    v.push_back(some_type(42));
+    // reserve without change
+    v.reserve(1);
+    BOOST_CHECK_MESSAGE(v.size()==2,"vector size should be 2.");
+    BOOST_CHECK_MESSAGE(v.capacity()== v.default_capacity,"vector capacity should be 10.");
+
+    // reserve with change
+    v.reserve(20);
+    BOOST_CHECK_MESSAGE(v.size()==2,"vector size should be 2.");
+    BOOST_CHECK_MESSAGE(v.capacity()== 20,"vector capacity should be 20.");
+    BOOST_CHECK_MESSAGE(v[0].data == 41,"vector[0] should have value 41.");
+    BOOST_CHECK_MESSAGE(v[1].data == 42,"vector[1] should have value 42.");
+}
+
+BOOST_AUTO_TEST_CASE( test_vector_shrink_to_fit )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(8);
+
+    boost::asynchronous::vector<some_type> v(scheduler, 100 /* cutoff */);
+    v.push_back(some_type(41));
+    v.push_back(some_type(42));
+    v.shrink_to_fit();
+    BOOST_CHECK_MESSAGE(v.size()==2,"vector size should be 2.");
+    BOOST_CHECK_MESSAGE(v.capacity()== 2,"vector capacity should be 2.");
+    BOOST_CHECK_MESSAGE(v[0].data == 41,"vector[0] should have value 41.");
+    BOOST_CHECK_MESSAGE(v[1].data == 42,"vector[1] should have value 42.");
+}
+
