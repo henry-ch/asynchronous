@@ -149,3 +149,31 @@ BOOST_AUTO_TEST_CASE( test_vector_push_back_no_realloc )
     BOOST_CHECK_MESSAGE(v.size()==2,"vector size should be 2.");
     BOOST_CHECK_MESSAGE(v.capacity()== v.default_capacity - 2,"vector capacity should be 8.");
 }
+
+BOOST_AUTO_TEST_CASE( test_vector_push_back_realloc )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(8);
+
+    boost::asynchronous::vector<some_type> v(scheduler, 100 /* cutoff */);
+    BOOST_CHECK_MESSAGE(v.size()==0,"vector size should be 0.");
+    BOOST_CHECK_MESSAGE(v.capacity()== v.default_capacity,"vector capacity should be 10.");
+
+    for (auto i = 0; i < 10; ++i)
+    {
+        v.push_back(some_type(i));
+        BOOST_CHECK_MESSAGE(v[i].data == i,"vector[i] should have value i.");
+        BOOST_CHECK_MESSAGE(v.size()==(std::size_t)i+1,"vector size should be i+1.");
+        BOOST_CHECK_MESSAGE(v.capacity()== (std::size_t)(v.default_capacity - (i+1)),"vector capacity should be 10 - (i+1).");
+    }
+    // realloc happens now
+    v.push_back(some_type(10));
+    for (auto i = 0; i < 10; ++i)
+    {
+        BOOST_CHECK_MESSAGE(v[i].data == i,"vector[i] should have value i.");
+    }
+    BOOST_CHECK_MESSAGE(v[10].data == 10,"vector[10] should have value 10.");
+    BOOST_CHECK_MESSAGE(v.size()==11,"vector size should be 11.");
+    BOOST_CHECK_MESSAGE(v.capacity()== 19,"vector capacity should be 19.");
+}
+

@@ -15,6 +15,7 @@
 
 #include <boost/shared_ptr.hpp>
 #include <boost/asynchronous/algorithm/parallel_placement.hpp>
+#include <boost/asynchronous/algorithm/parallel_move.hpp>
 #include <boost/asynchronous/any_shared_scheduler_proxy.hpp>
 #include <boost/asynchronous/post.hpp>
 #include <boost/mpl/has_xxx.hpp>
@@ -274,15 +275,56 @@ public:
 
     void push_back( const T& value )
     {
-        if (m_capacity >=1 )
+        if (m_capacity >= 1 )
         {
+            new (end()) T;
             --m_capacity;
             ++m_size;
-            ++m_data->size_;
-            new (end()) T;
+            ++m_data->size_;            
             back() = value;
         }
-        // todo realloc
+        else
+        {
+            // reallocate memory
+            auto new_memory = (m_size *2) + 10;
+            boost::shared_array<char> raw (new char[new_memory * sizeof(T)]);
+
+            // create our current number of objects with placement new
+            auto n = m_size;
+            auto cutoff = m_cutoff;
+            auto task_name = m_task_name;
+            auto prio = m_prio;
+            auto fu = boost::asynchronous::post_future(m_scheduler,
+            [n,raw,cutoff,task_name,prio]()mutable
+            {
+                return boost::asynchronous::parallel_placement<T,Job>(0,n,raw,cutoff,task_name+"push_back_placement",prio);
+            },
+            task_name+"_push_back_placement",prio);
+            // if exception, will be forwarded
+            fu.get();
+            auto new_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
+
+            auto beg_it = begin();
+            auto end_it = end();
+
+            // move our data to new memory
+            auto fu2 = boost::asynchronous::post_future(m_scheduler,
+            [new_data,beg_it,end_it,cutoff,task_name,prio]()mutable
+            {
+                return boost::asynchronous::parallel_move<iterator,iterator,Job>(beg_it,end_it,(iterator)(new_data->data()),cutoff,task_name+"push_back_copy",prio);
+            },
+            task_name+"_push_back_placement",prio);
+            // if exception, will be forwarded
+            fu2.get();
+            // destroy our old data (no need to wait until done)
+            boost::asynchronous::post_future(m_scheduler,
+                                             boost::asynchronous::detail::move_only<boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>(std::move(m_data)),
+                                             m_task_name+"push_back_delete",m_prio);;
+            std::swap(m_data,new_data);
+            // add new element, update size and capacity
+            m_capacity = new_memory - m_size;
+            push_back(value);
+        }
     }
 
     enum { default_capacity = 10 };

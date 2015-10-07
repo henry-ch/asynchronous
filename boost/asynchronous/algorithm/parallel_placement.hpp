@@ -254,7 +254,8 @@ struct placement_deleter
     placement_deleter& operator=(placement_deleter &&)=delete;
     ~placement_deleter()
     {
-        boost::shared_array<char> d (data_);
+        boost::shared_array<char> d (std::move(data_));
+
         auto cont = boost::asynchronous::parallel_placement_delete<T,Job>(d,size_,cutoff_,task_name_,prio_);
         cont.on_done(
             [d](std::tuple<boost::asynchronous::expected<void> >&&)
