@@ -10,7 +10,7 @@
 #ifndef BOOST_ASYNCHRONOUS_CONTAINER_VECTOR_HPP
 #define BOOST_ASYNCHRONOUS_CONTAINER_VECTOR_HPP
 
-//#include <vector>
+#include <iterator>
 #include <limits>
 
 #include <boost/shared_ptr.hpp>
@@ -82,6 +82,9 @@ public:
     typedef T					        value_type;
     typedef T*                          pointer;
     typedef const T*                    const_pointer;
+    typedef std::reverse_iterator<const_iterator>  const_reverse_iterator;
+    typedef std::reverse_iterator<iterator>		 reverse_iterator;
+
     typedef boost::asynchronous::vector<T,Job,Alloc> this_type;
 
     enum { default_capacity = 10 };
@@ -91,7 +94,7 @@ public:
     : m_data()
     {}
 
-    // only for use inside a threadpool using make_asynchronous_range
+    // only for use from within a threadpool using make_asynchronous_range
     vector(long cutoff,size_type n,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
            const std::string& task_name, std::size_t prio)
@@ -121,17 +124,16 @@ public:
         , m_capacity(n)
     {
         boost::shared_array<char> raw (new char[n * sizeof(T)]);
+        m_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,raw,cutoff,task_name,prio);
         auto fu = boost::asynchronous::post_future(scheduler,
         [n,raw,cutoff,task_name,prio]()mutable
         {
-            return boost::asynchronous::parallel_placement<T,Job>(0,n,raw,cutoff,task_name+"_placement",prio);
+            return boost::asynchronous::parallel_placement<T,Job>(0,n,raw,cutoff,task_name+"_vector_ctor_placement",prio);
         },
-        task_name+"_ctor",prio);
+        task_name+"vector_ctor",prio);
         // if exception, will be forwarded
         fu.get();
-        m_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,raw,cutoff,task_name,prio);
     }
-
     vector(boost::asynchronous::any_shared_scheduler_proxy<Job> scheduler,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
            const std::string& task_name, std::size_t prio)
@@ -149,6 +151,32 @@ public:
 
         m_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(0,raw,cutoff,task_name,prio);
     }
+    vector(boost::asynchronous::any_shared_scheduler_proxy<Job> scheduler,long cutoff,
+           size_type n,
+           T const& value,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+           const std::string& task_name, std::size_t prio)
+#else
+           const std::string& task_name="", std::size_t prio=0)
+#endif
+        : m_scheduler(scheduler)
+        , m_cutoff(cutoff)
+        , m_task_name(task_name)
+        , m_prio(prio)
+        , m_size(n)
+        , m_capacity(n)
+    {
+        boost::shared_array<char> raw (new char[n * sizeof(T)]);
+        m_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,raw,cutoff,task_name,prio);
+        auto fu = boost::asynchronous::post_future(scheduler,
+        [n,raw,value,cutoff,task_name,prio]()mutable
+        {
+            return boost::asynchronous::parallel_placement<T,Job>(0,n,raw.get(),value,cutoff,task_name+"_vector_ctor_placement",prio);
+        },
+        task_name+"vector_ctor",prio);
+        // if exception, will be forwarded
+        fu.get();
+    }
 
     ~vector()
     {
@@ -160,7 +188,7 @@ public:
             {
                 boost::asynchronous::post_future(m_scheduler,
                                                  boost::asynchronous::detail::move_only<boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>(std::move(m_data)),
-                                                 m_task_name+"_dtor",m_prio);
+                                                 m_task_name+"_vector_dtor",m_prio);
             }
             catch(std::exception&)
             {}
@@ -179,7 +207,6 @@ public:
     {
         return (const_iterator) (m_data->data());
     }
-
     iterator end()
     {
         return ((iterator) (m_data->data())) + m_size;
@@ -191,6 +218,30 @@ public:
     const_iterator cend() const
     {
         return ((const_iterator) (m_data->data())) + m_size;
+    }
+    reverse_iterator rbegin()
+    {
+        return reverse_iterator(end());
+    }
+    const_reverse_iterator rbegin() const
+    {
+        return const_reverse_iterator(end());
+    }
+    const_reverse_iterator crbegin() const
+    {
+        return const_reverse_iterator(cend());
+    }
+    reverse_iterator rend()
+    {
+        return reverse_iterator(begin());
+    }
+    const_reverse_iterator rend() const
+    {
+        return const_reverse_iterator(begin());
+    }
+    const_reverse_iterator crend() const
+    {
+        return const_reverse_iterator(cbegin());
     }
 
     reference operator[] (size_type n)
@@ -273,7 +324,7 @@ public:
         {
             boost::asynchronous::post_future(m_scheduler,
                                              boost::asynchronous::detail::move_only<boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>(std::move(m_data)),
-                                             m_task_name+"_clear",m_prio);
+                                             m_task_name+"_vector_clear",m_prio);
         }
         m_size=0;
     }
@@ -357,6 +408,53 @@ public:
         assert(new_size == m_data->size_);
         m_capacity = new_size;
     }
+    void resize( size_type count, T value = T() )
+    {
+        if (count == size())
+            return;
+        auto cutoff = m_cutoff;
+        auto task_name = m_task_name;
+        auto prio = m_prio;
+
+        if (count > size())
+        {
+            // we need to allocate new elements
+            if (count > capacity())
+            {
+                // reallocate memory
+                reserve(count);
+            }
+            // add count - size() elements
+            auto s = size();
+            char* raw = (char*) begin();
+            auto fu = boost::asynchronous::post_future(m_scheduler,
+            [s,count,raw,value,cutoff,task_name,prio]()mutable
+            {
+                return boost::asynchronous::parallel_placement<T,Job>(s,count,raw,value,cutoff,task_name+"_vector_resize_placement",prio);
+            },
+            task_name+"_vector_resize_placement_top",prio);
+            // if exception, will be forwarded
+            auto placement_result = fu.get();
+            if (placement_result.first != boost::asynchronous::detail::parallel_placement_helper_enum::success)
+            {
+                boost::rethrow_exception(placement_result.second);
+            }
+            m_size = count;
+        }
+        else
+        {
+            // remove elements
+            auto s = size();
+            m_size = count;
+            auto raw = m_data->data_;
+            boost::asynchronous::post_future(m_scheduler,
+            [s,count,raw,cutoff,task_name,prio]()mutable
+            {
+                return boost::asynchronous::parallel_placement_delete<T,Job>(raw,count,s,cutoff,task_name+"_vector_resize_placement_delete",prio);
+            },
+            task_name+"_vector_resize_placement_delete_top",prio);
+        }
+    }
 
 private:
 
@@ -377,9 +475,9 @@ private:
         auto fu = boost::asynchronous::post_future(m_scheduler,
         [n,raw,cutoff,task_name,prio]()mutable
         {
-            return boost::asynchronous::parallel_placement<T,Job>(0,n,raw,cutoff,task_name+"push_back_placement",prio);
+            return boost::asynchronous::parallel_placement<T,Job>(0,n,raw,cutoff,task_name+"_reallocate_placement",prio);
         },
-        task_name+"_push_back_placement",prio);
+        task_name+"_vector_reallocate_placement_top",prio);
         // if exception, will be forwarded
         auto placement_result = fu.get();
         if (placement_result.first != boost::asynchronous::detail::parallel_placement_helper_enum::success)
@@ -396,15 +494,15 @@ private:
         auto fu2 = boost::asynchronous::post_future(m_scheduler,
         [new_data,beg_it,end_it,cutoff,task_name,prio]()mutable
         {
-            return boost::asynchronous::parallel_move<iterator,iterator,Job>(beg_it,end_it,(iterator)(new_data->data()),cutoff,task_name+"push_back_copy",prio);
+            return boost::asynchronous::parallel_move<iterator,iterator,Job>(beg_it,end_it,(iterator)(new_data->data()),cutoff,task_name+"_reallocate_move",prio);
         },
-        task_name+"_push_back_placement",prio);
+        task_name+"_reallocate_move_top",prio);
         // if exception, will be forwarded
         fu2.get();
         // destroy our old data (no need to wait until done)
         boost::asynchronous::post_future(m_scheduler,
                                          boost::asynchronous::detail::move_only<boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>(std::move(m_data)),
-                                         m_task_name+"push_back_delete",m_prio);;
+                                         m_task_name+"_vector_reallocate_delete",m_prio);;
         std::swap(m_data,new_data);
 
         return new_memory;
@@ -438,7 +536,7 @@ void make_asynchronous_range_task<Range,Job>::operator()()
         auto task_name = m_task_name;
         auto prio = m_prio;
 
-        auto cont = boost::asynchronous::parallel_placement<typename Range::value_type,Job>(0,n,raw,cutoff,task_name+"_placement",prio);
+        auto cont = boost::asynchronous::parallel_placement<typename Range::value_type,Job>(0,n,raw,cutoff,task_name+"_vector_placement",prio);
         cont.on_done(
         [task_res, raw,v,n,cutoff,task_name,prio]
         (std::tuple<boost::asynchronous::expected<boost::asynchronous::detail::parallel_placement_helper_result> >&& continuation_res) mutable

@@ -52,6 +52,20 @@ BOOST_AUTO_TEST_CASE( test_vector_ctor_size )
     BOOST_CHECK_MESSAGE(v[500].data == 0,"vector[500] should have value 0.");
 }
 
+BOOST_AUTO_TEST_CASE( test_vector_ctor_size_value )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(8);
+
+    boost::asynchronous::vector<some_type> v(scheduler, 100 /* cutoff */, 10000 /* number of elements */, some_type(42));
+    BOOST_CHECK_MESSAGE(v.size()==10000,"vector size should be 10000.");
+
+    // check iterators
+    auto cpt = std::count_if(v.begin(),v.end(),[](some_type const & i){return i.data == 42;});
+    BOOST_CHECK_MESSAGE(cpt==10000,"vector should have 10000 int with value 42.");
+    BOOST_CHECK_MESSAGE(v[500].data == 42,"vector[500] should have value 42.");
+}
+
 BOOST_AUTO_TEST_CASE( test_vector_ctor_size_job )
 {
     typedef boost::asynchronous::any_loggable servant_job;
@@ -260,5 +274,44 @@ BOOST_AUTO_TEST_CASE( test_vector_shrink_to_fit )
     BOOST_CHECK_MESSAGE(v.capacity()== 2,"vector capacity should be 2.");
     BOOST_CHECK_MESSAGE(v[0].data == 41,"vector[0] should have value 41.");
     BOOST_CHECK_MESSAGE(v[1].data == 42,"vector[1] should have value 42.");
+}
+
+BOOST_AUTO_TEST_CASE( test_vector_iterators )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(8);
+
+    boost::asynchronous::vector<some_type> v(scheduler, 100 /* cutoff */);
+    v.push_back(some_type(1));
+    v.push_back(some_type(2));
+    v.push_back(some_type(3));
+    BOOST_CHECK_MESSAGE((*v.begin()).data==1,"vector begin should be 1.");
+    BOOST_CHECK_MESSAGE((*(v.begin()+1)).data==2,"vector begin+1 should be 2.");
+    BOOST_CHECK_MESSAGE((*v.rbegin()).data==3,"vector rbegin should be 3.");
+    BOOST_CHECK_MESSAGE((*(v.rbegin()+1)).data==2,"vector begin+1 should be 2.");
+    BOOST_CHECK_MESSAGE((*v.cbegin()).data==1,"vector begin should be 1.");
+    BOOST_CHECK_MESSAGE((*(v.cbegin()+1)).data==2,"vector begin+1 should be 2.");
+    BOOST_CHECK_MESSAGE((*v.crbegin()).data==3,"vector rbegin should be 3.");
+    BOOST_CHECK_MESSAGE((*(v.crbegin()+1)).data==2,"vector begin+1 should be 2.");
+}
+
+BOOST_AUTO_TEST_CASE( test_vector_resize)
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(8);
+
+    boost::asynchronous::vector<some_type> v(scheduler, 100 /* cutoff */, 10000 /* number of elements */);
+    v.resize(10000);
+    BOOST_CHECK_MESSAGE(v.size() == 10000,"vector size should be 10000.");
+
+    v.resize(20000,some_type(42));
+    BOOST_CHECK_MESSAGE(v.size() == 20000,"vector size should be 20000.");
+    BOOST_CHECK_MESSAGE(v[15000].data == 42,"vector[15000] should have value 42.");
+    BOOST_CHECK_MESSAGE(v.capacity() == 20000,"vector capacity should be 20000.");
+
+    v.resize(5000);
+    BOOST_CHECK_MESSAGE(v.size() == 5000,"vector size should be 5000.");
+    BOOST_CHECK_MESSAGE(v.capacity() == 20000,"vector capacity should be 20000.");
+    BOOST_CHECK_MESSAGE(v[4999].data == 0,"vector[4999] should have value 0.");
 }
 
