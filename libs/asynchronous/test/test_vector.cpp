@@ -11,6 +11,7 @@
 #define BOOST_THREAD_PROVIDES_FUTURE
 #endif
 #include <algorithm>
+#include <vector>
 
 #include <boost/thread.hpp>
 #include <boost/thread/future.hpp>
@@ -64,6 +65,27 @@ BOOST_AUTO_TEST_CASE( test_vector_ctor_size_value )
     auto cpt = std::count_if(v.begin(),v.end(),[](some_type const & i){return i.data == 42;});
     BOOST_CHECK_MESSAGE(cpt==10000,"vector should have 10000 int with value 42.");
     BOOST_CHECK_MESSAGE(v[500].data == 42,"vector[500] should have value 42.");
+}
+
+BOOST_AUTO_TEST_CASE( test_vector_ctor_iterators )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(8);
+
+    std::vector<some_type> source(10000);
+    int i=0;
+    for(auto& e:source)
+    {
+        e = some_type(i++);
+    }
+
+    boost::asynchronous::vector<some_type> v(scheduler, 100 /* cutoff */, source.begin(),source.end());
+    BOOST_CHECK_MESSAGE(v.size()==10000,"vector size should be 10000.");
+
+    // check iterators
+    BOOST_CHECK_MESSAGE(v[500].data == 500,"vector[500] should have value 500.");
+    BOOST_CHECK_MESSAGE(v[100].data == 100,"vector[100] should have value 100.");
+    BOOST_CHECK_MESSAGE(v[800].data == 800,"vector[800] should have value 800.");
 }
 
 BOOST_AUTO_TEST_CASE( test_vector_ctor_size_job )
