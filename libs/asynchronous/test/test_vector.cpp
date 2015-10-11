@@ -37,6 +37,12 @@ struct some_type
     }
     int data;
 };
+
+bool operator== (some_type const& lhs, some_type const& rhs)
+{
+    return rhs.data == lhs.data;
+}
+
 }
 
 BOOST_AUTO_TEST_CASE( test_vector_ctor_size )
@@ -337,3 +343,123 @@ BOOST_AUTO_TEST_CASE( test_vector_resize)
     BOOST_CHECK_MESSAGE(v[4999].data == 0,"vector[4999] should have value 0.");
 }
 
+BOOST_AUTO_TEST_CASE( test_vector_assignment_operator_to_smaller )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(8);
+
+    boost::asynchronous::vector<some_type> v(scheduler, 100 /* cutoff */, 10000 /* number of elements */);
+    boost::asynchronous::vector<some_type> v2(scheduler, 100 /* cutoff */, 5000 /* number of elements */);
+
+    v2[0].data = 1;
+    v2[2000].data = 2;
+    v2[4999].data = 3;
+    v = v2;
+    BOOST_CHECK_MESSAGE(v2[0].data == 1,"vector[0] should have value 1.");
+    BOOST_CHECK_MESSAGE(v2[2000].data == 2,"vector[2000] should have value 2.");
+    BOOST_CHECK_MESSAGE(v2[4999].data == 3,"vector[4999] should have value 3.");
+    BOOST_CHECK_MESSAGE(v[0].data == 1,"vector[0] should have value 1.");
+    BOOST_CHECK_MESSAGE(v[2000].data == 2,"vector[2000] should have value 2.");
+    BOOST_CHECK_MESSAGE(v[4999].data == 3,"vector[4999] should have value 3.");
+}
+
+BOOST_AUTO_TEST_CASE( test_vector_assignment_operator_to_larger )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(8);
+
+    boost::asynchronous::vector<some_type> v(scheduler, 100 /* cutoff */, 5000 /* number of elements */);
+    boost::asynchronous::vector<some_type> v2(scheduler, 100 /* cutoff */, 10000 /* number of elements */);
+
+    v2[0].data = 1;
+    v2[2000].data = 2;
+    v2[9999].data = 3;
+    v = v2;
+    BOOST_CHECK_MESSAGE(v2[0].data == 1,"vector[0] should have value 1.");
+    BOOST_CHECK_MESSAGE(v2[2000].data == 2,"vector[2000] should have value 2.");
+    BOOST_CHECK_MESSAGE(v2[9999].data == 3,"vector[9999] should have value 3.");
+    BOOST_CHECK_MESSAGE(v[0].data == 1,"vector[0] should have value 1.");
+    BOOST_CHECK_MESSAGE(v[2000].data == 2,"vector[2000] should have value 2.");
+    BOOST_CHECK_MESSAGE(v[9999].data == 3,"vector[9999] should have value 3.");
+}
+
+BOOST_AUTO_TEST_CASE( test_vector_assignment_to_smaller )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(8);
+
+    boost::asynchronous::vector<some_type> v(scheduler, 100 /* cutoff */, 10000 /* number of elements */);
+    std::vector<some_type> v2( 5000 /* number of elements */);
+
+    v2[0].data = 1;
+    v2[2000].data = 2;
+    v2[4999].data = 3;
+    v.assign(v2.begin(),v2.end());
+    BOOST_CHECK_MESSAGE(v2[0].data == 1,"vector[0] should have value 1.");
+    BOOST_CHECK_MESSAGE(v2[2000].data == 2,"vector[2000] should have value 2.");
+    BOOST_CHECK_MESSAGE(v2[4999].data == 3,"vector[4999] should have value 3.");
+    BOOST_CHECK_MESSAGE(v[0].data == 1,"vector[0] should have value 1.");
+    BOOST_CHECK_MESSAGE(v[2000].data == 2,"vector[2000] should have value 2.");
+    BOOST_CHECK_MESSAGE(v[4999].data == 3,"vector[4999] should have value 3.");
+}
+
+BOOST_AUTO_TEST_CASE( test_vector_assignment_to_larger )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(8);
+
+    boost::asynchronous::vector<some_type> v(scheduler, 100 /* cutoff */, 5000 /* number of elements */);
+    std::vector<some_type> v2( 10000 /* number of elements */);
+
+    v2[0].data = 1;
+    v2[2000].data = 2;
+    v2[9999].data = 3;
+    v.assign(v2.begin(),v2.end());
+    BOOST_CHECK_MESSAGE(v2[0].data == 1,"vector[0] should have value 1.");
+    BOOST_CHECK_MESSAGE(v2[2000].data == 2,"vector[2000] should have value 2.");
+    BOOST_CHECK_MESSAGE(v2[9999].data == 3,"vector[9999] should have value 3.");
+    BOOST_CHECK_MESSAGE(v[0].data == 1,"vector[0] should have value 1.");
+    BOOST_CHECK_MESSAGE(v[2000].data == 2,"vector[2000] should have value 2.");
+    BOOST_CHECK_MESSAGE(v[9999].data == 3,"vector[9999] should have value 3.");
+}
+
+BOOST_AUTO_TEST_CASE( test_vector_assignment2_to_smaller )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(8);
+
+    boost::asynchronous::vector<some_type> v(scheduler, 100 /* cutoff */, 10000 /* number of elements */);
+    v.assign(std::size_t(5000),42);
+    BOOST_CHECK_MESSAGE(v[0].data == 42,"vector[0] should have value 1.");
+    BOOST_CHECK_MESSAGE(v[2000].data == 42,"vector[2000] should have value 42.");
+    BOOST_CHECK_MESSAGE(v[4999].data == 42,"vector[4999] should have value 42.");
+}
+
+BOOST_AUTO_TEST_CASE( test_vector_assignment2_to_larger )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(8);
+
+    boost::asynchronous::vector<some_type> v(scheduler, 100 /* cutoff */, 5000 /* number of elements */);
+    v.assign(std::size_t(10000),42);
+    BOOST_CHECK_MESSAGE(v[0].data == 42,"vector[0] should have value 1.");
+    BOOST_CHECK_MESSAGE(v[2000].data == 42,"vector[2000] should have value 42.");
+    BOOST_CHECK_MESSAGE(v[9999].data == 42,"vector[4999] should have value 42.");
+}
+
+BOOST_AUTO_TEST_CASE( test_vector_equal )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(8);
+
+    boost::asynchronous::vector<some_type> v(scheduler, 100 /* cutoff */, 5000 /* number of elements */);
+    boost::asynchronous::vector<some_type> v2(scheduler, 100 /* cutoff */, 5000 /* number of elements */);
+    boost::asynchronous::vector<some_type> v3(scheduler, 100 /* cutoff */, (std::size_t)5000 /* number of elements */, (int)42);
+    boost::asynchronous::vector<some_type> v4(scheduler, 100 /* cutoff */, 4000 /* number of elements */);
+
+    BOOST_CHECK_MESSAGE(v == v2,"vectors should be equal");
+    BOOST_CHECK_MESSAGE(!(v == v3),"vectors should not be equal");
+    BOOST_CHECK_MESSAGE(!(v == v4),"vectors should not be equal");
+    BOOST_CHECK_MESSAGE(v != v3,"vectors should not be equal");
+    BOOST_CHECK_MESSAGE(v != v4,"vectors should not be equal");
+}

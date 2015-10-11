@@ -30,8 +30,6 @@
 
 #include <boost/mpl/has_xxx.hpp>
 
-BOOST_MPL_HAS_XXX_TRAIT_DEF(iterator_category)
-
 namespace boost { namespace asynchronous {
 
 // version for iterators => will return nothing

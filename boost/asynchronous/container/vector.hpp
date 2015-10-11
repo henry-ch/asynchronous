@@ -16,6 +16,8 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/asynchronous/algorithm/parallel_placement.hpp>
 #include <boost/asynchronous/algorithm/parallel_move.hpp>
+#include <boost/asynchronous/algorithm/parallel_copy.hpp>
+#include <boost/asynchronous/algorithm/parallel_equal.hpp>
 #include <boost/asynchronous/any_shared_scheduler_proxy.hpp>
 #include <boost/asynchronous/post.hpp>
 #include <boost/mpl/has_xxx.hpp>
@@ -204,6 +206,16 @@ public:
         // if exception, will be forwarded
         fu.get();
     }
+    vector( vector&& other )
+        : m_scheduler(std::forward<boost::asynchronous::any_shared_scheduler_proxy<Job>>(other.m_scheduler))
+        , m_data(std::forward<boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>(other.m_data))
+        , m_cutoff(other.m_cutoff)
+        , m_task_name(std::forward<std::string>(other.m_task_name))
+        , m_prio(other.m_prio)
+        , m_size(other.m_size)
+        , m_capacity(other.m_capacity)
+    {
+    }
 
     ~vector()
     {
@@ -220,6 +232,74 @@ public:
             catch(std::exception&)
             {}
         }
+    }
+
+    vector& operator=( vector&& other )
+    {
+        std::swap(m_scheduler,other.m_scheduler);
+        std::swap(m_data,other.m_data);
+        std::swap(m_cutoff,other.m_cutoff);
+        std::swap(m_task_name,other.m_task_name);
+        std::swap(m_prio,other.m_prio);
+        std::swap(m_size,other.m_size);
+        std::swap(m_capacity,other.m_capacity);
+        return *this;
+    }
+
+    vector& operator=( const vector& other )
+    {
+        if (&other != this)
+        {
+            // we will switch our scheduler to other
+            m_scheduler = other.m_scheduler;
+            // resize to other's size
+            resize(other.size());
+            // copy
+            auto beg_it = begin();
+            auto other_end_it = other.end();
+            auto other_beg_it = other.begin();
+            auto cutoff = m_cutoff;
+            auto task_name = m_task_name;
+            auto prio = m_prio;
+            auto fu = boost::asynchronous::post_future(m_scheduler,
+            [beg_it,other_end_it,other_beg_it,cutoff,task_name,prio]()mutable
+            {
+                return boost::asynchronous::parallel_copy<const_iterator,iterator,Job>
+                        (other_beg_it,other_end_it,beg_it,cutoff,task_name+"_vector_copy",prio);
+            },
+            task_name+"_vector_copy_top",prio);
+            // if exception, will be forwarded
+            fu.get();
+            m_cutoff = other.m_cutoff;
+            m_task_name = other.m_task_name;
+            m_prio = other.m_prio;
+        }
+        return *this;
+    }
+    template< class InputIt >
+    void assign( InputIt first, InputIt last )
+    {
+        // resize
+        resize(std::distance(first,last));
+        // copy
+        auto beg_it = begin();
+        auto cutoff = m_cutoff;
+        auto task_name = m_task_name;
+        auto prio = m_prio;
+        auto fu = boost::asynchronous::post_future(m_scheduler,
+        [beg_it,first,last,cutoff,task_name,prio]()mutable
+        {
+            return boost::asynchronous::parallel_copy<InputIt,iterator,Job>
+                    (first,last,beg_it,cutoff,task_name+"_vector_copy",prio);
+        },
+        task_name+"_vector_copy_top",prio);
+        // if exception, will be forwarded
+        fu.get();
+    }
+    void assign( size_type count, const T& value )
+    {
+        this_type temp(m_scheduler,m_cutoff,count,value,m_task_name,m_prio);
+        *this = std::move(temp);
     }
 
     iterator begin()
@@ -521,7 +601,7 @@ private:
         auto fu2 = boost::asynchronous::post_future(m_scheduler,
         [new_data,beg_it,end_it,cutoff,task_name,prio]()mutable
         {
-            return boost::asynchronous::parallel_move<iterator,iterator,Job>(beg_it,end_it,(iterator)(new_data->data()),cutoff,task_name+"_reallocate_move",prio);
+            return boost::asynchronous::parallel_move<iterator,iterator,Job>(beg_it,end_it,(iterator)(new_data->data()),cutoff,task_name+"_vector_reallocate_move",prio);
         },
         task_name+"_reallocate_move_top",prio);
         // if exception, will be forwarded
@@ -529,7 +609,7 @@ private:
         // destroy our old data (no need to wait until done)
         boost::asynchronous::post_future(m_scheduler,
                                          boost::asynchronous::detail::move_only<boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>(std::move(m_data)),
-                                         m_task_name+"_vector_reallocate_delete",m_prio);;
+                                         m_task_name+"_vector_reallocate_delete",m_prio);
         std::swap(m_data,new_data);
 
         return new_memory;
@@ -537,6 +617,10 @@ private:
 
     template <class _Range, class _Job>
     friend struct boost::asynchronous::detail::make_asynchronous_range_task;
+    template< class _T, class _Job, class _Alloc >
+    friend bool operator==( const boost::asynchronous::vector<_T,_Job,_Alloc>&,
+                            const boost::asynchronous::vector<_T,_Job,_Alloc>& );
+
     // only used from "outside" (i.e. not algorithms)
     boost::asynchronous::any_shared_scheduler_proxy<Job> m_scheduler;
     boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> m_data;
@@ -546,6 +630,38 @@ private:
     std::size_t m_size;
     std::size_t m_capacity;
 };
+
+// comparion operators
+template< class T, class Job, class Alloc >
+bool operator==( const boost::asynchronous::vector<T,Job,Alloc>& lhs,
+                 const boost::asynchronous::vector<T,Job,Alloc>& rhs )
+{
+    if (lhs.size() != rhs.size())
+    {
+        return false;
+    }
+    auto lhs_beg = lhs.begin();
+    auto lhs_end = lhs.end();
+    auto rhs_beg = rhs.begin();
+    auto cutoff = lhs.m_cutoff;
+    auto task_name = lhs.m_task_name;
+    auto prio = lhs.m_prio;
+    auto fu = boost::asynchronous::post_future(lhs.m_scheduler,
+    [lhs_beg,lhs_end,rhs_beg,cutoff,task_name,prio]()mutable
+    {
+        return boost::asynchronous::parallel_equal<typename boost::asynchronous::vector<T,Job,Alloc>::const_iterator,
+                                                   typename boost::asynchronous::vector<T,Job,Alloc>::const_iterator,
+                                                   Job>(lhs_beg,lhs_end,rhs_beg,cutoff,task_name+"_vector_equal",prio);
+    },
+    task_name+"_vector_equal_top",prio);
+    return fu.get();
+}
+template< class T, class Job, class Alloc >
+bool operator!=( const boost::asynchronous::vector<T,Job,Alloc>& lhs,
+                 const boost::asynchronous::vector<T,Job,Alloc>& rhs )
+{
+    return !(lhs == rhs);
+}
 
 namespace detail
 {

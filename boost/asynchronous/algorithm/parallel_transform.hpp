@@ -33,8 +33,6 @@
 
 #include <boost/utility/enable_if.hpp>
 
-BOOST_MPL_HAS_XXX_TRAIT_DEF(iterator_category)
-
 namespace boost { namespace asynchronous
 {
 
