@@ -42,7 +42,10 @@ bool operator== (some_type const& lhs, some_type const& rhs)
 {
     return rhs.data == lhs.data;
 }
-
+bool operator< (some_type const& lhs, some_type const& rhs)
+{
+    return lhs.data < rhs.data;
+}
 }
 
 BOOST_AUTO_TEST_CASE( test_vector_ctor_size )
@@ -463,3 +466,23 @@ BOOST_AUTO_TEST_CASE( test_vector_equal )
     BOOST_CHECK_MESSAGE(v != v3,"vectors should not be equal");
     BOOST_CHECK_MESSAGE(v != v4,"vectors should not be equal");
 }
+
+BOOST_AUTO_TEST_CASE( test_vector_compare )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(8);
+
+    boost::asynchronous::vector<some_type> v1(scheduler, 100 /* cutoff */, (std::size_t)5000 /* number of elements */, (int)42);
+    boost::asynchronous::vector<some_type> v2(scheduler, 100 /* cutoff */, (std::size_t)5000 /* number of elements */, (int)42);
+    boost::asynchronous::vector<some_type> v3(scheduler, 100 /* cutoff */, (std::size_t)5000 /* number of elements */, (int)42);
+    ++v1[2000].data;
+
+    BOOST_CHECK_MESSAGE(v2 < v1,"v2 should be less than v1");
+    BOOST_CHECK_MESSAGE(!(v2 > v1),"v2 should be not be greater than v1");
+    BOOST_CHECK_MESSAGE(v2 <= v1,"v2 should be less or equal than v1");
+    BOOST_CHECK_MESSAGE(!(v2 >= v1),"v2 should be not be greater or equal than v1");
+
+    BOOST_CHECK_MESSAGE(v3 <= v2,"v3 should be less or equal than v2");
+    BOOST_CHECK_MESSAGE(v2 <= v3,"v3 should be less or equal than v2");
+}
+

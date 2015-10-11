@@ -18,6 +18,7 @@
 #include <boost/asynchronous/algorithm/parallel_move.hpp>
 #include <boost/asynchronous/algorithm/parallel_copy.hpp>
 #include <boost/asynchronous/algorithm/parallel_equal.hpp>
+#include <boost/asynchronous/algorithm/parallel_lexicographical_compare.hpp>
 #include <boost/asynchronous/any_shared_scheduler_proxy.hpp>
 #include <boost/asynchronous/post.hpp>
 #include <boost/mpl/has_xxx.hpp>
@@ -620,6 +621,9 @@ private:
     template< class _T, class _Job, class _Alloc >
     friend bool operator==( const boost::asynchronous::vector<_T,_Job,_Alloc>&,
                             const boost::asynchronous::vector<_T,_Job,_Alloc>& );
+    template< class _T, class _Job, class _Alloc >
+    friend bool operator<( const boost::asynchronous::vector<_T,_Job,_Alloc>&,
+                           const boost::asynchronous::vector<_T,_Job,_Alloc>& );
 
     // only used from "outside" (i.e. not algorithms)
     boost::asynchronous::any_shared_scheduler_proxy<Job> m_scheduler;
@@ -661,6 +665,48 @@ bool operator!=( const boost::asynchronous::vector<T,Job,Alloc>& lhs,
                  const boost::asynchronous::vector<T,Job,Alloc>& rhs )
 {
     return !(lhs == rhs);
+}
+template< class T, class Job, class Alloc >
+bool operator<( const boost::asynchronous::vector<T,Job,Alloc>& lhs,
+                const boost::asynchronous::vector<T,Job,Alloc>& rhs )
+{
+    auto lhs_beg = lhs.begin();
+    auto lhs_end = lhs.end();
+    auto rhs_beg = rhs.begin();
+    auto rhs_end = rhs.end();
+    auto cutoff = lhs.m_cutoff;
+    auto task_name = lhs.m_task_name;
+    auto prio = lhs.m_prio;
+
+    auto fu = boost::asynchronous::post_future(lhs.m_scheduler,
+    [lhs_beg,lhs_end,rhs_beg,rhs_end,cutoff,task_name,prio]()mutable
+    {
+        return boost::asynchronous::parallel_lexicographical_compare<
+                typename boost::asynchronous::vector<T,Job,Alloc>::const_iterator,
+                typename boost::asynchronous::vector<T,Job,Alloc>::const_iterator,
+                Job>
+                (lhs_beg,lhs_end,rhs_beg,rhs_end,cutoff,task_name+"_vector_operator_less",prio);
+    },
+    task_name+"_vector_operator_less_top",prio);
+    return fu.get();
+}
+template< class T, class Job, class Alloc >
+bool operator<=( const boost::asynchronous::vector<T,Job,Alloc>& lhs,
+                 const boost::asynchronous::vector<T,Job,Alloc>& rhs )
+{
+    return (lhs < rhs) || (lhs == rhs);
+}
+template< class T, class Job, class Alloc >
+bool operator>=( const boost::asynchronous::vector<T,Job,Alloc>& lhs,
+                 const boost::asynchronous::vector<T,Job,Alloc>& rhs )
+{
+    return !(lhs < rhs);
+}
+template< class T, class Job, class Alloc >
+bool operator>( const boost::asynchronous::vector<T,Job,Alloc>& lhs,
+                const boost::asynchronous::vector<T,Job,Alloc>& rhs )
+{
+    return (lhs != rhs) && !(lhs < rhs);
 }
 
 namespace detail
