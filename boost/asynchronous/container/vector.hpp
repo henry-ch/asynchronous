@@ -548,12 +548,14 @@ public:
                 boost::rethrow_exception(placement_result.second);
             }
             m_size = count;
+            m_data->size_ = count;
         }
         else
         {
             // remove elements
             auto s = size();
             m_size = count;
+            m_data->size_ = count;
             auto raw = m_data->data_;
             boost::asynchronous::post_future(m_scheduler,
             [s,count,raw,cutoff,task_name,prio]()mutable
@@ -562,6 +564,37 @@ public:
             },
             task_name+"_vector_resize_placement_delete_top",prio);
         }
+    }
+    iterator erase( const_iterator first, const_iterator last )
+    {
+        if (last == end())
+        {
+            // nothing to move, just resize
+            resize(first - cbegin());
+            return end();
+        }
+        else if((last - first) >= cend() - last )
+        {
+            // move our data to new memory
+            auto cutoff = m_cutoff;
+            auto task_name = m_task_name;
+            auto prio = m_prio;
+            auto cur_end = end();
+            auto fu = boost::asynchronous::post_future(m_scheduler,
+            [first,last,cur_end,cutoff,task_name,prio]()mutable
+            {
+                return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                        ((iterator)last,(iterator)cur_end,(iterator)first,cutoff,task_name+"_vector_erase_move",prio);
+            },
+            task_name+"_vector_erase_move_top",prio);
+            // if exception, will be forwarded
+            fu.get();
+            // set to new size
+            resize(size()-(last - first));
+            return end();
+        }
+        //todo
+        return end();
     }
 
 private:

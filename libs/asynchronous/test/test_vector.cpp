@@ -445,7 +445,7 @@ BOOST_AUTO_TEST_CASE( test_vector_assignment2_to_larger )
 
     boost::asynchronous::vector<some_type> v(scheduler, 100 /* cutoff */, 5000 /* number of elements */);
     v.assign(std::size_t(10000),42);
-    BOOST_CHECK_MESSAGE(v[0].data == 42,"vector[0] should have value 1.");
+    BOOST_CHECK_MESSAGE(v[0].data == 42,"vector[0] should have value 42.");
     BOOST_CHECK_MESSAGE(v[2000].data == 42,"vector[2000] should have value 42.");
     BOOST_CHECK_MESSAGE(v[9999].data == 42,"vector[4999] should have value 42.");
 }
@@ -486,3 +486,17 @@ BOOST_AUTO_TEST_CASE( test_vector_compare )
     BOOST_CHECK_MESSAGE(v2 <= v3,"v3 should be less or equal than v2");
 }
 
+BOOST_AUTO_TEST_CASE( test_vector_erase)
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(8);
+
+    boost::asynchronous::vector<some_type> v(scheduler, 100 /* cutoff */, (std::size_t)10000 /* number of elements */, (int)42);
+    v.erase(v.cbegin()+3000, v.cend());
+    BOOST_CHECK_MESSAGE(v.size() == 3000,"vector size should be 3000.");
+    BOOST_CHECK_MESSAGE(v[5000].data == 42,"vector[5000] should have value 42.");
+
+    v.erase(v.cbegin()+1000,v.cbegin()+2000 );
+    BOOST_CHECK_MESSAGE(v.size() == 2000,"vector size should be 2000.");
+    BOOST_CHECK_MESSAGE(v[1000].data == 42,"vector[1000] should have value 42.");
+}
