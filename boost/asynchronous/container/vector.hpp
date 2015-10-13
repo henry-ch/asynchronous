@@ -567,6 +567,10 @@ public:
     }
     iterator erase( const_iterator first, const_iterator last )
     {
+        auto cutoff = m_cutoff;
+        auto task_name = m_task_name;
+        auto prio = m_prio;
+        auto cur_end = end();
         if (last == end())
         {
             // nothing to move, just resize
@@ -576,10 +580,6 @@ public:
         else if((last - first) >= cend() - last )
         {
             // move our data to new memory
-            auto cutoff = m_cutoff;
-            auto task_name = m_task_name;
-            auto prio = m_prio;
-            auto cur_end = end();
             auto fu = boost::asynchronous::post_future(m_scheduler,
             [first,last,cur_end,cutoff,task_name,prio]()mutable
             {
@@ -593,8 +593,52 @@ public:
             resize(size()-(last - first));
             return end();
         }
-        //todo
-        return end();
+        else
+        {
+            // least efficient way, requires twice moving as parallel_move does not support overlapping ranges
+            auto n = cur_end-last;
+
+            // create temporary buffer
+            boost::shared_array<char> raw (new char[n * sizeof(T)]);
+            auto fu = boost::asynchronous::post_future(m_scheduler,
+            [n,raw,cutoff,task_name,prio]()mutable
+            {
+                return boost::asynchronous::parallel_placement<T,Job>(0,n,raw,cutoff,task_name+"_vector_erase_placement",prio);
+            },
+            task_name+"_vector_erase_placement_top",prio);
+            // if exception, will be forwarded
+            auto placement_result = fu.get();
+            if (placement_result.first != boost::asynchronous::detail::parallel_placement_helper_enum::success)
+            {
+                boost::rethrow_exception(placement_result.second);
+            }
+            fu.get();
+            // move to temporary buffer
+            auto temp_begin = (iterator)raw.get();
+            auto fu2 = boost::asynchronous::post_future(m_scheduler,
+            [cur_end,last,temp_begin,cutoff,task_name,prio]()mutable
+            {
+                return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                        ((iterator)last,(iterator)cur_end,temp_begin,cutoff,task_name+"_vector_erase_move",prio);
+            },
+            task_name+"_vector_erase_move_top",prio);
+            // if exception, will be forwarded
+            fu2.get();
+
+            // move back to vector
+            auto temp_end = temp_begin + n;
+            auto fu3 = boost::asynchronous::post_future(m_scheduler,
+            [temp_begin,temp_end,first,cutoff,task_name,prio]()mutable
+            {
+                return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                        (temp_begin,temp_end,(iterator)first,cutoff,task_name+"_vector_erase_move",prio);
+            },
+            task_name+"_vector_erase_move_top",prio);
+            // if exception, will be forwarded
+            fu3.get();
+            resize(size()-(last - first));
+            return end();
+        }
     }
 
 private:
@@ -616,7 +660,7 @@ private:
         auto fu = boost::asynchronous::post_future(m_scheduler,
         [n,raw,cutoff,task_name,prio]()mutable
         {
-            return boost::asynchronous::parallel_placement<T,Job>(0,n,raw,cutoff,task_name+"_reallocate_placement",prio);
+            return boost::asynchronous::parallel_placement<T,Job>(0,n,raw,cutoff,task_name+"vector_reallocate_placement",prio);
         },
         task_name+"_vector_reallocate_placement_top",prio);
         // if exception, will be forwarded

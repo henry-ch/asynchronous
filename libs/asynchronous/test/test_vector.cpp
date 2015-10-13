@@ -499,4 +499,8 @@ BOOST_AUTO_TEST_CASE( test_vector_erase)
     v.erase(v.cbegin()+1000,v.cbegin()+2000 );
     BOOST_CHECK_MESSAGE(v.size() == 2000,"vector size should be 2000.");
     BOOST_CHECK_MESSAGE(v[1000].data == 42,"vector[1000] should have value 42.");
+
+    v.erase(v.cbegin()+1000,v.cbegin()+1100 );
+    BOOST_CHECK_MESSAGE(v.size() == 1900,"vector size should be 1900.");
+    BOOST_CHECK_MESSAGE(v[1700].data == 42,"vector[1700] should have value 42.");
 }
