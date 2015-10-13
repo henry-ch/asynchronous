@@ -636,6 +636,10 @@ public:
             task_name+"_vector_erase_move_top",prio);
             // if exception, will be forwarded
             fu3.get();
+            // call dtors on temp
+            auto temp_deleter =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
+            temp_deleter.reset();
+            // remove our excess elements
             resize(size()-(last - first));
             return end();
         }
