@@ -491,16 +491,26 @@ BOOST_AUTO_TEST_CASE( test_vector_erase)
     auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
                                                                         boost::asynchronous::lockfree_queue<>>>(8);
 
-    boost::asynchronous::vector<some_type> v(scheduler, 100 /* cutoff */, (std::size_t)10000 /* number of elements */, (int)42);
+    boost::asynchronous::vector<some_type> v(scheduler, 100 /* cutoff */);
+    for (auto i = 0; i < 10000; ++i)
+    {
+        v.push_back(some_type(i));
+    }
+
     v.erase(v.cbegin()+3000, v.cend());
     BOOST_CHECK_MESSAGE(v.size() == 3000,"vector size should be 3000.");
-    BOOST_CHECK_MESSAGE(v[5000].data == 42,"vector[5000] should have value 42.");
+    BOOST_CHECK_MESSAGE(v[2000].data == 2000,"vector[2000] should have value 2000.");
 
     v.erase(v.cbegin()+1000,v.cbegin()+2000 );
     BOOST_CHECK_MESSAGE(v.size() == 2000,"vector size should be 2000.");
-    BOOST_CHECK_MESSAGE(v[1000].data == 42,"vector[1000] should have value 42.");
+    BOOST_CHECK_MESSAGE(v[1000].data == 2000,"vector[1000] should have value 2000.");
 
     v.erase(v.cbegin()+1000,v.cbegin()+1100 );
     BOOST_CHECK_MESSAGE(v.size() == 1900,"vector size should be 1900.");
-    BOOST_CHECK_MESSAGE(v[1700].data == 42,"vector[1700] should have value 42.");
+    BOOST_CHECK_MESSAGE(v[1000].data == 2100,"vector[1000] should have value 2100.");
+    BOOST_CHECK_MESSAGE(v[1700].data == 2800,"vector[1700] should have value 2800.");
+
+    v.erase(v.cbegin()+1000);
+    BOOST_CHECK_MESSAGE(v.size() == 1899,"vector size should be 1899.");
+    BOOST_CHECK_MESSAGE(v[1000].data == 2101,"vector[1000] should have value 2101.");
 }

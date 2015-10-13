@@ -640,6 +640,10 @@ public:
             return end();
         }
     }
+    iterator erase( const_iterator pos)
+    {
+        return erase(pos,pos+1);
+    }
 
 private:
 
