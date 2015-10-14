@@ -651,6 +651,11 @@ public:
     template< class InputIt >
     iterator insert( const_iterator orgpos, InputIt first, InputIt last )
     {
+        if (first == last)
+        {
+            // nothing to do
+            return (iterator)orgpos;
+        }
         auto distance_begin_pos = orgpos-cbegin();
         // check if we need to reallocate
         if (size()+(last-first) > capacity())
