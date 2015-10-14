@@ -448,7 +448,7 @@ public:
         else
         {
             // reallocate memory
-            auto new_memory = reallocate_helper(calc_new_capacity());
+            auto new_memory = reallocate_helper(calc_new_capacity(size()));
             // add new element, update size and capacity
             m_capacity = new_memory;
             push_back(value);
@@ -465,7 +465,7 @@ public:
         else
         {
             // reallocate memory
-            auto new_memory = reallocate_helper(calc_new_capacity());
+            auto new_memory = reallocate_helper(calc_new_capacity(size()));
             // add new element, update size and capacity
             m_capacity = new_memory;
             push_back(std::forward<T>(value));
@@ -483,7 +483,7 @@ public:
         else
         {
             // reallocate memory
-            auto new_memory = reallocate_helper(calc_new_capacity());
+            auto new_memory = reallocate_helper(calc_new_capacity(size()));
             // add new element, update size and capacity
             m_capacity = new_memory;
             push_back(std::forward<Args...>(args...));
@@ -648,12 +648,104 @@ public:
     {
         return erase(pos,pos+1);
     }
+    template< class InputIt >
+    iterator insert( const_iterator orgpos, InputIt first, InputIt last )
+    {
+        auto distance_begin_pos = orgpos-cbegin();
+        // check if we need to reallocate
+        if (size()+(last-first) > capacity())
+        {
+            auto new_capacity = calc_new_capacity(size()+(last-first));
+            reallocate_helper(new_capacity);
+        }
+        iterator pos = begin() + distance_begin_pos;
+        // we need move twice data after pos as parallel_move does not support overlapping ranges
+        // first we create a temporary buffer and move our data after pos to temporary buffer
+        auto n = cend() - pos;
+        boost::shared_array<char> raw (new char[n * sizeof(T)]);
+        auto cutoff = m_cutoff;
+        auto task_name = m_task_name;
+        auto prio = m_prio;
+        auto fu = boost::asynchronous::post_future(m_scheduler,
+        [n,raw,cutoff,task_name,prio]()mutable
+        {
+            return boost::asynchronous::parallel_placement<T,Job>(0,n,raw,cutoff,task_name+"_vector_insert_placement",prio);
+        },
+        task_name+"_vector_insert_placement_top",prio);
+        // if exception, will be forwarded
+        auto placement_result = fu.get();
+        if (placement_result.first != boost::asynchronous::detail::parallel_placement_helper_enum::success)
+        {
+            boost::rethrow_exception(placement_result.second);
+        }
+        fu.get();
+        // move to temporary buffer
+        auto temp_begin = (iterator)raw.get();
+        auto cur_begin = pos;
+        auto cur_end = cend();
+        auto fu2 = boost::asynchronous::post_future(m_scheduler,
+        [cur_end,cur_begin,temp_begin,cutoff,task_name,prio]()mutable
+        {
+            return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                    ((iterator)cur_begin,(iterator)cur_end,temp_begin,cutoff,task_name+"_vector_insert_move",prio);
+        },
+        task_name+"_vector_insert_move_top",prio);
+        // if exception, will be forwarded
+        fu2.get();
+        // we need to add the missing placement new's
+        //if ((last - first) > size() - pos)
+        {
+            auto to_add = (last - first);
+            auto where = ((iterator)m_data->data())+ size();
+            auto fu3 = boost::asynchronous::post_future(m_scheduler,
+            [to_add,where,cutoff,task_name,prio]()mutable
+            {
+                return boost::asynchronous::parallel_placement<T,Job>(0,to_add,(char*)where,T(),cutoff,task_name+"_vector_insert_placement_2",prio);
+            },
+            task_name+"_vector_insert_placement_2_top",prio);
+            // if exception, will be forwarded
+            auto placement_result = fu3.get();
+            if (placement_result.first != boost::asynchronous::detail::parallel_placement_helper_enum::success)
+            {
+                boost::rethrow_exception(placement_result.second);
+            }
+        }
+        // copy input
+        auto fu4 = boost::asynchronous::post_future(m_scheduler,
+        [first,last,pos,cutoff,task_name,prio]()mutable
+        {
+            return boost::asynchronous::parallel_copy<InputIt,iterator,Job>
+                    (first,last,(iterator)pos,cutoff,task_name+"_vector_insert_copy",prio);
+        },
+        task_name+"_vector_insert_copy_top",prio);
+        fu4.get();
+        // move back from temporary
+        auto temp_end = temp_begin + n;
+        auto beg_move_back = pos + (last-first);
+        auto fu5 = boost::asynchronous::post_future(m_scheduler,
+        [temp_begin,temp_end,beg_move_back,cutoff,task_name,prio]()mutable
+        {
+            return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                    (temp_begin,temp_end,(iterator)beg_move_back,cutoff,task_name+"_vector_insert_move_2",prio);
+        },
+        task_name+"_vector_insert_move_2_top",prio);
+        // if exception, will be forwarded
+        fu5.get();
+        // call dtors on temp
+        auto temp_deleter =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
+        temp_deleter.reset();
+        // update size
+        m_size += (last-first);
+        m_data->size_ += (last-first);
+
+        return begin() + distance_begin_pos;
+    }
 
 private:
 
-    std::size_t calc_new_capacity() const
+    std::size_t calc_new_capacity(size_type hint) const
     {
-        return (m_size *2) + 10;
+        return (hint *2) + 10;
     }
 
     std::size_t reallocate_helper(size_type new_memory)
