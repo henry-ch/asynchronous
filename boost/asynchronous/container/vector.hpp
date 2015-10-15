@@ -320,9 +320,9 @@ public:
         [beg_it,first,last,cutoff,task_name,prio]()mutable
         {
             return boost::asynchronous::parallel_copy<InputIt,iterator,Job>
-                    (first,last,beg_it,cutoff,task_name+"_vector_copy",prio);
+                    (first,last,beg_it,cutoff,task_name+"_vector_assign",prio);
         },
-        task_name+"_vector_copy_top",prio);
+        task_name+"_vector_assign_top",prio);
         // if exception, will be forwarded
         fu.get();
     }
@@ -330,6 +330,27 @@ public:
     {
         this_type temp(m_scheduler,m_cutoff,count,value,m_task_name,m_prio);
         *this = std::move(temp);
+    }
+    void assign( std::initializer_list<T> ilist )
+    {
+        // resize
+        auto first = ilist.begin();
+        auto last = ilist.end();
+        resize(std::distance(first,last));
+        // copy
+        auto beg_it = begin();
+        auto cutoff = m_cutoff;
+        auto task_name = m_task_name;
+        auto prio = m_prio;
+        auto fu = boost::asynchronous::post_future(m_scheduler,
+        [beg_it,first,last,cutoff,task_name,prio]()mutable
+        {
+            return boost::asynchronous::parallel_copy<decltype(first),iterator,Job>
+                    (first,last,beg_it,cutoff,task_name+"_vector_assign",prio);
+        },
+        task_name+"_vector_assign_top",prio);
+        // if exception, will be forwarded
+        fu.get();
     }
 
     iterator begin()
@@ -1041,6 +1062,10 @@ public:
         m_data->size_ += count;
 
         return begin() + distance_begin_pos;
+    }
+    iterator insert( const_iterator pos, std::initializer_list<T> ilist )
+    {
+        return this->insert(pos,ilist.begin(),ilist.end());
     }
 
 private:

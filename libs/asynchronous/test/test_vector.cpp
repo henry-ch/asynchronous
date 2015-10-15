@@ -408,6 +408,12 @@ BOOST_AUTO_TEST_CASE( test_vector_assignment_to_smaller )
 
     boost::asynchronous::vector<some_type> v(scheduler, 100 /* cutoff */, 10000 /* number of elements */);
     std::vector<some_type> v2( 5000 /* number of elements */);
+    v.assign({10,20,30,40,50});
+    BOOST_CHECK_MESSAGE(v[0].data == 10,"vector[0] should have value 10.");
+    BOOST_CHECK_MESSAGE(v[1].data == 20,"vector[1] should have value 20.");
+    BOOST_CHECK_MESSAGE(v[2].data == 30,"vector[2] should have value 30.");
+    BOOST_CHECK_MESSAGE(v[3].data == 40,"vector[3] should have value 40.");
+    BOOST_CHECK_MESSAGE(v[4].data == 50,"vector[4] should have value 50.");
 
     v2[0].data = 1;
     v2[2000].data = 2;
@@ -417,6 +423,7 @@ BOOST_AUTO_TEST_CASE( test_vector_assignment_to_smaller )
     BOOST_CHECK_MESSAGE(v2[2000].data == 2,"vector[2000] should have value 2.");
     BOOST_CHECK_MESSAGE(v2[4999].data == 3,"vector[4999] should have value 3.");
     BOOST_CHECK_MESSAGE(v[0].data == 1,"vector[0] should have value 1.");
+    BOOST_CHECK_MESSAGE(v[1000].data == 0,"vector[1000] should have value 0.");
     BOOST_CHECK_MESSAGE(v[2000].data == 2,"vector[2000] should have value 2.");
     BOOST_CHECK_MESSAGE(v[4999].data == 3,"vector[4999] should have value 3.");
 }
@@ -558,7 +565,13 @@ BOOST_AUTO_TEST_CASE( test_vector_insert)
     v.insert(v.cbegin() + 1000,100,some_type(42));
     BOOST_CHECK_MESSAGE(v.size() == 11101,"vector size should be 11101.");
     BOOST_CHECK_MESSAGE(v[999].data == 999,"vector[999] should have value 999.");
-    BOOST_CHECK_MESSAGE(v[1000].data == 42,"vector[1000] should have value 20000.");
+    BOOST_CHECK_MESSAGE(v[1000].data == 42,"vector[1000] should have value 42.");
     BOOST_CHECK_MESSAGE(v[9101].data == 8000,"vector[9101] should have value 8000.");
+
+    v.insert(v.cbegin() + 1000,{1,2,3});
+    BOOST_CHECK_MESSAGE(v.size() == 11104,"vector size should be 11104.");
+    BOOST_CHECK_MESSAGE(v[999].data == 999,"vector[999] should have value 999.");
+    BOOST_CHECK_MESSAGE(v[1000].data == 1,"vector[1000] should have value 1.");
+    BOOST_CHECK_MESSAGE(v[9104].data == 8000,"vector[9104] should have value 8000.");
 }
 
