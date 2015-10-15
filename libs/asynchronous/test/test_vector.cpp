@@ -108,6 +108,21 @@ BOOST_AUTO_TEST_CASE( test_vector_ctor_size_job )
     BOOST_CHECK_MESSAGE(!v.empty(),"vector should not be empty.");
 }
 
+BOOST_AUTO_TEST_CASE( test_vector_ctor_initializer_list )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(8);
+
+    boost::asynchronous::vector<some_type> v(scheduler, 100 /* cutoff */, {1,2,3,4,5});
+    BOOST_CHECK_MESSAGE(v.size()==5,"vector size should be 5.");
+    BOOST_CHECK_MESSAGE(!v.empty(),"vector should not be empty.");
+    BOOST_CHECK_MESSAGE(v[0].data == 1,"vector[0] should have value 1.");
+    BOOST_CHECK_MESSAGE(v[1].data == 2,"vector[1] should have value 2.");
+    BOOST_CHECK_MESSAGE(v[2].data == 3,"vector[2] should have value 3.");
+    BOOST_CHECK_MESSAGE(v[3].data == 4,"vector[3] should have value 4.");
+    BOOST_CHECK_MESSAGE(v[4].data == 5,"vector[4] should have value 5.");
+}
+
 BOOST_AUTO_TEST_CASE( test_vector_access )
 {
     auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<

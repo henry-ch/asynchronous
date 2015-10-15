@@ -218,6 +218,34 @@ public:
         , m_capacity(other.m_capacity)
     {
     }
+    vector( boost::asynchronous::any_shared_scheduler_proxy<Job> scheduler,long cutoff,
+            std::initializer_list<T> init,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+            const std::string& task_name, std::size_t prio
+#else
+            const std::string& task_name="", std::size_t prio=0
+#endif
+            /*,const Alloc& = Alloc()*/ )
+     : m_scheduler(scheduler)
+     , m_cutoff(cutoff)
+     , m_task_name(task_name)
+     , m_prio(prio)
+    {
+        auto n = std::distance(init.begin(),init.end());
+        auto first = init.begin();
+        m_size=n;
+        m_capacity=n;
+        boost::shared_array<char> raw (new char[n * sizeof(T)]);
+        m_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,raw,cutoff,task_name,prio);
+        auto fu = boost::asynchronous::post_future(scheduler,
+        [n,raw,first,cutoff,task_name,prio]()mutable
+        {
+            return boost::asynchronous::parallel_placement<T,decltype(first),Job>(0,n,first,raw,cutoff,task_name+"_vector_ctor_placement",prio);
+        },
+        task_name+"vector_ctor",prio);
+        // if exception, will be forwarded
+        fu.get();
+    }
 
     ~vector()
     {
