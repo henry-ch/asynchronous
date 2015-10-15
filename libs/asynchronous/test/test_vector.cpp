@@ -527,11 +527,23 @@ BOOST_AUTO_TEST_CASE( test_vector_insert)
     }
     std::vector<some_type> v2(1000,some_type(20000));
     v.insert(v.cbegin() + 1000, v2.cbegin(), v2.cend());
-    BOOST_CHECK_MESSAGE(v.size() == 11000,"vector size should be 2000.");
+    BOOST_CHECK_MESSAGE(v.size() == 11000,"vector size should be 11000.");
     BOOST_CHECK_MESSAGE(v[999].data == 999,"vector[999] should have value 999.");
     BOOST_CHECK_MESSAGE(v[1000].data == 20000,"vector[1000] should have value 20000.");
     BOOST_CHECK_MESSAGE(v[1999].data == 20000,"vector[1999] should have value 20000.");
     BOOST_CHECK_MESSAGE(v[10999].data == 9999,"vector[10999] should have value 9999.");
     BOOST_CHECK_MESSAGE(v[9000].data == 8000,"vector[9000] should have value 8000.");
+
+    v.insert(v.cbegin() + 1000,some_type(41));
+    BOOST_CHECK_MESSAGE(v.size() == 11001,"vector size should be 11001.");
+    BOOST_CHECK_MESSAGE(v[999].data == 999,"vector[999] should have value 999.");
+    BOOST_CHECK_MESSAGE(v[1000].data == 41,"vector[1000] should have value 20000.");
+    BOOST_CHECK_MESSAGE(v[9001].data == 8000,"vector[9001] should have value 8000.");
+
+    v.insert(v.cbegin() + 1000,100,some_type(42));
+    BOOST_CHECK_MESSAGE(v.size() == 11101,"vector size should be 11101.");
+    BOOST_CHECK_MESSAGE(v[999].data == 999,"vector[999] should have value 999.");
+    BOOST_CHECK_MESSAGE(v[1000].data == 42,"vector[1000] should have value 20000.");
+    BOOST_CHECK_MESSAGE(v[9101].data == 8000,"vector[9101] should have value 8000.");
 }
 
