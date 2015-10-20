@@ -75,6 +75,7 @@ struct make_asynchronous_range_task: public boost::asynchronous::continuation_ta
 template<typename T, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB, typename Alloc = std::allocator<T> >
 class vector
 {
+private:
 public:
     // we want to indicate we are an asynchronous container and support continuation-based construction
     typedef int                         asynchronous_container;
@@ -91,6 +92,7 @@ public:
     typedef Alloc                       allocator_type;
 
     typedef boost::asynchronous::vector<T,Job,Alloc> this_type;
+    typedef boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>> internal_data_type;
 
     enum { default_capacity = 10 };
 
@@ -214,7 +216,7 @@ public:
     }
     vector( vector&& other )
         : m_scheduler(std::forward<boost::asynchronous::any_shared_scheduler_proxy<Job>>(other.m_scheduler))
-        , m_data(std::forward<boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>>>(other.m_data))
+        , m_data(std::forward<internal_data_type>(other.m_data))
         , m_cutoff(other.m_cutoff)
         , m_task_name(std::forward<std::string>(other.m_task_name))
         , m_prio(other.m_prio)
@@ -261,7 +263,7 @@ public:
             try
             {
                 boost::asynchronous::post_future(m_scheduler,
-                                                 boost::asynchronous::detail::move_only<boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>>>
+                                                 boost::asynchronous::detail::move_only<internal_data_type>
                                                     (std::move(m_data)),
                                                  m_task_name+"_vector_dtor",m_prio);
             }
@@ -490,7 +492,7 @@ public:
         if (m_scheduler.is_valid())
         {
             boost::asynchronous::post_future(m_scheduler,
-                                             boost::asynchronous::detail::move_only<boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>>>
+                                             boost::asynchronous::detail::move_only<internal_data_type>
                                                 (std::move(m_data)),
                                              m_task_name+"_vector_clear",m_prio);
         }
@@ -1078,12 +1080,29 @@ public:
         return this->insert(pos,ilist.begin(),ilist.end());
     }
 
-private:
+    // only for use by asynchronous algorithms
+    void set_internal_data(internal_data_type data)
+    {
+        m_data = std::move(data);
+        m_size = m_data->size_;
+    }
+
 
     std::size_t calc_new_capacity(size_type hint) const
     {
         return (hint *2) + 10;
     }
+
+    // asynchronous members
+    boost::asynchronous::detail::callback_continuation<internal_data_type,Job>
+    async_reallocate(size_type new_memory)
+    {
+        return boost::asynchronous::top_level_callback_continuation_job<internal_data_type,Job>
+            (async_reallocate_task(new_memory,m_data,begin(),end(),m_allocator,m_size,m_cutoff,m_task_name,m_prio));
+
+    }
+
+private:
 
     std::size_t reallocate_helper(size_type new_memory)
     {
@@ -1124,7 +1143,7 @@ private:
         fu2.get();
         // destroy our old data (no need to wait until done)
         boost::asynchronous::post_future(m_scheduler,
-                                         boost::asynchronous::detail::move_only<boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>>>
+                                         boost::asynchronous::detail::move_only<internal_data_type>
                                             (std::move(m_data)),
                                          m_task_name+"_vector_reallocate_delete",m_prio);
         std::swap(m_data,new_data);
@@ -1132,8 +1151,77 @@ private:
         return new_memory;
     }
 
-    template <class _Range, class _Job>
-    friend struct boost::asynchronous::detail::make_asynchronous_range_task;
+    struct async_reallocate_task: public boost::asynchronous::continuation_task<internal_data_type>
+    {
+        async_reallocate_task(size_type new_memory,
+                              internal_data_type data,iterator beg, iterator end,
+                              Alloc alloc,std::size_t size, long cutoff, std::string const& task_name, std::size_t prio )
+            : boost::asynchronous::continuation_task<internal_data_type>(task_name)
+            , m_new_memory(new_memory),m_data(data),m_begin(beg),m_end(end),m_allocator(alloc),m_size(size),m_cutoff(cutoff),m_prio(prio)
+        {}
+        void operator()()
+        {
+            boost::asynchronous::continuation_result<internal_data_type> task_res = this->this_task_result();
+            try
+            {
+                auto new_memory = m_new_memory;
+                auto alloc = m_allocator;
+                auto size = m_size;
+                auto cutoff = m_cutoff;
+                auto task_name = this->get_name();
+                auto prio = m_prio;
+                auto beg = m_begin; auto end =m_end;
+
+                boost::shared_ptr<T> raw (m_allocator.allocate(new_memory),[this,new_memory,alloc](T* p)mutable{alloc.deallocate(p,new_memory);});
+
+                auto cont_p = boost::asynchronous::parallel_placement<T,Job>
+                        (0,m_size,(char*)raw.get(),T(),m_cutoff,this->get_name()+"vector_reallocate_placement",m_prio);
+                cont_p.on_done([task_res,raw,beg,end,size,cutoff,task_name,prio]
+                               (std::tuple<boost::asynchronous::expected<boost::asynchronous::detail::parallel_placement_helper_result> >&& cres)mutable
+                {
+                    auto res =std::get<0>(cres).get();
+                    if (res.first != boost::asynchronous::detail::parallel_placement_helper_enum::success)
+                    {
+                        task_res.set_exception(res.second);
+                        return;
+                    }
+                    auto new_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>>
+                            (size,std::move(raw),cutoff,task_name,prio);
+                    auto cont_m = boost::asynchronous::parallel_move<iterator,iterator,Job>
+                                     (beg,end,(iterator)(new_data->data()),cutoff,task_name+"_vector_reallocate_move",prio);
+                    cont_m.on_done([task_res,new_data,raw,beg,end,size,cutoff,task_name,prio]
+                                   (std::tuple<boost::asynchronous::expected<void> >&& mres)mutable
+                    {
+                        try
+                        {
+                            // check for exceptions
+                            std::get<0>(mres).get();
+                            task_res.set_value(std::move(new_data));
+                        }
+                        catch(std::exception& e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
+                    });
+                });
+
+            }
+            catch(std::exception& e)
+            {
+                task_res.set_exception(boost::copy_exception(e));
+            }
+        }
+        size_type m_new_memory;
+        internal_data_type m_data;
+        iterator m_begin;
+        iterator m_end;
+        Alloc m_allocator;
+        std::size_t m_size;
+        long m_cutoff;
+        std::size_t m_prio;
+    };
+
+private:
     template< class _T, class _Job, class _Alloc >
     friend bool operator==( const boost::asynchronous::vector<_T,_Job,_Alloc>&,
                             const boost::asynchronous::vector<_T,_Job,_Alloc>& );
@@ -1143,7 +1231,7 @@ private:
 
     // only used from "outside" (i.e. not algorithms)
     boost::asynchronous::any_shared_scheduler_proxy<Job> m_scheduler;
-    boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>> m_data;
+    internal_data_type m_data;
     long m_cutoff;
     std::string m_task_name;
     std::size_t m_prio;
@@ -1228,6 +1316,66 @@ bool operator>( const boost::asynchronous::vector<T,Job,Alloc>& lhs,
 
 namespace detail
 {
+template <class Container, class T>
+struct push_back_task: public boost::asynchronous::continuation_task<boost::shared_ptr<Container>>
+{
+    push_back_task(boost::shared_ptr<Container> c, T val)
+        : boost::asynchronous::continuation_task<boost::shared_ptr<Container>>("push_back_task")
+        , m_container(std::move(c)),m_value(std::move(val))
+    {}
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<boost::shared_ptr<Container>> task_res = this->this_task_result();
+        try
+        {
+            // if we can insert without reallocating, we are done fast.
+            if (m_container->size() + 1 <= m_container->capacity() )
+            {
+                m_container->push_back(m_value);
+                task_res.set_value(std::move(m_container));
+                return;
+            }
+            // reallocate
+            auto c = m_container;
+            auto v = m_value;
+            auto cont = c->async_reallocate(c->calc_new_capacity(c->size()));
+            cont.on_done([task_res,c,v]
+                           (std::tuple<boost::asynchronous::expected<typename Container::internal_data_type> >&& res)mutable
+            {
+                try
+                {
+                    // reallocation has already been done, ok to call push_back directly
+                    c->set_internal_data(std::get<0>(res).get());
+                    c->push_back(v);
+                    task_res.set_value(std::move(c));
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
+            });
+
+        }
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
+    }
+    boost::shared_ptr<Container> m_container;
+    T m_value;
+};
+}
+template <class Container, class T, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation<boost::shared_ptr<Container>,Job>
+async_push_back(boost::shared_ptr<Container> c, T&& data)
+{
+    return boost::asynchronous::top_level_callback_continuation_job<boost::shared_ptr<Container>,Job>
+        (boost::asynchronous::detail::push_back_task<Container,T>(std::move(c), std::move(data)));
+
+}
+
+namespace detail
+{
 //version asynchronous contaimners
 template<typename Range, typename Job>
 void make_asynchronous_range_task<Range,Job>::operator()()
@@ -1236,7 +1384,7 @@ void make_asynchronous_range_task<Range,Job>::operator()()
     try
     {
         auto v = boost::make_shared<Range>(m_cutoff,m_size,m_task_name,m_prio);
-        auto alloc = v->m_allocator;
+        auto alloc = v->get_allocator();
         auto n = m_size;
         boost::shared_ptr<typename Range::value_type> raw (alloc.allocate(n),
                                                            [alloc,n](typename Range::value_type* p)mutable{alloc.deallocate(p,n);});
@@ -1260,10 +1408,10 @@ void make_asynchronous_range_task<Range,Job>::operator()()
                 }
                 else
                 {
-                    v->m_data = boost::make_shared<boost::asynchronous::placement_deleter<typename Range::value_type,
+                    v->set_internal_data(boost::make_shared<boost::asynchronous::placement_deleter<typename Range::value_type,
                                                                                           Job,
                                                                                           boost::shared_ptr<typename Range::value_type>>>
-                            (n,raw,cutoff,task_name,prio);
+                            (n,raw,cutoff,task_name,prio));
                     task_res.set_value(v);
                 }
             }
@@ -1279,7 +1427,7 @@ void make_asynchronous_range_task<Range,Job>::operator()()
     }
 }
 
-//version for plain old contaimners
+//version for plain old containers
 template<typename Range>
 struct make_standard_range_task: public boost::asynchronous::continuation_task<boost::shared_ptr<Range>>
 {
