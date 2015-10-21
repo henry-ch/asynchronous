@@ -76,7 +76,6 @@ struct make_asynchronous_range_task: public boost::asynchronous::continuation_ta
 template<typename T, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB, typename Alloc = std::allocator<T> >
 class vector
 {
-private:
 public:
     // we want to indicate we are an asynchronous container and support continuation-based construction
     typedef int                         asynchronous_container;
@@ -1082,10 +1081,11 @@ public:
     }
 
     // only for use by asynchronous algorithms
-    void set_internal_data(internal_data_type data)
+    void set_internal_data(internal_data_type data, std::size_t capacity)
     {
         m_data = std::move(data);
         m_size = m_data->size_;
+        m_capacity = capacity;
     }
 
 
@@ -1101,6 +1101,11 @@ public:
         return boost::asynchronous::top_level_callback_continuation_job<internal_data_type,Job>
             (async_reallocate_task(new_memory,m_data,begin(),end(),m_allocator,m_size,m_cutoff,m_task_name,m_prio));
 
+    }
+    // needed for vectors resulting from async calls and having therefore no scheduler
+    void set_scheduler(boost::asynchronous::any_shared_scheduler_proxy<Job> scheduler)
+    {
+        m_scheduler = scheduler;
     }
 
 private:
@@ -1339,14 +1344,15 @@ struct push_back_task: public boost::asynchronous::continuation_task<Container>
             // reallocate
             boost::shared_ptr<Container> c = boost::make_shared<Container>(std::move(m_container));
             auto v = m_value;
-            auto cont = c->async_reallocate(c->calc_new_capacity(c->size()));
-            cont.on_done([task_res,c,v]
+            auto capacity = c->calc_new_capacity(c->size());
+            auto cont = c->async_reallocate(capacity);
+            cont.on_done([task_res,c,v,capacity]
                            (std::tuple<boost::asynchronous::expected<typename Container::internal_data_type> >&& res)mutable
             {
                 try
                 {
                     // reallocation has already been done, ok to call push_back directly
-                    c->set_internal_data(std::get<0>(res).get());
+                    c->set_internal_data(std::get<0>(res).get(),capacity);
                     c->push_back(v);
                     task_res.set_value(std::move(*c));
                 }
@@ -1368,10 +1374,69 @@ struct push_back_task: public boost::asynchronous::continuation_task<Container>
 }
 template <class Container, class T, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<Container,Job>
-async_push_back(Container c, T&& data)
+async_push_back(Container c, T&& data,typename boost::disable_if<has_is_continuation_task<Container>>::type* = 0)
 {
     return boost::asynchronous::top_level_callback_continuation_job<Container,Job>
         (boost::asynchronous::detail::push_back_task<Container,T>(std::move(c), std::move(data)));
+
+}
+// continuation
+namespace detail
+{
+template <class Continuation, class T, class Job>
+struct push_back_task_continuation: public boost::asynchronous::continuation_task<typename Continuation::return_type>
+{
+    push_back_task_continuation(Continuation c, T val)
+        : boost::asynchronous::continuation_task<typename Continuation::return_type>("push_back_task")
+        , m_continuation(std::move(c)),m_value(std::move(val))
+    {}
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<typename Continuation::return_type> task_res = this->this_task_result();
+        try
+        {
+            auto val = m_value;
+            m_continuation.on_done([task_res,val]
+                                   (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)mutable
+            {
+                try
+                {
+                    auto c = std::move(std::get<0>(continuation_res).get());
+                    auto push_back_cont = boost::asynchronous::async_push_back<typename Continuation::return_type,T,Job>
+                                            (std::move(c),std::move(val));
+                    push_back_cont.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& res) mutable
+                    {
+                        try
+                        {
+                            task_res.set_value(std::move(std::get<0>(res).get()));
+                        }
+                        catch(std::exception& e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
+                    });
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
+            });
+        }
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
+    }
+    Continuation m_continuation;
+    T m_value;
+};
+}
+template <class Container, class T, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation<typename Container::return_type,Job>
+async_push_back(Container c, T&& data,typename boost::enable_if<has_is_continuation_task<Container>>::type* = 0)
+{
+    return boost::asynchronous::top_level_callback_continuation_job<typename Container::return_type,Job>
+        (boost::asynchronous::detail::push_back_task_continuation<Container,T,Job>(std::move(c), std::move(data)));
 
 }
 
@@ -1412,7 +1477,7 @@ void make_asynchronous_range_task<Range,Job>::operator()()
                     v->set_internal_data(boost::make_shared<boost::asynchronous::placement_deleter<typename Range::value_type,
                                                                                           Job,
                                                                                           boost::shared_ptr<typename Range::value_type>>>
-                            (n,raw,cutoff,task_name,prio));
+                            (n,raw,cutoff,task_name,prio),n);
                     task_res.set_value(std::move(*v));
                 }
             }
