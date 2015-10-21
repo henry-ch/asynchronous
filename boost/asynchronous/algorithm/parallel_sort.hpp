@@ -647,13 +647,13 @@ struct parallel_sort_range_move_helper2 : public boost::asynchronous::continuati
                 Sort()(beg,it,func);
             }
             auto cont = boost::asynchronous::make_asynchronous_range<Range,Job> (std::distance(beg,end),cutoff);
-            cont.on_done([task_res,beg,it](std::tuple<boost::asynchronous::expected<boost::shared_ptr<Range>>>&& continuation_res)
+            cont.on_done([task_res,beg,it](std::tuple<boost::asynchronous::expected<Range>>&& continuation_res)
             {
                 try
                 {
-                    auto res = std::get<0>(continuation_res).get();
-                    std::move(beg,it,boost::begin(*res));
-                    task_res.set_value(std::move(*res));
+                    auto res = std::move(std::get<0>(continuation_res).get());
+                    std::move(beg,it,boost::begin(res));
+                    task_res.set_value(std::move(res));
                 }
                 catch(std::exception& e)
                 {
@@ -674,11 +674,11 @@ struct parallel_sort_range_move_helper2 : public boost::asynchronous::continuati
                                 boost::shared_ptr<Range> r2 =  boost::make_shared<Range>(std::move(std::get<1>(res).get()));
                                 auto vec_cont = boost::asynchronous::make_asynchronous_range<Range,Job>(r1->size()+r2->size(),cutoff);
                                 vec_cont.on_done([full_range,task_res,it,cutoff,func,task_name,prio,r1,r2]
-                                                 (std::tuple<boost::asynchronous::expected<boost::shared_ptr<Range>>>&& vec_res)
+                                                 (std::tuple<boost::asynchronous::expected<Range>>&& vec_res)
                                 {
                                     try
                                     {
-                                        auto range = std::get<0>(vec_res).get();
+                                        boost::shared_ptr<Range> range = boost::make_shared<Range>(std::move(std::get<0>(vec_res).get()));
                                         // merge both sorted sub-ranges
                                         auto on_done_fct = [full_range,task_res,r1,r2,range]
                                                            (std::tuple<boost::asynchronous::expected<void> >&& merge_res) mutable

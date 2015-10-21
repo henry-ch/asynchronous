@@ -59,10 +59,11 @@ private:
 };
 
 template<typename Range, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-struct make_asynchronous_range_task: public boost::asynchronous::continuation_task<boost::shared_ptr<Range>>
+struct make_asynchronous_range_task: public boost::asynchronous::continuation_task<Range>
 {
     make_asynchronous_range_task(std::size_t n,long cutoff,const std::string& task_name, std::size_t prio)
-    : m_size(n),m_cutoff(cutoff),m_task_name(task_name),m_prio(prio)
+    : boost::asynchronous::continuation_task<Range>(task_name)
+    , m_size(n),m_cutoff(cutoff),m_task_name(task_name),m_prio(prio)
     {}
     void operator()();
     std::size_t m_size;
@@ -1317,26 +1318,26 @@ bool operator>( const boost::asynchronous::vector<T,Job,Alloc>& lhs,
 namespace detail
 {
 template <class Container, class T>
-struct push_back_task: public boost::asynchronous::continuation_task<boost::shared_ptr<Container>>
+struct push_back_task: public boost::asynchronous::continuation_task<Container>
 {
-    push_back_task(boost::shared_ptr<Container> c, T val)
-        : boost::asynchronous::continuation_task<boost::shared_ptr<Container>>("push_back_task")
+    push_back_task(Container c, T val)
+        : boost::asynchronous::continuation_task<Container>("push_back_task")
         , m_container(std::move(c)),m_value(std::move(val))
     {}
     void operator()()
     {
-        boost::asynchronous::continuation_result<boost::shared_ptr<Container>> task_res = this->this_task_result();
+        boost::asynchronous::continuation_result<Container> task_res = this->this_task_result();
         try
         {
             // if we can insert without reallocating, we are done fast.
-            if (m_container->size() + 1 <= m_container->capacity() )
+            if (m_container.size() + 1 <= m_container.capacity() )
             {
-                m_container->push_back(m_value);
+                m_container.push_back(m_value);
                 task_res.set_value(std::move(m_container));
                 return;
             }
             // reallocate
-            auto c = m_container;
+            boost::shared_ptr<Container> c = boost::make_shared<Container>(std::move(m_container));
             auto v = m_value;
             auto cont = c->async_reallocate(c->calc_new_capacity(c->size()));
             cont.on_done([task_res,c,v]
@@ -1347,7 +1348,7 @@ struct push_back_task: public boost::asynchronous::continuation_task<boost::shar
                     // reallocation has already been done, ok to call push_back directly
                     c->set_internal_data(std::get<0>(res).get());
                     c->push_back(v);
-                    task_res.set_value(std::move(c));
+                    task_res.set_value(std::move(*c));
                 }
                 catch(std::exception& e)
                 {
@@ -1361,15 +1362,15 @@ struct push_back_task: public boost::asynchronous::continuation_task<boost::shar
             task_res.set_exception(boost::copy_exception(e));
         }
     }
-    boost::shared_ptr<Container> m_container;
+    Container m_container;
     T m_value;
 };
 }
 template <class Container, class T, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-boost::asynchronous::detail::callback_continuation<boost::shared_ptr<Container>,Job>
-async_push_back(boost::shared_ptr<Container> c, T&& data)
+boost::asynchronous::detail::callback_continuation<Container,Job>
+async_push_back(Container c, T&& data)
 {
-    return boost::asynchronous::top_level_callback_continuation_job<boost::shared_ptr<Container>,Job>
+    return boost::asynchronous::top_level_callback_continuation_job<Container,Job>
         (boost::asynchronous::detail::push_back_task<Container,T>(std::move(c), std::move(data)));
 
 }
@@ -1380,7 +1381,7 @@ namespace detail
 template<typename Range, typename Job>
 void make_asynchronous_range_task<Range,Job>::operator()()
 {
-    boost::asynchronous::continuation_result<boost::shared_ptr<Range>> task_res = this->this_task_result();
+    boost::asynchronous::continuation_result<Range> task_res = this->this_task_result();
     try
     {
         auto v = boost::make_shared<Range>(m_cutoff,m_size,m_task_name,m_prio);
@@ -1412,7 +1413,7 @@ void make_asynchronous_range_task<Range,Job>::operator()()
                                                                                           Job,
                                                                                           boost::shared_ptr<typename Range::value_type>>>
                             (n,raw,cutoff,task_name,prio));
-                    task_res.set_value(v);
+                    task_res.set_value(std::move(*v));
                 }
             }
             catch(std::exception& e)
@@ -1429,15 +1430,15 @@ void make_asynchronous_range_task<Range,Job>::operator()()
 
 //version for plain old containers
 template<typename Range>
-struct make_standard_range_task: public boost::asynchronous::continuation_task<boost::shared_ptr<Range>>
+struct make_standard_range_task: public boost::asynchronous::continuation_task<Range>
 {
     make_standard_range_task(std::size_t n)
     : m_size(n)
     {}
     void operator()()
     {
-        boost::asynchronous::continuation_result<boost::shared_ptr<Range>> task_res = this->this_task_result();
-        task_res.set_value(boost::make_shared<Range>(m_size));
+        boost::asynchronous::continuation_result<Range> task_res = this->this_task_result();
+        task_res.set_value(Range(m_size));
     }
 
     std::size_t m_size;
@@ -1447,7 +1448,7 @@ struct make_standard_range_task: public boost::asynchronous::continuation_task<b
 
 //version asynchronous contaimners
 template <typename Range, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-boost::asynchronous::detail::callback_continuation<boost::shared_ptr<Range>,Job>
+boost::asynchronous::detail::callback_continuation<Range,Job>
 make_asynchronous_range(std::size_t n,long cutoff,
  #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
             const std::string& task_name, std::size_t prio, typename boost::enable_if<has_asynchronous_container<Range>>::type* = 0)
@@ -1455,14 +1456,14 @@ make_asynchronous_range(std::size_t n,long cutoff,
             const std::string& task_name="", std::size_t prio=0, typename boost::enable_if<has_asynchronous_container<Range>>::type* = 0)
  #endif
 {
-    return boost::asynchronous::top_level_callback_continuation_job<boost::shared_ptr<Range>,Job>
+    return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
             (boost::asynchronous::detail::make_asynchronous_range_task<Range,Job>
              (n,cutoff,task_name,prio));
 }
 
 //version for plain old contaimners
 template <typename Range, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-boost::asynchronous::detail::callback_continuation<boost::shared_ptr<Range>,Job>
+boost::asynchronous::detail::callback_continuation<Range,Job>
 make_asynchronous_range(std::size_t n,long ,
  #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
             const std::string& , std::size_t , typename boost::disable_if<has_asynchronous_container<Range>>::type* = 0)
@@ -1470,7 +1471,7 @@ make_asynchronous_range(std::size_t n,long ,
             const std::string& ="", std::size_t =0, typename boost::disable_if<has_asynchronous_container<Range>>::type* = 0)
  #endif
 {
-    return boost::asynchronous::top_level_callback_continuation_job<boost::shared_ptr<Range>,Job>
+    return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
             (boost::asynchronous::detail::make_standard_range_task<Range>(n));
 }
 
