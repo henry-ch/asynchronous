@@ -115,26 +115,36 @@ struct increasing_sort_subtask
 void ParallelAsyncPostCb(boost::asynchronous::vector<SORTED_TYPE> a, size_t n)
 {        
     servant_time = boost::chrono::high_resolution_clock::now();
+    // we have to release scheduler as a scheduler cannot live into its own thread
+    // (inside the pool, it doesn't need any anyway)
+    a.release_scheduler();
     boost::future<boost::asynchronous::vector<SORTED_TYPE>> fu = boost::asynchronous::post_future(pool,
     [a=std::move(a),n,tasksize=tasksize]()mutable
     {
         return boost::asynchronous::parallel_sort2(std::move(a),SORT_FCT(),tasksize,"",0);
     }
     ,"",0);
-    fu.wait();
+    a = fu.get();
+    // reset scheduler to avoid leak
+    a.set_scheduler(pool);
     servant_intern += (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - servant_time).count() / 1000000);           
 }
 void ParallelAsyncPostCbSpreadsort(boost::asynchronous::vector<SORTED_TYPE> a, size_t n)
 {
 #ifndef NO_SPREADSORT    
     servant_time = boost::chrono::high_resolution_clock::now();
+    // we have to release scheduler as a scheduler cannot live into its own thread
+    // (inside the pool, it doesn't need any anyway)
+    a.release_scheduler();
     boost::future<boost::asynchronous::vector<SORTED_TYPE>> fu = boost::asynchronous::post_future(pool,
     [a=std::move(a),n,tasksize=tasksize]()mutable
     {
         return boost::asynchronous::parallel_spreadsort2(std::move(a),SORT_FCT(),tasksize,"",0);
     }
     ,"",0);
-    fu.wait();
+    a = fu.get();
+    // reset scheduler to avoid leak
+    a.set_scheduler(pool);
     servant_intern += (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - servant_time).count() / 1000000); 
 #endif
 }
