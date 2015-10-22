@@ -1107,6 +1107,14 @@ public:
     {
         m_scheduler = scheduler;
     }
+    // Releasing the scheduler means the vector cannot call any members needing to execute in parallel
+    // This includes destruction!
+    // In exchange it can be posted in its scheduler's thread or in a post_callback.
+    // After being used in the threadpool, the scheduler should be reset using set_scheduler()
+    void release_scheduler()
+    {
+        m_scheduler.reset();
+    }
 
 private:
 

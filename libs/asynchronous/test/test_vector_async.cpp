@@ -63,8 +63,34 @@ BOOST_AUTO_TEST_CASE( test_make_asynchronous_range)
     BOOST_CHECK_MESSAGE(v[0].data == 0,"vector[0] should have value 0.");
     BOOST_CHECK_MESSAGE(v[10000].data == 42,"vector[10000] should have value 42.");
 }
+// asynchronous interface tests
+BOOST_AUTO_TEST_CASE( test_vector_async_ctor_push_back )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(8);
 
-BOOST_AUTO_TEST_CASE( test_vector_async_ctor_push_back)
+    // make shared_ptr to avoid requiring C++14 move-capture lambda
+    boost::shared_ptr<boost::asynchronous::vector<some_type>> pv =
+            boost::make_shared<boost::asynchronous::vector<some_type>>(scheduler, 100 /* cutoff */, 10000 /* number of elements */);
+    // we have to release scheduler as a scheduler cannot live into its own thread
+    // (inside the pool, it doesn't need any anyway)
+    pv->release_scheduler();
+
+    boost::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
+    [pv]()mutable
+    {
+        return boost::asynchronous::async_push_back<boost::asynchronous::vector<some_type>,some_type>(std::move(*pv), some_type(42));
+    },
+    "test_vector_async_ctor_push_back",0);
+    boost::asynchronous::vector<some_type> v (std::move(fu.get()));
+    // reset scheduler to avoid leak
+    v.set_scheduler(scheduler);
+    BOOST_CHECK_MESSAGE(v.size() == 10001,"vector size should be 10001.");
+    BOOST_CHECK_MESSAGE(v[0].data == 0,"vector[0] should have value 0.");
+    BOOST_CHECK_MESSAGE(v[10000].data == 42,"vector[10000] should have value 42.");
+}
+
+BOOST_AUTO_TEST_CASE( test_vector_async_ctor_push_back_2)
 {
     auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
                                                                         boost::asynchronous::lockfree_queue<>>>(8);
