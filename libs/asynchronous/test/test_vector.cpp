@@ -123,6 +123,36 @@ BOOST_AUTO_TEST_CASE( test_vector_ctor_initializer_list )
     BOOST_CHECK_MESSAGE(v[4].data == 5,"vector[4] should have value 5.");
 }
 
+BOOST_AUTO_TEST_CASE( test_vector_move_ctor )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(8);
+
+    boost::asynchronous::vector<some_type> vorg(scheduler, 100 /* cutoff */, 10000 /* number of elements */);
+    boost::asynchronous::vector<some_type> v(std::move(vorg));
+    BOOST_CHECK_MESSAGE(v.size()==10000,"vector size should be 10000.");
+
+    // check iterators
+    auto cpt = std::count_if(v.begin(),v.end(),[](some_type const & i){return i.data == 0;});
+    BOOST_CHECK_MESSAGE(cpt==10000,"vector should have 10000 int with value 0.");
+    BOOST_CHECK_MESSAGE(v[500].data == 0,"vector[500] should have value 0.");
+}
+
+BOOST_AUTO_TEST_CASE( test_vector_copy_ctor )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(8);
+
+    boost::asynchronous::vector<some_type> vorg(scheduler, 100 /* cutoff */, 10000 /* number of elements */);
+    boost::asynchronous::vector<some_type> v(vorg);
+    BOOST_CHECK_MESSAGE(v.size()==10000,"vector size should be 10000.");
+
+    // check iterators
+    auto cpt = std::count_if(v.begin(),v.end(),[](some_type const & i){return i.data == 0;});
+    BOOST_CHECK_MESSAGE(cpt==10000,"vector should have 10000 int with value 0.");
+    BOOST_CHECK_MESSAGE(v[500].data == 0,"vector[500] should have value 0.");
+}
+
 BOOST_AUTO_TEST_CASE( test_vector_access )
 {
     auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<

@@ -222,7 +222,48 @@ public:
         , m_prio(other.m_prio)
         , m_size(other.m_size)
         , m_capacity(other.m_capacity)
+        , m_allocator(other.m_allocator)
     {
+    }
+    vector( vector const& other )
+        : m_scheduler(other.m_scheduler)
+        , m_cutoff(other.m_cutoff)
+        , m_task_name(other.m_task_name)
+        , m_prio(other.m_prio)
+        , m_allocator(other.m_allocator)
+    {
+        // resize to other's size
+        auto n = other.size();
+        m_size=n;
+        m_capacity=n;
+        boost::shared_ptr<T> raw (m_allocator.allocate(n),[this,n](T* p){this->m_allocator.deallocate(p,n);});
+        auto cutoff = m_cutoff;
+        auto task_name = m_task_name;
+        auto prio = m_prio;
+        m_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>>(n,raw,cutoff,task_name,prio);
+        auto fu = boost::asynchronous::post_future(m_scheduler,
+        [n,raw,cutoff,task_name,prio]()mutable
+        {
+            return boost::asynchronous::parallel_placement<T,Job>
+                        (0,n,(char*)raw.get(),T(),cutoff,task_name+"_vector_ctor_placement",prio);
+        },
+        task_name+"vector_ctor",prio);
+        // if exception, will be forwarded
+        fu.get();
+
+        // copy
+        auto beg_it = begin();
+        auto other_end_it = other.end();
+        auto other_beg_it = other.begin();
+        auto fu2 = boost::asynchronous::post_future(m_scheduler,
+        [beg_it,other_end_it,other_beg_it,cutoff,task_name,prio]()mutable
+        {
+            return boost::asynchronous::parallel_copy<const_iterator,iterator,Job>
+                    (other_beg_it,other_end_it,beg_it,cutoff,task_name+"_vector_copy",prio);
+        },
+        task_name+"_vector_copy_top",prio);
+        // if exception, will be forwarded
+        fu2.get();
     }
     vector( boost::asynchronous::any_shared_scheduler_proxy<Job> scheduler,long cutoff,
             std::initializer_list<T> init,
