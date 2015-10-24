@@ -30,7 +30,7 @@
 #include <boost/asynchronous/algorithm/parallel_reverse.hpp>
 #include <boost/asynchronous/algorithm/detail/parallel_sort_helper.hpp>
 #include <boost/asynchronous/algorithm/parallel_placement.hpp>
-#include <boost/asynchronous/container/vector.hpp>
+#include <boost/asynchronous/container/algorithms.hpp>
 
 #include <boost/mpl/or.hpp>
 #include <boost/mpl/and.hpp>
