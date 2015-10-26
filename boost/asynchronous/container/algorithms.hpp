@@ -312,6 +312,123 @@ async_resize(Container c, std::size_t s,typename boost::enable_if<has_is_continu
 }
 
 
+// reserve
+namespace detail
+{
+template <class Container>
+struct reserve_task: public boost::asynchronous::continuation_task<Container>
+{
+    reserve_task(Container c, std::size_t val)
+        : boost::asynchronous::continuation_task<Container>("reserve_task")
+        , m_container(std::move(c)),m_value(std::move(val))
+    {}
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<Container> task_res = this->this_task_result();
+        try
+        {
+            if (m_value <= m_container.capacity())
+            {
+                task_res.set_value(std::move(m_container));
+                return;
+            }
+            // more memory, same size
+            boost::shared_ptr<Container> c = boost::make_shared<Container>(std::move(m_container));
+            auto v = m_value;
+            auto cont = c->async_reallocate(m_value,c->size());
+            cont.on_done([task_res,c,v]
+                           (std::tuple<boost::asynchronous::expected<typename Container::internal_data_type> >&& res)mutable
+            {
+                try
+                {
+                    auto new_data = std::get<0>(res).get();
+                    c->set_internal_data(new_data,v);
+                    task_res.set_value(std::move(*c));
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
+            });
+        }
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
+    }
+    Container m_container;
+    std::size_t m_value;
+};
+}
+template <class Container, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation<Container,Job>
+async_reserve(Container c, std::size_t s,typename boost::disable_if<has_is_continuation_task<Container>>::type* = 0)
+{
+    return boost::asynchronous::top_level_callback_continuation_job<Container,Job>
+        (boost::asynchronous::detail::reserve_task<Container>(std::move(c), s));
+
+}
+
+// continuation
+namespace detail
+{
+template <class Continuation>
+struct reserve_task_continuation: public boost::asynchronous::continuation_task<typename Continuation::return_type>
+{
+    reserve_task_continuation(Continuation c, std::size_t val)
+        : boost::asynchronous::continuation_task<typename Continuation::return_type>("reserve_task")
+        , m_continuation(std::move(c)),m_value(val)
+    {}
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<typename Continuation::return_type> task_res = this->this_task_result();
+        try
+        {
+            auto val = m_value;
+            m_continuation.on_done([task_res,val]
+                                   (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)mutable
+            {
+                try
+                {
+                    auto c = std::move(std::get<0>(continuation_res).get());
+                    auto resize_cont = boost::asynchronous::async_reserve<typename Continuation::return_type>
+                                            (std::move(c),val);
+                    resize_cont.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& res) mutable
+                    {
+                        try
+                        {
+                            task_res.set_value(std::move(std::get<0>(res).get()));
+                        }
+                        catch(std::exception& e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
+                    });
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
+            });
+        }
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
+    }
+    Continuation m_continuation;
+    std::size_t m_value;
+};
+}
+template <class Container, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation<typename Container::return_type,Job>
+async_reserve(Container c, std::size_t s,typename boost::enable_if<has_is_continuation_task<Container>>::type* = 0)
+{
+    return boost::asynchronous::top_level_callback_continuation_job<typename Container::return_type,Job>
+        (boost::asynchronous::detail::reserve_task_continuation<Container>(std::move(c), s));
+
+}
+
 namespace detail
 {
 template<typename Range, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
