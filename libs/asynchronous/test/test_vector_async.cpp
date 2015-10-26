@@ -227,3 +227,24 @@ BOOST_AUTO_TEST_CASE( test_vector_async_reserve_to_bigger)
     BOOST_CHECK_MESSAGE(v.capacity() == 20000,"vector capacity should be 20000.");
     BOOST_CHECK_MESSAGE(v[0].data == 0,"vector[0] should have value 0.");
 }
+
+BOOST_AUTO_TEST_CASE( test_vector_async_shrink_to_fit)
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(8);
+
+    boost::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
+    []()mutable
+    {
+        return boost::asynchronous::async_shrink_to_fit(
+                    boost::asynchronous::async_resize(
+                            boost::asynchronous::make_asynchronous_range<boost::asynchronous::vector<some_type>>
+                                (10000,100),
+                            5000));
+    },
+    "test_vector_async_shrink_to_fit",0);
+    boost::asynchronous::vector<some_type> v (std::move(fu.get()));
+    BOOST_CHECK_MESSAGE(v.size() == 5000,"vector size should be 5000.");
+    BOOST_CHECK_MESSAGE(v.capacity() == 5000,"vector capacity should be 5000.");
+}
+

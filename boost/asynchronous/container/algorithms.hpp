@@ -429,6 +429,120 @@ async_reserve(Container c, std::size_t s,typename boost::enable_if<has_is_contin
 
 }
 
+
+// shrink_to_fit
+namespace detail
+{
+template <class Container>
+struct shrink_to_fit_task: public boost::asynchronous::continuation_task<Container>
+{
+    shrink_to_fit_task(Container c)
+        : boost::asynchronous::continuation_task<Container>("shrink_to_fit_task")
+        , m_container(std::move(c))
+    {}
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<Container> task_res = this->this_task_result();
+        try
+        {
+            if (m_container.size() == m_container.capacity())
+            {
+                // nothing to do
+                task_res.set_value(std::move(m_container));
+                return;
+            }
+            // reduce memory to size
+            boost::shared_ptr<Container> c = boost::make_shared<Container>(std::move(m_container));
+            auto cont = c->async_reallocate(c->size(),c->size());
+            cont.on_done([task_res,c]
+                           (std::tuple<boost::asynchronous::expected<typename Container::internal_data_type> >&& res)mutable
+            {
+                try
+                {
+                    auto new_data = std::get<0>(res).get();
+                    c->set_internal_data(new_data,c->size());
+                    task_res.set_value(std::move(*c));
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
+            });
+        }
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
+    }
+    Container m_container;
+};
+}
+template <class Container, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation<Container,Job>
+async_shrink_to_fit(Container c,typename boost::disable_if<has_is_continuation_task<Container>>::type* = 0)
+{
+    return boost::asynchronous::top_level_callback_continuation_job<Container,Job>
+        (boost::asynchronous::detail::shrink_to_fit_task<Container>(std::move(c)));
+
+}
+
+// continuation
+namespace detail
+{
+template <class Continuation>
+struct shrink_to_fit_task_continuation: public boost::asynchronous::continuation_task<typename Continuation::return_type>
+{
+    shrink_to_fit_task_continuation(Continuation c)
+        : boost::asynchronous::continuation_task<typename Continuation::return_type>("shrink_to_fit_task")
+        , m_continuation(std::move(c))
+    {}
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<typename Continuation::return_type> task_res = this->this_task_result();
+        try
+        {
+            m_continuation.on_done([task_res]
+                                   (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)mutable
+            {
+                try
+                {
+                    auto c = std::move(std::get<0>(continuation_res).get());
+                    auto resize_cont = boost::asynchronous::async_shrink_to_fit<typename Continuation::return_type>
+                                            (std::move(c));
+                    resize_cont.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& res) mutable
+                    {
+                        try
+                        {
+                            task_res.set_value(std::move(std::get<0>(res).get()));
+                        }
+                        catch(std::exception& e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
+                    });
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
+            });
+        }
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
+    }
+    Continuation m_continuation;
+};
+}
+template <class Container, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation<typename Container::return_type,Job>
+async_shrink_to_fit(Container c, typename boost::enable_if<has_is_continuation_task<Container>>::type* = 0)
+{
+    return boost::asynchronous::top_level_callback_continuation_job<typename Container::return_type,Job>
+        (boost::asynchronous::detail::shrink_to_fit_task_continuation<Container>(std::move(c)));
+
+}
 namespace detail
 {
 template<typename Range, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
