@@ -308,7 +308,7 @@ BOOST_AUTO_TEST_CASE( test_vector_async_merge)
         return boost::asynchronous::top_level_callback_continuation<boost::asynchronous::vector<some_type>>(merge_task());
     },
     "test_vector_async_merge",0);
-    boost::asynchronous::vector<some_type> v (std::move(fu.get()));
+    boost::asynchronous::vector<some_type> v (fu.get());
     BOOST_CHECK_MESSAGE(v.size() == 30000,"vector size should be 30000.");
     BOOST_CHECK_MESSAGE(v[100].data == 1,"vector[100] should have value 1.");
     BOOST_CHECK_MESSAGE(v[10100].data == 2,"vector[10100] should have value 2.");
