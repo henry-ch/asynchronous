@@ -248,3 +248,70 @@ BOOST_AUTO_TEST_CASE( test_vector_async_shrink_to_fit)
     BOOST_CHECK_MESSAGE(v.capacity() == 5000,"vector capacity should be 5000.");
 }
 
+BOOST_AUTO_TEST_CASE( test_vector_async_merge)
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(8);
+
+    struct merge_task : public boost::asynchronous::continuation_task<boost::asynchronous::vector<some_type>>
+    {
+        void operator()()
+        {
+            boost::asynchronous::continuation_result<boost::asynchronous::vector<some_type>> task_res = this_task_result();
+
+            // we are in the threadpool where we cannot block so we need to use the asynchronous version of vector
+            auto cont = boost::asynchronous::make_asynchronous_range<boost::asynchronous::vector<some_type>>(30000,100);
+            cont.on_done([task_res](std::tuple<boost::asynchronous::expected<boost::asynchronous::vector<some_type>>>&& cont_res) mutable
+            {
+                try
+                {
+                    // we must forget no move because we want to avoid a copy (the vector has no scheduler yet, so not possible anyway)
+                    boost::shared_ptr<boost::asynchronous::vector<some_type>> res =
+                            boost::make_shared<boost::asynchronous::vector<some_type>>(std::move(std::get<0>(cont_res).get()));
+                    // we want to merge a few vectors
+                    auto v1 = boost::make_shared<std::vector<some_type>>(10000, some_type(1));
+                    auto v2 = boost::make_shared<std::vector<some_type>>(10000, some_type(2));
+                    auto v3 = boost::make_shared<std::vector<some_type>>(10000, some_type(3));
+                    // create a vector of continuations and wait for all of them
+                    std::vector<boost::asynchronous::detail::callback_continuation<void>> subs;
+                    subs.push_back(boost::asynchronous::parallel_move(v1->begin(),v1->end(),res->begin(),100));
+                    subs.push_back(boost::asynchronous::parallel_move(v2->begin(),v2->end(),res->begin()+10000,100));
+                    subs.push_back(boost::asynchronous::parallel_move(v3->begin(),v3->end(),res->begin()+20000,100));
+                    boost::asynchronous::create_callback_continuation(
+                                    // do not forget the mutable or you get a copy
+                                    [task_res,res,v1,v2,v3](std::vector<boost::asynchronous::expected<void>>&&)mutable
+                                    {
+                                        try
+                                        {
+                                            // we must forget no move because we want to avoid a copy
+                                            // (the vector has no scheduler yet, so not possible anyway)
+                                            task_res.set_value(std::move(*res));
+                                        }
+                                        catch(std::exception& e)
+                                        {
+                                            task_res.set_exception(boost::copy_exception(e));
+                                        }
+                                    },
+                                    std::move(subs));
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
+            });
+        }
+    };
+
+    boost::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
+    []()mutable
+    {
+        return boost::asynchronous::top_level_callback_continuation<boost::asynchronous::vector<some_type>>(merge_task());
+    },
+    "test_vector_async_merge",0);
+    boost::asynchronous::vector<some_type> v (std::move(fu.get()));
+    BOOST_CHECK_MESSAGE(v.size() == 30000,"vector size should be 30000.");
+    BOOST_CHECK_MESSAGE(v[100].data == 1,"vector[100] should have value 1.");
+    BOOST_CHECK_MESSAGE(v[10100].data == 2,"vector[10100] should have value 2.");
+    BOOST_CHECK_MESSAGE(v[20100].data == 3,"vector[20100] should have value 3.");
+
+}

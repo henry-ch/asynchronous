@@ -20,6 +20,7 @@
 #include <boost/chrono.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/type_erasure/is_empty.hpp>
+#include <boost/type_traits/is_same.hpp>
 
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/post.hpp>
@@ -1099,7 +1100,7 @@ struct callback_continuation_as_seq
         typedef boost::asynchronous::expected<T> type;
     };
     // wrapper in case we only get a callback_continuation
-    template <class Continuation>
+    template <class Continuation, class Enable =void>
     struct callback_continuation_wrapper : public boost::asynchronous::continuation_task<Return>
     {
         callback_continuation_wrapper(Continuation cont)
@@ -1123,7 +1124,34 @@ struct callback_continuation_as_seq
         }
         Continuation m_cont;
     };
-
+    template <class Continuation>
+    struct callback_continuation_wrapper<Continuation,
+                                         typename ::boost::enable_if<boost::is_same<typename Continuation::return_type,void> >::type>
+            : public boost::asynchronous::continuation_task<void>
+    {
+        callback_continuation_wrapper(Continuation cont)
+        : boost::asynchronous::continuation_task<void>("callback_continuation_wrapper")
+        , m_cont(std::move(cont))
+        {}
+        void operator()()
+        {
+            boost::asynchronous::continuation_result<void> task_res = this->this_task_result();
+            m_cont.on_done([task_res](std::tuple<boost::asynchronous::expected<void> >&& res)
+            {
+                try
+                {
+                    // check for exception
+                    std::get<0>(res).get();
+                    task_res.set_value();
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
+            });
+        }
+        Continuation m_cont;
+    };
     // workaround for compiler crash (gcc 4.7)
     boost::asynchronous::expected<Return> get_continuation_args()const
     {
