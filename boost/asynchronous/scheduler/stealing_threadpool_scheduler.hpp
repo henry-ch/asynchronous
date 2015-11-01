@@ -23,7 +23,6 @@
 #include <boost/thread/thread.hpp>
 #include <boost/bind.hpp>
 #include <boost/thread/future.hpp>
-#include <boost/thread/mutex.hpp>
 #include <boost/thread/tss.hpp>
 
 #include <boost/asynchronous/scheduler/detail/scheduler_helpers.hpp>

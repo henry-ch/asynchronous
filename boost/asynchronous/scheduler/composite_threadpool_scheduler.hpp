@@ -25,7 +25,6 @@
 #include <boost/thread/thread.hpp>
 #include <boost/bind.hpp>
 #include <boost/thread/future.hpp>
-#include <boost/thread/mutex.hpp>
 #include <boost/thread/tss.hpp>
 #include <boost/utility/enable_if.hpp>
 #include <boost/enable_shared_from_this.hpp>
