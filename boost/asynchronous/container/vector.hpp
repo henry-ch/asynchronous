@@ -1333,6 +1333,7 @@ private:
             boost::asynchronous::continuation_result<internal_data_type> task_res = this->this_task_result();
             try
             {
+                auto old_data = std::move(m_data);
                 auto new_memory = m_new_memory;
                 auto alloc = m_allocator;
                 auto size = m_size;
@@ -1345,7 +1346,7 @@ private:
 
                 auto cont_p = boost::asynchronous::parallel_placement<T,Job>
                         (0,m_size,(char*)raw.get(),T(),m_cutoff,this->get_name()+"vector_reallocate_placement",m_prio);
-                cont_p.on_done([task_res,raw,beg,end,size,cutoff,task_name,prio]
+                cont_p.on_done([task_res,old_data,raw,beg,end,size,cutoff,task_name,prio]
                                (std::tuple<boost::asynchronous::expected<boost::asynchronous::detail::parallel_placement_helper_result> >&& cres)mutable
                 {
                     auto res =std::get<0>(cres).get();
@@ -1358,19 +1359,36 @@ private:
                             (size,std::move(raw),cutoff,task_name,prio);
                     auto cont_m = boost::asynchronous::parallel_move<iterator,iterator,Job>
                                      (beg,end,(iterator)(new_data->data()),cutoff,task_name+"_vector_reallocate_move",prio);
-                    cont_m.on_done([task_res,new_data,raw,beg,end,size,cutoff,task_name,prio]
+                    cont_m.on_done([task_res,old_data,new_data,raw,beg,end,size,cutoff,task_name,prio]
                                    (std::tuple<boost::asynchronous::expected<void> >&& mres)mutable
                     {
                         try
                         {
                             // check for exceptions
                             std::get<0>(mres).get();
-                            task_res.set_value(std::move(new_data));
+                            // delete old data
+                            auto cont_d = boost::asynchronous::top_level_callback_continuation_job<void,Job>(
+                                                                             boost::asynchronous::detail::move_only<internal_data_type>
+                                                                                (std::move(old_data)));
+                            cont_d.on_done([task_res,new_data](std::tuple<boost::asynchronous::expected<void>>&& dres)mutable
+                            {
+                                try
+                                {
+                                    // check for exceptions
+                                    std::get<0>(dres).get();
+                                    task_res.set_value(std::move(new_data));
+                                }
+                                catch(std::exception& e)
+                                {
+                                    task_res.set_exception(boost::copy_exception(e));
+                                }
+                            });
                         }
                         catch(std::exception& e)
                         {
                             task_res.set_exception(boost::copy_exception(e));
                         }
+
                     });
                 });
 

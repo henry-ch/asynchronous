@@ -53,7 +53,7 @@ struct push_back_task: public boost::asynchronous::continuation_task<Container>
                 try
                 {
                     // reallocation has already been done, ok to call push_back directly
-                    c->set_internal_data(std::get<0>(res).get(),capacity);
+                    c->set_internal_data(std::move(std::get<0>(res).get()),capacity);
                     c->push_back(v);
                     task_res.set_value(std::move(*c));
                 }
@@ -164,10 +164,10 @@ struct resize_task: public boost::asynchronous::continuation_task<Container>
                 return;
             }
             boost::shared_ptr<Container> c = boost::make_shared<Container>(std::move(m_container));
-            if (m_value > m_container.size())
+            if (m_value > c->size())
             {
                 // we need to allocate new elements
-                if (m_value > m_container.capacity())
+                if (m_value > c->capacity())
                 {
                     // reallocate memory
                     auto v = m_value;
@@ -178,28 +178,9 @@ struct resize_task: public boost::asynchronous::continuation_task<Container>
                     {
                         try
                         {
-                            auto new_data = std::get<0>(res).get();
-                            // add m_value - size() elements
-                            auto cont2 = boost::asynchronous::parallel_placement<value_type,Job>
-                                    (c->size(),v,(char*)new_data->data(),value_type(),c->get_cutoff(),c->get_name()+"_vector_resize_placement",c->get_prio());
-                            cont2.on_done([task_res,c,new_data,capacity]
-                                           (std::tuple<boost::asynchronous::expected<boost::asynchronous::detail::parallel_placement_helper_result> >&& res)mutable
-                            {
-                                try
-                                {
-                                    auto placement_result = std::get<0>(res).get();
-                                    if (placement_result.first != boost::asynchronous::detail::parallel_placement_helper_enum::success)
-                                    {
-                                        boost::rethrow_exception(placement_result.second);
-                                    }
-                                    c->set_internal_data(new_data,capacity);
-                                    task_res.set_value(std::move(*c));
-                                }
-                                catch(std::exception& e)
-                                {
-                                    task_res.set_exception(boost::copy_exception(e));
-                                }
-                            });
+                            auto new_data = std::move(std::get<0>(res).get());
+                            c->set_internal_data(new_data,capacity);
+                            task_res.set_value(std::move(*c));
                         }
                         catch(std::exception& e)
                         {
@@ -229,9 +210,6 @@ struct resize_task: public boost::asynchronous::continuation_task<Container>
                         task_res.set_exception(boost::copy_exception(e));
                     }
                 });
-                // safe to call resize
-                //m_container.resize(m_value);
-                //task_res.set_value(std::move(m_container));
             }
         }
         catch(std::exception& e)
