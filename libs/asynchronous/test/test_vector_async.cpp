@@ -53,7 +53,7 @@ BOOST_AUTO_TEST_CASE( test_make_asynchronous_range)
                         (10000,100);
     },
     "test_vector_async_ctor_push_back",0);
-    boost::asynchronous::vector<some_type> v (std::move(fu.get()));
+    boost::asynchronous::vector<some_type> v (fu.get());
     BOOST_CHECK_MESSAGE(v.size() == 10000,"vector size should be 10000.");
     BOOST_CHECK_MESSAGE(v[0].data == 0,"vector[0] should have value 0.");
     // vectors created this way have no scheduler as worker (would be unsafe to have a scheduler in its own thread)
@@ -83,7 +83,7 @@ BOOST_AUTO_TEST_CASE( test_vector_async_ctor_push_back )
         return boost::asynchronous::async_push_back<boost::asynchronous::vector<some_type>,some_type>(std::move(*pv), some_type(42));
     },
     "test_vector_async_ctor_push_back",0);
-    boost::asynchronous::vector<some_type> v (std::move(fu.get()));
+    boost::asynchronous::vector<some_type> v (fu.get());
     // reset scheduler to avoid leak
     v.set_scheduler(scheduler);
     BOOST_CHECK_MESSAGE(v.size() == 10001,"vector size should be 10001.");
@@ -107,7 +107,7 @@ BOOST_AUTO_TEST_CASE( test_vector_async_ctor_push_back_2)
                     some_type(41));
     },
     "test_vector_async_ctor_push_back",0);
-    boost::asynchronous::vector<some_type> v (std::move(fu.get()));
+    boost::asynchronous::vector<some_type> v (fu.get());
     BOOST_CHECK_MESSAGE(v.size() == 10002,"vector size should be 10001.");
     BOOST_CHECK_MESSAGE(v[0].data == 0,"vector[0] should have value 0.");
     BOOST_CHECK_MESSAGE(v[10000].data == 42,"vector[10000] should have value 42.");
@@ -133,7 +133,7 @@ BOOST_AUTO_TEST_CASE( test_vector_async_resize)
                     std::move(*pv),20000);
     },
     "test_vector_async_ctor_push_back",0);
-    boost::asynchronous::vector<some_type> v (std::move(fu.get()));
+    boost::asynchronous::vector<some_type> v (fu.get());
     // reset scheduler to avoid leak
     v.set_scheduler(scheduler);
     BOOST_CHECK_MESSAGE(v.size() == 20000,"vector size should be 20000.");
@@ -155,7 +155,7 @@ BOOST_AUTO_TEST_CASE( test_vector_async_resize_2)
                         20000);
     },
     "test_vector_async_ctor_push_back",0);
-    boost::asynchronous::vector<some_type> v (std::move(fu.get()));
+    boost::asynchronous::vector<some_type> v (fu.get());
     BOOST_CHECK_MESSAGE(v.size() == 20000,"vector size should be 20000.");
     BOOST_CHECK_MESSAGE(v[0].data == 0,"vector[0] should have value 0.");
     BOOST_CHECK_MESSAGE(v[10000].data == 0,"vector[10000] should have value 0.");
@@ -180,7 +180,7 @@ BOOST_AUTO_TEST_CASE( test_vector_async_resize_to_smaller)
                     std::move(*pv),5000);
     },
     "test_vector_async_ctor_push_back",0);
-    boost::asynchronous::vector<some_type> v (std::move(fu.get()));
+    boost::asynchronous::vector<some_type> v (fu.get());
     // reset scheduler to avoid leak
     v.set_scheduler(scheduler);
     BOOST_CHECK_MESSAGE(v.size() == 5000,"vector size should be 5000.");
@@ -202,7 +202,7 @@ BOOST_AUTO_TEST_CASE( test_vector_async_reserve_to_smaller)
                         5000);
     },
     "test_vector_async_ctor_push_back",0);
-    boost::asynchronous::vector<some_type> v (std::move(fu.get()));
+    boost::asynchronous::vector<some_type> v (fu.get());
     BOOST_CHECK_MESSAGE(v.size() == 10000,"vector size should be 10000.");
     BOOST_CHECK_MESSAGE(v.capacity() == 10000,"vector capacity should be 10000.");
     BOOST_CHECK_MESSAGE(v[0].data == 0,"vector[0] should have value 0.");
@@ -222,7 +222,7 @@ BOOST_AUTO_TEST_CASE( test_vector_async_reserve_to_bigger)
                         20000);
     },
     "test_vector_async_ctor_push_back",0);
-    boost::asynchronous::vector<some_type> v (std::move(fu.get()));
+    boost::asynchronous::vector<some_type> v (fu.get());
     BOOST_CHECK_MESSAGE(v.size() == 10000,"vector size should be 10000.");
     BOOST_CHECK_MESSAGE(v.capacity() == 20000,"vector capacity should be 20000.");
     BOOST_CHECK_MESSAGE(v[0].data == 0,"vector[0] should have value 0.");
@@ -243,7 +243,7 @@ BOOST_AUTO_TEST_CASE( test_vector_async_shrink_to_fit)
                             5000));
     },
     "test_vector_async_shrink_to_fit",0);
-    boost::asynchronous::vector<some_type> v (std::move(fu.get()));
+    boost::asynchronous::vector<some_type> v (fu.get());
     BOOST_CHECK_MESSAGE(v.size() == 5000,"vector size should be 5000.");
     BOOST_CHECK_MESSAGE(v.capacity() == 5000,"vector capacity should be 5000.");
 }
