@@ -573,17 +573,22 @@ struct placement_deleter
     placement_deleter(placement_deleter &&)=delete;
     placement_deleter& operator=(placement_deleter const&)=delete;
     placement_deleter& operator=(placement_deleter &&)=delete;
-    ~placement_deleter()
+    //TODO async clear
+    /*~placement_deleter()
+    {
+    }*/
+    void clear(std::function<void()> when_done)
     {
         Ptr d (std::move(data_));
 
         auto cont = boost::asynchronous::parallel_placement_delete<T,Job>(d,size_,cutoff_,task_name_,prio_);
         cont.on_done(
-            [d](std::tuple<boost::asynchronous::expected<void> >&&)
-             {
-              // ignore
-             });
+            [d,when_done](std::tuple<boost::asynchronous::expected<void> >&&)
+            {
+                when_done();
+            });
     }
+
     auto data() -> decltype(Ptr().get())
     {
         return data_.get();

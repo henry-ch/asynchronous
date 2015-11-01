@@ -22,6 +22,7 @@
 #include <boost/asynchronous/algorithm/parallel_lexicographical_compare.hpp>
 #include <boost/asynchronous/any_shared_scheduler_proxy.hpp>
 #include <boost/asynchronous/post.hpp>
+#include <boost/asynchronous/detail/move_bind.hpp>
 
 namespace boost { namespace asynchronous
 {
@@ -31,11 +32,14 @@ namespace detail
 {
 // helper for destructors, avoids c++14 move lambda
 template <class T>
-struct move_only
+struct move_only :  public boost::asynchronous::continuation_task<void>
 {
-    move_only(T&& data):m_data(std::forward<T>(data)){}
+    move_only(T&& data)
+        : boost::asynchronous::continuation_task<void>("vector_move_only")
+        , m_data(std::forward<T>(data)){}
     move_only(move_only&& rhs)noexcept
-        : m_data(std::move(rhs.m_data)){}
+        : boost::asynchronous::continuation_task<void>("vector_move_only")
+        , m_data(std::move(rhs.m_data)){}
 
     move_only& operator= (move_only&& rhs) noexcept
     {
@@ -49,7 +53,14 @@ struct move_only
         std::swap(m_data,const_cast<move_only&>(rhs).m_data);
         return *this;
     }
-    void operator()()const{} //dummy
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<void> task_res = this->this_task_result();
+        m_data->clear([task_res]()mutable
+            {
+                task_res.set_value();
+            });
+    }
 
 private:
     T m_data;
@@ -283,14 +294,23 @@ public:
     {
         // if in threadpool (algorithms) already, nothing to do, placement deleter will handle dtors and freeing of memory
         // else we need to handle destruction
-        if (m_scheduler.is_valid())
+        if (m_scheduler.is_valid() && !!m_data)
         {
             try
             {
+                auto fu =
                 boost::asynchronous::post_future(m_scheduler,
-                                                 boost::asynchronous::detail::move_only<internal_data_type>
-                                                    (std::move(m_data)),
+                                                 boost::asynchronous::move_bind(
+                                                     [](internal_data_type data)mutable
+                                                     {
+                                                        return boost::asynchronous::top_level_callback_continuation_job<void,Job>(
+                                                         boost::asynchronous::detail::move_only<internal_data_type>
+                                                            (std::move(data)));
+                                                     },
+                                                     std::move(m_data)),
                                                  m_task_name+"_vector_dtor",m_prio);
+
+                fu.get();
             }
             catch(std::exception&)
             {}
@@ -514,12 +534,26 @@ public:
 
     void clear()
     {
-        if (m_scheduler.is_valid())
+        if (m_scheduler.is_valid() && !!m_data)
         {
-            boost::asynchronous::post_future(m_scheduler,
-                                             boost::asynchronous::detail::move_only<internal_data_type>
-                                                (std::move(m_data)),
-                                             m_task_name+"_vector_clear",m_prio);
+            try
+            {
+                auto fu =
+                boost::asynchronous::post_future(m_scheduler,
+                                                 boost::asynchronous::move_bind(
+                                                     [](internal_data_type data)mutable
+                                                     {
+                                                        return boost::asynchronous::top_level_callback_continuation_job<void,Job>(
+                                                         boost::asynchronous::detail::move_only<internal_data_type>
+                                                            (std::move(data)));
+                                                     },
+                                                     std::move(m_data)),
+                                                 m_task_name+"_vector_clear",m_prio);
+
+                fu.get();
+            }
+            catch(std::exception&)
+            {}
         }
         m_size=0;
     }
@@ -644,12 +678,14 @@ public:
             m_size = count;
             m_data->size_ = count;
             auto raw = m_data->data_;
+            auto fu =
             boost::asynchronous::post_future(m_scheduler,
             [s,count,raw,cutoff,task_name,prio]()mutable
             {
                 return boost::asynchronous::parallel_placement_delete<T,Job>(raw,count,s,cutoff,task_name+"_vector_resize_placement_delete",prio);
             },
             task_name+"_vector_resize_placement_delete_top",prio);
+            fu.get();
         }
     }
     iterator erase( const_iterator first, const_iterator last )
@@ -724,8 +760,21 @@ public:
             // if exception, will be forwarded
             fu3.get();
             // call dtors on temp
-            auto temp_deleter =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
-            temp_deleter.reset();
+            boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> temp_deleter =
+                    boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
+            auto fu4 =
+            boost::asynchronous::post_future(m_scheduler,
+                                             boost::asynchronous::move_bind(
+                                                 [](boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> data)mutable
+                                                 {
+                                                    return boost::asynchronous::top_level_callback_continuation_job<void,Job>(
+                                                     boost::asynchronous::detail::move_only<boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>
+                                                        (std::move(data)));
+                                                 },
+                                                 std::move(temp_deleter)),
+                                             task_name+"_vector_erase_delete",prio);
+
+            fu4.get();
             // remove our excess elements
             resize(size()-(last - first));
             return end();
@@ -821,8 +870,21 @@ public:
         // if exception, will be forwarded
         fu5.get();
         // call dtors on temp
-        auto temp_deleter =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
-        temp_deleter.reset();
+        boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> temp_deleter =
+                boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
+        auto fu6 =
+        boost::asynchronous::post_future(m_scheduler,
+                                         boost::asynchronous::move_bind(
+                                             [](boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> data)mutable
+                                             {
+                                                return boost::asynchronous::top_level_callback_continuation_job<void,Job>(
+                                                 boost::asynchronous::detail::move_only<boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>
+                                                    (std::move(data)));
+                                             },
+                                             std::move(temp_deleter)),
+                                         task_name+"_vector_insert_delete",prio);
+
+        fu6.get();
         // update size
         m_size += (last-first);
         m_data->size_ += (last-first);
@@ -911,8 +973,21 @@ public:
         // if exception, will be forwarded
         fu5.get();
         // call dtors on temp
-        auto temp_deleter =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
-        temp_deleter.reset();
+        boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> temp_deleter =
+                boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
+        auto fu6 =
+        boost::asynchronous::post_future(m_scheduler,
+                                         boost::asynchronous::move_bind(
+                                             [](boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> data)mutable
+                                             {
+                                                return boost::asynchronous::top_level_callback_continuation_job<void,Job>(
+                                                 boost::asynchronous::detail::move_only<boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>
+                                                    (std::move(data)));
+                                             },
+                                             std::move(temp_deleter)),
+                                         task_name+"_vector_insert_delete",prio);
+
+        fu6.get();
         // update size
         ++m_size;
         ++m_data->size_;
@@ -1001,8 +1076,21 @@ public:
         // if exception, will be forwarded
         fu5.get();
         // call dtors on temp
-        auto temp_deleter =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
-        temp_deleter.reset();
+        boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> temp_deleter =
+                boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
+        auto fu6 =
+        boost::asynchronous::post_future(m_scheduler,
+                                         boost::asynchronous::move_bind(
+                                             [](boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> data)mutable
+                                             {
+                                                return boost::asynchronous::top_level_callback_continuation_job<void,Job>(
+                                                 boost::asynchronous::detail::move_only<boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>
+                                                    (std::move(data)));
+                                             },
+                                             std::move(temp_deleter)),
+                                         task_name+"_vector_insert_delete",prio);
+
+        fu6.get();
         // update size
         ++m_size;
         ++m_data->size_;
@@ -1092,8 +1180,21 @@ public:
         // if exception, will be forwarded
         fu5.get();
         // call dtors on temp
-        auto temp_deleter =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
-        temp_deleter.reset();
+        boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> temp_deleter =
+                boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
+        auto fu6 =
+        boost::asynchronous::post_future(m_scheduler,
+                                         boost::asynchronous::move_bind(
+                                             [](boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> data)mutable
+                                             {
+                                                return boost::asynchronous::top_level_callback_continuation_job<void,Job>(
+                                                 boost::asynchronous::detail::move_only<boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>
+                                                    (std::move(data)));
+                                             },
+                                             std::move(temp_deleter)),
+                                         task_name+"_vector_erase_delete",prio);
+
+        fu6.get();
         // update size
         m_size += count;
         m_data->size_ += count;
@@ -1200,11 +1301,20 @@ private:
         task_name+"_reallocate_move_top",prio);
         // if exception, will be forwarded
         fu2.get();
-        // destroy our old data (no need to wait until done)
+        // destroy our old data (wait until done)
+        auto fu3 =
         boost::asynchronous::post_future(m_scheduler,
-                                         boost::asynchronous::detail::move_only<internal_data_type>
-                                            (std::move(m_data)),
+                                         boost::asynchronous::move_bind(
+                                             [](internal_data_type data)mutable
+                                             {
+                                                return boost::asynchronous::top_level_callback_continuation_job<void,Job>(
+                                                 boost::asynchronous::detail::move_only<internal_data_type>
+                                                    (std::move(data)));
+                                             },
+                                             std::move(m_data)),
                                          m_task_name+"_vector_reallocate_delete",m_prio);
+
+        fu3.get();
         std::swap(m_data,new_data);
 
         return new_memory;
