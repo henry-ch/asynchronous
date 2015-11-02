@@ -101,11 +101,27 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
                                     {
                                         // get to check that no exception
                                         std::get<0>(merge_res).get();
-                                        task_res.set_value();
+                                        // we need to clean up before returning value (in case a shutdown would be under way
+                                        if (depth == 0)
+                                        {
+                                            merge_memory->clear([task_res,merge_memory]()mutable{task_res.set_value();});
+                                        }
+                                        else
+                                        {
+                                            task_res.set_value();
+                                        }
                                     }
                                     catch(std::exception& e)
                                     {
-                                        task_res.set_exception(boost::copy_exception(e));
+                                        if (depth == 0)
+                                        {
+                                            merge_memory->clear([task_res,merge_memory,e]()mutable
+                                                                {task_res.set_exception(boost::copy_exception(e));});
+                                        }
+                                        else
+                                        {
+                                            task_res.set_exception(boost::copy_exception(e));
+                                        }
                                     }
                                 };
                                 if (depth%2 == 0)
@@ -125,7 +141,15 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
                             }
                             catch(std::exception& e)
                             {
-                                task_res.set_exception(boost::copy_exception(e));
+                                if (depth == 0)
+                                {
+                                    merge_memory->clear([task_res,merge_memory,e]()mutable
+                                                        {task_res.set_exception(boost::copy_exception(e));});
+                                }
+                                else
+                                {
+                                    task_res.set_exception(boost::copy_exception(e));
+                                }
                             }
                         },
                         // recursive tasks

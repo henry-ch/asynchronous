@@ -573,10 +573,6 @@ struct placement_deleter
     placement_deleter(placement_deleter &&)=delete;
     placement_deleter& operator=(placement_deleter const&)=delete;
     placement_deleter& operator=(placement_deleter &&)=delete;
-    //TODO async clear
-    /*~placement_deleter()
-    {
-    }*/
     void clear(std::function<void()> when_done)
     {
         Ptr d (std::move(data_));
