@@ -41,13 +41,14 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(requires_weak_scheduler)
 namespace boost { namespace asynchronous
 {        
 #ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-#define BOOST_ASYNC_POST_MEMBER_1(funcname)                                                                                 \
-    template <typename... Args>                                                                                             \
-    void funcname(Args... args)const                                                                                        \
-    {                                                                                                                       \
-        auto servant = this->m_servant;                                                                                     \
-        this->post(typename boost::asynchronous::job_traits<callable_type>::wrapper_type(boost::asynchronous::any_callable  \
-        (boost::asynchronous::move_bind([servant](Args... as){servant->funcname(std::move(as)...);},std::move(args)...)))); \
+#define BOOST_ASYNC_POST_MEMBER_1(funcname)                                                                                     \
+    template <typename... Args>                                                                                                 \
+    void funcname(Args... args)const                                                                                            \
+    {                                                                                                                           \
+        auto servant = this->m_servant;                                                                                         \
+        std::size_t p = 100000 * this->m_offset_id;                                                                             \
+        this->post(typename boost::asynchronous::job_traits<callable_type>::wrapper_type(boost::asynchronous::any_callable      \
+        (boost::asynchronous::move_bind([servant](Args... as){servant->funcname(std::move(as)...);},std::move(args)...))),p);   \
     }
 #endif
 
@@ -56,8 +57,9 @@ namespace boost { namespace asynchronous
     void funcname(Args... args)const                                                                                            \
     {                                                                                                                           \
         auto servant = this->m_servant;                                                                                         \
+        std::size_t p = prio + 100000 * this->m_offset_id;                                                                      \
         this->post(typename boost::asynchronous::job_traits<callable_type>::wrapper_type(boost::asynchronous::any_callable      \
-        (boost::asynchronous::move_bind([servant](Args... as){servant->funcname(std::move(as)...);},std::move(args)...))),prio);\
+        (boost::asynchronous::move_bind([servant](Args... as){servant->funcname(std::move(as)...);},std::move(args)...))),p);   \
     }
 
 #define BOOST_ASYNC_POST_MEMBER(...)                                                                            \
@@ -69,10 +71,11 @@ namespace boost { namespace asynchronous
     void funcname(Args... args)const                                                                                                        \
     {                                                                                                                                       \
         auto servant = this->m_servant;                                                                                                     \
+        std::size_t prio = 100000 * this->m_offset_id;                                                                                      \
         typename boost::asynchronous::job_traits<callable_type>::wrapper_type  a(boost::asynchronous::any_callable                          \
                         (boost::asynchronous::move_bind([servant](Args... as){servant->funcname(std::move(as)...);},std::move(args)...)));  \
         a.set_name(taskname);                                                                                                               \
-        this->post(std::move(a));                                                                                                           \
+        this->post(std::move(a),prio);                                                                                                      \
     }
 #endif
 
@@ -81,10 +84,11 @@ namespace boost { namespace asynchronous
     void funcname(Args... args)const                                                                                                        \
     {                                                                                                                                       \
         auto servant = this->m_servant;                                                                                                     \
+        std::size_t p = prio + 100000 * this->m_offset_id;                                                                                  \
         typename boost::asynchronous::job_traits<callable_type>::wrapper_type  a(boost::asynchronous::any_callable                          \
                         (boost::asynchronous::move_bind([servant](Args... as){servant->funcname(std::move(as)...);},std::move(args)...)));  \
         a.set_name(taskname);                                                                                                               \
-        this->post(std::move(a),prio);                                                                                                      \
+        this->post(std::move(a),p);                                                                                                         \
     }
 
 #define BOOST_ASYNC_POST_MEMBER_LOG(...)                                                                        \
@@ -100,10 +104,11 @@ namespace boost { namespace asynchronous
         -> boost::future<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))>                                                         \
     {                                                                                                                                                       \
         auto servant = this->m_servant;                                                                                                                     \
+        std::size_t prio = 100000 * this->m_offset_id;                                                                                                      \
         return boost::asynchronous::post_future(this->m_proxy,                                                                                              \
                 boost::asynchronous::move_bind([servant](Args... as)                                                                                        \
                                     {return servant->funcname(std::move(as)...);                                                                            \
-                                    },std::move(args)...),taskname);                                                                                        \
+                                    },std::move(args)...),taskname,prio);                                                                                   \
     }
 #else
 #define BOOST_ASYNC_FUTURE_MEMBER_LOG_2(funcname,taskname)                                                                                                  \
@@ -111,10 +116,11 @@ namespace boost { namespace asynchronous
     auto funcname(Args... args)const                                                                                                                        \
     {                                                                                                                                                       \
         auto servant = this->m_servant;                                                                                                                     \
+        std::size_t prio = 100000 * this->m_offset_id;                                                                                                      \
         return boost::asynchronous::post_future(this->m_proxy,                                                                                              \
                 boost::asynchronous::move_bind([servant](Args... as)                                                                                        \
                                     {return servant->funcname(std::move(as)...);                                                                            \
-                                    },std::move(args)...),taskname);                                                                                        \
+                                    },std::move(args)...),taskname,prio);                                                                                   \
     }
 #endif
 #endif
@@ -126,10 +132,11 @@ namespace boost { namespace asynchronous
         -> boost::future<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))>                                                     \
     {                                                                                                                                                   \
         auto servant = this->m_servant;                                                                                                                 \
+        std::size_t p = prio + 100000 * this->m_offset_id;                                                                                              \
         return boost::asynchronous::post_future(this->m_proxy,                                                                                          \
                 boost::asynchronous::move_bind([servant](Args... as)                                                                                    \
                                     {return servant->funcname(std::move(as)...);                                                                        \
-                                    },std::move(args)...),taskname,prio);                                                                               \
+                                    },std::move(args)...),taskname,p);                                                                                  \
     }
 #else
 #define BOOST_ASYNC_FUTURE_MEMBER_LOG_3(funcname,taskname,prio)                                                                                         \
@@ -137,10 +144,11 @@ namespace boost { namespace asynchronous
     auto funcname(Args... args)const                                                                                                                    \
     {                                                                                                                                                   \
         auto servant = this->m_servant;                                                                                                                 \
+        std::size_t p = prio + 100000 * this->m_offset_id;                                                                                              \
         return boost::asynchronous::post_future(this->m_proxy,                                                                                          \
                 boost::asynchronous::move_bind([servant](Args... as)                                                                                    \
                                     {return servant->funcname(std::move(as)...);                                                                        \
-                                    },std::move(args)...),taskname,prio);                                                                               \
+                                    },std::move(args)...),taskname,p);                                                                                  \
     }
 #endif
 #define BOOST_ASYNC_FUTURE_MEMBER_LOG(...)                                                                      \
@@ -154,10 +162,11 @@ namespace boost { namespace asynchronous
         -> boost::future<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))>                                                     \
     {                                                                                                                                                   \
         auto servant = this->m_servant;                                                                                                                 \
+        std::size_t prio = 100000 * this->m_offset_id;                                                                                                  \
         return boost::asynchronous::post_future(this->m_proxy,                                                                                          \
                 boost::asynchronous::move_bind([servant](Args... as)                                                                                    \
                                     {return servant->funcname(std::move(as)...);                                                                        \
-                                    },std::move(args)...));                                                                                             \
+                                    },std::move(args)...),"",prio);                                                                                     \
     }
 #else
 #define BOOST_ASYNC_FUTURE_MEMBER_1(funcname)                                                                                                           \
@@ -165,10 +174,11 @@ namespace boost { namespace asynchronous
     auto funcname(Args... args)const                                                                                                                    \
     {                                                                                                                                                   \
         auto servant = this->m_servant;                                                                                                                 \
+        std::size_t prio = 100000 * this->m_offset_id;                                                                                                  \
         return boost::asynchronous::post_future(this->m_proxy,                                                                                          \
                 boost::asynchronous::move_bind([servant](Args... as)                                                                                    \
                                     {return servant->funcname(std::move(as)...);                                                                        \
-                                    },std::move(args)...));                                                                                             \
+                                    },std::move(args)...),"",prio);                                                                                     \
     }
 #endif
 #endif
@@ -180,10 +190,11 @@ namespace boost { namespace asynchronous
         -> boost::future<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...))>                                                     \
     {                                                                                                                                                   \
         auto servant = this->m_servant;                                                                                                                 \
+        std::size_t p = prio + 100000 * this->m_offset_id;                                                                                              \
         return boost::asynchronous::post_future(this->m_proxy,                                                                                          \
                 boost::asynchronous::move_bind([servant](Args... as)                                                                                    \
                                     {return servant->funcname(std::move(as)...);                                                                        \
-                                    },std::move(args)...),"",prio);                                                                                     \
+                                    },std::move(args)...),"",p);                                                                                        \
     }
 #else
 #define BOOST_ASYNC_FUTURE_MEMBER_2(funcname,prio)                                                                                                      \
@@ -191,10 +202,11 @@ namespace boost { namespace asynchronous
     auto funcname(Args... args)const                                                                                                                    \
     {                                                                                                                                                   \
         auto servant = this->m_servant;                                                                                                                 \
+        std::size_t p = prio + 100000 * this->m_offset_id;                                                                                              \
         return boost::asynchronous::post_future(this->m_proxy,                                                                                          \
                 boost::asynchronous::move_bind([servant](Args... as)                                                                                    \
                                     {return servant->funcname(std::move(as)...);                                                                        \
-                                    },std::move(args)...),"",prio);                                                                                     \
+                                    },std::move(args)...),"",p);                                                                                        \
     }
 #endif
 #define BOOST_ASYNC_FUTURE_MEMBER(...)                                                                          \
@@ -206,10 +218,11 @@ namespace boost { namespace asynchronous
     void funcname(F&& cb_func,S const& weak_cb_scheduler,std::size_t cb_prio, Args... args)const                                                    \
     {                                                                                                                                               \
         auto servant = this->m_servant;                                                                                                             \
+        std::size_t prio = 100000 * this->m_offset_id;                                                                                              \
         boost::asynchronous::post_callback(m_proxy,                                                                                                 \
                 boost::asynchronous::move_bind([servant](Args... as)                                                                                \
                                     {return servant->funcname(std::move(as)...);                                                                    \
-                                    },std::move(args)...),weak_cb_scheduler,std::forward<F>(cb_func),"",0,cb_prio);                                 \
+                                    },std::move(args)...),weak_cb_scheduler,std::forward<F>(cb_func),"",prio,cb_prio);                              \
     }
 #endif
 
@@ -217,11 +230,12 @@ namespace boost { namespace asynchronous
     template <typename F, typename S,typename... Args>                                                                                              \
     void funcname(F&& cb_func,S const& weak_cb_scheduler,std::size_t cb_prio, Args... args)const                                                    \
     {                                                                                                                                               \
-        auto servant = m_servant;                                                                                                                   \
+        auto servant = this->m_servant;                                                                                                             \
+        std::size_t p = prio + 100000 * this->m_offset_id;                                                                                          \
         boost::asynchronous::post_callback(m_proxy,                                                                                                 \
                 boost::asynchronous::move_bind([servant](Args... as)                                                                                \
                                     {return servant->funcname(std::move(as)...);                                                                    \
-                                    },std::move(args)...),weak_cb_scheduler,std::forward<F>(cb_func),"",prio,cb_prio);                              \
+                                    },std::move(args)...),weak_cb_scheduler,std::forward<F>(cb_func),"",p,cb_prio);                                 \
     }
 
 #define BOOST_ASYNC_POST_CALLBACK_MEMBER(...)                                                                                                       \
@@ -313,6 +327,7 @@ public:
     servant_proxy(scheduler_proxy_type p, Args... args)
         : m_proxy(p)
         , m_servant()
+        , m_offset_id(0)
     {
         std::vector<boost::thread::id> ids = m_proxy.thread_ids();
         if ((std::find(ids.begin(),ids.end(),boost::this_thread::get_id()) != ids.end()))
@@ -332,6 +347,7 @@ public:
     servant_proxy(scheduler_proxy_type p, boost::future<boost::shared_ptr<servant_type> > s)
         : m_proxy(p)
         , m_servant()
+        , m_offset_id(0)
     {
         bool ok = s.timed_wait(boost::posix_time::milliseconds(max_create_wait_ms));
         if(ok)
@@ -353,6 +369,7 @@ public:
     servant_proxy(scheduler_proxy_type p, boost::future<CServant> s)
         : m_proxy(p)
         , m_servant()
+        , m_offset_id(0)
     {
         bool ok = s.timed_wait(boost::posix_time::milliseconds(max_create_wait_ms));
         if(ok)
@@ -369,13 +386,38 @@ public:
             throw servant_proxy_timeout();
         }
     }
+
+    // version for multiple_thread_scheduler
+    //TODO other ctors
+    template <typename... Args>
+    servant_proxy(std::tuple<scheduler_proxy_type, std::size_t> p, Args... args)
+        : m_proxy(std::get<0>(p))
+        , m_servant()
+        , m_offset_id(std::get<1>(p))
+    {
+        std::vector<boost::thread::id> ids = m_proxy.thread_ids();
+        if ((std::find(ids.begin(),ids.end(),boost::this_thread::get_id()) != ids.end()))
+        {
+            // our thread, not possible to wait for a future
+            // TODO forward
+            // if a servant has a simple_ctor, then he MUST get a weak scheduler as he might get it too late with tss
+            //m_servant = boost::make_shared<servant_type>(m_proxy.get_weak_scheduler(),args...);
+            m_servant = servant_create_helper::template create<servant_type>(m_proxy.get_weak_scheduler(),std::move(args)...);
+        }
+        else
+        {
+            // outside thread, create in scheduler thread if no other choice
+            init_servant_proxy<servant_type>(std::move(args)...);
+        }
+    }
+
     ~servant_proxy()
     {
         servant_deleter n(std::move(m_servant));
         boost::future<void> fu = n.done_promise->get_future();
         typename boost::asynchronous::job_traits<callable_type>::wrapper_type  a(std::move(n));
         a.set_name(ServantProxy::get_dtor_name());
-        m_proxy.post(std::move(a),ServantProxy::get_dtor_prio());
+        m_proxy.post(std::move(a),ServantProxy::get_dtor_prio() + 100000 * m_offset_id);
         try
         {
             // no interruption could go good here
@@ -397,7 +439,7 @@ public:
     void post(callable_type job, std::size_t prio=0) const
 #endif
     {
-        m_proxy.post(std::move(job),prio);
+        m_proxy.post(std::move(job),prio + 100000 * m_offset_id);
     }
     scheduler_proxy_type get_proxy()const
     {
@@ -417,6 +459,7 @@ public:
 
     scheduler_proxy_type m_proxy;
     boost::shared_ptr<servant_type> m_servant;
+    std::size_t m_offset_id;
 
 private:
     template <class S>
@@ -467,9 +510,9 @@ private:
                     boost::asynchronous::move_bind(init_helper(p),m_proxy.get_weak_scheduler(),std::move(args)...)));
         a.set_name(ServantProxy::get_ctor_name());
 #ifndef BOOST_NO_RVALUE_REFERENCES
-        post(std::move(a),ServantProxy::get_ctor_prio());
+        post(std::move(a),ServantProxy::get_ctor_prio() + 100000 * m_offset_id);
 #else
-        post(a,ServantProxy::get_ctor_prio());
+        post(a,ServantProxy::get_ctor_prio() + 100000 * m_offset_id);
 #endif
         bool ok = fu.timed_wait(boost::posix_time::milliseconds(max_create_wait_ms));
         if(ok)

@@ -62,8 +62,9 @@ public:
 #ifdef BOOST_NO_CXX14_RETURN_TYPE_DEDUCTION
     using servant_type = typename boost::asynchronous::servant_proxy<ServantProxy<T>,Servant<T>>::servant_type;
 #endif
+
 #ifndef _MSC_VER
-    BOOST_ASYNC_FUTURE_MEMBER(do_it)
+    BOOST_ASYNC_FUTURE_MEMBER(do_it,1)
 #else
     BOOST_ASYNC_FUTURE_MEMBER_1(do_it)
 #endif
@@ -76,7 +77,7 @@ BOOST_AUTO_TEST_CASE( test_multiple_thread_scheduler_basic )
     main_thread_id = boost::this_thread::get_id();
     {
         auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiple_thread_scheduler<
-                                                                            boost::asynchronous::lockfree_queue<>>>(1,1);
+                                                                            boost::asynchronous::lockfree_queue<>>>(3,5);
 
         ServantProxy<int> proxy(scheduler);
         boost::shared_future<void> fuv = proxy.do_it();

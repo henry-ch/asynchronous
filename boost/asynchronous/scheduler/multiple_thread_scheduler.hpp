@@ -77,8 +77,6 @@ public:
         boost::shared_ptr<queue_type> m_queues;
     };
 
-    //typedef std::tuple<std::atomic_bool,boost::shared_ptr<queue_type>> job_queues;
-
     template<typename... Args>
     multiple_thread_scheduler(size_t number_of_workers, size_t max_number_of_clients, Args... args)
         : m_max_number_of_clients(max_number_of_clients)
@@ -89,8 +87,8 @@ public:
         //m_queues.emplace_back(false,boost::make_shared<queue_type>(args...));
         for (std::size_t i = 0; i < max_number_of_clients ; ++i)
         {
-            //m_queues.emplace_back(false,boost::shared_ptr<queue_type>());
-            m_queues.emplace_back(false,boost::make_shared<queue_type>(args...));
+            m_queues.emplace_back(false,boost::shared_ptr<queue_type>());
+            //m_queues.emplace_back(false,boost::make_shared<queue_type>(args...));
         }
         for (size_t i = 0; i< number_of_workers;++i)
         {
@@ -107,7 +105,8 @@ public:
         m_private_queues.reserve(number_of_workers);
         for (std::size_t i = 0; i < max_number_of_clients ; ++i)
         {
-            m_queues.emplace_back(false,boost::make_shared<queue_type>(args...));
+            //m_queues.emplace_back(false,boost::make_shared<queue_type>(args...));
+            m_queues.emplace_back(false,boost::shared_ptr<queue_type>());
         }
         for (size_t i = 0; i< number_of_workers;++i)
         {
@@ -230,13 +229,19 @@ public:
     }
     void post(typename queue_type::job_type job, std::size_t prio)
     {
+        std::size_t servant_index = (prio / 100000);
+        // create queue if first call
+        if(!m_queues[servant_index].m_queues)
+        {
+            m_queues[servant_index].m_queues = boost::make_shared<queue_type>();
+        }
         boost::asynchronous::job_traits<typename queue_type::job_type>::set_posted_time(job);
-        if ((prio >= m_queues.size()) || !m_queues[prio].m_queues)
+        if ((servant_index >= m_queues.size()))
         {
             // this queue is not existing
             assert(false);
         }
-        m_queues[prio].m_queues->push(std::move(job),prio);
+        m_queues[servant_index].m_queues->push(std::move(job),prio % 100000);
     }
     void post(typename queue_type::job_type job)
     {
