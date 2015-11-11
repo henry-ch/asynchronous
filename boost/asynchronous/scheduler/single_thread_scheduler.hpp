@@ -162,7 +162,7 @@ public:
         m_private_queue->push(std::move(job),std::numeric_limits<std::size_t>::max());
     }
     // try to execute a job, return true
-    static bool execute_one_job(boost::shared_ptr<queue_type> queue,CPULoad& cpu_load,boost::shared_ptr<diag_type> diagnostics,
+    static bool execute_one_job(boost::shared_ptr<queue_type> const& queue,CPULoad& cpu_load,boost::shared_ptr<diag_type> diagnostics,
                                 std::list<boost::asynchronous::any_continuation>& waiting)
     {
         bool popped = false;
@@ -226,8 +226,8 @@ public:
         return popped;
     }
 
-    static void run(boost::shared_ptr<queue_type> queue,boost::shared_ptr<diag_type> diagnostics,
-                    boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > private_queue,
+    static void run(boost::shared_ptr<queue_type> const& queue,boost::shared_ptr<diag_type> diagnostics,
+                    boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > const& private_queue,
                     boost::shared_future<boost::thread*> self,
                     boost::weak_ptr<this_type> this_)
     {

@@ -196,8 +196,8 @@ public:
         return m_name;
     }
     // try to execute a job, return true
-    static bool execute_one_job(std::vector<boost::shared_ptr<queue_type> > queues,size_t index,
-                                std::vector<boost::asynchronous::any_queue_ptr<job_type> > other_queues,
+    static bool execute_one_job(std::vector<boost::shared_ptr<queue_type> > const& queues,size_t index,
+                                std::vector<boost::asynchronous::any_queue_ptr<job_type> > const& other_queues,
                                 CPULoad& cpu_load,boost::shared_ptr<diag_type> diagnostics,
                                 std::list<boost::asynchronous::any_continuation>& waiting)
     {
@@ -286,9 +286,9 @@ public:
         return popped;
     }
 
-    static void run(std::vector<boost::shared_ptr<queue_type> > queues,
-                    boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > private_queue,
-                    std::vector<boost::asynchronous::any_queue_ptr<job_type> > other_queues,
+    static void run(std::vector<boost::shared_ptr<queue_type> > const& queues,
+                    boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > const& private_queue,
+                    std::vector<boost::asynchronous::any_queue_ptr<job_type> > const& other_queues,
                     size_t index,boost::shared_ptr<diag_type> diagnostics,boost::shared_future<boost::thread*> self,
                     boost::weak_ptr<this_type> this_)
     {

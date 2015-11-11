@@ -318,7 +318,7 @@ public:
         }
     }
     // try to execute a job, return true
-    static bool execute_one_job(boost::shared_ptr<queue_type> queue,CPULoad* cpu_load,boost::shared_ptr<diag_type> diagnostics,
+    static bool execute_one_job(boost::shared_ptr<queue_type> const& queue,CPULoad* cpu_load,boost::shared_ptr<diag_type> diagnostics,
                                 std::list<boost::asynchronous::any_continuation>& waiting,size_t index)
     {
         bool popped = false;
@@ -379,8 +379,8 @@ public:
         }
         return popped;
     }
-    static bool run_loop(boost::shared_ptr<queue_type> queue,
-                         boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > private_queue,
+    static bool run_loop(boost::shared_ptr<queue_type> const& queue,
+                         boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > const& private_queue,
                          std::list<boost::asynchronous::any_continuation>& waiting,
                          boost::shared_ptr<diag_type> diagnostics,CPULoad* cpu_load,
                          size_t index)
@@ -411,8 +411,8 @@ public:
         return executed_job;
     }
 
-    static void run_always(boost::shared_ptr<queue_type> queue,
-                           boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > private_queue,
+    static void run_always(boost::shared_ptr<queue_type> const& queue,
+                           boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > const& private_queue,
                            boost::shared_ptr<diag_type> diagnostics,
                            boost::shared_future<boost::thread*> self,
                            boost::weak_ptr<this_type> this_,
@@ -460,8 +460,8 @@ public:
             }
         }
     }
-    static void run_once(boost::shared_ptr<queue_type> queue,
-                         boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > /*private_queue*/,
+    static void run_once(boost::shared_ptr<queue_type> const& queue,
+                         boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > const& /*private_queue*/,
                          boost::shared_ptr<diag_type> diagnostics,
                          boost::shared_future<boost::thread*> self,
                          boost::weak_ptr<this_type> this_,

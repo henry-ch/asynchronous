@@ -377,7 +377,7 @@ public:
     }
 
     static void run(std::vector<job_queues>* queues,
-                    boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > private_queue,
+                    boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > const& private_queue,
                     boost::shared_ptr<diag_type> diagnostics,
                     boost::shared_future<boost::thread*> self,
                     boost::weak_ptr<this_type> this_,
