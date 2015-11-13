@@ -57,7 +57,9 @@ void ParallelAsyncPostFuture(float a[], size_t n)
                                                             [](float* beg, float* end)
                                                             {
 //#pragma clang loop vectorize(disable)
+#ifdef __ICC
 #pragma simd
+#endif
                                                                for(;beg!=end;++beg)
                                                                {
                                                                     *beg = Foo(*beg);

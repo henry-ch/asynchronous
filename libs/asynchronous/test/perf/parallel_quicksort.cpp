@@ -23,11 +23,11 @@
 using namespace std;
 #define LOOP 1
 
-//#define NELEM 200000000
-//#define SORTED_TYPE uint32_t
+#define NELEM 200000000
+#define SORTED_TYPE uint32_t
 
-#define NELEM 10000000
-#define SORTED_TYPE std::string
+//#define NELEM 10000000
+//#define SORTED_TYPE std::string
 
 //#define NELEM 200000000
 //#define SORTED_TYPE double
@@ -58,7 +58,9 @@ void ParallelAsyncPostCb(SORTED_TYPE a[], size_t n)
                         boost::asynchronous::default_find_position< boost::asynchronous::sequential_push_policy>,
                         boost::asynchronous::no_cpu_load_saving
                     >>(tpsize,tasks);
-    
+    // set processor affinity to improve cache usage. We start at core 0, until tpsize-1
+    pool.processor_bind(0);
+
     long tasksize = NELEM / tasks;
     servant_time = boost::chrono::high_resolution_clock::now();
     boost::future<void> fu = boost::asynchronous::post_future(pool,
