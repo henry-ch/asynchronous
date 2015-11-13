@@ -24,7 +24,7 @@
 
 using namespace std;
 
-#define SIZE 10000000
+#define SIZE 1000000
 #define LOOP 10
 
 boost::chrono::high_resolution_clock::time_point servant_time;
@@ -114,8 +114,8 @@ int main( int argc, const char *argv[] )
             boost::asynchronous::multiqueue_threadpool_scheduler<
                     boost::asynchronous::lockfree_queue<>,
                     boost::asynchronous::default_find_position< boost::asynchronous::sequential_push_policy>,
-                    //boost::asynchronous::default_save_cpu_load<10,80000,1000>
-                    boost::asynchronous::no_cpu_load_saving
+                    boost::asynchronous::default_save_cpu_load<10,80000,1000>
+                    //boost::asynchronous::no_cpu_load_saving
                 >>(tpsize,tasks/tpsize);
     // set processor affinity to improve cache usage. We start at core 0, until tpsize-1
     scheduler.processor_bind(0);

@@ -82,8 +82,8 @@ void test(void(*pf)(float [], size_t ))
     (*pf)(a.get(),SIZE);
 }
 
-int main( int argc, const char *argv[] ) 
-{   
+int main( int argc, const char *argv[] )
+{
     tpsize = (argc>1) ? strtol(argv[1],0,0) : boost::thread::hardware_concurrency();
     tasks = (argc>2) ? strtol(argv[2],0,0) : 500;
     std::cout << "tpsize=" << tpsize << std::endl;
@@ -100,7 +100,7 @@ int main( int argc, const char *argv[] )
     scheduler.processor_bind(0);
 
     for (int i=0;i<LOOP;++i)
-    {     
+    {
         test(ParallelAsyncPostFuture);
     }
     printf ("%24s: time = %.1f usec\n","parallel async cb intern", servant_intern);
