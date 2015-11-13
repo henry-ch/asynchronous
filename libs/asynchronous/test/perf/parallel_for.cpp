@@ -57,6 +57,7 @@ void ParallelAsyncPostFuture(float a[], size_t n)
                                                             [](float* beg, float* end)
                                                             {
 //#pragma clang loop vectorize(disable)
+#pragma simd
                                                                for(;beg!=end;++beg)
                                                                {
                                                                     *beg = Foo(*beg);
@@ -71,14 +72,22 @@ void ParallelAsyncPostFuture(float a[], size_t n)
 
 void test(void(*pf)(float [], size_t ))
 {
+    auto start_mem = boost::chrono::high_resolution_clock::now();
     boost::shared_array<float> a (new float[SIZE]);
-    /* in case we have a huge input or compßlicated generate function
-     long tasksize = SIZE / tasks;
-     auto fu = boost::asynchronous::post_future(
+    auto duration_mem = (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start_mem).count() / 1000);
+    std::cout << "memory alloc: " << duration_mem <<std::endl;
+
+    auto start_generate = boost::chrono::high_resolution_clock::now();
+    int n = {0};
+    // in case we have a huge input or complicated generate function
+    /*long tasksize = SIZE / tasks;
+    auto fu = boost::asynchronous::post_future(
                 scheduler,
-                [&]{return boost::asynchronous::parallel_generate(a.get(), a.get()+SIZE,rand,tasksize);});
+                [&]{return boost::asynchronous::parallel_generate(a.get(), a.get()+SIZE,[&n]{ return n++; },tasksize);});
     fu.get();*/
-    std::generate(a.get(), a.get()+SIZE,rand);
+    std::generate(a.get(), a.get()+SIZE,[&n]{ return n++; });
+    auto duration_generate = (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start_generate).count() / 1000);
+    std::cout << "generate: " << duration_generate <<std::endl;
     (*pf)(a.get(),SIZE);
 }
 

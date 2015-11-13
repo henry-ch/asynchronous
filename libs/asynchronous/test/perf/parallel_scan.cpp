@@ -79,6 +79,9 @@ void ParallelAsyncPostFuture(Iterator beg, Iterator end, Iterator out, element i
                                                              [](Iterator beg, Iterator end)
                                                              {
                                                                element r=0;
+#ifdef __ICC
+#pragma simd
+#endif
                                                                for (;beg != end; ++beg)
                                                                {
                                                                    r += (*beg + Foo(*beg));
@@ -88,6 +91,9 @@ void ParallelAsyncPostFuture(Iterator beg, Iterator end, Iterator out, element i
                                                              std::plus<element>(),
                                                              [](Iterator beg, Iterator end, Iterator out, element init) mutable
                                                              {
+#ifdef __ICC
+#pragma simd
+#endif
                                                                for (;beg != end; ++beg)
                                                                {
                                                                    init += (*beg + Foo(*beg));
