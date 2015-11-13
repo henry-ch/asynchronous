@@ -46,16 +46,8 @@ float Foo(float f)
 void generate(container& data, unsigned elements)
 {
     data = container(elements,(element)1.0);
-
-    auto fu = boost::asynchronous::post_future(
-                scheduler,
-                [&]
-                {
-                    return boost::asynchronous::parallel_generate(
-                                data.begin(),data.end(),
-                                [](){return static_cast <element> (rand()) / static_cast <element> (RAND_MAX);},1024);
-                });
-    fu.get();
+    int n = {0};
+    std::generate(data.begin(),data.end(),[&n]{ return n++; });
 }
 template <class Iterator,class OutIterator,class T>
 OutIterator inclusive_scan(Iterator beg, Iterator end, OutIterator out, T init)
