@@ -39,12 +39,12 @@ struct LongOne
     std::vector<long> data;
 };
 inline bool operator< (const LongOne& lhs, const LongOne& rhs){ return rhs.data[0] < lhs.data[0]; }
-#define NELEM 10000000
-#define SORTED_TYPE LongOne
-#define NO_SPREADSORT
+//#define NELEM 10000000
+//#define SORTED_TYPE LongOne
+//#define NO_SPREADSORT
 
-//#define NELEM 200000000
-//#define SORTED_TYPE uint32_t
+#define NELEM 200000000
+#define SORTED_TYPE uint32_t
 
 //#define NELEM 10000000
 //#define SORTED_TYPE std::string
@@ -84,6 +84,8 @@ void ParallelAsyncPostCb(SORTED_TYPE a[], size_t n)
                         boost::asynchronous::default_find_position< boost::asynchronous::sequential_push_policy>,
                         boost::asynchronous::no_cpu_load_saving
                     >>(tpsize,tasks);
+    // set processor affinity to improve cache usage. We start at core 0, until tpsize-1
+    pool.processor_bind(0);
 
     long tasksize = NELEM / tasks;
     servant_time = boost::chrono::high_resolution_clock::now();
@@ -105,6 +107,8 @@ void ParallelAsyncPostCbSpreadsort(SORTED_TYPE a[], size_t n)
                         boost::asynchronous::default_find_position< boost::asynchronous::sequential_push_policy>,
                         boost::asynchronous::no_cpu_load_saving
                     >>(tpsize,tasks);
+    // set processor affinity to improve cache usage. We start at core 0, until tpsize-1
+    pool.processor_bind(0);
 
     long tasksize = NELEM / tasks;
     servant_time = boost::chrono::high_resolution_clock::now();
