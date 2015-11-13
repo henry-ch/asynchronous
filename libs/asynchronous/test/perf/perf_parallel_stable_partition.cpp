@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <iostream>
 #include <vector>
+#include <memory>
 //#include <stdlib.h>
 
 #include <boost/type_traits/is_same.hpp>
@@ -51,8 +52,8 @@ void ParallelAsyncPostCb(std::vector<SORTED_TYPE>& a)
     // set processor affinity to improve cache usage. We start at core 0, until tpsize-1
     scheduler.processor_bind(0);
 
-    boost::shared_ptr<std::vector<SORTED_TYPE>> vec = boost::make_shared<std::vector<SORTED_TYPE>>(a);
-    boost::shared_ptr<std::vector<SORTED_TYPE>> vec_res = boost::make_shared<std::vector<SORTED_TYPE>>(vec->size());
+    std::shared_ptr<std::vector<SORTED_TYPE>> vec = std::make_shared<std::vector<SORTED_TYPE>>(a);
+    std::shared_ptr<std::vector<SORTED_TYPE>> vec_res = std::make_shared<std::vector<SORTED_TYPE>>(vec->size());
     long tasksize = NELEM / tasks;
     servant_time = boost::chrono::high_resolution_clock::now();
     auto fu = boost::asynchronous::post_future(

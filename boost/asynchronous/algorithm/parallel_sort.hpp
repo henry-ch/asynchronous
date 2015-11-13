@@ -16,6 +16,7 @@
 
 #include <boost/utility/enable_if.hpp>
 #include <boost/serialization/vector.hpp>
+#include <boost/type_traits/has_trivial_destructor.hpp>
 
 #include <boost/asynchronous/detail/any_interruptible.hpp>
 #include <boost/asynchronous/callable_any.hpp>
@@ -102,7 +103,7 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
                                         // get to check that no exception
                                         std::get<0>(merge_res).get();
                                         // we need to clean up before returning value (in case a shutdown would be under way)
-                                        if (depth == 0 && !std::is_trivially_destructible<value_type>::value)
+                                        if (depth == 0 && !boost::has_trivial_destructor<value_type>::value)
                                         {
                                             merge_memory->clear([task_res,merge_memory]()mutable{task_res.set_value();});
                                         }

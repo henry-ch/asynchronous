@@ -45,7 +45,7 @@ struct LongOne
     std::vector<long> data;
 };
 inline bool operator< (const LongOne& lhs, const LongOne& rhs){ return rhs.data[0] < lhs.data[0]; }
-#define NELEM 10000000
+#define NELEM 1000000
 #define SORTED_TYPE LongOne
 #define NO_SPREADSORT
 
