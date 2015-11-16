@@ -36,7 +36,7 @@ typename boost::chrono::high_resolution_clock::time_point servant_time;
 double servant_intern=0.0;
 long tpsize = 12;
 long tasks = 500;
-
+bool with_sequential=true;
 
 SORTED_TYPE compare_with = NELEM/2;
 
@@ -74,6 +74,7 @@ void ParallelAsyncPostCb(std::vector<SORTED_TYPE>& a)
     fu.wait();
     servant_intern += (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - servant_time).count() / 1000000);
 
+    if (with_sequential)
     {
         auto seq_start = boost::chrono::high_resolution_clock::now();
         std::partition(a.begin(),a.end(),[](SORTED_TYPE const& i)
@@ -146,6 +147,7 @@ int main( int argc, const char *argv[] )
 {
     tpsize = (argc>1) ? strtol(argv[1],0,0) : boost::thread::hardware_concurrency();
     tasks = (argc>2) ? strtol(argv[2],0,0) : 500;
+    with_sequential = (argc>3) ? (bool)(strtol(argv[3],0,0)) : true;
     std::cout << "tasks=" << tasks << std::endl;
     std::cout << "tpsize=" << tpsize << std::endl;
 

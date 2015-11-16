@@ -172,23 +172,19 @@ struct parallel_stable_partition_part2_helper: public boost::asynchronous::conti
             {
                 // write true part
                 auto out = out_;
-                auto beg = beg_;
                 std::advance(out,offset_true_);
                 auto out2 = out_+offset_false_+ start_false_;
                 std::size_t values_counter=0;
-                while (beg != end_)
+                for (auto it = beg_ ; it != end_ ; ++it, ++values_counter)
                 {
-                    //if (func_(*beg))
                     if (data_.values_[values_counter])
                     {
-                        *out++ = *beg;
+                        *out++ = *it;
                     }
                     else
                     {
-                        *out2++ = *beg;
+                        *out2++ = *it;
                     }
-                    ++beg;
-                    ++values_counter;
                 }
 
                 // done
