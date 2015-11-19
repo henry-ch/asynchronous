@@ -136,14 +136,11 @@ public:
     
 protected:
 
-#ifndef BOOST_NO_RVALUE_REFERENCES
     multi_queue_scheduler_policy(boost::shared_ptr<queue_type>&& queues)
         : m_queues(std::forward<std::vector<boost::shared_ptr<queue_type> > >(queues))
         , m_next_shutdown_bucket(0)
     {
     }
-#endif
-#ifndef BOOST_NO_CXX11_VARIADIC_TEMPLATES
     template<typename... Args>
     multi_queue_scheduler_policy(size_t number_of_workers,Args... args)
          : m_next_shutdown_bucket(0)
@@ -151,10 +148,9 @@ protected:
         m_queues.reserve(number_of_workers);
         for (size_t i = 0; i< number_of_workers;++i)
         {
-            m_queues.push_back(boost::make_shared<queue_type>(std::move(args)...));
+            m_queues.push_back(boost::make_shared<queue_type>(args...));
         }
     }
-#endif
     multi_queue_scheduler_policy(size_t number_of_workers)
         : m_next_shutdown_bucket(0)
     {
