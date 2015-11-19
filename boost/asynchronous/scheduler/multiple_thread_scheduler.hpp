@@ -66,28 +66,29 @@ public:
     struct job_queues
     {
         job_queues(bool f, boost::shared_ptr<queue_type> q)
-            : m_free(f), m_queues(q)
+            : m_taken(f), m_queues(q)
         {}
 
         job_queues(job_queues&& rhs)
-            : m_free(rhs.m_free.load())
+            : m_taken(rhs.m_taken.load())
             , m_queues(std::move(rhs.m_queues))
         {}
-        std::atomic_bool m_free;
+        std::atomic_bool m_taken;
         boost::shared_ptr<queue_type> m_queues;
     };
 
     template<typename... Args>
-    multiple_thread_scheduler(size_t number_of_workers, size_t max_number_of_clients, Args... args)
+    multiple_thread_scheduler(size_t number_of_workers, size_t max_number_of_clients, Args... /*args*/)
         : m_max_number_of_clients(max_number_of_clients)
         , m_number_of_workers(number_of_workers)
     {
         m_private_queues.reserve(number_of_workers);
         //TODO remove test
         //m_queues.emplace_back(false,boost::make_shared<queue_type>(args...));
+        m_queues = boost::make_shared<std::vector<job_queues>>();
         for (std::size_t i = 0; i < max_number_of_clients ; ++i)
         {
-            m_queues.emplace_back(false,boost::shared_ptr<queue_type>());
+            m_queues->emplace_back(false,boost::shared_ptr<queue_type>());
             //m_queues.emplace_back(false,boost::make_shared<queue_type>(args...));
         }
         for (size_t i = 0; i< number_of_workers;++i)
@@ -97,16 +98,17 @@ public:
         }
     }
     template<typename... Args>
-    multiple_thread_scheduler(size_t number_of_workers, size_t max_number_of_clients, std::string const& name, Args... args)
+    multiple_thread_scheduler(size_t number_of_workers, size_t max_number_of_clients, std::string const& name, Args... /*args*/)
         : m_max_number_of_clients(max_number_of_clients)
         , m_number_of_workers(number_of_workers)
         , m_name(name)
     {
         m_private_queues.reserve(number_of_workers);
+        m_queues = boost::make_shared<std::vector<job_queues>>();
         for (std::size_t i = 0; i < max_number_of_clients ; ++i)
         {
             //m_queues.emplace_back(false,boost::make_shared<queue_type>(args...));
-            m_queues.emplace_back(false,boost::shared_ptr<queue_type>());
+            m_queues->emplace_back(false,boost::shared_ptr<queue_type>());
         }
         for (size_t i = 0; i< number_of_workers;++i)
         {
@@ -125,7 +127,7 @@ public:
             boost::promise<boost::thread*> new_thread_promise;
             boost::shared_future<boost::thread*> fu = new_thread_promise.get_future();
             boost::thread* new_thread =
-                    m_group->create_thread(boost::bind(&multiple_thread_scheduler::run,&(this->m_queues),
+                    m_group->create_thread(boost::bind(&multiple_thread_scheduler::run,this->m_queues,
                                                        m_private_queues[i],m_diagnostics,fu,weak_self,i));
             new_thread_promise.set_value(new_thread);
             m_thread_ids.push_back(new_thread->get_id());
@@ -210,9 +212,9 @@ public:
     std::vector<std::size_t> get_queue_size() const
     {
         std::size_t res = 0;
-        for (auto const& q : m_queues)
+        for (auto const& q : (*m_queues))
         {
-            if (!!q.m_free)
+            if (!!q.m_queues)
             {
                 auto vec = q.m_queues->get_queue_size();
                 res += std::accumulate(vec.begin(),vec.end(),0,[](std::size_t rhs,std::size_t lhs){return rhs + lhs;});
@@ -231,17 +233,17 @@ public:
     {
         std::size_t servant_index = (prio / 100000);
         // create queue if first call
-        if(!m_queues[servant_index].m_queues)
+        if(!(*m_queues)[servant_index].m_queues)
         {
-            m_queues[servant_index].m_queues = boost::make_shared<queue_type>();
+            (*m_queues)[servant_index].m_queues = boost::make_shared<queue_type>();
         }
         boost::asynchronous::job_traits<typename queue_type::job_type>::set_posted_time(job);
-        if ((servant_index >= m_queues.size()))
+        if ((servant_index >= m_queues->size()))
         {
             // this queue is not existing
             assert(false);
         }
-        m_queues[servant_index].m_queues->push(std::move(job),prio % 100000);
+        (*m_queues)[servant_index].m_queues->push(std::move(job),prio % 100000);
     }
     void post(typename queue_type::job_type job)
     {
@@ -267,12 +269,12 @@ public:
         boost::asynchronous::job_traits<typename queue_type::job_type>::set_posted_time(job);
         boost::asynchronous::interruptible_job<typename queue_type::job_type,this_type>
                 ijob(std::move(job),wpromise,state);
-        if ((prio >= m_queues.size()) || !m_queues[prio].m_queues)
+        if ((prio >= m_queues->size()) || !(*m_queues)[prio].m_queues)
         {
             // this queue is not existing
             assert(false);
         }
-        m_queues[prio].m_queues->push(std::move(ijob),prio);
+        (*m_queues)[prio].m_queues->push(std::move(ijob),prio);
 
         boost::future<boost::thread*> fu = wpromise->get_future();
         boost::asynchronous::interrupt_helper interruptible(std::move(fu),state);
@@ -312,14 +314,11 @@ public:
                 {
                     // used slot, check if we can take it
                     bool expected = false;
-                    if ((*queues)[i].m_free.compare_exchange_strong(expected,true))
+                    if ((*queues)[i].m_taken.compare_exchange_strong(expected,true))
                     {
                         // ok we have it
-                        if (!!(*queues)[i].m_queues)
-                        {
-                            popped = ((*queues)[i].m_queues)->try_pop(job);
-                        }
-                        (*queues)[i].m_free = false;
+                        popped = ((*queues)[i].m_queues)->try_pop(job);
+                        (*queues)[i].m_taken = false;
                     }
                 }
                 if (popped)
@@ -376,7 +375,7 @@ public:
         return popped;
     }
 
-    static void run(std::vector<job_queues>* queues,
+    static void run(boost::shared_ptr<std::vector<job_queues>> queues,
                     boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > const& private_queue,
                     boost::shared_ptr<diag_type> diagnostics,
                     boost::shared_future<boost::thread*> self,
@@ -398,7 +397,7 @@ public:
             try
             {
                 {
-                    bool popped = execute_one_job(queues,index,cpu_load,diagnostics,waiting);
+                    bool popped = execute_one_job(queues.get(),index,cpu_load,diagnostics,waiting);
                     if (!popped)
                     {
                         cpu_load.loop_done_no_job();
@@ -419,7 +418,7 @@ public:
             catch(boost::asynchronous::detail::shutdown_exception&)
             {
                 // we are done, execute jobs posted short before to the end, then shutdown
-                while(execute_one_job(queues,index,cpu_load,diagnostics,waiting));
+                while(execute_one_job(queues.get(),index,cpu_load,diagnostics,waiting));
                 delete this_type::m_self_thread.release();
                 return;
             }
@@ -438,7 +437,7 @@ public:
     static boost::thread_specific_ptr<thread_ptr_wrapper> m_self_thread;
 
 private:
-    std::vector<job_queues> m_queues;
+    boost::shared_ptr<std::vector<job_queues>> m_queues;
     size_t m_max_number_of_clients;
     boost::shared_ptr<boost::thread_group> m_group;
     std::vector<boost::thread::id> m_thread_ids;

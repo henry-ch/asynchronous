@@ -417,7 +417,7 @@ public:
         boost::future<void> fu = n.done_promise->get_future();
         typename boost::asynchronous::job_traits<callable_type>::wrapper_type  a(std::move(n));
         a.set_name(ServantProxy::get_dtor_name());
-        m_proxy.post(std::move(a),ServantProxy::get_dtor_prio() + 100000 * m_offset_id);
+        m_proxy.post(std::move(a),ServantProxy::get_dtor_prio());
         try
         {
             // no interruption could go good here
@@ -510,9 +510,9 @@ private:
                     boost::asynchronous::move_bind(init_helper(p),m_proxy.get_weak_scheduler(),std::move(args)...)));
         a.set_name(ServantProxy::get_ctor_name());
 #ifndef BOOST_NO_RVALUE_REFERENCES
-        post(std::move(a),ServantProxy::get_ctor_prio() + 100000 * m_offset_id);
+        post(std::move(a),ServantProxy::get_ctor_prio());
 #else
-        post(a,ServantProxy::get_ctor_prio() + 100000 * m_offset_id);
+        post(a,ServantProxy::get_ctor_prio());
 #endif
         bool ok = fu.timed_wait(boost::posix_time::milliseconds(max_create_wait_ms));
         if(ok)

@@ -19,12 +19,16 @@
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/trackable_servant.hpp>
 
+#include "test_common.hpp"
 #include <boost/test/unit_test.hpp>
+using namespace boost::asynchronous::test;
 
 namespace
 {
 // main thread id
 boost::thread::id main_thread_id;
+std::vector<boost::thread::id> tpids;
+
 bool dtor_called=false;
 //make template just to try it out
 template <class T>
@@ -44,8 +48,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
     }
     void do_it()
     {
-        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_endless_async_work not posted.");
-
+        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work in main thread.");
+        BOOST_CHECK_MESSAGE(contains_id(tpids.begin(),tpids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
     }
 };
 
@@ -55,8 +59,8 @@ class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy<T>,S
 {
 public:
     template <class Scheduler>
-    ServantProxy(Scheduler s):
-        boost::asynchronous::servant_proxy<ServantProxy,Servant<T>>(s)
+    ServantProxy(Scheduler s, std::size_t index):
+        boost::asynchronous::servant_proxy<ServantProxy,Servant<T>>(std::make_tuple(s,index))
     {}
     // this is only for c++11 compilers necessary
 #ifdef BOOST_NO_CXX14_RETURN_TYPE_DEDUCTION
@@ -66,25 +70,55 @@ public:
 #ifndef _MSC_VER
     BOOST_ASYNC_FUTURE_MEMBER(do_it,1)
 #else
-    BOOST_ASYNC_FUTURE_MEMBER_1(do_it)
+    BOOST_ASYNC_FUTURE_MEMBER_1(do_it,1)
 #endif
 };
 
 }
 
-BOOST_AUTO_TEST_CASE( test_multiple_thread_scheduler_basic )
+BOOST_AUTO_TEST_CASE( test_multiple_thread_scheduler_one_worker )
 {
     main_thread_id = boost::this_thread::get_id();
     {
         auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiple_thread_scheduler<
-                                                                            boost::asynchronous::lockfree_queue<>>>(3,5);
+                                                                            boost::asynchronous::lockfree_queue<>>>(1,5);
+        tpids = scheduler.thread_ids();
 
-        ServantProxy<int> proxy(scheduler);
-        boost::shared_future<void> fuv = proxy.do_it();
+        ServantProxy<int> proxy0(scheduler,0);
+        proxy0.do_it();
+        ServantProxy<int> proxy1(scheduler,1);
+        proxy1.do_it();
+        ServantProxy<int> proxy2(scheduler,2);
+        proxy2.do_it();
+        ServantProxy<int> proxy3(scheduler,3);
+        proxy3.do_it();
+        ServantProxy<int> proxy4(scheduler,4);
+        proxy4.do_it();
     }
     // at this point, the dtor has been called
     BOOST_CHECK_MESSAGE(dtor_called,"servant dtor not called.");
 }
 
+BOOST_AUTO_TEST_CASE( test_multiple_thread_scheduler_two_workers )
+{
+    main_thread_id = boost::this_thread::get_id();
+    {
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiple_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<>>>(2,5);
+        tpids = scheduler.thread_ids();
 
+        ServantProxy<int> proxy0(scheduler,0);
+        proxy0.do_it();
+        ServantProxy<int> proxy1(scheduler,1);
+        proxy1.do_it();
+        ServantProxy<int> proxy2(scheduler,2);
+        proxy2.do_it();
+        ServantProxy<int> proxy3(scheduler,3);
+        proxy3.do_it();
+        ServantProxy<int> proxy4(scheduler,4);
+        proxy4.do_it();
+    }
+    // at this point, the dtor has been called
+    BOOST_CHECK_MESSAGE(dtor_called,"servant dtor not called.");
+}
 
