@@ -305,8 +305,10 @@ public:
         bool popped = false;
         // get a job
         typename Q::job_type job;
+        std::size_t taken_index = 0;
         try
         {
+
             //TODO restart at last position
             for (std::size_t i = 0 ; i < queues->size() ; ++i)
             {
@@ -318,7 +320,15 @@ public:
                     {
                         // ok we have it
                         popped = ((*queues)[i].m_queues)->try_pop(job);
-                        (*queues)[i].m_taken = false;
+                        //(*queues)[i].m_taken = false;
+                        if (popped)
+                        {
+                            taken_index = i;
+                        }
+                        else
+                        {
+                            (*queues)[i].m_taken = false;
+                        }
                     }
                 }
                 if (popped)
@@ -337,6 +347,7 @@ public:
                 boost::asynchronous::job_traits<typename Q::job_type>::add_current_diagnostic(index,job,diagnostics.get());
                 // execute job
                 job();
+                (*queues)[taken_index].m_taken = false;
                 boost::asynchronous::job_traits<typename Q::job_type>::reset_current_diagnostic(index,diagnostics.get());
             }
             else
@@ -363,11 +374,16 @@ public:
         catch(boost::thread_interrupted&)
         {
             // task interrupted, no problem, just continue
+            if (popped)
+            {
+                (*queues)[taken_index].m_taken = false;
+            }
         }
         catch(std::exception&)
         {
             if (popped)
             {
+                (*queues)[taken_index].m_taken = false;
                 boost::asynchronous::job_traits<typename Q::job_type>::set_failed(job);
                 boost::asynchronous::job_traits<typename Q::job_type>::reset_current_diagnostic(index,diagnostics.get());
             }

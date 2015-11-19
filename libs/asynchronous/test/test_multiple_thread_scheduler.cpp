@@ -138,7 +138,7 @@ BOOST_AUTO_TEST_CASE( test_multiple_thread_scheduler_two_workers )
     // at this point, the dtor has been called
     BOOST_CHECK_MESSAGE(dtor_called,"servant dtor not called.");
 }
-/*
+
 BOOST_AUTO_TEST_CASE( test_multiple_thread_scheduler_many_workers_and_no_race )
 {
     main_thread_id = boost::this_thread::get_id();
@@ -170,4 +170,4 @@ BOOST_AUTO_TEST_CASE( test_multiple_thread_scheduler_many_workers_and_no_race )
     // at this point, the dtor has been called
     BOOST_CHECK_MESSAGE(dtor_called,"servant dtor not called.");
 }
-*/
+
