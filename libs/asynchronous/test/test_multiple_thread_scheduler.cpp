@@ -50,7 +50,18 @@ struct Servant : boost::asynchronous::trackable_servant<>
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work in main thread.");
         BOOST_CHECK_MESSAGE(contains_id(tpids.begin(),tpids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
+        test_data.push_back(42);
     }
+    void do_it2()
+    {
+        test_data.push_back(42);
+    }
+    std::size_t size()const
+    {
+        return test_data.size();
+    }
+    // check for race
+    std::vector<int> test_data;
 };
 
 //make template just to try it out
@@ -69,8 +80,12 @@ public:
 
 #ifndef _MSC_VER
     BOOST_ASYNC_FUTURE_MEMBER(do_it,1)
+    BOOST_ASYNC_FUTURE_MEMBER(do_it2,1)
+    BOOST_ASYNC_FUTURE_MEMBER(size,1)
 #else
     BOOST_ASYNC_FUTURE_MEMBER_1(do_it,1)
+    BOOST_ASYNC_FUTURE_MEMBER_1(do_it2,1)
+    BOOST_ASYNC_FUTURE_MEMBER_1(size,1)
 #endif
 };
 
@@ -94,6 +109,7 @@ BOOST_AUTO_TEST_CASE( test_multiple_thread_scheduler_one_worker )
         proxy3.do_it();
         ServantProxy<int> proxy4(scheduler,4);
         proxy4.do_it();
+        BOOST_CHECK_MESSAGE(proxy0.size().get() == 1,"wrong number of test data");
     }
     // at this point, the dtor has been called
     BOOST_CHECK_MESSAGE(dtor_called,"servant dtor not called.");
@@ -117,8 +133,41 @@ BOOST_AUTO_TEST_CASE( test_multiple_thread_scheduler_two_workers )
         proxy3.do_it();
         ServantProxy<int> proxy4(scheduler,4);
         proxy4.do_it();
+        BOOST_CHECK_MESSAGE(proxy0.size().get() == 1,"wrong number of test data");
     }
     // at this point, the dtor has been called
     BOOST_CHECK_MESSAGE(dtor_called,"servant dtor not called.");
 }
+/*
+BOOST_AUTO_TEST_CASE( test_multiple_thread_scheduler_many_workers_and_no_race )
+{
+    main_thread_id = boost::this_thread::get_id();
+    {
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiple_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<>>>(
+                                                                                    boost::thread::hardware_concurrency(),5);
+        tpids = scheduler.thread_ids();
 
+        ServantProxy<int> proxy0(scheduler,0);
+        ServantProxy<int> proxy1(scheduler,1);
+        ServantProxy<int> proxy2(scheduler,2);
+        ServantProxy<int> proxy3(scheduler,3);
+        ServantProxy<int> proxy4(scheduler,4);
+        for (int i = 0; i< 10000; ++i)
+        {
+            proxy0.do_it2();
+            proxy1.do_it2();
+            proxy2.do_it2();
+            proxy4.do_it2();
+            proxy3.do_it2();
+        }
+        BOOST_CHECK_MESSAGE(proxy0.size().get() == 10000,"wrong number of test data");
+        BOOST_CHECK_MESSAGE(proxy1.size().get() == 10000,"wrong number of test data");
+        BOOST_CHECK_MESSAGE(proxy2.size().get() == 10000,"wrong number of test data");
+        BOOST_CHECK_MESSAGE(proxy3.size().get() == 10000,"wrong number of test data");
+        BOOST_CHECK_MESSAGE(proxy4.size().get() == 10000,"wrong number of test data");
+    }
+    // at this point, the dtor has been called
+    BOOST_CHECK_MESSAGE(dtor_called,"servant dtor not called.");
+}
+*/
