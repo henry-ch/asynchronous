@@ -49,7 +49,7 @@ parallel_inclusive_scan(Iterator beg, Iterator end, OutIterator out, T init,Func
 
 // version for moved ranges
 template <class Range, class OutRange, class T, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::disable_if<has_is_continuation_task<Range>,
+typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,
                            boost::asynchronous::detail::callback_continuation<std::pair<Range,OutRange>,Job> >::type
 parallel_inclusive_scan(Range&& range,OutRange&& out_range,T init,Func f,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -83,7 +83,7 @@ parallel_inclusive_scan(Range&& range,OutRange&& out_range,T init,Func f,long cu
 
 // version for a single moved range (in/out) => will return the range as continuation
 template <class Range, class T, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::disable_if<has_is_continuation_task<Range>,
+typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,
                            boost::asynchronous::detail::callback_continuation<Range,Job> >::type
 parallel_inclusive_scan(Range&& range,T init,Func f,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -117,7 +117,7 @@ parallel_inclusive_scan(Range&& range,T init,Func f,long cutoff,
 
 // version for ranges given as continuation => will return the range as continuation
 template <class Range, class T, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<has_is_continuation_task<Range>,
+typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,
                           boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_inclusive_scan(Range range,T init,Func f,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS

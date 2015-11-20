@@ -205,7 +205,7 @@ struct parallel_count_range_helper: public boost::asynchronous::continuation_tas
 };
 }
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<long,Job> >::type
+typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<long,Job> >::type
 parallel_count_if(Range const& range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                const std::string& task_name, std::size_t prio)
@@ -371,7 +371,7 @@ struct parallel_count_range_move_helper<Range,Func,Job,typename ::boost::enable_
 };
 
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<long,Job> >::type
+typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<long,Job> >::type
 parallel_count_if(Range&& range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                const std::string& task_name, std::size_t prio)
@@ -386,7 +386,7 @@ parallel_count_if(Range&& range,Func func,long cutoff,
             (boost::asynchronous::parallel_count_range_move_helper<Range,Func,Job>(r,beg,end,std::move(func),cutoff,task_name,prio));
 }
 template <class Range, class T, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::disable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<long,Job> >::type
+typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<long,Job> >::type
 parallel_count(Range&& range,const T& value,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                const std::string& task_name, std::size_t prio)
@@ -458,7 +458,8 @@ struct parallel_count_continuation_range_helper: public boost::asynchronous::con
 };
 // Continuation is a callback continuation
 template <class Continuation, class Func, class Job>
-struct parallel_count_continuation_range_helper<Continuation,Func,Job,typename ::boost::enable_if< has_is_callback_continuation_task<Continuation> >::type>
+struct parallel_count_continuation_range_helper<Continuation,Func,Job,
+                                                typename ::boost::enable_if< boost::asynchronous::detail::has_is_callback_continuation_task<Continuation> >::type>
         : public boost::asynchronous::continuation_task<long>
 {
     parallel_count_continuation_range_helper(Continuation const& c,Func func,long cutoff,
@@ -505,7 +506,7 @@ struct parallel_count_continuation_range_helper<Continuation,Func,Job,typename :
 }
 
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<has_is_continuation_task<Range>, boost::asynchronous::detail::continuation<long, Job>>::type
+typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>, boost::asynchronous::detail::continuation<long, Job>>::type
 parallel_count_if(Range range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                const std::string& task_name, std::size_t prio)
@@ -519,7 +520,7 @@ parallel_count_if(Range range,Func func,long cutoff,
 }
 
 template <class Range, class T, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<has_is_continuation_task<Range>, boost::asynchronous::detail::continuation<long, Job>>::type
+typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>, boost::asynchronous::detail::continuation<long, Job>>::type
 parallel_count(Range range,T const& value,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                const std::string& task_name, std::size_t prio)

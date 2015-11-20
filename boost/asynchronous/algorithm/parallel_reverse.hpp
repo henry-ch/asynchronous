@@ -180,7 +180,8 @@ struct parallel_reverse_continuation_range_helper: public boost::asynchronous::c
 };
 // Continuation is a callback continuation
 template <class Continuation, class Job>
-struct parallel_reverse_continuation_range_helper<Continuation,Job,typename ::boost::enable_if< has_is_callback_continuation_task<Continuation> >::type>:
+struct parallel_reverse_continuation_range_helper<Continuation,Job,
+                                                  typename ::boost::enable_if< boost::asynchronous::detail::has_is_callback_continuation_task<Continuation> >::type>:
         public boost::asynchronous::continuation_task<typename Continuation::return_type>
 {
     parallel_reverse_continuation_range_helper(Continuation const& c,long cutoff,
@@ -226,7 +227,7 @@ struct parallel_reverse_continuation_range_helper<Continuation,Job,typename ::bo
 };
 }
 template <class Range, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
+typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_reverse(Range range,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
               const std::string& task_name, std::size_t prio)

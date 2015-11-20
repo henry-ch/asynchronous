@@ -780,7 +780,7 @@ struct callback_continuation
         }
     };
     template<int I,class Task>
-    struct task_type_selector<I,Task,typename ::boost::enable_if<has_is_callback_continuation_task<Task> >::type>
+    struct task_type_selector<I,Task,typename ::boost::enable_if< boost::asynchronous::detail::has_is_callback_continuation_task<Task> >::type>
     {
         template <typename S,typename Interruptibles,typename F>
         static void construct(S& ,Interruptibles&,F& func, boost::shared_ptr<boost::asynchronous::detail::interrupt_state>,bool, Task&& t)

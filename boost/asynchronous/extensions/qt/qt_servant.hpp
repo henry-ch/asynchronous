@@ -187,7 +187,7 @@ public:
     void post_callback(F1&& func,F2&& cb_func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
     {
         typedef typename ::boost::mpl::eval_if<
-            typename has_is_continuation_task<decltype(func())>::type,
+            typename boost::asynchronous::detail::has_is_continuation_task<decltype(func())>::type,
             get_continuation_return<decltype(func())>,
             ::boost::mpl::identity<decltype(func())>
         >::type f1_result_type;

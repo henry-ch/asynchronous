@@ -557,7 +557,7 @@ parallel_transform(ResultIterator result, Func func, Iterator begin, Iterator en
 
 // version for any number of ranges (held by reference) not with ICC
 template <class ResultIterator, class Func, class Job, class Range, class... Ranges>
-typename boost::disable_if<has_is_continuation_task<Range>, boost::asynchronous::detail::callback_continuation<ResultIterator, Job>>::type
+typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>, boost::asynchronous::detail::callback_continuation<ResultIterator, Job>>::type
 parallel_transform(ResultIterator result, Func func, Range & range, Ranges & ... ranges, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                    const std::string& task_name, std::size_t prio)

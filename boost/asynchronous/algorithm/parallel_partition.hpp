@@ -438,7 +438,7 @@ auto parallel_partition(Range&& range,Func func,
                         const uint32_t thread_num = boost::thread::hardware_concurrency(),const std::string& task_name="", std::size_t prio=0)
 #endif
 -> typename boost::disable_if<
-              has_is_continuation_task<Range>,
+              boost::asynchronous::detail::has_is_continuation_task<Range>,
               // TODO make it work with boost::begin and clang
               boost::asynchronous::detail::callback_continuation<std::pair<Range,decltype(range.begin())>,Job> >::type
 
@@ -521,7 +521,7 @@ struct parallel_partition_continuation_helper:
 
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::enable_if<
-        has_is_continuation_task<Range>,
+        boost::asynchronous::detail::has_is_continuation_task<Range>,
         boost::asynchronous::detail::callback_continuation<
               std::pair<typename Range::return_type,decltype(boost::begin(std::declval<typename Range::return_type&>()))>,
               Job>

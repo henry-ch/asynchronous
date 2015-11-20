@@ -19,10 +19,10 @@
 #include <boost/chrono/chrono.hpp>
 #include <boost/asynchronous/any_serializable.hpp>
 
-BOOST_MPL_HAS_XXX_TRAIT_DEF(task_failed_handling)
 
 namespace boost { namespace asynchronous
 {
+BOOST_MPL_HAS_XXX_TRAIT_DEF(task_failed_handling)
 
 struct no_diagnostics
 {
@@ -91,7 +91,7 @@ namespace detail
         Fct m_callable;
     };
     template <class Base, class Fct>
-    struct base_job<Base,Fct,typename ::boost::enable_if<typename has_task_failed_handling<Fct>::type >::type> : public Base
+    struct base_job<Base,Fct,typename ::boost::enable_if<typename boost::asynchronous::has_task_failed_handling<Fct>::type >::type> : public Base
     {
         struct non_loggable_helper : public Base
         {
@@ -186,7 +186,7 @@ namespace detail
         Fct m_callable;
     };
     template <class Base, class Fct>
-    struct serializable_base_job<Base,Fct,typename ::boost::enable_if<typename has_task_failed_handling<Fct>::type >::type> : public Base
+    struct serializable_base_job<Base,Fct,typename ::boost::enable_if<typename boost::asynchronous::has_task_failed_handling<Fct>::type >::type> : public Base
     {
         serializable_base_job(serializable_base_job&& rhs)noexcept
             : Base(std::forward<serializable_base_job>(rhs)),m_callable(std::forward<Fct>(rhs.m_callable)){}
