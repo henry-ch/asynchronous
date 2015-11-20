@@ -69,7 +69,7 @@ create_continuation(OnDone&& on_done, boost::shared_future<Args>&&... args)
 }
 // version with containers of futures
 template <class OnDone, typename Seq>
-typename boost::enable_if< typename has_iterator<Seq>::type ,void >::type
+typename boost::enable_if< typename boost::asynchronous::has_iterator<Seq>::type ,void >::type
 create_continuation(OnDone&& on_done, Seq&& seq)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
@@ -111,7 +111,7 @@ create_continuation_timeout(OnDone&& on_done, Duration const& d, boost::future<A
 }
 // with containers of futures
 template <class OnDone, class Duration, typename Seq>
-typename boost::enable_if< typename has_iterator<Seq>::type ,void >::type
+typename boost::enable_if< typename boost::asynchronous::has_iterator<Seq>::type ,void >::type
 create_continuation_timeout(OnDone&& on_done, Duration const& d, Seq&& seq)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
@@ -158,7 +158,7 @@ create_continuation_job(OnDone&& on_done, Args&&... args)
 
 // version with containers of futures
 template <typename Job, class OnDone, typename Seq>
-typename boost::enable_if< typename has_iterator<Seq>::type ,void >::type
+typename boost::enable_if< typename boost::asynchronous::has_iterator<Seq>::type ,void >::type
 create_continuation_job(OnDone&& on_done, Seq&& seq)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
@@ -205,7 +205,7 @@ create_continuation_job_timeout(OnDone&& on_done, Duration const& d, Args&&... a
 
 // version with containers of futures and timeout
 template <typename Job, class OnDone, class Duration, typename Seq>
-typename boost::enable_if< typename has_iterator<Seq>::type ,void >::type
+typename boost::enable_if< typename boost::asynchronous::has_iterator<Seq>::type ,void >::type
 create_continuation_job_timeout(OnDone&& on_done, Duration const& d, Seq&& seq)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();

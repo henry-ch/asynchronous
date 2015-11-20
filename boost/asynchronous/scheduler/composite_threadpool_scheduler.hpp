@@ -494,7 +494,7 @@ create_shared_scheduler_proxy(composite_threadpool_scheduler<Job,FindPosition>* 
     return composite;
 }
 template< class S, class... Args >
-typename boost::enable_if<has_self_proxy_creation<S>,boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type> >::type
+typename boost::enable_if<boost::asynchronous::has_self_proxy_creation<S>,boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type> >::type
 make_shared_scheduler_proxy(Args && ... args)
 {
     auto sps = boost::make_shared<S>(std::forward<Args>(args)...);

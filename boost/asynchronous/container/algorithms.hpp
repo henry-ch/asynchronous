@@ -15,13 +15,13 @@
 #include <boost/asynchronous/continuation_task.hpp>
 #include <boost/asynchronous/algorithm/parallel_placement.hpp>
 
-BOOST_MPL_HAS_XXX_TRAIT_DEF(asynchronous_container)
 
 
 namespace boost { namespace asynchronous
 {
 namespace detail
 {
+BOOST_MPL_HAS_XXX_TRAIT_DEF(asynchronous_container)
 // push_back
 template <class Container, class T>
 struct push_back_task: public boost::asynchronous::continuation_task<Container>
@@ -610,9 +610,11 @@ template <typename Range, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<Range,Job>
 make_asynchronous_range(std::size_t n,long cutoff,
  #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-            const std::string& task_name, std::size_t prio, typename boost::enable_if<has_asynchronous_container<Range>>::type* = 0)
+            const std::string& task_name, std::size_t prio,
+            typename boost::enable_if<boost::asynchronous::detail::has_asynchronous_container<Range>>::type* = 0)
  #else
-            const std::string& task_name="", std::size_t prio=0, typename boost::enable_if<has_asynchronous_container<Range>>::type* = 0)
+            const std::string& task_name="", std::size_t prio=0,
+            typename boost::enable_if<boost::asynchronous::detail::has_asynchronous_container<Range>>::type* = 0)
  #endif
 {
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
@@ -625,9 +627,11 @@ template <typename Range, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<Range,Job>
 make_asynchronous_range(std::size_t n,long ,
  #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-            const std::string& , std::size_t , typename boost::disable_if<has_asynchronous_container<Range>>::type* = 0)
+            const std::string& , std::size_t ,
+            typename boost::disable_if<boost::asynchronous::detail::has_asynchronous_container<Range>>::type* = 0)
  #else
-            const std::string& ="", std::size_t =0, typename boost::disable_if<has_asynchronous_container<Range>>::type* = 0)
+            const std::string& ="", std::size_t =0,
+            typename boost::disable_if<boost::asynchronous::detail::has_asynchronous_container<Range>>::type* = 0)
  #endif
 {
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>

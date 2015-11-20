@@ -33,13 +33,13 @@
 #include <boost/asynchronous/job_traits.hpp>
 #include <boost/asynchronous/detail/move_bind.hpp>
 
-//BOOST_MPL_HAS_XXX_TRAIT_DEF(post_servant_ctor)
+
+namespace boost { namespace asynchronous
+{        
 BOOST_MPL_HAS_XXX_TRAIT_DEF(simple_ctor)
 BOOST_MPL_HAS_XXX_TRAIT_DEF(simple_dtor)
 BOOST_MPL_HAS_XXX_TRAIT_DEF(requires_weak_scheduler)
 
-namespace boost { namespace asynchronous
-{        
 #ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
 #define BOOST_ASYNC_POST_MEMBER_1(funcname)                                                                                     \
     template <typename... Args>                                                                                                 \
@@ -463,13 +463,13 @@ public:
 
 private:
     template <class S>
-    typename boost::enable_if<typename has_simple_dtor<S>::type,void>::type
+    typename boost::enable_if<typename boost::asynchronous::has_simple_dtor<S>::type,void>::type
     dtor_wait_helper(boost::future<void> )
     {
         // no waiting required
     }
     template <class S>
-    typename boost::disable_if<typename has_simple_dtor<S>::type,void>::type
+    typename boost::disable_if<typename boost::asynchronous::has_simple_dtor<S>::type,void>::type
     dtor_wait_helper(boost::future<void> fu)
     {
         fu.timed_wait(boost::posix_time::milliseconds(max_create_wait_ms));
@@ -482,7 +482,7 @@ private:
     typename boost::enable_if<
                 typename ::boost::mpl::or_<
                     typename boost::has_trivial_constructor<S>::type,
-                    typename has_simple_ctor<S>::type
+                    typename boost::asynchronous::has_simple_ctor<S>::type
                 >,
             void>::type
     init_servant_proxy(Args... args)
@@ -496,7 +496,7 @@ private:
     typename boost::disable_if<
                 typename ::boost::mpl::or_<
                     typename boost::has_trivial_constructor<S>::type,
-                    typename has_simple_ctor<S>::type
+                    typename boost::asynchronous::has_simple_ctor<S>::type
                 >,
             void>::type
     init_servant_proxy(Args... args)
@@ -550,10 +550,10 @@ private:
         template <typename S,typename... Args>
         static
         typename boost::enable_if<  typename ::boost::mpl::or_<
-                                            typename has_requires_weak_scheduler<S>::type,
+                                            typename boost::asynchronous::has_requires_weak_scheduler<S>::type,
                                             typename ::boost::mpl::or_<
                                                 typename boost::has_trivial_constructor<S>::type,
-                                                typename has_simple_ctor<S>::type
+                                                typename boost::asynchronous::has_simple_ctor<S>::type
                                             >::type
                                           >::type,
         boost::shared_ptr<servant_type> >::type
@@ -565,10 +565,10 @@ private:
         template <typename S,typename... Args>
         static
         typename boost::disable_if<  typename ::boost::mpl::or_<
-                                            typename has_requires_weak_scheduler<S>::type,
+                                            typename boost::asynchronous::has_requires_weak_scheduler<S>::type,
                                             typename ::boost::mpl::or_<
                                                 typename boost::has_trivial_constructor<S>::type,
-                                                typename has_simple_ctor<S>::type
+                                                typename boost::asynchronous::has_simple_ctor<S>::type
                                             >::type
                                           >::type,
         boost::shared_ptr<servant_type> >::type

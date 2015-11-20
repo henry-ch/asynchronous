@@ -29,10 +29,10 @@
 #include <boost/asynchronous/expected.hpp>
 #include <boost/asynchronous/scheduler/tss_scheduler.hpp>
 
-BOOST_MPL_HAS_XXX_TRAIT_DEF(state)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(iterator)
 
 namespace boost { namespace asynchronous {
+BOOST_MPL_HAS_XXX_TRAIT_DEF(state)
+BOOST_MPL_HAS_XXX_TRAIT_DEF(iterator)
 
 // what has to be set when a task is ready
 template <class Return>
@@ -1425,7 +1425,7 @@ auto make_expected_tuple(Args&... args) -> decltype(std::make_tuple(call_get_exp
 template <typename Front,typename... Tail>
 struct has_future_args_helper
 {
-    typedef typename has_state<Front>::type type;
+    typedef typename boost::asynchronous::has_state<Front>::type type;
 };
 
 template <typename... Args>
@@ -1437,7 +1437,7 @@ struct has_future_args
 template <typename Front,typename... Tail>
 struct has_iterator_args_helper
 {
-    typedef typename has_iterator<Front>::type type;
+    typedef typename boost::asynchronous::has_iterator<Front>::type type;
 };
 
 template <typename... Args>

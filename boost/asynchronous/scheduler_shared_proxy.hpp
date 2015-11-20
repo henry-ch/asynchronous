@@ -345,7 +345,8 @@ private:
 
     template< class Sched, class... Args >
     friend
-    typename boost::disable_if<has_self_proxy_creation<Sched>,boost::asynchronous::any_shared_scheduler_proxy<typename Sched::job_type> >::type
+    typename boost::disable_if<boost::asynchronous::has_self_proxy_creation<Sched>,
+                               boost::asynchronous::any_shared_scheduler_proxy<typename Sched::job_type> >::type
     make_shared_scheduler_proxy(Args && ... args);
 };
 
@@ -392,7 +393,8 @@ boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type> create_sha
 #endif
 
 template< class S, class... Args >
-typename boost::disable_if<has_self_proxy_creation<S>,boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type> >::type
+typename boost::disable_if<boost::asynchronous::has_self_proxy_creation<S>,
+                           boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type> >::type
 make_shared_scheduler_proxy(Args && ... args)
 {
     auto sps = boost::make_shared<S>(std::forward<Args>(args)...);

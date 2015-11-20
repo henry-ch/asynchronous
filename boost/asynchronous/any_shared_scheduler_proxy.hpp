@@ -33,10 +33,11 @@
 #include <boost/asynchronous/queue/any_queue.hpp>
 #include <boost/asynchronous/scheduler_diagnostics.hpp>
 
-BOOST_MPL_HAS_XXX_TRAIT_DEF(self_proxy_creation)
 
 namespace boost { namespace asynchronous
 {
+BOOST_MPL_HAS_XXX_TRAIT_DEF(self_proxy_creation)
+
 #ifdef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
 // for implementation use only
 template <class JOB>
