@@ -358,7 +358,7 @@ parallel_spreadsort(Iterator beg, Iterator end,Func func,long cutoff,
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::disable_if<boost::mpl::or_<
                                 boost::asynchronous::detail::is_serializable<Func>,
-                                has_is_continuation_task<Range>
+                                boost::asynchronous::detail::has_is_continuation_task<Range>
                            >,
                            boost::asynchronous::detail::callback_continuation<Range,Job> >::type
 parallel_sort(Range&& range,Func func,long cutoff,
@@ -380,7 +380,7 @@ parallel_sort(Range&& range,Func func,long cutoff,
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::disable_if<boost::mpl::or_<
                                 boost::asynchronous::detail::is_serializable<Func>,
-                                has_is_continuation_task<Range>
+                                boost::asynchronous::detail::has_is_continuation_task<Range>
                            >,
                            boost::asynchronous::detail::callback_continuation<Range,Job> >::type
 parallel_stable_sort(Range&& range,Func func,long cutoff,
@@ -402,7 +402,7 @@ parallel_stable_sort(Range&& range,Func func,long cutoff,
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::disable_if<boost::mpl::or_<
                                 boost::asynchronous::detail::is_serializable<Func>,
-                                has_is_continuation_task<Range>
+                                boost::asynchronous::detail::has_is_continuation_task<Range>
                            >,
                            boost::asynchronous::detail::callback_continuation<Range,Job> >::type
 parallel_spreadsort(Range&& range,Func func,long cutoff,
@@ -573,7 +573,7 @@ struct parallel_sort_range_move_helper_serializable
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::enable_if<boost::mpl::and_<
                             boost::asynchronous::detail::is_serializable<Func>,
-                            boost::mpl::not_<has_is_continuation_task<Range>>
+                            boost::mpl::not_<boost::asynchronous::detail::has_is_continuation_task<Range>>
                           >,
                           boost::asynchronous::detail::callback_continuation<Range,Job> >::type
 parallel_sort(Range&& range,Func func,long cutoff,
@@ -593,7 +593,7 @@ parallel_sort(Range&& range,Func func,long cutoff,
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::enable_if<boost::mpl::and_<
                             boost::asynchronous::detail::is_serializable<Func>,
-                            boost::mpl::not_<has_is_continuation_task<Range>>
+                            boost::mpl::not_<boost::asynchronous::detail::has_is_continuation_task<Range>>
                           >,
                           boost::asynchronous::detail::callback_continuation<Range,Job> >::type
 parallel_stable_sort(Range&& range,Func func,long cutoff,
@@ -614,7 +614,7 @@ parallel_stable_sort(Range&& range,Func func,long cutoff,
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::enable_if<boost::mpl::and_<
                             boost::asynchronous::detail::is_serializable<Func>,
-                            boost::mpl::not_<has_is_continuation_task<Range>>
+                            boost::mpl::not_<boost::asynchronous::detail::has_is_continuation_task<Range>>
                           >,
                           boost::asynchronous::detail::callback_continuation<Range,Job> >::type
 parallel_spreadsort(Range&& range,Func func,long cutoff,
@@ -845,7 +845,7 @@ struct parallel_sort_range_move_helper2 : public boost::asynchronous::continuati
 }
 
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::disable_if<has_is_continuation_task<Range>,
+typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,
                           boost::asynchronous::detail::callback_continuation<Range,Job> >::type
 parallel_sort2(Range&& range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -862,7 +862,7 @@ parallel_sort2(Range&& range,Func func,long cutoff,
                 (r,beg,end,std::move(func),0,cutoff,task_name,prio));
 }
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::disable_if<has_is_continuation_task<Range>,
+typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,
                           boost::asynchronous::detail::callback_continuation<Range,Job> >::type
 parallel_stable_sort2(Range&& range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -880,7 +880,7 @@ parallel_stable_sort2(Range&& range,Func func,long cutoff,
 }
 #ifdef BOOST_ASYNCHRONOUS_USE_BOOST_SPREADSORT
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::disable_if<has_is_continuation_task<Range>,
+typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,
                           boost::asynchronous::detail::callback_continuation<Range,Job> >::type
 parallel_spreadsort2(Range&& range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -951,7 +951,8 @@ struct parallel_sort_continuation_range_helper: public boost::asynchronous::cont
 };
 // Continuation is a callback continuation
 template <class Continuation, class Func, class Job>
-struct parallel_sort_continuation_range_helper<Continuation,Func,Job,typename ::boost::enable_if< has_is_callback_continuation_task<Continuation> >::type>:
+struct parallel_sort_continuation_range_helper<Continuation,Func,Job,
+                                               typename ::boost::enable_if< boost::asynchronous::detail::has_is_callback_continuation_task<Continuation> >::type>:
         public boost::asynchronous::continuation_task<typename Continuation::return_type>
 {
     parallel_sort_continuation_range_helper(Continuation const& c,Func func,long cutoff,
@@ -1046,7 +1047,8 @@ struct parallel_stable_sort_continuation_range_helper: public boost::asynchronou
 };
 // Continuation is a callback continuation
 template <class Continuation, class Func, class Job>
-struct parallel_stable_sort_continuation_range_helper<Continuation,Func,Job,typename ::boost::enable_if< has_is_callback_continuation_task<Continuation> >::type>
+struct parallel_stable_sort_continuation_range_helper<Continuation,Func,Job,
+                                                      typename ::boost::enable_if< boost::asynchronous::detail::has_is_callback_continuation_task<Continuation> >::type>
         : public boost::asynchronous::continuation_task<typename Continuation::return_type>
 {
     parallel_stable_sort_continuation_range_helper(Continuation const& c,Func func,long cutoff,
@@ -1142,7 +1144,8 @@ struct parallel_spreadsort_continuation_range_helper: public boost::asynchronous
 };
 // Continuation is a callback continuation
 template <class Continuation, class Func, class Job>
-struct parallel_spreadsort_continuation_range_helper<Continuation,Func,Job,typename ::boost::enable_if< has_is_callback_continuation_task<Continuation> >::type>
+struct parallel_spreadsort_continuation_range_helper<Continuation,Func,Job,
+                                                     typename ::boost::enable_if< boost::asynchronous::detail::has_is_callback_continuation_task<Continuation> >::type>
         : public boost::asynchronous::continuation_task<typename Continuation::return_type>
 {
     parallel_spreadsort_continuation_range_helper(Continuation const& c,Func func,long cutoff,
@@ -1190,7 +1193,7 @@ struct parallel_spreadsort_continuation_range_helper<Continuation,Func,Job,typen
 #endif
 }
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
+typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_sort(Range range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
               const std::string& task_name, std::size_t prio)
@@ -1202,7 +1205,7 @@ parallel_sort(Range range,Func func,long cutoff,
             (boost::asynchronous::detail::parallel_sort_continuation_range_helper<Range,Func,Job>(range,std::move(func),cutoff,task_name,prio));
 }
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
+typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_stable_sort(Range range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                      const std::string& task_name, std::size_t prio)
@@ -1215,7 +1218,7 @@ parallel_stable_sort(Range range,Func func,long cutoff,
 }
 #ifdef BOOST_ASYNCHRONOUS_USE_BOOST_SPREADSORT
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
+typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_spreadsort(Range range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                      const std::string& task_name, std::size_t prio)
@@ -1281,7 +1284,8 @@ struct parallel_sort_continuation_range_helper2: public boost::asynchronous::con
 };
 // Continuation is a callback continuation
 template <class Continuation, class Func, class Job>
-struct parallel_sort_continuation_range_helper2<Continuation,Func,Job,typename ::boost::enable_if< has_is_callback_continuation_task<Continuation> >::type>:
+struct parallel_sort_continuation_range_helper2<Continuation,Func,Job,
+                                                typename ::boost::enable_if< boost::asynchronous::detail::has_is_callback_continuation_task<Continuation> >::type>:
         public boost::asynchronous::continuation_task<typename Continuation::return_type>
 {
     parallel_sort_continuation_range_helper2(Continuation const& c,Func func,long cutoff,
@@ -1376,7 +1380,8 @@ struct parallel_stable_sort_continuation_range_helper2: public boost::asynchrono
 };
 // Continuation is a callback continuation
 template <class Continuation, class Func, class Job>
-struct parallel_stable_sort_continuation_range_helper2<Continuation,Func,Job,typename ::boost::enable_if< has_is_callback_continuation_task<Continuation> >::type>
+struct parallel_stable_sort_continuation_range_helper2<Continuation,Func,Job,
+                                                       typename ::boost::enable_if< boost::asynchronous::detail::has_is_callback_continuation_task<Continuation> >::type>
         : public boost::asynchronous::continuation_task<typename Continuation::return_type>
 {
     parallel_stable_sort_continuation_range_helper2(Continuation const& c,Func func,long cutoff,
@@ -1472,7 +1477,8 @@ struct parallel_spreadsort_continuation_range_helper2: public boost::asynchronou
 };
 // Continuation is a callback continuation
 template <class Continuation, class Func, class Job>
-struct parallel_spreadsort_continuation_range_helper2<Continuation,Func,Job,typename ::boost::enable_if< has_is_callback_continuation_task<Continuation> >::type>
+struct parallel_spreadsort_continuation_range_helper2<Continuation,Func,Job,
+                                                      typename ::boost::enable_if< boost::asynchronous::detail::has_is_callback_continuation_task<Continuation> >::type>
         : public boost::asynchronous::continuation_task<typename Continuation::return_type>
 {
     parallel_spreadsort_continuation_range_helper2(Continuation const& c,Func func,long cutoff,
@@ -1520,7 +1526,7 @@ struct parallel_spreadsort_continuation_range_helper2<Continuation,Func,Job,type
 #endif
 }
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
+typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_sort2(Range range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
               const std::string& task_name, std::size_t prio)
@@ -1532,7 +1538,7 @@ parallel_sort2(Range range,Func func,long cutoff,
             (boost::asynchronous::detail::parallel_sort_continuation_range_helper2<Range,Func,Job>(range,std::move(func),cutoff,task_name,prio));
 }
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
+typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_stable_sort2(Range range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                      const std::string& task_name, std::size_t prio)
@@ -1545,7 +1551,7 @@ parallel_stable_sort2(Range range,Func func,long cutoff,
 }
 #ifdef BOOST_ASYNCHRONOUS_USE_BOOST_SPREADSORT
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
+typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_spreadsort2(Range range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                      const std::string& task_name, std::size_t prio)

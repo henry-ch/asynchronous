@@ -14,19 +14,20 @@
 #include <boost/mpl/eval_if.hpp>
 #include <boost/mpl/identity.hpp>
 
-BOOST_MPL_HAS_XXX_TRAIT_DEF(serializable_type)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(is_continuation_task)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(is_callback_continuation_task)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(return_type)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(iterator_category)
 
 namespace boost { namespace asynchronous { namespace detail {
+
+BOOST_MPL_HAS_XXX_TRAIT_DEF(iterator_category)
+BOOST_MPL_HAS_XXX_TRAIT_DEF(return_type)
+BOOST_MPL_HAS_XXX_TRAIT_DEF(is_callback_continuation_task)
+BOOST_MPL_HAS_XXX_TRAIT_DEF(serializable_type)
+BOOST_MPL_HAS_XXX_TRAIT_DEF(is_continuation_task)
 
 template <class T>
 struct is_serializable
 {
-    enum {value = has_serializable_type<T>::type::value};
-    typedef typename has_serializable_type<T>::type type;
+    enum {value = boost::asynchronous::detail::has_serializable_type<T>::type::value};
+    typedef typename boost::asynchronous::detail::has_serializable_type<T>::type type;
 };
 
 template <class T>
@@ -44,7 +45,7 @@ template <class T>
 struct get_return_type
 {
     typedef typename boost::mpl::eval_if<
-            has_return_type<T>,
+            boost::asynchronous::detail::has_return_type<T>,
             boost::asynchronous::detail::eval_return_type<T>,
             boost::asynchronous::detail::eval_return_type2<T>
             >::type type;
@@ -55,7 +56,7 @@ template <class T>
 struct get_return_type_if_possible_continuation
 {
     typedef typename boost::mpl::eval_if<
-            has_is_continuation_task<T>,
+            boost::asynchronous::detail::has_is_continuation_task<T>,
             boost::asynchronous::detail::eval_return_type<T>,
             boost::mpl::identity<T>
             >::type type;

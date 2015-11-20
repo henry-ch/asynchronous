@@ -126,7 +126,7 @@ auto invoke(Continuation c,Func func,
             const std::string& task_name = "", std::size_t prio = 0
 #endif
             )
-    -> typename boost::enable_if<has_is_continuation_task<Continuation>,
+    -> typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Continuation>,
             boost::asynchronous::detail::callback_continuation<decltype(func(typename Continuation::return_type())),Job> >::type
 {
     return boost::asynchronous::top_level_callback_continuation_job<decltype(func(typename Continuation::return_type())),Job>

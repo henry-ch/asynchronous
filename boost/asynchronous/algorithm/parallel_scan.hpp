@@ -356,7 +356,7 @@ struct parallel_scan_range_move_helper: public boost::asynchronous::continuation
 };
 // version for moved ranges
 template <class Range, class OutRange, class T, class Reduce, class Combine, class Scan, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::disable_if<has_is_continuation_task<Range>,
+typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,
                            boost::asynchronous::detail::callback_continuation<std::pair<Range,OutRange>,Job> >::type
 parallel_scan(Range&& range,OutRange&& out_range,T init,Reduce r, Combine c, Scan s,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -429,7 +429,7 @@ struct parallel_scan_range_move_single_helper: public boost::asynchronous::conti
 };
 // version for a single moved range (in/out) => will return the range as continuation
 template <class Range, class T, class Reduce, class Combine, class Scan, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::disable_if<has_is_continuation_task<Range>,
+typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,
                            boost::asynchronous::detail::callback_continuation<Range,Job> >::type
 parallel_scan(Range&& range,T init,Reduce r, Combine c, Scan s,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -522,7 +522,7 @@ struct parallel_scan_range_continuation_helper: public boost::asynchronous::cont
 }
 // version for ranges given as continuation => will return the range as continuation
 template <class Range, class T, class Reduce, class Combine, class Scan, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<has_is_continuation_task<Range>,
+typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,
                           boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_scan(Range range,T init,Reduce r, Combine c, Scan s,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS

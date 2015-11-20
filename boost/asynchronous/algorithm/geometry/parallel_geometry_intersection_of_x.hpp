@@ -239,7 +239,7 @@ parallel_geometry_intersection_of_x(Range&& range,
                     const std::string& task_name="", std::size_t prio=0,
 #endif
                     long cutoff=300, long overlay_cutoff=1500, long partition_cutoff=80000)
--> typename boost::disable_if<has_is_continuation_task<Range>,
+-> typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,
                               boost::asynchronous::detail::callback_continuation<
                                 typename std::remove_reference<decltype(*boost::begin(range))
                               >::type,Job>>::type
@@ -305,7 +305,8 @@ struct parallel_geometry_intersection_of_x_continuation_range_helper: public boo
 };
 // Continuation is a callback continuation
 template <class Continuation, class Job>
-struct parallel_geometry_intersection_of_x_continuation_range_helper<Continuation,Job,typename ::boost::enable_if< has_is_callback_continuation_task<Continuation> >::type>
+struct parallel_geometry_intersection_of_x_continuation_range_helper<Continuation,Job,
+                                                                     typename ::boost::enable_if< boost::asynchronous::detail::has_is_callback_continuation_task<Continuation> >::type>
         : public boost::asynchronous::continuation_task<typename Continuation::return_type>
 {
     parallel_geometry_intersection_of_x_continuation_range_helper(Continuation c,long cutoff,long overlay_cutoff, long partition_cutoff,
@@ -349,7 +350,7 @@ struct parallel_geometry_intersection_of_x_continuation_range_helper<Continuatio
 }
 // version for ranges given as continuation => will return the range as continuation
 template <class Range, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
+typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_geometry_intersection_of_x(Range range,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                      const std::string& task_name, std::size_t prio,
