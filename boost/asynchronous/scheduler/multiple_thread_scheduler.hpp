@@ -320,7 +320,6 @@ public:
                     {
                         // ok we have it
                         popped = ((*queues)[i].m_queues)->try_pop(job);
-                        //(*queues)[i].m_taken = false;
                         if (popped)
                         {
                             taken_index = i;
