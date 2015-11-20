@@ -18,9 +18,10 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(serializable_type)
 BOOST_MPL_HAS_XXX_TRAIT_DEF(is_continuation_task)
 BOOST_MPL_HAS_XXX_TRAIT_DEF(is_callback_continuation_task)
 BOOST_MPL_HAS_XXX_TRAIT_DEF(return_type)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(iterator_category)
 
 namespace boost { namespace asynchronous { namespace detail {
+
+    BOOST_MPL_HAS_XXX_TRAIT_DEF(iterator_category)
 
 template <class T>
 struct is_serializable

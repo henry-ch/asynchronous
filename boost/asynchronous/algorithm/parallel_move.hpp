@@ -110,7 +110,7 @@ struct parallel_move_helper : public boost::asynchronous::continuation_task<void
 }
 
 template<class Iterator, class ResultIterator, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<has_iterator_category<std::iterator_traits<Iterator>>, boost::asynchronous::detail::callback_continuation<void, Job>>::type
+typename boost::enable_if<boost::asynchronous::detail::has_iterator_category<std::iterator_traits<Iterator>>, boost::asynchronous::detail::callback_continuation<void, Job>>::type
 parallel_move(Iterator begin, Iterator end, ResultIterator result, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                      const std::string& task_name, std::size_t prio)
