@@ -299,7 +299,7 @@ public:
         return interruptible_post(std::move(w),priority);
     }
     // try to execute a job, return true
-    static bool execute_one_job(std::vector<job_queues>* queues,size_t index,CPULoad& cpu_load,boost::shared_ptr<diag_type> diagnostics,
+    static bool execute_one_job(std::vector<job_queues>* queues,size_t index,size_t& current_servant,CPULoad& cpu_load,boost::shared_ptr<diag_type> diagnostics,
                                 std::list<boost::asynchronous::any_continuation>& waiting)
     {
         bool popped = false;
@@ -309,24 +309,26 @@ public:
         try
         {
 
+            auto s = queues->size();
             //TODO restart at last position
-            for (std::size_t i = 0 ; i < queues->size() ; ++i)
+            for (std::size_t i = 0 ; i < s ; ++i)
             {
-                if (!!(*queues)[i].m_queues)
+                current_servant = (++current_servant)%s;
+                if (!!(*queues)[current_servant].m_queues)
                 {
                     // used slot, check if we can take it
                     bool expected = false;
-                    if ((*queues)[i].m_taken.compare_exchange_strong(expected,true))
+                    if ((*queues)[current_servant].m_taken.compare_exchange_strong(expected,true))
                     {
                         // ok we have it
-                        popped = ((*queues)[i].m_queues)->try_pop(job);
+                        popped = ((*queues)[current_servant].m_queues)->try_pop(job);
                         if (popped)
                         {
-                            taken_index = i;
+                            taken_index = current_servant;
                         }
                         else
                         {
-                            (*queues)[i].m_taken = false;
+                            (*queues)[current_servant].m_taken = false;
                         }
                     }
                 }
@@ -407,12 +409,14 @@ public:
                 boost::asynchronous::get_continuations(std::list<boost::asynchronous::any_continuation>(),true);
 
         CPULoad cpu_load;
+        size_t current_servant=0;
         while(true)
         {
             try
             {
+
                 {
-                    bool popped = execute_one_job(queues.get(),index,cpu_load,diagnostics,waiting);
+                    bool popped = execute_one_job(queues.get(),index,current_servant,cpu_load,diagnostics,waiting);
                     if (!popped)
                     {
                         cpu_load.loop_done_no_job();
@@ -433,7 +437,7 @@ public:
             catch(boost::asynchronous::detail::shutdown_exception&)
             {
                 // we are done, execute jobs posted short before to the end, then shutdown
-                while(execute_one_job(queues.get(),index,cpu_load,diagnostics,waiting));
+                while(execute_one_job(queues.get(),index,current_servant,cpu_load,diagnostics,waiting));
                 delete this_type::m_self_thread.release();
                 return;
             }
