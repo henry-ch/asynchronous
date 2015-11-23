@@ -78,18 +78,15 @@ public:
     };
 
     template<typename... Args>
-    multiple_thread_scheduler(size_t number_of_workers, size_t max_number_of_clients, Args... /*args*/)
+    multiple_thread_scheduler(size_t number_of_workers, size_t max_number_of_clients, Args... args)
         : m_max_number_of_clients(max_number_of_clients)
         , m_number_of_workers(number_of_workers)
     {
         m_private_queues.reserve(number_of_workers);
-        //TODO remove test
-        //m_queues.emplace_back(false,boost::make_shared<queue_type>(args...));
         m_queues = boost::make_shared<std::vector<job_queues>>();
         for (std::size_t i = 0; i < max_number_of_clients ; ++i)
         {
-            m_queues->emplace_back(false,boost::shared_ptr<queue_type>());
-            //m_queues.emplace_back(false,boost::make_shared<queue_type>(args...));
+            m_queues->emplace_back(false,boost::make_shared<queue_type>(args...));
         }
         for (size_t i = 0; i< number_of_workers;++i)
         {
@@ -98,7 +95,7 @@ public:
         }
     }
     template<typename... Args>
-    multiple_thread_scheduler(size_t number_of_workers, size_t max_number_of_clients, std::string const& name, Args... /*args*/)
+    multiple_thread_scheduler(size_t number_of_workers, size_t max_number_of_clients, std::string const& name, Args... args)
         : m_max_number_of_clients(max_number_of_clients)
         , m_number_of_workers(number_of_workers)
         , m_name(name)
@@ -107,8 +104,7 @@ public:
         m_queues = boost::make_shared<std::vector<job_queues>>();
         for (std::size_t i = 0; i < max_number_of_clients ; ++i)
         {
-            //m_queues.emplace_back(false,boost::make_shared<queue_type>(args...));
-            m_queues->emplace_back(false,boost::shared_ptr<queue_type>());
+            m_queues->emplace_back(false,boost::make_shared<queue_type>(args...));
         }
         for (size_t i = 0; i< number_of_workers;++i)
         {
@@ -214,11 +210,8 @@ public:
         std::size_t res = 0;
         for (auto const& q : (*m_queues))
         {
-            if (!!q.m_queues)
-            {
-                auto vec = q.m_queues->get_queue_size();
-                res += std::accumulate(vec.begin(),vec.end(),0,[](std::size_t rhs,std::size_t lhs){return rhs + lhs;});
-            }
+            auto vec = q.m_queues->get_queue_size();
+            res += std::accumulate(vec.begin(),vec.end(),0,[](std::size_t rhs,std::size_t lhs){return rhs + lhs;});
         }
         std::vector<std::size_t> res_vec;
         res_vec.push_back(res);
@@ -232,11 +225,6 @@ public:
     void post(typename queue_type::job_type job, std::size_t prio)
     {
         std::size_t servant_index = (prio / 100000);
-        // create queue if first call
-        if(!(*m_queues)[servant_index].m_queues)
-        {
-            (*m_queues)[servant_index].m_queues = boost::make_shared<queue_type>();
-        }
         boost::asynchronous::job_traits<typename queue_type::job_type>::set_posted_time(job);
         if ((servant_index >= m_queues->size()))
         {
@@ -269,7 +257,7 @@ public:
         boost::asynchronous::job_traits<typename queue_type::job_type>::set_posted_time(job);
         boost::asynchronous::interruptible_job<typename queue_type::job_type,this_type>
                 ijob(std::move(job),wpromise,state);
-        if ((prio >= m_queues->size()) || !(*m_queues)[prio].m_queues)
+        if (prio >= m_queues->size())
         {
             // this queue is not existing
             assert(false);
@@ -308,28 +296,23 @@ public:
         std::size_t taken_index = 0;
         try
         {
-
             auto s = queues->size();
-            //TODO restart at last position
             for (std::size_t i = 0 ; i < s ; ++i)
             {
                 current_servant = (++current_servant)%s;
-                if (!!(*queues)[current_servant].m_queues)
+                // used slot, check if we can take it
+                bool expected = false;
+                if ((*queues)[current_servant].m_taken.compare_exchange_strong(expected,true))
                 {
-                    // used slot, check if we can take it
-                    bool expected = false;
-                    if ((*queues)[current_servant].m_taken.compare_exchange_strong(expected,true))
+                    // ok we have it
+                    popped = ((*queues)[current_servant].m_queues)->try_pop(job);
+                    if (popped)
                     {
-                        // ok we have it
-                        popped = ((*queues)[current_servant].m_queues)->try_pop(job);
-                        if (popped)
-                        {
-                            taken_index = current_servant;
-                        }
-                        else
-                        {
-                            (*queues)[current_servant].m_taken = false;
-                        }
+                        taken_index = current_servant;
+                    }
+                    else
+                    {
+                        (*queues)[current_servant].m_taken = false;
                     }
                 }
                 if (popped)
