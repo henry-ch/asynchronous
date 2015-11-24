@@ -213,6 +213,77 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(requires_weak_scheduler)
     BOOST_PP_OVERLOAD(BOOST_ASYNC_FUTURE_MEMBER_,__VA_ARGS__)(__VA_ARGS__)
 
 #ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+#define BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK_1(funcname)                                                                                              \
+    template <typename F,typename... Args>                                                                                                          \
+    void funcname(F&& cb_func, Args... args)const                                                                                                   \
+    {                                                                                                                                               \
+        auto servant = this->m_servant;                                                                                                             \
+        std::size_t prio = 100000 * this->m_offset_id;                                                                                              \
+        using servant_return = decltype(servant->funcname(std::move(args)...));                                                                     \
+        boost::asynchronous::post_future(this->m_proxy,                                                                                             \
+                boost::asynchronous::move_bind([servant,cb_func](Args... as)                                                                        \
+                                    {try{ cb_func(boost::asynchronous::expected<servant_return>(servant->funcname(std::move(as)...)));}             \
+                                     catch(std::exception& e){cb_func(boost::asynchronous::expected<servant_return>(boost::copy_exception(e)));}    \
+                                     catch(...){cb_func(boost::asynchronous::expected<servant_return>(boost::current_exception()));}                \
+                                    },std::move(args)...),"",prio);                                                                                 \
+    }
+#endif
+#define BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK_2(funcname,prio)                                                                                         \
+    template <typename F,typename... Args>                                                                                                          \
+    void funcname(F&& cb_func, Args... args)const                                                                                                   \
+    {                                                                                                                                               \
+        auto servant = this->m_servant;                                                                                                             \
+        std::size_t p = prio + 100000 * this->m_offset_id;                                                                                          \
+        using servant_return = decltype(servant->funcname(std::move(args)...));                                                                     \
+        boost::asynchronous::post_future(this->m_proxy,                                                                                             \
+                boost::asynchronous::move_bind([servant,cb_func](Args... as)                                                                        \
+                                    {try{ cb_func(boost::asynchronous::expected<servant_return>(servant->funcname(std::move(as)...)));}             \
+                                     catch(std::exception& e){cb_func(boost::asynchronous::expected<servant_return>(boost::copy_exception(e)));}    \
+                                     catch(...){cb_func(boost::asynchronous::expected<servant_return>(boost::current_exception()));}                \
+                                    },std::move(args)...),"",p);                                                                                    \
+    }
+#define BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK(...)                                                                          \
+    BOOST_PP_OVERLOAD(BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK_,__VA_ARGS__)(__VA_ARGS__)
+
+
+#ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+#define BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK_LOG_2(funcname,taskname)                                                                                 \
+    template <typename F,typename... Args>                                                                                                          \
+    void funcname(F&& cb_func, Args... args)const                                                                                                   \
+    {                                                                                                                                               \
+        auto servant = this->m_servant;                                                                                                             \
+        std::size_t prio = 100000 * this->m_offset_id;                                                                                              \
+        using servant_return = decltype(servant->funcname(std::move(args)...));                                                                     \
+        boost::asynchronous::post_future(this->m_proxy,                                                                                             \
+                boost::asynchronous::move_bind([servant,cb_func](Args... as)                                                                        \
+                                    {try{ cb_func(boost::asynchronous::expected<servant_return>(servant->funcname(std::move(as)...)));}             \
+                                     catch(std::exception& e){cb_func(boost::asynchronous::expected<servant_return>(boost::copy_exception(e)));}    \
+                                     catch(...){cb_func(boost::asynchronous::expected<servant_return>(boost::current_exception()));}                \
+                                    },std::move(args)...),taskname,prio);                                                                           \
+    }
+#endif
+
+#define BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK_LOG_3(funcname,taskname,prio)                                                                            \
+    template <typename F,typename... Args>                                                                                                          \
+    void funcname(F&& cb_func, Args... args)const                                                                                                   \
+    {                                                                                                                                               \
+        auto servant = this->m_servant;                                                                                                             \
+        std::size_t p = prio + 100000 * this->m_offset_id;                                                                                          \
+        using servant_return = decltype(servant->funcname(std::move(args)...));                                                                     \
+        boost::asynchronous::post_future(this->m_proxy,                                                                                             \
+                boost::asynchronous::move_bind([servant,cb_func](Args... as)                                                                        \
+                                    {try{ cb_func(boost::asynchronous::expected<servant_return>(servant->funcname(std::move(as)...)));}             \
+                                     catch(std::exception& e){cb_func(boost::asynchronous::expected<servant_return>(boost::copy_exception(e)));}    \
+                                     catch(...){cb_func(boost::asynchronous::expected<servant_return>(boost::current_exception()));}                \
+                                    },std::move(args)...),taskname,p);                                                                              \
+    }
+
+
+#define BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK_LOG(...)                                                                          \
+    BOOST_PP_OVERLOAD(BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK_LOG_,__VA_ARGS__)(__VA_ARGS__)
+
+
+#ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
 #define BOOST_ASYNC_POST_CALLBACK_MEMBER_1(funcname)                                                                                                \
     template <typename F, typename S,typename... Args>                                                                                              \
     void funcname(F&& cb_func,S const& weak_cb_scheduler,std::size_t cb_prio, Args... args)const                                                    \
