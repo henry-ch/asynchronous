@@ -30,6 +30,8 @@ boost::thread::id s2_thread_id;
 
 boost::promise<void> callback_called;
 boost::future<void> callback_called_fu=callback_called.get_future();
+boost::promise<void> callback_called2;
+boost::future<void> callback_called_fu2=callback_called2.get_future();
 
 struct Servant1 : boost::asynchronous::trackable_servant<>
 {
@@ -45,6 +47,10 @@ struct Servant1 : boost::asynchronous::trackable_servant<>
     {
         BOOST_CHECK_MESSAGE(s1_thread_id == boost::this_thread::get_id(),"servant do_it in wrong thread.");
         return v;
+    }
+    void do_it()
+    {
+        BOOST_CHECK_MESSAGE(s1_thread_id == boost::this_thread::get_id(),"servant do_it in wrong thread.");
     }
 };
 
@@ -86,6 +92,16 @@ struct Servant2 : boost::asynchronous::trackable_servant<>
             }),
             42);
     }
+    void void_test()
+    {
+        BOOST_CHECK_MESSAGE(s2_thread_id == boost::this_thread::get_id(),"servant test in wrong thread.");
+        m_contained.do_it(
+            this->make_safe_callback([](boost::asynchronous::expected<void> res)
+            {
+                BOOST_CHECK_MESSAGE(!res.has_exception(),"servant1 threw an exception.");
+                callback_called2.set_value();
+            }));
+    }
     ServantProxy1 m_contained;
 };
 
@@ -98,8 +114,10 @@ public:
     {}
 #ifndef _MSC_VER
     BOOST_ASYNC_FUTURE_MEMBER(test)
+    BOOST_ASYNC_FUTURE_MEMBER(void_test)
 #else
     BOOST_ASYNC_FUTURE_MEMBER_1(test)
+    BOOST_ASYNC_FUTURE_MEMBER_1(void_test)
 #endif
 };
 
@@ -119,5 +137,18 @@ BOOST_AUTO_TEST_CASE( test_trackable_servant_post )
     }
 }
 
+BOOST_AUTO_TEST_CASE( test_trackable_servant_post_void )
+{
+    {
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<>>>();
+
+        {
+            ServantProxy2 proxy(scheduler);
+            proxy.void_test();
+            callback_called_fu2.get();
+        }
+    }
+}
 
 
