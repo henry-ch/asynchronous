@@ -9,11 +9,6 @@
 #ifndef BOOST_ASYNCHRONOUS_GEOMETRY_ALGORITHMS_DETAIL_PARTITION_HPP
 #define BOOST_ASYNCHRONOUS_GEOMETRY_ALGORITHMS_DETAIL_PARTITION_HPP
 
-#include <vector>
-#include <boost/assert.hpp>
-#include <boost/range/algorithm/copy.hpp>
-#include <boost/geometry/algorithms/assign.hpp>
-#include <boost/geometry/core/coordinate_type.hpp>
 #include <boost/geometry/algorithms/detail/partition.hpp>
 
 #include <boost/asynchronous/algorithm/detail/safe_advance.hpp>

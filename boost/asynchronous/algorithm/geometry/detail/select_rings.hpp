@@ -17,13 +17,6 @@
 
 #include <boost/geometry/core/tags.hpp>
 
-#include <boost/geometry/algorithms/area.hpp>
-#include <boost/geometry/algorithms/within.hpp>
-#include <boost/geometry/algorithms/detail/interior_iterator.hpp>
-#include <boost/geometry/algorithms/detail/point_on_border.hpp>
-#include <boost/geometry/algorithms/detail/ring_identifier.hpp>
-#include <boost/geometry/algorithms/detail/overlay/ring_properties.hpp>
-#include <boost/geometry/algorithms/detail/overlay/overlay_type.hpp>
 #include <boost/geometry/algorithms/detail/overlay/select_rings.hpp>
 
 #include <boost/asynchronous/algorithm/parallel_for_each.hpp>

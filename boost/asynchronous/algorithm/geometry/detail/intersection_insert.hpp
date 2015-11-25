@@ -15,41 +15,8 @@
 #define BOOST_ASYNCHRONOUS_GEOMETRY_ALGORITHMS_DETAIL_OVERLAY_INTERSECTION_INSERT_HPP
 
 
-#include <cstddef>
-
-#include <boost/mpl/if.hpp>
-#include <boost/mpl/assert.hpp>
-#include <boost/range/metafunctions.hpp>
-
-
-#include <boost/geometry/core/is_areal.hpp>
-#include <boost/geometry/core/point_order.hpp>
-#include <boost/geometry/core/reverse_dispatch.hpp>
-#include <boost/geometry/geometries/concepts/check.hpp>
-#include <boost/geometry/algorithms/convert.hpp>
-#include <boost/geometry/algorithms/detail/point_on_border.hpp>
-#include <boost/geometry/algorithms/detail/overlay/clip_linestring.hpp>
-#include <boost/geometry/algorithms/detail/overlay/get_intersection_points.hpp>
-#include <boost/geometry/algorithms/detail/overlay/overlay.hpp>
-#include <boost/geometry/algorithms/detail/overlay/overlay_type.hpp>
-#include <boost/geometry/algorithms/detail/overlay/follow.hpp>
-
+#include <boost/geometry/algorithms/detail/overlay/intersection_insert.hpp>
 #include <boost/asynchronous/algorithm/geometry/detail/overlay.hpp>
-
-#include <boost/geometry/policies/robustness/robust_point_type.hpp>
-#include <boost/geometry/policies/robustness/segment_ratio_type.hpp>
-#include <boost/geometry/policies/robustness/get_rescale_policy.hpp>
-
-#include <boost/geometry/views/segment_view.hpp>
-
-#include <boost/geometry/algorithms/detail/overlay/linear_linear.hpp>
-#include <boost/geometry/algorithms/detail/overlay/pointlike_pointlike.hpp>
-
-#if defined(BOOST_GEOMETRY_DEBUG_FOLLOW)
-#include <boost/geometry/algorithms/detail/overlay/debug_turn_info.hpp>
-#include <boost/geometry/io/wkt/wkt.hpp>
-#endif
-
 
 
 namespace boost { namespace geometry
