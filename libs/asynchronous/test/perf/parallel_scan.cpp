@@ -21,6 +21,10 @@
 #include <boost/asynchronous/trackable_servant.hpp>
 #include <boost/asynchronous/algorithm/parallel_scan.hpp>
 #include <boost/asynchronous/algorithm/parallel_generate.hpp>
+#include <boost/asynchronous/helpers/random_provider.hpp>
+
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_real_distribution.hpp>
 
 using namespace std;
 
@@ -46,8 +50,17 @@ float Foo(float f)
 void generate(container& data, unsigned elements)
 {
     data = container(elements,(element)1.0);
-    int n = {0};
-    std::generate(data.begin(),data.end(),[&n]{ return n++; });
+    auto fu = boost::asynchronous::post_future(
+                scheduler,
+                [&]{
+                    return boost::asynchronous::parallel_generate(
+                                data.begin(), data.end(),
+                                []{
+                                    boost::random::uniform_real_distribution<element> distribution(0, 1);
+                                    return boost::asynchronous::random_provider<boost::random::mt19937>::generate(distribution);
+                                }, 1024);
+                });
+    fu.get();
 }
 template <class Iterator,class OutIterator,class T>
 OutIterator inclusive_scan(Iterator beg, Iterator end, OutIterator out, T init)

@@ -1,5 +1,5 @@
 // Boost.Asynchronous library
-//  Copyright (C) Christophe Henry 2015
+//  Copyright (C) Christophe Henry, Tobias Holl 2015
 //
 //  Use, modification and distribution is subject to the Boost
 //  Software License, Version 1.0.  (See accompanying file
@@ -25,6 +25,16 @@
 #include <boost/asynchronous/trackable_servant.hpp>
 #include <boost/asynchronous/algorithm/parallel_sort.hpp>
 #include <boost/asynchronous/container/vector.hpp>
+
+#include <boost/asynchronous/helpers/lazy_irange.hpp>
+#include <boost/asynchronous/algorithm/parallel_copy.hpp>
+#include <boost/asynchronous/algorithm/parallel_fill.hpp>
+#include <boost/asynchronous/algorithm/parallel_generate.hpp>
+
+#include <boost/asynchronous/helpers/random_provider.hpp>
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_int_distribution.hpp>
+
 
 using namespace std;
 
@@ -154,55 +164,112 @@ void ParallelAsyncPostCbSpreadsort(boost::asynchronous::vector<SORTED_TYPE> a, s
 void test_sorted_elements(void(*pf)(boost::asynchronous::vector<SORTED_TYPE>, size_t ))
 {
     boost::asynchronous::vector<SORTED_TYPE> a (pool,tasksize,NELEM);
+    auto lazy = boost::asynchronous::lazy_irange(
+                  0, NELEM,
+                  [](uint32_t index) {
+                      return test_cast<decltype(index), SORTED_TYPE>(index + NELEM);\
+                  });
+    auto fu = boost::asynchronous::post_future(
+                pool,
+                [&]{
+                    return boost::asynchronous::parallel_copy(
+                                lazy.begin(), lazy.end(),
+                                a.begin(),
+                                1024);
+                });
+    fu.get();
+    /* serial version:
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
         a[i] = test_cast<uint32_t,SORTED_TYPE>( i+NELEM) ;
     }
+     */
     (*pf)(std::move(a),NELEM);
 }
 void test_random_elements_many_repeated(void(*pf)(boost::asynchronous::vector<SORTED_TYPE>, size_t ))
 {
     boost::asynchronous::vector<SORTED_TYPE> a (pool,tasksize,NELEM);
-    for ( uint32_t i = 0 ; i < NELEM ; ++i)
-    {
-        a[i] = test_cast<uint32_t,SORTED_TYPE>(rand() % 10000) ;
-    }
+    auto fu = boost::asynchronous::post_future(
+                pool,
+                [&]{
+                    return boost::asynchronous::parallel_generate(
+                                a.begin(), a.end(),
+                                []{
+                                    boost::random::uniform_int_distribution<> distribution(0, 9999); // 9999 is inclusive, rand() % 10000 was exclusive
+                                    uint32_t gen = boost::asynchronous::random_provider<boost::random::mt19937>::generate(distribution);
+                                    return test_cast<uint32_t, SORTED_TYPE>(gen);
+                                }, 1024);
+                });
+    fu.get();
     (*pf)(std::move(a),NELEM);
 }
 void test_random_elements_few_repeated(void(*pf)(boost::asynchronous::vector<SORTED_TYPE>, size_t ))
 {
     boost::asynchronous::vector<SORTED_TYPE> a (pool,tasksize,NELEM);
-    for ( uint32_t i = 0 ; i < NELEM ; ++i)
-    {
-        a[i] = test_cast<uint32_t,SORTED_TYPE>(rand());
-    }
+    auto fu = boost::asynchronous::post_future(
+                pool,
+                [&]{
+                    return boost::asynchronous::parallel_generate(
+                                a.begin(), a.end(),
+                                []{
+                                    uint32_t gen = boost::asynchronous::random_provider<boost::random::mt19937>::generate();
+                                    return test_cast<uint32_t, SORTED_TYPE>(gen);
+                                }, 1024);
+                });
+    fu.get();
     (*pf)(std::move(a),NELEM);
 }
 void test_random_elements_quite_repeated(void(*pf)(boost::asynchronous::vector<SORTED_TYPE>, size_t ))
 {
     boost::asynchronous::vector<SORTED_TYPE> a (pool,tasksize,NELEM);
-    for ( uint32_t i = 0 ; i < NELEM ; ++i)
-    {
-        a[i] = test_cast<uint32_t,SORTED_TYPE>(rand() % (NELEM/2)) ;
-    }
+    auto fu = boost::asynchronous::post_future(
+                pool,
+                [&]{
+                    return boost::asynchronous::parallel_generate(
+                                a.begin(), a.end(),
+                                []{
+                                    boost::random::uniform_int_distribution<> distribution(0, NELEM / 2 - 1);
+                                    uint32_t gen = boost::asynchronous::random_provider<boost::random::mt19937>::generate(distribution);
+                                    return test_cast<uint32_t, SORTED_TYPE>(gen);
+                                }, 1024);
+                });
+    fu.get();
     (*pf)(std::move(a),NELEM);
 }
 void test_reversed_sorted_elements(void(*pf)(boost::asynchronous::vector<SORTED_TYPE>, size_t ))
 {
     boost::asynchronous::vector<SORTED_TYPE> a (pool,tasksize,NELEM);
+    auto lazy = boost::asynchronous::lazy_irange(
+                  0, NELEM,
+                  [](uint32_t index) {
+                      return test_cast<decltype(index), SORTED_TYPE>((NELEM << 1) - index);\
+                  });
+    auto fu = boost::asynchronous::post_future(
+                pool,
+                [&]{
+                    return boost::asynchronous::parallel_copy(
+                                lazy.begin(), lazy.end(),
+                                a.begin(),
+                                1024);
+                });
+    fu.get();
+    /* serial version:
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
         a[i] = test_cast<uint32_t,SORTED_TYPE>((NELEM<<1) -i) ;
     }
+     */
     (*pf)(std::move(a),NELEM);
 }
 void test_equal_elements(void(*pf)(boost::asynchronous::vector<SORTED_TYPE>, size_t ))
 {
     boost::asynchronous::vector<SORTED_TYPE> a (pool,tasksize,NELEM);
-    for ( uint32_t i = 0 ; i < NELEM ; ++i)
-    {
-        a[i] = test_cast<uint32_t,SORTED_TYPE>(NELEM) ;
-    }
+    auto fu = boost::asynchronous::post_future(
+                pool,
+                [&]{
+                    return boost::asynchronous::parallel_fill(a.begin(), a.end(), test_cast<uint32_t, SORTED_TYPE>(NELEM), 1024);
+                });
+    fu.get();
     (*pf)(std::move(a),NELEM);
 }
 int main( int argc, const char *argv[] ) 
