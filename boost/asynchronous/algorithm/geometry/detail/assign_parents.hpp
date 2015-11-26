@@ -9,15 +9,8 @@
 #ifndef BOOST_ASYNCHRONOUS_GEOMETRY_ALGORITHMS_DETAIL_OVERLAY_ASSIGN_PARENTS_HPP
 #define BOOST_ASYNCHRONOUS_GEOMETRY_ALGORITHMS_DETAIL_OVERLAY_ASSIGN_PARENTS_HPP
 
-#include <boost/geometry/algorithms/area.hpp>
-#include <boost/geometry/algorithms/envelope.hpp>
-#include <boost/geometry/algorithms/expand.hpp>
-#include <boost/geometry/algorithms/detail/partition.hpp>
-#include <boost/geometry/algorithms/detail/overlay/get_ring.hpp>
 #include <boost/geometry/algorithms/detail/overlay/assign_parents.hpp>
-#include <boost/geometry/algorithms/within.hpp>
 
-#include <boost/geometry/geometries/box.hpp>
 
 namespace boost { namespace geometry
 {

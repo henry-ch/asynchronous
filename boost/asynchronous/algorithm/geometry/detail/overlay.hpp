@@ -10,46 +10,26 @@
 #ifndef BOOST_ASYNCHRONOUS_GEOMETRY_ALGORITHMS_DETAIL_OVERLAY_OVERLAY_HPP
 #define BOOST_ASYNCHRONOUS_GEOMETRY_ALGORITHMS_DETAIL_OVERLAY_OVERLAY_HPP
 
-
-#include <deque>
-#include <map>
-
-#include <boost/range.hpp>
-#include <boost/mpl/assert.hpp>
-
-
-#include <boost/geometry/algorithms/detail/overlay/enrich_intersection_points.hpp>
-#include <boost/geometry/algorithms/detail/overlay/enrichment_info.hpp>
-#include <boost/geometry/algorithms/detail/overlay/get_turns.hpp>
-#include <boost/geometry/algorithms/detail/overlay/overlay_type.hpp>
-#include <boost/geometry/algorithms/detail/overlay/traverse.hpp>
-#include <boost/geometry/algorithms/detail/overlay/traversal_info.hpp>
-#include <boost/geometry/algorithms/detail/overlay/turn_info.hpp>
-
-#include <boost/geometry/algorithms/detail/recalculate.hpp>
-
-#include <boost/geometry/algorithms/num_points.hpp>
-#include <boost/geometry/algorithms/reverse.hpp>
-
-#include <boost/geometry/algorithms/detail/overlay/add_rings.hpp>
-#include <boost/geometry/algorithms/detail/overlay/assign_parents.hpp>
-#include <boost/geometry/algorithms/detail/overlay/ring_properties.hpp>
+#include <boost/geometry/algorithms/detail/overlay/overlay.hpp>
 #include <boost/asynchronous/algorithm/geometry/detail/select_rings.hpp>
 #include <boost/asynchronous/algorithm/geometry/detail/get_turns.hpp>
 #include <boost/asynchronous/algorithm/geometry/detail/assign_parents.hpp>
-#include <boost/geometry/algorithms/detail/overlay/do_reverse.hpp>
-
-#include <boost/geometry/policies/robustness/segment_ratio_type.hpp>
-
-
-#ifdef BOOST_GEOMETRY_DEBUG_ASSEMBLE
-#  include <boost/geometry/io/dsv/write.hpp>
-#endif
-
 #ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
 # include <boost/timer.hpp>
 #endif
 
+namespace boost { namespace geometry
+{
+
+// TODO why do I need to cheat?
+// Meta-function to access segment-ratio for a policy
+template <typename Point, typename Policy>
+struct dummy_segment_ratio_type {
+    typedef segment_ratio<boost::long_long_type> type;
+};
+
+
+}} // namespace boost::geometry
 
 namespace boost { namespace geometry
 {
@@ -209,7 +189,7 @@ struct parallel_overlay
         typedef detail::overlay::traversal_turn_info
         <
             point_type,
-            typename geometry::segment_ratio_type<point_type, RobustPolicy>::type
+            typename boost::geometry::dummy_segment_ratio_type<point_type, RobustPolicy>::type
         > turn_info;
         typedef std::deque<turn_info> container_type;
 
