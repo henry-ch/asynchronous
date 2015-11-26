@@ -21,7 +21,7 @@ struct random_provider
 {
     static boost::thread_specific_ptr<RandomEngine> generator;
 
-    template <typename Distribution>\
+    template <typename Distribution>
     static decltype(std::declval<Distribution>()(*generator)) generate(Distribution & distribution)
     {
         if (generator.get() == nullptr)

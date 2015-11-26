@@ -20,6 +20,15 @@
 #include <boost/type_traits/is_same.hpp>
 #include <boost/utility/enable_if.hpp>
 
+#include <boost/asynchronous/helpers/lazy_irange.hpp>
+#include <boost/asynchronous/algorithm/parallel_copy.hpp>
+#include <boost/asynchronous/algorithm/parallel_fill.hpp>
+#include <boost/asynchronous/algorithm/parallel_generate.hpp>
+
+#include <boost/asynchronous/helpers/random_provider.hpp>
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_int_distribution.hpp>
+
 using namespace std;
 #define LOOP 1
 
@@ -37,6 +46,8 @@ double servant_intern=0.0;
 long tpsize = 12;
 long tasks = 48;
 
+boost::asynchronous::any_shared_scheduler_proxy<> pool;
+
 template <class T, class U>
 typename boost::disable_if<boost::is_same<T,U>,U >::type
 test_cast(T const& t)
@@ -52,15 +63,6 @@ test_cast(T const& t)
 
 void ParallelAsyncPostCb(SORTED_TYPE a[], size_t n)
 {
-    auto pool = boost::asynchronous::make_shared_scheduler_proxy<
-                  boost::asynchronous::multiqueue_threadpool_scheduler<
-                        boost::asynchronous::lockfree_queue<>,
-                        boost::asynchronous::default_find_position< boost::asynchronous::sequential_push_policy>,
-                        boost::asynchronous::no_cpu_load_saving
-                    >>(tpsize,tasks);
-    // set processor affinity to improve cache usage. We start at core 0, until tpsize-1
-    pool.processor_bind(0);
-
     long tasksize = NELEM / tasks;
     servant_time = boost::chrono::high_resolution_clock::now();
     boost::future<void> fu = boost::asynchronous::post_future(pool,
@@ -75,13 +77,6 @@ void ParallelAsyncPostCb(SORTED_TYPE a[], size_t n)
 
 void ParallelAsyncPostCbSpreadsort(SORTED_TYPE a[], size_t n)
 {
-    auto pool = boost::asynchronous::make_shared_scheduler_proxy<
-                  boost::asynchronous::multiqueue_threadpool_scheduler<
-                        boost::asynchronous::lockfree_queue<>,
-                        boost::asynchronous::default_find_position< boost::asynchronous::sequential_push_policy>,
-                        boost::asynchronous::no_cpu_load_saving
-                    >>(tpsize,tasks);
-
     long tasksize = NELEM / tasks;
     servant_time = boost::chrono::high_resolution_clock::now();
     boost::future<void> fu = boost::asynchronous::post_future(pool,
@@ -97,55 +92,136 @@ void ParallelAsyncPostCbSpreadsort(SORTED_TYPE a[], size_t n)
 void test_sorted_elements(void(*pf)(SORTED_TYPE [], size_t ))
 {
     boost::shared_array<SORTED_TYPE> a (new SORTED_TYPE[NELEM]);
+    auto lazy = boost::asynchronous::lazy_irange(
+                  0, NELEM,
+                  [](uint32_t index) {
+                      return test_cast<decltype(index), SORTED_TYPE>(index + NELEM);
+                  });
+    auto fu = boost::asynchronous::post_future(
+                pool,
+                [&]{
+                    return boost::asynchronous::parallel_copy(
+                                lazy.begin(), lazy.end(),
+                                a.get(),
+                                1024);
+                });
+    fu.get();
+    /* serial version:
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
         *(a.get()+i) = test_cast<uint32_t,SORTED_TYPE>( i+NELEM) ;
     }
+     */
     (*pf)(a.get(),NELEM);
 }
 void test_random_elements_many_repeated(void(*pf)(SORTED_TYPE [], size_t ))
 {
     boost::shared_array<SORTED_TYPE> a (new SORTED_TYPE[NELEM]);
+    auto fu = boost::asynchronous::post_future(
+                pool,
+                [&]{
+                    return boost::asynchronous::parallel_generate(
+                                a.get(), a.get() + NELEM,
+                                []{
+                                    boost::random::uniform_int_distribution<> distribution(0, 9999); // 9999 is inclusive, rand() % 10000 was exclusive
+                                    uint32_t gen = boost::asynchronous::random_provider<boost::random::mt19937>::generate(distribution);
+                                    return test_cast<uint32_t, SORTED_TYPE>(gen);
+                                }, 1024);
+                });
+    fu.get();
+    /* serial version:
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
         *(a.get()+i) = test_cast<uint32_t,SORTED_TYPE>(rand() % 10000) ;
     }
+     */
     (*pf)(a.get(),NELEM);
 }
 void test_random_elements_few_repeated(void(*pf)(SORTED_TYPE [], size_t ))
 {
     boost::shared_array<SORTED_TYPE> a (new SORTED_TYPE[NELEM]);
+    auto fu = boost::asynchronous::post_future(
+                pool,
+                [&]{
+                    return boost::asynchronous::parallel_generate(
+                                a.get(), a.get() + NELEM,
+                                []{
+                                    uint32_t gen = boost::asynchronous::random_provider<boost::random::mt19937>::generate();
+                                    return test_cast<uint32_t, SORTED_TYPE>(gen);
+                                }, 1024);
+                });
+    fu.get();
+    /* serial version:
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
         *(a.get()+i) = test_cast<uint32_t,SORTED_TYPE>(rand());
     }
+     */
     (*pf)(a.get(),NELEM);
 }
 void test_random_elements_quite_repeated(void(*pf)(SORTED_TYPE [], size_t ))
 {
     boost::shared_array<SORTED_TYPE> a (new SORTED_TYPE[NELEM]);
+    auto fu = boost::asynchronous::post_future(
+                pool,
+                [&]{
+                    return boost::asynchronous::parallel_generate(
+                                a.get(), a.get() + NELEM,
+                                []{
+                                    boost::random::uniform_int_distribution<> distribution(0, NELEM / 2 - 1);
+                                    uint32_t gen = boost::asynchronous::random_provider<boost::random::mt19937>::generate(distribution);
+                                    return test_cast<uint32_t, SORTED_TYPE>(gen);
+                                }, 1024);
+                });
+    fu.get();
+    /* serial version:
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
         *(a.get()+i) = test_cast<uint32_t,SORTED_TYPE>(rand() % (NELEM/2)) ;
     }
+     */
     (*pf)(a.get(),NELEM);
 }
 void test_reversed_sorted_elements(void(*pf)(SORTED_TYPE [], size_t ))
 {
     boost::shared_array<SORTED_TYPE> a (new SORTED_TYPE[NELEM]);
+    auto lazy = boost::asynchronous::lazy_irange(
+                  0, NELEM,
+                  [](uint32_t index) {
+                      return test_cast<decltype(index), SORTED_TYPE>((NELEM << 1) - index);\
+                  });
+    auto fu = boost::asynchronous::post_future(
+                pool,
+                [&]{
+                    return boost::asynchronous::parallel_copy(
+                                lazy.begin(), lazy.end(),
+                                a.get(),
+                                1024);
+                });
+    fu.get();
+    /* serial version:
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
         *(a.get()+i) = test_cast<uint32_t,SORTED_TYPE>((NELEM<<1) -i) ;
     }
+     */
     (*pf)(a.get(),NELEM);
 }
 void test_equal_elements(void(*pf)(SORTED_TYPE [], size_t ))
 {
     boost::shared_array<SORTED_TYPE> a (new SORTED_TYPE[NELEM]);
+    auto fu = boost::asynchronous::post_future(
+                pool,
+                [&]{
+                    return boost::asynchronous::parallel_fill(a.get(), a.get() + NELEM, test_cast<uint32_t, SORTED_TYPE>(NELEM), 1024);
+                });
+    fu.get();
+    /* serial version:
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
         *(a.get()+i) = test_cast<uint32_t,SORTED_TYPE>(NELEM) ;
     }
+    */
     (*pf)(a.get(),NELEM);
 }
 int main( int argc, const char *argv[] ) 
@@ -155,6 +231,15 @@ int main( int argc, const char *argv[] )
     std::cout << "tpsize=" << tpsize << std::endl;
     std::cout << "tasks=" << tasks << std::endl;   
     
+    pool = boost::asynchronous::make_shared_scheduler_proxy<
+                  boost::asynchronous::multiqueue_threadpool_scheduler<
+                        boost::asynchronous::lockfree_queue<>,
+                        boost::asynchronous::default_find_position< boost::asynchronous::sequential_push_policy>,
+                        boost::asynchronous::no_cpu_load_saving
+                    >>(tpsize,tasks);
+    // set processor affinity to improve cache usage. We start at core 0, until tpsize-1
+    pool.processor_bind(0);
+
     servant_intern=0.0;
     for (int i=0;i<LOOP;++i)
     {     
