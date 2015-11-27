@@ -757,7 +757,7 @@ const std::string& task_name = "", std::size_t prio = 0, typename boost::enable_
 
 namespace detail
 {
-    template <class Work,class Sched,class PostSched,class OP,class CB,class Enable=void>
+    template <class Work,class Sched,class PostSched,class OP,class Callback,class Enable=void>
     struct post_callback_helper_base : public boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type
     {
 #ifndef BOOST_NO_RVALUE_REFERENCES
@@ -835,7 +835,7 @@ namespace detail
                     return;
                 // call callback
                 callback_fct cb(std::move(m_work),std::move(ex));
-                CB()(shared_scheduler,std::move(cb),m_task_name,m_cb_prio);
+                Callback()(shared_scheduler,std::move(cb),m_task_name,m_cb_prio);
             }
             catch(std::exception& ){/* TODO */}
         }
@@ -847,17 +847,17 @@ namespace detail
     struct cb_helper
     {
         //TODO static?
-        template <class S, class CB>
-        void operator()(S const& s, CB&& cb,std::string const& name,std::size_t cb_prio)const
+        template <class S, class Callback>
+        void operator()(S const& s, Callback&& cb,std::string const& name,std::size_t cb_prio)const
         {
-            typename boost::asynchronous::job_traits<typename S::job_type>::wrapper_type w(std::forward<CB>(cb));
+            typename boost::asynchronous::job_traits<typename S::job_type>::wrapper_type w(std::forward<Callback>(cb));
             w.set_name(name);
             s.post(std::move(w),cb_prio);
         }
     };
     // version for serializable tasks
-    template <class Work,class Sched,class PostSched,class OP,class CB>
-    struct post_callback_helper_base<Work,Sched,PostSched,OP,CB,typename ::boost::enable_if<boost::asynchronous::detail::is_serializable<typename Work::task_type> >::type>
+    template <class Work,class Sched,class PostSched,class OP,class Callback>
+    struct post_callback_helper_base<Work,Sched,PostSched,OP,Callback,typename ::boost::enable_if<boost::asynchronous::detail::is_serializable<typename Work::task_type> >::type>
             : public boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type
     {
 #ifndef BOOST_NO_RVALUE_REFERENCES
@@ -968,7 +968,7 @@ namespace detail
                     return;
                 // call callback
                 callback_fct cb(std::move(m_work),std::move(ex));
-                CB()(shared_scheduler,std::move(cb),m_task_name,m_cb_prio);
+                Callback()(shared_scheduler,std::move(cb),m_task_name,m_cb_prio);
             }
             catch(std::exception& ){/* TODO */}
         }
@@ -983,7 +983,7 @@ namespace detail
                     return;
                 // call callback
                 callback_fct cb(std::move(m_work),std::move(work_fu));
-                CB()(shared_scheduler,std::move(cb),m_task_name,m_cb_prio);
+                Callback()(shared_scheduler,std::move(cb),m_task_name,m_cb_prio);
             }
             catch(std::exception& ){/* TODO */}
         }
@@ -992,7 +992,7 @@ namespace detail
         std::string m_task_name;
         std::size_t m_cb_prio;
     };
-    template <class Ret,class Sched,class Func,class Work,class F1,class F2,class CallbackFct,class CB,class EnablePostHelper=void>
+    template <class Ret,class Sched,class Func,class Work,class F1,class F2,class CallbackFct,class Callback,class EnablePostHelper=void>
     struct post_helper_continuation
     {
         void operator()(std::string const& task_name,std::size_t cb_prio, Sched scheduler,
@@ -1029,7 +1029,7 @@ namespace detail
                         }
 
                         CallbackFct cb(std::move(work),std::move(ex));
-                        CB()(shared_scheduler,std::move(cb),task_name,cb_prio);
+                        Callback()(shared_scheduler,std::move(cb),task_name,cb_prio);
                     }
                     catch(std::exception& ){/* TODO */}
                 }
@@ -1038,8 +1038,8 @@ namespace detail
             boost::asynchronous::get_continuations().emplace_front(std::move(ac));
         }
     };
-    template <class Ret,class Sched,class Func,class Work,class F1,class F2,class CallbackFct,class CB>
-    struct post_helper_continuation<Ret,Sched,Func,Work,F1,F2,CallbackFct,CB,typename ::boost::enable_if<boost::is_same<Ret,void> >::type>
+    template <class Ret,class Sched,class Func,class Work,class F1,class F2,class CallbackFct,class Callback>
+    struct post_helper_continuation<Ret,Sched,Func,Work,F1,F2,CallbackFct,Callback,typename ::boost::enable_if<boost::is_same<Ret,void> >::type>
     {
         void operator()(std::string const& task_name,std::size_t cb_prio, Sched scheduler,
                         move_task_helper<typename Func::return_type,F1,F2>& work)const
@@ -1075,7 +1075,7 @@ namespace detail
                         }
 
                         CallbackFct cb(std::move(work),std::move(ex));
-                        CB()(shared_scheduler,std::move(cb),task_name,cb_prio);
+                        Callback()(shared_scheduler,std::move(cb),task_name,cb_prio);
                     }
                     catch(std::exception& ){/* TODO */}
                 }
@@ -1086,7 +1086,7 @@ namespace detail
     };
 
     //TODO no copy/paste
-    template <class Func,class F1, class F2,class Work,class Sched,class PostSched,class CB,class Enable=void>
+    template <class Func,class F1, class F2,class Work,class Sched,class PostSched,class Callback,class Enable=void>
     struct post_callback_helper_continuation : public boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type
     {
 #ifndef BOOST_NO_RVALUE_REFERENCES
@@ -1141,7 +1141,7 @@ namespace detail
         {
             // TODO check not empty
             // call task
-            post_helper_continuation<typename Work::result_type,Sched,Func,Work,F1,F2,callback_fct,CB>()(m_task_name,m_cb_prio,m_scheduler,m_work);
+            post_helper_continuation<typename Work::result_type,Sched,Func,Work,F1,F2,callback_fct,Callback>()(m_task_name,m_cb_prio,m_scheduler,m_work);
 
         }
         Work m_work;
@@ -1150,8 +1150,8 @@ namespace detail
         std::size_t m_cb_prio;
     };
     //TODO no copy/paste
-    template <class Func,class F1, class F2,class Work,class Sched,class PostSched,class CB>
-    struct post_callback_helper_continuation<Func,F1,F2,Work,Sched,PostSched,CB,typename ::boost::enable_if<boost::asynchronous::detail::is_serializable<typename Work::task_type> >::type>
+    template <class Func,class F1, class F2,class Work,class Sched,class PostSched,class Callback>
+    struct post_callback_helper_continuation<Func,F1,F2,Work,Sched,PostSched,Callback,typename ::boost::enable_if<boost::asynchronous::detail::is_serializable<typename Work::task_type> >::type>
             : public boost::asynchronous::job_traits<typename Sched::job_type>::diagnostic_type
     {
 #ifndef BOOST_NO_RVALUE_REFERENCES
@@ -1242,7 +1242,7 @@ namespace detail
                     return;
                 // call callback
                 callback_fct cb(std::move(m_work),std::move(work_fu));
-                CB()(shared_scheduler,std::move(cb),m_task_name,m_cb_prio);
+                Callback()(shared_scheduler,std::move(cb),m_task_name,m_cb_prio);
             }
             catch(std::exception& ){/* TODO */}
         }
@@ -1250,7 +1250,7 @@ namespace detail
         {
             // TODO check not empty
             // call task
-            post_helper_continuation<typename Work::result_type,Sched,Func,Work,F1,F2,callback_fct,CB>()(m_task_name,m_cb_prio,m_scheduler,m_work);
+            post_helper_continuation<typename Work::result_type,Sched,Func,Work,F1,F2,callback_fct,Callback>()(m_task_name,m_cb_prio,m_scheduler,m_work);
         }
         Work m_work;
         Sched m_scheduler;
