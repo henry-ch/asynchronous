@@ -123,7 +123,7 @@ public:
 
 }
 
-BOOST_AUTO_TEST_CASE( test_trackable_servant_post )
+BOOST_AUTO_TEST_CASE( test_trackable_servant_proxy_unsafe_callback )
 {
     {
         auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
@@ -137,7 +137,7 @@ BOOST_AUTO_TEST_CASE( test_trackable_servant_post )
     }
 }
 
-BOOST_AUTO_TEST_CASE( test_trackable_servant_post_void )
+BOOST_AUTO_TEST_CASE( test_trackable_servant_proxy_unsafe_callback_void )
 {
     {
         auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<

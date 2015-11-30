@@ -167,7 +167,7 @@ void test_sorted_elements(void(*pf)(boost::asynchronous::vector<SORTED_TYPE>, si
     auto lazy = boost::asynchronous::lazy_irange(
                   0, NELEM,
                   [](uint32_t index) {
-                      return test_cast<decltype(index), SORTED_TYPE>(index + NELEM);\
+                      return test_cast<decltype(index), SORTED_TYPE>(index + NELEM);
                   });
     auto fu = boost::asynchronous::post_future(
                 pool,
@@ -242,7 +242,7 @@ void test_reversed_sorted_elements(void(*pf)(boost::asynchronous::vector<SORTED_
     auto lazy = boost::asynchronous::lazy_irange(
                   0, NELEM,
                   [](uint32_t index) {
-                      return test_cast<decltype(index), SORTED_TYPE>((NELEM << 1) - index);\
+                      return test_cast<decltype(index), SORTED_TYPE>((NELEM << 1) - index);
                   });
     auto fu = boost::asynchronous::post_future(
                 pool,

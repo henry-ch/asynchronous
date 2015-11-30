@@ -27,6 +27,7 @@
 #include <boost/asynchronous/algorithm/parallel_is_sorted.hpp>
 #include <boost/asynchronous/algorithm/detail/parallel_sort_helper.hpp>
 #include <boost/asynchronous/algorithm/parallel_partition.hpp>
+#include <boost/asynchronous/algorithm/parallel_stable_partition.hpp>
 #include <boost/asynchronous/algorithm/parallel_sort.hpp>
 #include <boost/asynchronous/algorithm/parallel_is_sorted.hpp>
 
@@ -161,7 +162,11 @@ struct parallel_quicksort_helper: public boost::asynchronous::continuation_task<
                                     return func(i,middleval);
                                 };
 
+#ifdef BOOST_ASYNCHRONOUS_QUICKSORT_USE_STABLE_PARTITION
+                                auto cont3 = boost::asynchronous::parallel_stable_partition<Iterator,decltype(l),Job>(beg,end,std::move(l),cutoff);
+#else
                                 auto cont3 = boost::asynchronous::parallel_partition<Iterator,decltype(l),Job>(beg,end,std::move(l),thread_num);
+#endif
                                 cont3.on_done([task_res,beg,end,func,thread_num,size_all_partitions,original_size,cutoff,task_name,prio]
                                              (std::tuple<boost::asynchronous::expected<Iterator> >&& continuation_res)
                                 {

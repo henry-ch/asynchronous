@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <iostream>
 #include <vector>
+#include <memory>
 //#include <stdlib.h>
 
 #include <boost/lexical_cast.hpp>
@@ -21,12 +22,21 @@
 #include <boost/asynchronous/trackable_servant.hpp>
 #include <boost/asynchronous/algorithm/parallel_partition_copy.hpp>
 
+#include <boost/asynchronous/helpers/lazy_irange.hpp>
+#include <boost/asynchronous/algorithm/parallel_copy.hpp>
+#include <boost/asynchronous/algorithm/parallel_fill.hpp>
+#include <boost/asynchronous/algorithm/parallel_generate.hpp>
+
+#include <boost/asynchronous/helpers/random_provider.hpp>
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_int_distribution.hpp>
+
 using namespace std;
 
 
 #define LOOP 1
 
-#define NELEM 1000000000
+#define NELEM 200000000
 #define SORTED_TYPE uint32_t
 
 //#define NELEM 100000000
@@ -36,6 +46,8 @@ typename boost::chrono::high_resolution_clock::time_point servant_time;
 double servant_intern=0.0;
 long tpsize = 12;
 long tasks = 500;
+
+boost::asynchronous::any_shared_scheduler_proxy<> pool;
 
 namespace boost {
 template<>
@@ -66,14 +78,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     //typedef int requires_weak_scheduler;
     typedef std::vector<SORTED_TYPE>::iterator Iterator;
     Servant(boost::asynchronous::any_weak_scheduler<> scheduler)
-        : boost::asynchronous::trackable_servant<>(scheduler,
-                                               boost::asynchronous::make_shared_scheduler_proxy<
-                                                   boost::asynchronous::multiqueue_threadpool_scheduler<
-                                                           boost::asynchronous::lockfree_queue<>,
-                                                           boost::asynchronous::default_find_position< boost::asynchronous::sequential_push_policy>,
-                                                       //boost::asynchronous::default_save_cpu_load<10,80000,1000>
-                                                       boost::asynchronous::no_cpu_load_saving
-                                                       >>(tpsize))
+        : boost::asynchronous::trackable_servant<>(scheduler, pool)
         , m_promise(new boost::promise<void>)
         , m_tpsize(tpsize)
     {
@@ -89,9 +94,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
     {
         boost::shared_future<void> fu = m_promise->get_future();
         long tasksize = NELEM / tasks;
-        boost::shared_ptr<std::vector<SORTED_TYPE>> vec = boost::make_shared<std::vector<SORTED_TYPE>>(std::move(a));
-        boost::shared_ptr<std::vector<SORTED_TYPE>> vec_true = boost::make_shared<std::vector<SORTED_TYPE>>(NELEM);
-        boost::shared_ptr<std::vector<SORTED_TYPE>> vec_false = boost::make_shared<std::vector<SORTED_TYPE>>(NELEM);
+        std::shared_ptr<std::vector<SORTED_TYPE>> vec = std::make_shared<std::vector<SORTED_TYPE>>(std::move(a));
+        std::shared_ptr<std::vector<SORTED_TYPE>> vec_true = std::make_shared<std::vector<SORTED_TYPE>>(NELEM);
+        std::shared_ptr<std::vector<SORTED_TYPE>> vec_false = std::make_shared<std::vector<SORTED_TYPE>>(NELEM);
 
         servant_time = boost::chrono::high_resolution_clock::now();
         post_callback(
@@ -116,7 +121,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     }
 private:
 // for testing
-boost::shared_ptr<boost::promise<void> > m_promise;
+std::shared_ptr<boost::promise<void> > m_promise;
 size_t m_tpsize;
 };
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>
@@ -158,55 +163,112 @@ void ParallelAsyncPostCb(std::vector<SORTED_TYPE>& vec)
 void test_sorted_elements(void(*pf)(std::vector<SORTED_TYPE>& ))
 {
     std::vector<SORTED_TYPE> a(NELEM);
+    auto lazy = boost::asynchronous::lazy_irange(
+                  0, NELEM,
+                  [](uint32_t index) {
+                      return test_cast<decltype(index), SORTED_TYPE>(index + NELEM);\
+                  });
+    auto fu = boost::asynchronous::post_future(
+                pool,
+                [&]{
+                    return boost::asynchronous::parallel_copy(
+                                lazy.begin(), lazy.end(),
+                                a.begin(),
+                                NELEM / tasks);
+                });
+    fu.get();
+    /* serial version:
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
         a[i] = test_cast<uint32_t,SORTED_TYPE>( i+NELEM) ;
     }
+     */
     (*pf)(a);
 }
 void test_random_elements_many_repeated(void(*pf)(std::vector<SORTED_TYPE>& ))
 {
     std::vector<SORTED_TYPE> a(NELEM);
-    for ( uint32_t i = 0 ; i < NELEM ; ++i)
-    {
-        a[i] = test_cast<uint32_t,SORTED_TYPE>(rand() % 10000) ;
-    }
+    auto fu = boost::asynchronous::post_future(
+                pool,
+                [&]{
+                    return boost::asynchronous::parallel_generate(
+                                a.begin(), a.end(),
+                                []{
+                                    boost::random::uniform_int_distribution<> distribution(0, 9999); // 9999 is inclusive, rand() % 10000 was exclusive
+                                    uint32_t gen = boost::asynchronous::random_provider<boost::random::mt19937>::generate(distribution);
+                                    return test_cast<uint32_t, SORTED_TYPE>(gen);
+                                }, NELEM / tasks);
+                });
+    fu.get();
     (*pf)(a);
 }
 void test_random_elements_few_repeated(void(*pf)(std::vector<SORTED_TYPE>& ))
 {
     std::vector<SORTED_TYPE> a(NELEM);
-    for ( uint32_t i = 0 ; i < NELEM ; ++i)
-    {
-        a[i] = test_cast<uint32_t,SORTED_TYPE>(rand());
-    }
+    auto fu = boost::asynchronous::post_future(
+                pool,
+                [&]{
+                    return boost::asynchronous::parallel_generate(
+                                a.begin(), a.end(),
+                                []{
+                                    uint32_t gen = boost::asynchronous::random_provider<boost::random::mt19937>::generate();
+                                    return test_cast<uint32_t, SORTED_TYPE>(gen);
+                                }, NELEM / tasks);
+                });
+    fu.get();
     (*pf)(a);
 }
 void test_random_elements_quite_repeated(void(*pf)(std::vector<SORTED_TYPE>& ))
 {
     std::vector<SORTED_TYPE> a(NELEM);
-    for ( uint32_t i = 0 ; i < NELEM ; ++i)
-    {
-        a[i] = test_cast<uint32_t,SORTED_TYPE>(rand() % (NELEM/2)) ;
-    }
+    auto fu = boost::asynchronous::post_future(
+                pool,
+                [&]{
+                    return boost::asynchronous::parallel_generate(
+                                a.begin(), a.end(),
+                                []{
+                                    boost::random::uniform_int_distribution<> distribution(0, NELEM / 2 - 1);
+                                    uint32_t gen = boost::asynchronous::random_provider<boost::random::mt19937>::generate(distribution);
+                                    return test_cast<uint32_t, SORTED_TYPE>(gen);
+                                }, NELEM / tasks);
+                });
+    fu.get();
     (*pf)(a);
 }
 void test_reversed_sorted_elements(void(*pf)(std::vector<SORTED_TYPE>& ))
 {
     std::vector<SORTED_TYPE> a(NELEM);
+    auto lazy = boost::asynchronous::lazy_irange(
+                  0, NELEM,
+                  [](uint32_t index) {
+                      return test_cast<decltype(index), SORTED_TYPE>((NELEM << 1) - index);\
+                  });
+    auto fu = boost::asynchronous::post_future(
+                pool,
+                [&]{
+                    return boost::asynchronous::parallel_copy(
+                                lazy.begin(), lazy.end(),
+                                a.begin(),
+                                NELEM / tasks);
+                });
+    fu.get();
+    /* serial version:
     for ( uint32_t i = 0 ; i < NELEM ; ++i)
     {
         a[i] = test_cast<uint32_t,SORTED_TYPE>((NELEM<<1) -i) ;
     }
+     */
     (*pf)(a);
 }
 void test_equal_elements(void(*pf)(std::vector<SORTED_TYPE>& ))
 {
     std::vector<SORTED_TYPE> a(NELEM);
-    for ( uint32_t i = 0 ; i < NELEM ; ++i)
-    {
-        a[i] = test_cast<uint32_t,SORTED_TYPE>(NELEM) ;
-    }
+    auto fu = boost::asynchronous::post_future(
+                pool,
+                [&]{
+                    return boost::asynchronous::parallel_fill(a.begin(), a.end(), test_cast<uint32_t, SORTED_TYPE>(NELEM), NELEM / tasks);
+                });
+    fu.get();
     (*pf)(a);
 }
 int main( int argc, const char *argv[] ) 
@@ -215,6 +277,14 @@ int main( int argc, const char *argv[] )
     tasks = (argc>2) ? strtol(argv[2],0,0) : 500;
     std::cout << "tpsize=" << tpsize << std::endl;
     std::cout << "tasks=" << tasks << std::endl;
+
+    pool = boost::asynchronous::make_shared_scheduler_proxy<
+           boost::asynchronous::multiqueue_threadpool_scheduler<
+                   boost::asynchronous::lockfree_queue<>,
+                   boost::asynchronous::default_find_position< boost::asynchronous::sequential_push_policy>,
+               //boost::asynchronous::default_save_cpu_load<10,80000,1000>
+               boost::asynchronous::no_cpu_load_saving
+               >>(tpsize);
 
     servant_intern=0.0;
     for (int i=0;i<LOOP;++i)

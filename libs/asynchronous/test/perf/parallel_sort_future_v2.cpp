@@ -37,7 +37,7 @@
 using namespace std;
 
 #define LOOP 1
-
+#ifndef __MIC__
 struct LongOne
 {
     LongOne(uint32_t i = 0)
@@ -54,12 +54,13 @@ struct LongOne
     std::vector<long> data;
 };
 inline bool operator< (const LongOne& lhs, const LongOne& rhs){ return rhs.data[0] < lhs.data[0]; }
-#define NELEM 1000000
-#define SORTED_TYPE LongOne
-#define NO_SPREADSORT
+#endif
+//#define NELEM 1000000
+//#define SORTED_TYPE LongOne
+//#define NO_SPREADSORT
 
-//#define NELEM 200000000
-//#define SORTED_TYPE uint32_t
+#define NELEM 200000000
+#define SORTED_TYPE uint32_t
 
 //#define NELEM 10000000
 //#define SORTED_TYPE std::string
@@ -74,6 +75,7 @@ long tasks = 48;
 
 boost::asynchronous::any_shared_scheduler_proxy<> pool;
 
+#ifndef __MIC__
 template <class T, class U>
 typename boost::disable_if<boost::mpl::or_<boost::is_same<T,U>,boost::is_same<LongOne,U>>,U >::type
 test_cast(T const& t)
@@ -81,17 +83,19 @@ test_cast(T const& t)
     return boost::lexical_cast<U>(t);
 }
 template <class T, class U>
-typename boost::enable_if<boost::is_same<T,U>,U >::type
-test_cast(T const& t)
-{
-    return t;
-}
-template <class T, class U>
 typename boost::enable_if<boost::is_same<LongOne,U>,U >::type
 test_cast(T const& t)
 {
     return t;
 }
+#endif
+template <class T, class U>
+typename boost::enable_if<boost::is_same<T,U>,U >::type
+test_cast(T const& t)
+{
+    return t;
+}
+
 
 //#define USE_SERIALIZABLE 
 // we pretend to be serializable to use a different version of the sort algorithm
@@ -165,7 +169,7 @@ void test_sorted_elements(void(*pf)(std::vector<SORTED_TYPE>, size_t ))
                     return boost::asynchronous::parallel_copy(
                                 lazy.begin(), lazy.end(),
                                 a.begin(),
-                                NELEM / tasks);
+                                1024);
                 });
     fu.get();
     /* serial version:
@@ -188,7 +192,7 @@ void test_random_elements_many_repeated(void(*pf)(std::vector<SORTED_TYPE>, size
                                     boost::random::uniform_int_distribution<> distribution(0, 9999); // 9999 is inclusive, rand() % 10000 was exclusive
                                     uint32_t gen = boost::asynchronous::random_provider<boost::random::mt19937>::generate(distribution);
                                     return test_cast<uint32_t, SORTED_TYPE>(gen);
-                                }, NELEM / tasks);
+                                }, 1024);
                 });
     fu.get();
     (*pf)(std::move(a),NELEM);
@@ -204,7 +208,7 @@ void test_random_elements_few_repeated(void(*pf)(std::vector<SORTED_TYPE>, size_
                                 []{
                                     uint32_t gen = boost::asynchronous::random_provider<boost::random::mt19937>::generate();
                                     return test_cast<uint32_t, SORTED_TYPE>(gen);
-                                }, NELEM / tasks);
+                                }, 1024);
                 });
     fu.get();
     (*pf)(std::move(a),NELEM);
@@ -221,7 +225,7 @@ void test_random_elements_quite_repeated(void(*pf)(std::vector<SORTED_TYPE>, siz
                                     boost::random::uniform_int_distribution<> distribution(0, NELEM / 2 - 1);
                                     uint32_t gen = boost::asynchronous::random_provider<boost::random::mt19937>::generate(distribution);
                                     return test_cast<uint32_t, SORTED_TYPE>(gen);
-                                }, NELEM / tasks);
+                                }, 1024);
                 });
     fu.get();
     (*pf)(std::move(a),NELEM);
@@ -240,7 +244,7 @@ void test_reversed_sorted_elements(void(*pf)(std::vector<SORTED_TYPE>, size_t ))
                     return boost::asynchronous::parallel_copy(
                                 lazy.begin(), lazy.end(),
                                 a.begin(),
-                                NELEM / tasks);
+                                1024);
                 });
     fu.get();
     /* serial version:
@@ -257,7 +261,7 @@ void test_equal_elements(void(*pf)(std::vector<SORTED_TYPE>, size_t ))
     auto fu = boost::asynchronous::post_future(
                 pool,
                 [&]{
-                    return boost::asynchronous::parallel_fill(a.begin(), a.end(), test_cast<uint32_t, SORTED_TYPE>(NELEM), NELEM / tasks);
+                    return boost::asynchronous::parallel_fill(a.begin(), a.end(), test_cast<uint32_t, SORTED_TYPE>(NELEM), 1024);
                 });
     fu.get();
     (*pf)(std::move(a),NELEM);
