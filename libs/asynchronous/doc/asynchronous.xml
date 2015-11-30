@@ -5,10 +5,10 @@
         <title>Boost Asynchronous</title>
         <author>
             <personname>Christophe Henry</personname>
-            <email>christophe.j.henry@googlemail.com</email>
+            <email>christophe.j.henry@gmail.com</email>
         </author>
         <copyright>
-            <year>20013</year>
+            <year>20015</year>
             <holder>
                 <phrase> Distributed under the Boost Software License, Version 1.0. (See
                     accompanying file LICENSE_1_0.txt or copy at <link
@@ -21,68 +21,73 @@
         <title>Preface</title>
         <para>
             <emphasis role="underline">Note</emphasis>: Asynchronous is not part of the Boost
-            library. It is planed to be offered for Review in 2014. At the moment it is still in
-            development.</para>
+            library. It is planed to be offered for Review at the beginning of 2016. </para>
         <para>Herb Sutter wrote <link
-                xlink:href="http://www.gotw.ca/publications/concurrency-ddj.htm">in an article</link> "The Free Lunch
-            Is Over", meaning that developpers will be forced to learn to develop multi-threaded
-            applications. This, however, brings a fundamental issue: multithreading is hard, it's
-            full of ugly beasts waiting hidden for our mistakes: races, deadlocks, all kinds of
-            subtle bugs. Worse yet, these bugs are hard to find because they are never reproducible
-            when you are looking for them, which leaves us with backtrace analysis, and this is when
-            we are lucky enough to have a backtrace in the first place.</para>
+                xlink:href="http://www.gotw.ca/publications/concurrency-ddj.htm">in an
+                article</link> "The Free Lunch Is Over", meaning that developpers will be forced to
+            learn to develop multi-threaded applications. The reason is that we now get our extra
+            power in the form of more cores. The problem is: multithreading is hard! It's full of
+            ugly beasts waiting hidden for our mistakes: races, deadlocks, crashes, all kinds of
+            subtle timing-dependent bugs. Worse yet, these bugs are hard to find because they are
+            never reproducible when we are looking for them, which leaves us with backtrace
+            analysis, and this is when we are lucky enough to have a backtrace in the first
+            place.</para>
         <para>This is not even the only danger. CPUs are a magnitude faster than memory, I/O
             operations, network communications, which all stall our programms and degrade our
             performance, which means long sessions with coverage or analysis tools.</para>
-        <para>Well, maybe the free lunch is not completely over yet, or at least maybe we can still
-            get one a bit longer for a bargain. This is what Boost Asynchronous is helping
-            solve.</para>
-        <para>Boost Asynchronous is a library making it easy to write asynchronous code similar to
-            the <link xlink:href="http://www.cs.wustl.edu/~schmidt/PDF/proactor.pdf">Proactor pattern</link>. To achieve this, it offers tools for asynchronous designs: ActiveObject,
-            threadpools, servants, proxies, queues, algorithms, etc. </para>
-        <para>Asynchronous programming has the advantage of making it easier to design your code
-            nonblocking, single-threaded while still getting your cores to work at full capacity.
-            And all this while forgetting what a mutex is. Incorrect mutex usage is a huge source of
-            bugs and Asynchronous helps you avoid them.</para>
-        <para>However, the goal of this library is not to help you write massively parallel code.
-            There are other solutions for this. This library is for the other 99% of us who happen
-            to work on 4-12 cores hardware because 1000 cores are not affordable, but would still
-            like to get the best of it while avoiding ugly bugs, get better diagnostic of what our
-            application is doing and planing ourselves what our cores are doing. Asynchronous is not:<itemizedlist>
+        <para>Trying to solve these problems with tools of the past (mutexes, programmer-managed
+            threads) is a dead-end. It's just too hard. This is where Boost Asynchronous is
+            helping.</para>
+        <para>There are already existing solutions for this. To name a few:</para>
+        <para>
+            <itemizedlist>
                 <listitem>
-                    <para>std/boost::async: both are asynchronous in a very limited way. One posts
-                        asynchronously some work, but then? Well, then the choice is between
-                        blocking for the future result (taboo) or polling from time to time, as in
-                        the (bad) old times. Furthermore, one has no control on the
-                        scheduler.</para>
+                    <para>std/boost::async.</para>
                 </listitem>
                 <listitem>
-                    <para>Intel TBB: this is a wonderful parallel library. But it's not asynchronous
-                        as one needs to wait for the end of a parallel_xxx call. Sure, you have
-                        pipelines, but when your application is complex, good luck to understand the
-                        code. Again, one has limited control on the scheduler.</para>
+                    <para>Intel TBB.</para>
                 </listitem>
                 <listitem>
-                    <para>N3428: this is an interesting approach as it was at least recognized that
-                        std::async is not asynchronous. So now, you get a kind of state machine
-                        hidden behind a .then, when_any, when_all, which are a poor man's state
-                        machines, besides ugly limitations like finding out which when_all threw an
-                        exception. When did we give up writing design diagrams to document and
-                        understand our code later? When a 15+ states state machine with guards,
-                        event deferring and control flow has to be written with .then, please don't
-                        ask us to review the code.</para>
+                    <para>N3428.</para>
                 </listitem>
-            </itemizedlist></para>
-        <para>Let's have a quick look at code using futures and .then (taken from N3428):</para>
+            </itemizedlist>
+        </para>
+        <para>TBB is a wonderful parallel library. But it's not asynchronous as one needs to wait
+            for the end of a parallel call.</para>
+        <para>std::async will return us a future. But what will we do with it? Wait for it? This
+            would be synchronous. Collect them and then wait for all? This would also be
+            synchronous. Collect them, do something else, then check if they are ready? This would
+            be wasted opportunity for more calculations. To make it worse, I/O usage will seriously
+            degrade performance.</para>
+        <para>To solve these problems, NB3428 is an attempt at continuations. Let's have a quick
+            look at code using futures and .then (taken from N3428):</para>
         <para>
             <programlisting>future&lt;int> f1 = async([]() { return 123; });
 future&lt;string> f2 = f1.then([](future&lt;int> f) {return f.get().to_string();}); // here .get() won’t block
 f2.get(); // just a "small get" at the end?</programlisting>
         </para>
-        <para> Saying that there is only a "small get" at the end is, for an application with
+        <para>Saying that there is only a "small get" at the end is, for an application with
             real-time constraints, equivalent to saying at a lockfree conference something like
             "what is all the fuss about? Can't we just add a small lock at the end?". Just try
             it...</para>
+        <para>Worse yet, it clutters the code, makes it hard to debug and understand. When did we
+            give up writing design diagrams? How is this supposed to replace a dynamic behavior
+            using a state machine?</para>
+        <para>Asynchronous supports this programming model too, with some syntactic sugar, though it
+            is advised to use it only for simple programs or quick prototyping, or as a step to the
+            more powerful tools offered by the library. std::async is here replaced by
+            boost::asynchronous::post_future:</para>
+        <programlisting>future&lt;int> f1 = async([]() { return 123; });
+future&lt;string> f2 = f1.then([](future&lt;int> f) {return f.get().to_string();}); // here .get() won’t block
+f2.get(); // just a "small get" at the end?</programlisting>
+        <para>Boost Asynchronous is a library making it easy to write asynchronous code similar to
+            the <link xlink:href="http://www.cs.wustl.edu/~schmidt/PDF/proactor.pdf">Proactor
+                pattern</link>. To achieve this, it offers tools for asynchronous designs:
+            ActiveObject, threadpools, servants, proxies, queues, algorithms, etc. </para>
+        <para>Asynchronous programming has the advantage of making it easier to design your code
+            nonblocking, single-threaded while still getting your cores to work at full capacity.
+            And all this while forgetting what a mutex is. Incorrect mutex usage is a huge source of
+            bugs and Asynchronous helps you avoid them.</para>
         <para>This brings us to a central point of Asynchronous: if we build a system with strict
             real-time constraints, there is no such thing as a small get(). We need to be able to
             react to any event in the system in a timely manner. And we can't afford to have lots of
