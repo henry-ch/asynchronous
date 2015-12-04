@@ -47,11 +47,24 @@ struct for_each_helper
     }
 };
 template <class Iterator, class Func>
+struct for_each_helper<1,Iterator,Func,typename ::boost::enable_if<std::is_integral<Iterator>>::type>
+{
+    Func operator()(Iterator beg, Iterator end, Func&& func)
+    {   
+        for (; beg != end; ++beg)
+        {   
+            func(beg);
+        }
+        return func;
+    }   
+};
+template <class Iterator, class Func>
 struct for_each_helper<2,Iterator,Func,void>
 {
     Func operator()(Iterator beg, Iterator end, Func&& func)
     {
-        return func(beg,end);
+        func(beg,end);
+        return func;
     }
 };
 

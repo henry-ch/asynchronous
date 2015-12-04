@@ -60,9 +60,24 @@ Iterator find_cutoff_helper(Iterator it, Distance n, Iterator end,std::input_ite
     return it;
 }
 template <class Iterator, class Distance>
-Iterator find_cutoff(Iterator it, Distance n, Iterator end)
+Iterator find_cutoff(Iterator it, Distance n, Iterator end, typename boost::disable_if<std::is_integral<Iterator>>::type* = 0)
 {
     return find_cutoff_helper(it,n,end,typename std::iterator_traits<Iterator>::iterator_category());
+}
+
+template <class Iterator, class Distance>
+Iterator find_cutoff(Iterator it, Distance n, Iterator end, typename boost::enable_if<std::is_integral<Iterator>>::type* = 0)
+{
+    if (it + n < end)
+    {
+        it += n;
+    }
+    else
+    {
+        // only until end
+        it = end;
+    }
+    return it;
 }
 
 template <class It, class Distance>
