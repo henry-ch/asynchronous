@@ -18,7 +18,7 @@
         </copyright>
     </info>
     <preface>
-        <title>Preface</title>
+        <title>Introduction</title>
         <para>
             <emphasis role="underline">Note</emphasis>: Asynchronous is not part of the Boost
             library. It is planed to be offered for Review at the beginning of 2016. </para>
@@ -73,33 +73,43 @@ f2.get(); // just a "small get" at the end?</programlisting>
         <para>Worse yet, it clutters the code, makes it hard to debug and understand. When did we
             give up writing design diagrams? How is this supposed to replace a dynamic behavior
             using a state machine?</para>
-        <para>Asynchronous supports this programming model too, with some syntactic sugar, though it
-            is advised to use it only for simple programs or quick prototyping, or as a step to the
-            more powerful tools offered by the library. std::async is here replaced by
+        <para>Asynchronous supports this programming model too, though it is advised to use it only
+            for simple programs or quick prototyping, or as a step to the more powerful tools
+            offered by the library. std::async can be replaced by
             boost::asynchronous::post_future:</para>
-        <programlisting>future&lt;int> f1 = async([]() { return 123; });
-future&lt;string> f2 = f1.then([](future&lt;int> f) {return f.get().to_string();}); // here .get() won’t block
-f2.get(); // just a "small get" at the end?</programlisting>
-        <para>Boost Asynchronous is a library making it easy to write asynchronous code similar to
-            the <link xlink:href="http://www.cs.wustl.edu/~schmidt/PDF/proactor.pdf">Proactor
-                pattern</link>. To achieve this, it offers tools for asynchronous designs:
-            ActiveObject, threadpools, servants, proxies, queues, algorithms, etc. </para>
-        <para>Asynchronous programming has the advantage of making it easier to design your code
-            nonblocking, single-threaded while still getting your cores to work at full capacity.
-            And all this while forgetting what a mutex is. Incorrect mutex usage is a huge source of
-            bugs and Asynchronous helps you avoid them.</para>
-        <para>This brings us to a central point of Asynchronous: if we build a system with strict
-            real-time constraints, there is no such thing as a small get(). We need to be able to
-            react to any event in the system in a timely manner. And we can't afford to have lots of
-            functions potentially waiting too long everywhere in our code. Therefore, .then is only
-            good for an application of a few hundreds of lines. What about using a timed_wait
-            instead? Nope. Either we wait too long before handling an error (this just limits the
-            amount of time we waste waiting, that's all), or we wait not enough and we poll. In any
-            case, while waiting, our thread cannot react to other events.</para>
-        <para>All these libraries also have the disadvantage of working with functions, not classes.
-            But we, normal developers, do use classes. And we want them safe. And you can hardly
-            make a class safe if you simply pass it to another thread. Consider the following
-            example:</para>
+        <programlisting>auto pool = boost::asynchronous::make_shared_scheduler_proxy&lt;
+                  boost::asynchronous::multiqueue_threadpool_scheduler&lt;
+                        boost::asynchronous::lockfree_queue&lt;>>>(8); // create a pool with 8 threads
+boost::future&lt;int> fu = boost::asynchronous::post_future(pool,
+    []()
+    {
+        return 123;
+    });
+f1.get();</programlisting>
+        <para>Instead of an ugly future.then, Asynchronous supports continuations as coded into the
+            task itself. We will see later how to do it. For the moment, here is a quick example.
+            Let's say we want to modify a vector in parallel, then reduce it, also in parallel,
+            without having to write synchronization points:</para>
+        <programlisting>boost::future&lt;int> fu = boost::asynchronous::post_future(pool, // pool as before
+    [this]()
+    {
+        return boost::asynchronous::parallel_reduce(                   // reduce will be done in parallel after for
+            boost::asynchronous::parallel_for(std::move(this->m_data), // our data, a std::vector&lt;int> will be moved, transformed, then reduced and eventually destroyed
+                                              [](int&amp; i)
+                                              {
+                                                  i += 2;              // transform all elements in parallel
+                                              }, 1024),                // cutoff (when to go sequential. Will be explained later)
+            [](int const&amp; a, int const&amp; b)                             // reduce function
+            {
+                return a + b;
+            }, 1024);                                                  // reduce cutoff
+    });
+int res = fu.get();</programlisting>
+        <para>But this is just the beginning. It is not even really asynchronous. More important,
+            Boost Asynchronous is a library which can play a great role in making a thread-correct
+            architecture. To achieve this, it offers tools for asynchronous designs: ActiveObject,
+            safe callbacks, threadpools, servants, proxies, queues, algorithms, etc. </para>
+        <para>Consider the following example showing us why we need an architecture tool:</para>
         <para>
             <programlisting>struct Bad : public boost::signals::trackable
 {
@@ -108,15 +118,21 @@ f2.get(); // just a "small get" at the end?</programlisting>
 boost::shared_ptr&lt;Bad> b;
 future&lt;int> f = async([b](){return b->foo()});          </programlisting>
         </para>
-        <para> Now you have the ugly problem of not knowing in which thread Bad will be destroyed.
-            And as it's pretty hard to have a thread-safe destructor, you find yourself with a race
-            condition in it. Maybe you'll find a solution for signals, but are you sure nobody is
-            ever going to do something dangerous in the destructor? This clearly is not thinking in
-            the future sense.</para>
-        <para>Another particularity of Asynchronous is that it's not hiding anything: one gets to
-            pick a pool for a particular application, choose how many threads are to be used, and
-            the type of queue which best corresponds to the job to do, which allows finer
-            tuning.</para>
+        <para>Now we have the ugly problem of not knowing in which thread Bad will be destroyed. And
+            as it's pretty hard to have a thread-safe destructor, we find ourselves with a race
+            condition in it. </para>
+        <para>Asynchronous programming has the advantage of allowing to design of code, which is
+            nonblocking and single-threaded while still utilizing parallel hardware at full
+            capacity. And all this while forgetting what a mutex is. </para>
+        <para>This brings us to a central point of Asynchronous: if we build a system with strict
+            real-time constraints, there is no such thing as a small blocking get(). We need to be
+            able to react to any event in the system in a timely manner. And we can't afford to have
+            lots of functions potentially waiting too long everywhere in our code. Therefore,
+            .then() is only good for an application of a few hundreds of lines. What about using a
+            timed_wait instead? Nope. This just limits the amount of time we waste waiting. Either
+            we wait too long before handling an error or result, or we wait not enough and we poll.
+            In any case, while waiting, our thread cannot react to other events and wastes
+            time.</para>
         <para>An image being more worth than thousand words, the following story will explain in a
             few minutes what Asynchronous is about. Consider some fast-food restaurant:</para>
         <para><inlinemediaobject>
@@ -200,7 +216,7 @@ future&lt;int> f = async([b](){return b->foo()});          </programlisting>
             -> PickingMenu -> WaitingForFood -> Paying.</para>
         <para>We also need some queues (Burger queue, Beverage glass positioning) and some
             Asynchronous Operation Processor (for example a threadpool made of workers in the
-            kitchen), event of different types (Drinks delivery). Maybe you also want some work
+            kitchen), event of different types (Drinks delivery). Maybe we also want some work
             stealing (someone in the kitchen serving drinks as he has no more burger to prepare. He
             will be slower than the machine, but still bring some time gain).</para>
         <para><emphasis role="bold">To make this work, the worker must not block, never,
@@ -222,17 +238,16 @@ int res = f.get(); // wait for result, block until ready</programlisting>
                     that it's not really asynchronous. True, our lambda will execute in another
                     thread. Actually, it's not even guaranteed either. But then, what do we do with
                     our future? Do we poll it? Or call get() as in the example? But then we will
-                    block, right? And if we block, are we still asynchronous? We will postulate that
-                    no, we're not. If we block, we cannot react to any event happening in our system
-                    any more, we are unresponsive for a while (are we back to the old times of
-                    freezing programs, the old time before threads?). We also probably miss some
-                    parallelizing opportunities as we could be doing something more useful at the
-                    same time, as in our fast-food example. And diagnostics are looking bad too as
-                    we are blocked and cannot return any. What is left to us is polling. Polling?
-                    No, it cannot be true, this is what the C++ standard offers us? And if we get
-                    more and more futures, do we carry a bag of them with us at any time and check
-                    them from time to time? Do we need some functions to, at a given point, wait for
-                    all futures or any of them to be ready? </para>
+                    block, right? And if we block, are we still asynchronous? If we block, we cannot
+                    react to any event happening in our system any more, we are unresponsive for a
+                    while (are we back to the old times of freezing programs, the old time before
+                    threads?). We also probably miss some opportunities to fully use our hardware as
+                    we could be doing something more useful at the same time, as in our fast-food
+                    example. And diagnostics are looking bad too as we are blocked and cannot
+                    deliver any. What is left to us is polling. And if we get more and more futures,
+                    do we carry a bag of them with us at any time and check them from time to time?
+                    Do we need some functions to, at a given point, wait for all futures or any of
+                    them to be ready? </para>
                 <para>Wait, yes they exist, <code>wait_for_all</code> and
                     <code>wait_for_any</code>... </para>
                 <para>And what about this example from an online documentation?</para>
@@ -262,9 +277,9 @@ future&lt;string> f2 = f1.then([](future&lt;int> f)
 // and here?
 string s= f2.get();</programlisting>
                 </para>
-                <para>The idea is to make std::async more asynchronous (oh my, this already just
-                    sounds bad) by adding something (.then) to be called when the asynchronous
-                    action finishes. It still does not fly:<itemizedlist>
+                <para>The idea is to make std::async more asynchronous (this already just sounds
+                    bad) by adding something (.then) to be called when the asynchronous action
+                    finishes. It still does not fly:<itemizedlist>
                         <listitem>
                             <para>at some point, we will have to block, thus ending our asynchronous
                                 behavior</para>
@@ -307,11 +322,8 @@ string s= f2.get();</programlisting>
                                 consuming resources.</para>
                         </listitem>
                         <listitem>
-                            <para>Usage: getting a future doesn't bring as much asynchronous
-                                behaviour as one might think. Usually, docs tell you to do something
-                                else and check it later. But most cases simply mean that the client
-                                will earlier or later block until the future is ready. This also
-                                applies to std/boost::async.</para>
+                            <para>Usage: getting a future gets us back to the non-asynchronous
+                                behaviour we would like to avoid.</para>
                         </listitem>
                     </itemizedlist></para>
             </sect1>
@@ -332,7 +344,7 @@ string s= f2.get();</programlisting>
             </sect1>
         </chapter>
         <chapter>
-            <title>Features</title>
+            <title>Features of Boost.Asynchronous</title>
             <sect1>
                 <title>Active Component</title>
                 <subtitle>Extending Active Objects with more servants within a thread
@@ -340,28 +352,59 @@ string s= f2.get();</programlisting>
                 <para>A commonly cited drawback of Active Objects is that they are awfully
                     expensive. A thread per object is really a waste of ressources.
                     Boost.Asynchronous extends this concept by allowing an unlimited number of
-                    objects to live within a single thread context, thus amortizing the
-                    costs.</para>
-                <para>This brings another difference with ActiveObjects. As many objects are
-                    potentially living in a thread context, none should be allowed to process
-                    long-lasting tasks as it would reduce reactivity of the whole component. In this
-                    aspect, Asynchronous' philosophy is closer to a Proactor.</para>
+                    objects to live within a single thread context, thus amortizing the costs. It
+                    even provides a way for n Active Objects to share m threads while still being
+                    called single thread. This allows tuning thread usage.</para>
+                <para>As many objects are potentially living in a thread context, none should be
+                    allowed to process long-lasting tasks as it would reduce reactivity of the whole
+                    component. In this aspect, Asynchronous' philosophy is closer to a
+                    Proactor.</para>
                 <para>As long-lasting tasks do happen, Boost.Asynchronous provides several
-                    implementations of threadpools and the infrastructure to make it safe to post
-                    work to threadpools and get aynchronously a safe callback. It also provides safe
-                    mechanisms to shutdown Active Components and threadpools.</para>
+                    implementations of threadpools and the needed infrastructure to make it safe to
+                    post work to threadpools and get aynchronously a safe callback. It also provides
+                    safe mechanisms to shutdown Active Components and threadpools.</para>
+            </sect1>
+            <sect1>
+                <title>Better Architecture</title>
+                <para>We all learned in our design books that a software should be organized into
+                    layers. This is, however, easier said than done, single-threaded, but much worse
+                    when layers are having their own threads. Let's say, layer A is on top and
+                    basing itself on layer B. A creates B and keeps it alive as long as it lives
+                    itself. A and B are each composed of hundreds of classes / objects. Our standard
+                    communication is A => B, meaning A gives orders to B, which executes them. This
+                    is the theory. Unfortunately, B needs to give answers, usually delayed, to A.
+                    Unfortunately, A and B live in different threads. This means mutexes. Ouch. Now
+                    we are forced to check every class of A and protect it. Worse, the object of A
+                    getting an answer might have long been destroyed. Ouch again. What to do? We
+                    could keep the object of A alive in the callback of B. But then we have a
+                    dependency B -> A. Ouch again, bad design. We can also hide the dependency using
+                    some type erasure mechanism. We still have a logical one as B keeps its owner,
+                    A, alive. Then, we can use a weak_ptr so that B does not keep A alive. But when
+                    we lock, we do keep A alive. It's for a short time, but what if A is shutting
+                    down? It's lost, our layered design is broken.</para>
+                <para>Asynchronous is more that a library providing a better std::async or some
+                    parallel algorithms, it's first of all an architectural tool. In the above case,
+                    we will decide that every layer will live in its own thread(s), called
+                    schedulers in Asynchronous language. Deciding in which thread an object "lives"
+                    is a key point of a good design. Then the top layer, A, will make a request to
+                    B, aking a future as a result, or much better, providing a callback.
+                    Asynchronous offers a callback safe in two ways: thread-safe and checking the
+                    lifetime of the callback target. This callback is provided by
+                        <code>make_safe_callback</code>. This simple tool is a major help in making
+                    a safe and efficient design.</para>
             </sect1>
             <sect1>
                 <title>Shutting down</title>
                 <para>Shutting down a thread turns out to be harder in practice than expected, as
                     shown by several posts of surprise on the Boost mailing lists when Boost.Thread
                     tried to match the C++ Standard. Asynchronous hides all these ugly details. What
-                    users see is a proxy object, which can be shared by any number of objects
-                    executing within any number of threads. </para>
-                <para>When the last instance of the inner-ActiveComponent scheduler object is
-                    destroyed, the scheduler thread is stopped. When the last instance of a
-                    scheduler proxy is destroyed, the scheduler thread is joined. It's as simple as
-                    that. This makes threads shared objects.</para>
+                    users see is a scheduler proxy object, which can be shared by any number of
+                    objects, and running any number of threads, managed by a scheduler. The
+                    scheduler proxy object manages the lifetime of the scheduler. </para>
+                <para>When the last instance of the scheduler object is destroyed, the scheduler
+                    thread is stopped. When the last instance of a scheduler proxy is destroyed, the
+                    scheduler thread is joined. It's as simple as that. This makes threads shared
+                    objects. </para>
             </sect1>
             <sect1>
                 <title>Object lifetime</title>
@@ -385,36 +428,35 @@ private:
 };            </programlisting>
                 </para>
                 <para>This is called a thread-safe interface pattern. Public members lock, private
-                    do not. Simple enough, right? Unfortunately, it doesn't fly.</para>
+                    do not. Simple enough. Unfortunately, it doesn't fly.</para>
                 <para>First one has the risk of deadlock if a private member calls a public one
-                    while being called from another public member. Forget to check one path of
-                    execution within a class implementation and we get a nice deadlock. You'll have
-                    to test every single path of execution to prove your code is correct. And this
-                    at every change.</para>
-                <para>Anyway, let's face it, for any complex class, where there's a mutex, there is
-                    a race or a deadlock...</para>
+                    while being called from another public member. If we forget to check one path of
+                    execution within a class implementation, we get a deadlock. We'll have to test
+                    every single path of execution to prove our code is correct. And this at every
+                    commit.</para>
+                <para>Usually, for any complex class, where there's a mutex, there is a race or a
+                    deadlock...</para>
                 <para>But even worse, the principle itself is not correct in C++. It supposes that a
                     class can protect itself. Well, no, it can't. Why? One cannot protect the
                     destructor. If the object (and the mutex) gets destroyed when a thread waits for
                     it in foo(), we get a crash or an exception. We can mitigate this with the use
                     of a shared_ptr, then we have no destructor call while someone waits for the
                     mutex. Unfortunately, we still have a risk of a signal, callback, etc. all those
-                    things mixing badly with threads.</para>
-                <para>What you need is protect your object with a shared_ptr and have no other way
-                    to access the object. Asynchronous provides this.</para>
-                <para>There are more lifetime issues, even without mutexes. If you have ever used
-                    Boost.Asio, a common mistake and an easy one is when a callback is called in the
-                    proactor thread after an asynchronous operation, but the object called is long
-                    gone and the callback invalid. Asynchronous provides <command
+                    things mixing badly with threads. And if we use too many shared_ptr's, we start
+                    having lifetime issues or leaks. </para>
+                <para>There are more lifetime issues, even without mutexes or threads. If you have
+                    ever used Boost.Asio, a common mistake and an easy one is when a callback is
+                    called in the proactor thread after an asynchronous operation, but the object
+                    called is long gone and the callback invalid. Asynchronous provides <command
                         xlink:href="#trackable_servant">trackable_servant</command> which makes sure
                     that a callback is not called if the object which called the asynchronous
                     operation is gone. It also prevents a task posted in a threadpool to be called
-                    if this condition occurs, which improves performance. It also provides a safe
-                    callback for use as Boost.Asio or similar.</para>
+                    if this condition occurs, which improves performance. Asynchronous also provides
+                    a safe callback for use as Boost.Asio or similar asynchronous libraries.</para>
             </sect1>
             <sect1>
                 <title>Servant Proxies</title>
-                <para>Asynchronous offers <code>servant_proxy</code>, which make the outside world
+                <para>Asynchronous offers <code>servant_proxy</code>, which makes the outside world
                     call members of a servant as if it was not living in an ActiveObject. It looks
                     like a thread-safe interface, but safe from deadlock and race conditions. </para>
             </sect1>
@@ -424,20 +466,20 @@ private:
                 <para>Let's say you posted so many tasks to your threadpool that all your cores are
                     full, still, your application is slipping more and more behind plan. You need to
                     give up some tasks to catch back a little.</para>
-                <para>Asynchronous can give you an interruptible cookie when you post a task to a
-                    scheduler, and you can use it to <command xlink:href="#interrupting_tasks">stop a posted task</command>. If not running yet, the
-                    task will not start, if running, it will stop at the next interruption point,
-                    which are documented in the <link
+                <para>Asynchronous can give us an interruptible cookie when we post a task to a
+                    scheduler, and we can use it to <command xlink:href="#interrupting_tasks">stop a
+                        posted task</command>. If not running yet, the task will not start, if
+                    running, it will stop at the next interruption point, in the sense of the <link
                         xlink:href="http://www.boost.org/doc/libs/1_54_0/doc/html/thread/thread_management.html#thread.thread_management.tutorial.interruption"
-                        >Boost.Thread documentation</link>. Diagnostics will show that a task was
+                        >Boost.Thread documentation</link>. Diagnostics will show that the task was
                     interrupted.</para>
             </sect1>
             <sect1>
                 <title>Diagnostics</title>
-                <para>Finding out how good your software is doing is not an easy task. You need to
-                    add lots of logging to find out which function call takes too long and becomes a
-                    bottleneck. Finding out the minimum required hardware to run your application is
-                    even harder.</para>
+                <para>Finding out how good your software is doing is not an easy task. Developers
+                    are notoriously bad at it. You need to add lots of logging to find out which
+                    function call takes too long and becomes a bottleneck. Finding out the minimum
+                    required hardware to run your application is even harder.</para>
                 <para>Asynchronous design helps here too. By logging the required time and the
                     frequency of tasks, it is easy to find out how many cores are needed.
                     Bottlenecks can be found by logging what the Active Component is doing and how
@@ -445,18 +487,21 @@ private:
                     logging state changes will allow a better understanding of your system and make
                     visible potential for concurrency. Even for non-parallel algorithms, finding
                     out, using a state machine, the earliest point a task can be thrown to a
-                    threadpool will give some sort of low-hanging-fruit concurrency. Throw enough
-                    tasks to the threadpool and manage this with a state machine and you might use
-                    your cores with little effort. Parallelization can then be used later on by
-                    logging which tasks are worth parallelized.</para>
+                    threadpool will give some low-hanging-fruit concurrency. Throw enough tasks to
+                    the threadpool and manage this with a state machine and you might use your cores
+                    with little effort. Parallelization can then be used later on by logging which
+                    tasks are worth parallelized.</para>
+                <para>Asynchronous offers tools generating nice HTML outputs for every schedulers,
+                    including waiting and execution times of tasks, histograms, etc.</para>
+                <para>TODO link to html diags example</para>
             </sect1>
             <sect1>
                 <title>Continuations</title>
                 <para>Callbacks are great when you have a complex flow of operations which require a
                     state machine for management, however there are cases where callbacks are not an
-                    ideal solution. Either because your application requires a constant switching of
-                    context between single-threaded and parallel parts, or because the
-                    single-threaded part might be busy, which would delay completion of the
+                    ideal solution. Either because your application would require a constant
+                    switching of context between single-threaded and parallel schedulers, or because
+                    the single-threaded scheduler might be busy, which would delay completion of the
                     algorithm. A known example of this is a parallel fibonacci. In this case, one
                     can register a <command xlink:href="#continuations">continuation</command>,
                     which is to be executed upon completion of one or several tasks. </para>
@@ -474,19 +519,23 @@ private:
                     6-core i7, and will usually have a lesser clock frequency and an older
                     architecture. </para>
                 <para>The solution could be: start with the i7, then if you need more power, add
-                    some more machines which will steal jobs from your threadpools with <command xlink:href="#distributing">TCP</command>. This
-                    can be done quite easily with Asynchronous.</para>
+                    some more machines which will steal jobs from your threadpools using <command
+                        xlink:href="#distributing">TCP</command>. This can be done quite easily with
+                    Asynchronous.</para>
                 <para>Want to build your own hierarchical network of servers? It's hard to make it
                     easier.</para>
             </sect1>
             <sect1>
                 <title>Parallel algorithms</title>
                 <para>The library also comes with <command xlink:href="#parallel_algos">non-blocking
-                        algorithms</command> with iterators or ranges, support for TCP, which fit
-                    well in the asynchronous system, with more to come. If you want to contribute
-                    some more, be welcome. At the moment, the library offers:<itemizedlist>
+                        algorithms</command> with iterators or ranges, partial support for TCP,
+                    which fit well in the asynchronous system, with more to come. If you want to
+                    contribute some more, be welcome. At the moment, the library offers:<itemizedlist>
                         <listitem>
-                            <para>parallel_for</para>
+                            <para>most STL algorithms</para>
+                        </listitem>
+                        <listitem>
+                            <para>parallel_for / parallel_for_each</para>
                         </listitem>
                         <listitem>
                             <para>parallel_reduce</para>
@@ -495,16 +544,22 @@ private:
                             <para>parallel_extremum</para>
                         </listitem>
                         <listitem>
-                            <para>parallel_count</para>
-                        </listitem>
-                        <listitem>
                             <para>parallel_find_all</para>
                         </listitem>
                         <listitem>
                             <para>parallel_invoke</para>
                         </listitem>
                         <listitem>
-                            <para>parallel_sort</para>
+                            <para>parallel_sort , parallel_quicksort</para>
+                        </listitem>
+                        <listitem>
+                            <para>parallel_scan</para>
+                        </listitem>
+                        <listitem>
+                            <para>parallelized Boost.Geometry algorithms for polygons
+                                (parallel_union, parallel_intersection,
+                                parallel_geometry_intersection_of_x,
+                                parallel_geometry_union_of_x)</para>
                         </listitem>
                     </itemizedlist></para>
             </sect1>
@@ -539,10 +594,10 @@ private:
             <sect1>
                 <title>Extending the library</title>
                 <para>Asynchronous has been written with the design goal of allowing anybody to
-                    extend the library. In particular, the author is hoping to be offered the
+                    extend the library. In particular, the authors are hoping to be offered the
                     following extensions:<itemizedlist>
                         <listitem>
-                            <para>Schedulers, Threadpools</para>
+                            <para>More schedulers, threadpools</para>
                         </listitem>
                         <listitem>
                             <para>Queues</para>
@@ -676,8 +731,6 @@ int res = fui.get();   </programlisting>
                     first need a servant:</para>
                 <programlisting>struct Servant
 {
-    // optional: the servant has such an easy constructor, no need to post it
-    typedef int simple_ctor;
     Servant(int data): m_data(data){}
     int doIt()const
     {
@@ -728,9 +781,9 @@ public:
         // post and get a future because we're interested in the result.
         boost::future&lt;int> fu = proxy.doIt();
         std::cout&lt;&lt; "future:" &lt;&lt; fu.get() &lt;&lt; std::endl;
-    }// here, Servant's destructor is posted
+    }// here, Servant's destructor is posted and waited for
 }// scheduler is gone, its thread has been joined
-std::cout&lt;&lt; "something:" &lt;&lt; something &lt;&lt; std::endl; // something was not changed</programlisting>
+std::cout&lt;&lt; "something:" &lt;&lt; something &lt;&lt; std::endl; // something was not changed as it was passed by value. You could use a boost::ref if this is not desired.</programlisting>
                 <para>We can call members on the proxy, almost as if they were called on Servant.
                     The library takes care of the posting and forwarding the arguments. When
                     required, a future is returned. Stack unwinding works, and when the servant
@@ -742,7 +795,7 @@ std::cout&lt;&lt; "something:" &lt;&lt; something &lt;&lt; std::endl; // somethi
                     example</link>.</para>
             </sect1>
             <sect1>
-                <title>Using a threadpool</title>
+                <title>Using a threadpool from within a servant</title>
                 <para>If you remember the principles of Asynchronous, blocking a single-thread
                     scheduler is taboo as it blocks the thread doing all the management of a system.
                     But what to do when one needs to execute long tasks? Asynchronous provides a
@@ -751,36 +804,36 @@ std::cout&lt;&lt; "something:" &lt;&lt; something &lt;&lt; std::endl; // somethi
                     thread-unsafe? Why not threadpools with futures, like usual? Because in a
                     perfectly asynchronous world, waiting for a future means blocking a servant
                     scheduler. One would argue that it is possible not to block on the future, and
-                    instead ask if there is a result. But then, what if not? Is the alternative to
-                    poll? Like in the "good" all times?</para>
-                <para>If we accept the future argument, but what about thread-safety? Asynchronous
-                    takes care of this. A callback is never called from a threadpool, but instead
-                    posted back to the queue of the scheduler which posted the work. All the servant
-                    has to do is to do nothing and wait until the callback is executed. Note that
-                    this is not the same as a blocking wait, the servant can still react to
-                    events.</para>
+                    instead ask if there is a result. But frankly, polling is not a nice solution
+                    either.</para>
+                <para>And what about thread-safety? Asynchronous takes care of this. A callback is
+                    never called from a threadpool, but instead posted back to the queue of the
+                    scheduler which posted the work. All the servant has to do, is to do nothing and
+                    wait until the callback is executed. Note that this is not the same as a
+                    blocking wait, the servant can still react to events.</para>
                 <para>Clearly, this brings some new challenges as the flow of control gets harder to
                     follow. This is why a servant is often written using state machines. The
                     (biased) author suggests to have a look at the <link
-                        xlink:href="http://svn.boost.org/svn/boost/trunk/libs/msm/doc/HTML/index.html"
+                        xlink:href="http://www.boost.org/doc/libs/1_59_0/libs/msm/doc/HTML/index.html"
                         > Meta State Machine library </link> , which plays nicely with
                     Asynchronous.</para>
                 <para>But what about the usual proactor issues (crashes) when the servant has long
-                    been destroyed when the callback is posted. Gone. Asynchronous provides <command
-                        xml:id="trackable_servant"/><code>trackable_servant</code> which will ensure
-                    that a callback is not called if the servant is gone. Better even, if the
-                    servant has been destroyed, an unstarted posted task will not be
+                    been destroyed when the callback is posted. Gone. Asynchronous <command
+                        xml:id="trackable_servant"/><code>trackable_servant</code> post_callback
+                    ensures that a callback is not called if the servant is gone. Better even, if
+                    the servant has been destroyed, an unstarted posted task will not be
                     executed.</para>
-                <para>Again comes another issue. What if I post a task, say a lambda, which captures
-                    a shared_ptr to an object per value, and this object is a boost::signal? Then
-                    when the task object has been executed and is destroyed, I'll get a race on the
-                    signal deregistration. Good point, but again no. Asynchronous ensures that a
-                    task created within a scheduler context gets destroyed in this context.</para>
-                <para>This is about the best protection you can get. What Asynchronous cannot
-                    protect you from are self-made races within a task (if you post a task with a
+                <para>What about another common issue? If one posts a task, say a lambda, which
+                    captures a shared_ptr to an object per value, and this object is a
+                    boost::signal? Then when the task object has been executed and is destroyed, one
+                    could have a race on the signal deregistration. But again no. Asynchronous
+                    ensures that a task created within a scheduler context gets destroyed in this
+                    context.</para>
+                <para>This is about the best protection one can get. What Asynchronous cannot
+                    protect from are self-made races within a task (if you post a task with a
                     pointer to the servant, you're on your own and have to protect your servant). A
-                    good rule of thumb is to consider data passed to a task as moved. To support
-                    this, Asynchronous does not copy tasks but moves them.</para>
+                    good rule of thumb is to consider data passed to a task as moved or passed by
+                    value. To support this, Asynchronous does not copy tasks but moves them.</para>
                 <para>Armed with these protections, let's give a try to a threadpool, starting with
                     the most basic one, <code>threadpool_scheduler</code> (more to come):</para>
                 <programlisting>struct Servant : boost::asynchronous::trackable_servant&lt;>
@@ -796,17 +849,17 @@ std::cout&lt;&lt; "something:" &lt;&lt; something &lt;&lt; std::endl; // somethi
     {
        //ok, let's post some work and wait for an answer
        <emphasis role="bold">post_callback</emphasis>(
-                    [](){std::cout &lt;&lt; "Long Work" &lt;&lt; std::endl;}, //work, do not use "this" here
+                    [](){std::cout &lt;&lt; "Long Work" &lt;&lt; std::endl;}, // work, do not use "this" here
                     [/*this*/](boost::asynchronous::expected&lt;void>){...}// callback. Safe to use "this" as callback is only called if Servant is alive
         );
     }
 };</programlisting>
-                <para>We now have a servant, ready to be created in its own thread, which posts some
-                    long work to a three-thread-threadpool and gets a callback, but only if still
-                    alive. Similarly, the long work will be executed by the threadpool only if
-                    Servant is alive by the time it starts. Everything else stays the same, one
-                    creates a proxy for the servant and posts calls to its members, so we'll skip it
-                    for conciseness, the complete example can be found <link
+                <para>We now have a servant, living in its own thread, which posts some long work to
+                    a three-thread-threadpool and gets a callback, but only if still alive.
+                    Similarly, the long work will be executed by the threadpool only if Servant is
+                    alive by the time it starts. Everything else stays the same, one creates a proxy
+                    for the servant and posts calls to its members, so we'll skip it for
+                    conciseness, the complete example can be found <link
                         xlink:href="examples/example_post_trackable_threadpool.cpp"
                     >here</link>.</para>
             </sect1>
@@ -856,22 +909,52 @@ struct Servant2 : boost::asynchronous::trackable_servant&lt;>
                     (provided no more object is living there), and all threads joined. The <link
                         xlink:href="examples/example_two_simple_servants.cpp">complete example
                     </link> shows a few more calls too.</para>
+                <para>Asynchronous offers a different syntax to achieve the same result. Which one
+                    you use is a matter of taste, both are equivalent. The second method is with
+                    BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK(_LOG if you need logging). It takes a
+                    callback as argument, other arguments are forwarded. Combined with
+                    <code>make_safe_callback</code>, one gets the same effect (safe call) as above.</para>
+                <programlisting>// Proxy for a basic servant 
+class ServantProxy : public boost::asynchronous::servant_proxy&lt;ServantProxy,Servant>
+{
+public:
+    template &lt;class Scheduler>
+    ServantProxy(Scheduler s, int data):
+        boost::asynchronous::servant_proxy&lt;ServantProxy,Servant>(s, data)
+    {}
+    BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK(foo) // say, foo takes an int as argument
+};   </programlisting>
+                <programlisting>// Servant using the first one
+struct Servant2 : boost::asynchronous::trackable_servant&lt;>
+{
+    Servant2(boost::asynchronous::any_weak_scheduler&lt;> scheduler,ServantProxy worker)
+        :boost::asynchronous::trackable_servant&lt;>(scheduler)
+        ,m_worker(worker) // the proxy allowing access to Servant
+    void doIt()    
+    {                 
+         m_worker.foo(make_safe_callback([](boost::asynchronous::expected&lt;void> res) // expected&lt;return type of foo> 
+                                        {/* callback code*/}), 
+                      42 /* arguments of foo*/); 
+    }
+};</programlisting>
             </sect1>
             <sect1>
                 <title><command xml:id="interrupting_tasks"/>Interrupting tasks</title>
-                <para>Imagine a manager object (a state machine for example) posted some
+                <para>Let's imagine that a manager object (a state machine for example) posted some
                     long-lasting work to a threadpool, but this long-lasting work really takes too
                     long. As we are in an asynchronous world and non-blocking, the manager object
                     realizes there is a problem and decides the task must be stopped otherwise the
-                    whole application starts failing some real-time constraints. This is made
-                    possible by using another version of posting, getting a handle, on which one can
-                    require interruption. As Asynchronous does not kill threads, it means that we'll
-                    have to use one of Boost.Thread predefined interruption points. Supposing we
-                    have well-behaved tasks, they will be interrupted at the next interruption point
-                    if they started, or if they did not start yet because they are waiting in a
-                    queue, then they will never start. In this <link
-                        xlink:href="examples/example_interrupt.cpp">example</link>, we have very
-                    little to change but the post call:</para>
+                    whole application starts failing some real-time constraints (how would we do if
+                    we were blocked, waiting for a future?). This is made possible by using another
+                    form of posting, getting a handle, on which one can require interruption. As
+                    Asynchronous does not kill threads, we'll use one of Boost.Thread predefined
+                    interruption points. Supposing we have well-behaved tasks, they will be
+                    interrupted at the next interruption point if they started, or if they did not
+                    start yet because they are waiting in a queue, then they will never start. In
+                    this <link xlink:href="examples/example_interrupt.cpp">example</link>, we have
+                    very little to change but the post call. We use <code>interruptible_post_callback</code>
+                    instead of <code>post_callback</code>. We get an <code>any_interruptible object</code>, which offers a
+                    single <code>interrupt()</code> member.</para>
                 <programlisting>struct Servant : boost::asynchronous::trackable_servant&lt;>
 {
      ... // as usual
@@ -892,27 +975,28 @@ struct Servant2 : boost::asynchronous::trackable_servant&lt;>
         // if it had no time to start, well, then it will never.
         boost::this_thread::sleep(boost::posix_time::milliseconds(100));
         // actually, we changed our mind and want to interrupt the task
-        interruptible.interrupt();
-        // the callback will never be called as the task was interrupted
+        interruptible.<emphasis role="bold">interrupt()</emphasis>;
+        // the callback will likely never be called as the task was interrupted
     }
 };                </programlisting>
             </sect1>
             <sect1>
                 <title><command xml:id="logging_tasks"/>Logging tasks</title>
                 <para>Developers are notoriously famous for being bad at guessing which part of
-                    their code is inefficient or has potential for long execution time. This is bad
-                    in itself, but even worse for a control class like our post-callback servant as
-                    it reduces responsiveness. Knowing how long a posted call or a callback lasts is
-                    therefore very useful. Knowing how long take tasks executing in the threadpools
-                    is also essential to plan what hardware one needs for an application(4 cores? Or
-                    100?). We need to know what our program is doing. Asynchronous provides some
-                    logging per task to help there. Let's have a look at some code. It's also time
-                    to start using our template parameters for <code>trackable_servant</code>, in
-                    case you wondered why they are here.</para>
+                    their code is inefficient. This is bad in itself, but even worse for a control
+                    class like our post-callback servant as it reduces responsiveness. Knowing how
+                    long a posted tasks or a callback lasts is therefore very useful. Knowing how
+                    long take tasks executing in the threadpools is also essential to plan what
+                    hardware one needs for an application(4 cores? Or 100?). We need to know what
+                    our program is doing. Asynchronous provides logging per task to help there.
+                    Let's have a look at some code. It's also time to start using our template
+                    parameters for <code>trackable_servant</code>, in case you wondered why they are
+                    here.</para>
                 <programlisting>// we will be using loggable jobs internally
 typedef boost::asynchronous::any_loggable&lt;boost::chrono::high_resolution_clock> <emphasis role="bold">servant_job</emphasis>;
 // the type of our log
 typedef std::map&lt;std::string,std::list&lt;boost::asynchronous::diagnostic_item&lt;boost::chrono::high_resolution_clock> > > <emphasis role="bold">diag_type</emphasis>;
+
 // we log our scheduler and our threadpool scheduler (both use servant_job)
 struct Servant : boost::asynchronous::trackable_servant&lt;<emphasis role="bold">servant_job</emphasis>,<emphasis role="bold">servant_job</emphasis>>
 {
@@ -974,13 +1058,43 @@ for (auto mit = single_thread_sched_diag.begin(); mit != single_thread_sched_dia
           std::cout &lt;&lt; "job waited in us: " &lt;&lt; boost::chrono::nanoseconds((*jit).get_started_time() - (*jit).<emphasis role="bold">get_posted_time()</emphasis>).count() / 1000 &lt;&lt; std::endl;
           std::cout &lt;&lt; "job lasted in us: " &lt;&lt; boost::chrono::nanoseconds((*jit).get_finished_time() - (*jit).<emphasis role="bold">get_started_time()</emphasis>).count() / 1000 &lt;&lt; std::endl;
           std::cout &lt;&lt; "job interrupted? "  &lt;&lt; std::boolalpha &lt;&lt; (*jit).<emphasis role="bold">is_interrupted()</emphasis> &lt;&lt; std::endl;
+          std::cout &lt;&lt; "job failed? "  &lt;&lt; std::boolalpha &lt;&lt; (*jit).<emphasis role="bold">is_failed()</emphasis> &lt;&lt; std::endl; // did this job throw an exception?
      }
 }              </programlisting>
                 <para>It goes similarly with the threapool scheduler, with the slight difference
                     that we ask the Servant to deliver diagnostic information through a proxy
                     member. The <link xlink:href="examples/example_log.cpp">complete example</link>
-                    shows all this, plus an interrupted job (you might have noticed in the previous
-                    listing that a diagnostic offers an <code>is_interrupted</code> member).</para>
+                    shows all this, plus an interrupted job.</para>                
+            </sect1>
+            <sect1>
+                <title>Generating HTML diagnostics</title>
+                <para>We just saw how to programmatically get diagnostics from schedulers. This is
+                    very useful, but nobody likes to do it manually, so the authors went the extra
+                    mile and provide an HTML formatter for convenience. The <link
+                        xlink:href="examples/example_html_diagnostics.cpp">included example</link>
+                    shows how to use it. In this example, we have a Servant, living in its own
+                    single-threaded scheduler called "Servant". It uses a threadpool call
+                    "Threadpool". When the Servant's foo() method is called, it executes a
+                    parallel_reduce(parallel_for(...)), or whatever you like. These operations are
+                    named accordingly. We also create a third scheduler, called "Formatter
+                    scheduler", which will be used by the formatter code. Yes, even this scheduler
+                    will be logged too. The example creates a Servant, calls foo() on the proxy,
+                    sleeps for a while (how long is passed to the example as argument), then
+                    generates <link xlink:href="examples/in_progress.html">a first output
+                        statistics</link>. Depending on the sleep time, the parallel work might or
+                    might not be finished, so this is an intermediate result.</para>
+                <para>We then wait for the tasks to finish, destroy the servant, so that its
+                    destructor is logged too, and we generate a <link
+                        xlink:href="examples/final.html">final diagnostics</link>.</para>
+                <para>The HTML pages display the statistics for all schedulers, including the
+                    formatter. It shows with different colors the waiting times of tasks (called
+                    Scheduling time), the execution times, successful or failed separately, and the
+                    added total time for each task, with max min, average duration. One can also
+                    display the full list of tasks and even histograms. As this is a lot of
+                    information, it is possible to hide part of it using checkboxes.</para>
+                <para>One also gets the very useful information of how long are the different
+                    scheduler queues, which gives a very good indication of how busy the system
+                    is.</para>
             </sect1>
             <sect1>
                 <title>Queue container with priority</title>
@@ -995,16 +1109,17 @@ for (auto mit = single_thread_sched_diag.begin(); mit != single_thread_sched_dia
                                 algorithms.</para>
                         </listitem>
                         <listitem>
-                            <para>Ones gets also reduced contention if many threads of a threadpool
-                                post something to the queue of a single-threaded scheduler. If no
-                                priority is defined, one queue will be picked, according to a
-                                configurable policy, reducing contention on a single queue.</para>
+                            <para>Reduced contention if many threads of a threadpool post something
+                                to the queue of a single-threaded scheduler. If no priority is
+                                defined, one queue will be picked, according to a configurable
+                                policy, reducing contention on a single queue.</para>
                         </listitem>
                         <listitem>
-                            <para>It is possible to mix queues to get the best of each.</para>
+                            <para>It is possible to mix queues.</para>
                         </listitem>
                         <listitem>
-                            <para>One can build a queue container of queue containers, etc.</para>
+                            <para>It is possible to build a queue container of queue containers,
+                                etc.</para>
                         </listitem>
                     </itemizedlist></para>
                 <para>Note: This applies to any scheduler. We'll start with single-threaded
@@ -1046,13 +1161,13 @@ for (auto mit = single_thread_sched_diag.begin(); mit != single_thread_sched_dia
                     are work items in the first queue, take them, if there are no, try in the
                     second, etc. If all queues are empty, the thread gives up his time slice and
                     sleeps until some work item arrives. If no priority is defined by posting, a
-                    queue will be chosen (by default randomly, but you can configure this with a
+                    queue will be chosen (by default randomly, but this can be configured with a
                     policy). This has the advantage of reducing contention of the queue, even when
                     not using priorities. The servant defines the priority of the tasks it provides.
-                    While this might seem surprising, it is a design choice to avoid someone using a
-                    servant proxy interface to think about it, as you will see in the second
-                    listing. To define a priority for a servant proxy, there is a second field in
-                    the macros:</para>
+                    While this might seem surprising, it is a design choice to avoid that the coder
+                    using a servant proxy interface would have to think about it, as you will see in
+                    the second listing. To define a priority for a servant proxy, there is a second
+                    field in the macros:</para>
                 <programlisting>class ServantProxy : public boost::asynchronous::servant_proxy&lt;ServantProxy,Servant>
 {
 public:
@@ -1078,7 +1193,8 @@ boost::future&lt;boost::future&lt;int>> fu = proxy.start_async_work();</programl
        [](){return 42;},// work
        [this](boost::asynchronous::expected&lt;int> res){}// callback functor.
        ,"",
-       <emphasis role="bold">2,2</emphasis>
+       <emphasis role="bold">2</emphasis>, // work prio
+       <emphasis>2</emphasis>  // callback prio
 );</programlisting>
                 <para>Note the two added priority values: the first one for the task posted to the
                     threadpool, the second for the priority of the callback posted back to the
@@ -1091,7 +1207,7 @@ boost::future&lt;boost::future&lt;int>> fu = proxy.start_async_work();</programl
                     with an <code>any_queue_container</code> or a
                         <code>composite_threadpool_scheduler</code> can. The <link
                         xlink:href="examples/example_queue_container_log.cpp">same example</link>
-                    can be rewritten to make use of the logging mechanism.</para>
+                    can be rewritten to also support logging.</para>
                 <para><code>any_queue_container</code> has two template arguments. The first, the
                     job type, is as always by default, a callable (<code>any_callable</code>) job.
                     The second is the policy which Asynchronous uses to find the desired queue for a
@@ -1101,8 +1217,8 @@ boost::future&lt;boost::future&lt;int>> fu = proxy.start_async_work();</programl
                         (<code>default_random_push_policy</code>), but you might pick
                         <code>sequential_push_policy</code>, which keeps an atomic counter to post
                     jobs to queues in a sequential order.</para>
-                <para>If your idea is to build a queue container of queue containers, you'll
-                    probably want to provide your own policy.</para>
+                <para>If you plan to build a queue container of queue containers, you'll probably
+                    want to provide your own policy.</para>
             </sect1>
             <sect1>
                 <title>Multiqueue Schedulers' priority</title>
@@ -1111,7 +1227,7 @@ boost::future&lt;boost::future&lt;int>> fu = proxy.start_async_work();</programl
                     threadpool_scheduler. Furthermore, these schedulers support priority: the
                     priority given in post_future or post_callback is the (1-based) position of the
                     queue we want to post to. 0 means "any queue". A queue of priority 1 has a
-                    higher priority than a queue qith priority 2, etc. </para>
+                    higher priority than a queue with priority 2, etc. </para>
                 <para>Each queue is serving one thread, but threads steal from each other's queue,
                     according to the priority.</para>
             </sect1>
@@ -1136,11 +1252,11 @@ boost::future&lt;boost::future&lt;int>> fu = proxy.start_async_work();</programl
                 <para>The first argument is the number of worker threads, which is at the same time
                     the number of queues. As for every scheduler, if the queue constructor takes
                     arguments, they come next and are forwarded to the queue.</para>
-                <para>This is the advised scheduler for standard cases as it offers lesser
-                    contention and task stealing between the queues it uses for task
-                    transfer.</para>
-                <para>There is a limitation, these schedulers cannot have 0 thread like their
-                    single-queue counterparts.</para>
+                <para>This is the <emphasis role="underline">advised</emphasis> scheduler for
+                    standard cases as it offers lesser contention and task stealing between the
+                    queues it uses for task transfer.</para>
+                <para><emphasis role="italic">Limitation:</emphasis> these schedulers cannot have 0
+                    thread like their single-queue counterparts.</para>
             </sect1>
             <sect1>
                 <title>Composite Threadpool Scheduler</title>
@@ -1164,13 +1280,13 @@ boost::future&lt;boost::future&lt;int>> fu = proxy.start_async_work();</programl
                     great if we could decide how much compute power we give to each task
                     type.</para>
                 <para>This is what <code>composite_threadpool_scheduler</code> solves. This pool
-                    supports, like any other pool, the
-                    <code>any_shared_scheduler_proxy</code>concept so you can use it in place of the
-                    ones we used so far. The pool is composed of other pools
-                        (<code>any_shared_scheduler_proxy</code> pools). It implements work stealing
-                    between pools if a) the pools support it and b) the queue of a pool also does.
-                    For example, if we define as worker of a servant inside a single-threaded
-                    scheduler:</para>
+                        supports, like any other pool, the
+                        <code>any_shared_scheduler_proxy</code>concept so you can use it in place of
+                        the ones we used so far. The pool is composed of other pools
+                            (<code>any_shared_scheduler_proxy</code> pools). It implements work
+                        stealing between pools if a) the pools support it and b) the queue of a pool
+                        also does. For example, we can create the following worker pool made of 3
+                        sub-pools:</para>
                 <para>
                     <programlisting>// create a composite threadpool made of:
 // a multiqueue_threadpool_scheduler, 1 thread, with a lockfree_queue of capacity 100. 
@@ -1184,7 +1300,7 @@ boost::asynchronous::any_shared_scheduler_proxy&lt;> tp2 = boost::asynchronous::
                     new boost::asynchronous::stealing_multiqueue_threadpool_scheduler&lt;boost::asynchronous::threadsafe_list&lt;> > (3));
 
 // a multiqueue_threadpool_scheduler, 4 threads, each with a lockfree_spsc_queue of capacity 100
-// this works because there will be no stealing as the queue can't, and only this single-thread scheduler will be the producer
+// this is safe because there will be no stealing as the queue does not support it, and only the servant single-thread scheduler will be the producer
 boost::asynchronous::any_shared_scheduler_proxy&lt;> tp3 = boost::asynchronous::create_shared_scheduler_proxy( 
                new boost::asynchronous::multiqueue_threadpool_scheduler&lt;boost::asynchronous::lockfree_spsc_queue&lt;> > (4,100));
 
@@ -1210,9 +1326,10 @@ boost::asynchronous::any_shared_scheduler_proxy&lt;> tp_worker =
                                 always).</para>
                         </listitem>
                     </itemizedlist></para>
-                <para>A good example of why to use this pool is if you have a threadpool for an
-                    asio-based communication. Using such a pool inside the composite pool will allow
-                    the threads of this pool to help (steal) other pools if they have nothing to do. </para>
+                <para>Another example of why to use this pool is reusing threads allocated to an
+                        asio-based communication for helping other schedulers. Addng an asio
+                        scheduler to a composite pool will allow the threads of this scheduler to
+                        help (steal) other pools when no communication is currently happening. </para>
                 <para>Stealing is done with priority. A stealing pool first tries to steal from the
                         first pool, then from the second, etc.</para>
                 <para>The <link xlink:href="examples/example_composite_threadpool.cpp">following
@@ -1220,44 +1337,42 @@ boost::asynchronous::any_shared_scheduler_proxy&lt;> tp_worker =
                         xlink:href="#asio_scheduler">ASIO section</command> will show how an ASIO
                     pool can steal.</para>
                 <para>The threadpool schedulers we saw so far are not stealing from other pools. The
-                    single-queue schedulers are not stealing, and the multiqueue schedulers steal
-                    from the queues of other threads of the same pool. The stealing schedulers
-                    usually indicate this by appending a <code>stealing_</code> to their name:<itemizedlist>
-                        <listitem>
-                            <para><code>stealing_threadpool_scheduler</code> is a
-                                    <code>threadpool_scheduler</code> which steals from other
-                                pools.</para>
-                        </listitem>
-                        <listitem>
-                            <para><code>stealing_multiqueue_threadpool_scheduler</code> is a
-                                    <code>multiqueue_threadpool scheduler</code> which steals from
-                                other pools.</para>
-                        </listitem>
-                        <listitem>
-                            <para><code>asio_scheduler steals</code>.</para>
-                        </listitem>
-                    </itemizedlist></para>
-                <para>The only difference with their not stealing equivalent is that they need a
-                    composite_scheduler to tell them from which queues from other pools they can
-                    steal.</para>
-                <para>Not all schedulers offer a queue to steal from. A
-                        <code>single_thread_scheduler</code> does not as it would likely bring race
-                    conditions in active objects. If you do want to allow stealing, use a threadpool
-                    with 1 thread. An <code>asio_scheduler</code> also offers no queue to steal from
-                    although it can steal from other queues because Boost.Asio does not offer this
-                    in its interface. Future extensions will overcome this.</para>
+                        single-queue schedulers are not stealing, and the multiqueue schedulers
+                        steal from the queues of other threads of the same pool. The
+                        scheduler-stealing schedulers usually indicate this by appending a
+                            <code>stealing_</code> to their name:<itemizedlist>
+                            <listitem>
+                                <para><code>stealing_threadpool_scheduler</code> is a
+                                        <code>threadpool_scheduler</code> which steals from other
+                                    pools.</para>
+                            </listitem>
+                            <listitem>
+                                <para><code>stealing_multiqueue_threadpool_scheduler</code> is a
+                                        <code>multiqueue_threadpool scheduler</code> which steals
+                                    from other pools.</para>
+                            </listitem>
+                            <listitem>
+                                <para><code>asio_scheduler steals</code>.</para>
+                            </listitem>
+                        </itemizedlist></para>
+                <para>The only difference with their not stealing equivalent is that they steal from
+                        other schedulers. To achieve this, they need a composite_scheduler to tell
+                        them from which schedulers they can steal.</para>
+                <para>Not all schedulers offer to be stolen from. A
+                            <code>single_thread_scheduler</code> does not as it would likely bring
+                        race conditions to active objects.</para>
                 <para>Another interesting usage will be when planning for extra machines to help a
-                    threadpool by processing some of the work: jobs can be stolen from a threadpool
-                    by a <command xlink:href="#distributing">tcp_server_scheduler</command> from which other machines can
-                    get them. Just pack both pools in a <code>composite_threadpool_scheduler</code>
-                    and you're ready to go.</para>
+                        threadpool by processing some of the work: work can be stolen from a
+                        threadpool by a <command xlink:href="#distributing"
+                            >tcp_server_scheduler</command> from which other machines can get it.
+                        Just pack both pools in a <code>composite_threadpool_scheduler</code> and
+                        you're ready to go.</para>
                 </sect2>
                 <sect2>
                     <title>Priority</title>
-                    <para>Like a multiqueue threadpool scheduler, a composite supports priority. The
-                        first pool passed in the constructor of the composite pool has priority 1,
-                        the second 2, etc. 0 means "any pool" and n where n > number of pools will
-                        me modulo-ed.</para>
+                    <para>A composite supports priority. The first pool passed in the constructor of
+                        the composite pool has priority 1, the second 2, etc. 0 means "any pool" and
+                        n where n > number of pools will me modulo-ed.</para>
                     <para>Posting to this scheduler using post_future or post_callback using a given
                         priority will post to the according pool. If a pool supports stealing from
                         other pools (stealing_... pools), it will try to steal from other pools,
@@ -1272,6 +1387,48 @@ boost::asynchronous::any_shared_scheduler_proxy&lt;> tp_worker =
                0   // callback anywhere
 );</programlisting>
                 </sect2>
+            </sect1>
+            <sect1>
+                <title>More flexibility in dividing servants among threads</title>
+                <para>TODO example and code. We saw how to assign a servant or several servants to a
+                    single thread scheduler. We can also create schedulers and divide servants among
+                    them. This is very powerful but still has some constraints:<itemizedlist>
+                        <listitem>
+                            <para>We need to assign servants to schedulers while what we want is to
+                                assign them to threads. We also have to consider how many schedulers
+                                to create. This is not very flexible.</para>
+                        </listitem>
+                        <listitem>
+                            <para>If a servant is taking too long, it blocks all other servants
+                                living inside this thread context. This increases latency.</para>
+                        </listitem>
+                    </itemizedlist></para>
+                <para>We can increase the flexibility and reduce latency by using a
+                        <code>multiple_thread_scheduler</code>. This scheduler takes as first
+                    argument a number of threads to use and a maximum number of client "worlds"
+                    (clients living logically in the same thread context). What it does, is to
+                    assign any of its threads to different client worlds, but only one thread can
+                    service a world at a time. This means that the thread safety of servants is
+                    preserved. At the same time, having any number of threads decreases latency
+                    because if a servant keeps its thread busy, it does not block other servants
+                    from being serviced. As we can choose the number of threads this scheduler will
+                    use, we achieve very fine granularity in planing our thread resources.</para>
+                <para>Another interesting characteristics of this scheduler is that its threads
+                    service its servants in order. If a thread serviced servant x, it next tries to
+                    service servant x+1. This makes for good pipelining capabilities as it increases
+                    the odds that task is koved from a pipeline stage to the next one by the same
+                    thread and will be hot in its cache.</para>
+            </sect1>
+            <sect1>
+                <title>Processor binding</title>
+                <para>TODO example and code.On many systems, it can improve performance to bind
+                    threads to a processor: better cache usage is likely as the OS does not move
+                    threads from core to core. Mostly for threadpools this is an option you might
+                    want to try.</para>
+                <para>Usage is very simple. One needs to call
+                        <code>processor_bind(core_index)</code> on a scheduler proxy. This function
+                    takes a single argument, the core to which the first thread of the pool will be
+                    bound. The second thread will be bound to core+1, etc.</para>
             </sect1>
             <sect1>
                 <title><command xml:id="asio_scheduler"/>asio_scheduler</title>
@@ -1306,9 +1463,9 @@ boost::asynchronous::any_shared_scheduler_proxy&lt;> tp_worker =
                 <para>Let's start by creating a TCP client using Boost.Asio. A slightly modified
                     version of the async TCP client from the Asio documentation will do. All we
                     change is pass it a callback which it will call when the requested data is
-                    ready. We now pack it into an Asynchronous trackable client:</para>
+                    ready. We now pack it into an Asynchronous trackable servant:</para>
                 <programlisting>// Objects of this type are made to live inside an asio_scheduler,
-// they get their associated io_service object from TLS
+// they get their associated io_service object from Thread Local Storage
 struct AsioCommunicationServant : boost::asynchronous::trackable_servant&lt;>
 {
     AsioCommunicationServant(boost::asynchronous::any_weak_scheduler&lt;> scheduler,
@@ -1357,7 +1514,7 @@ public:
     {
         // as worker we use a simple threadpool scheduler with 4 threads (0 would also do as the asio pool steals)
         auto worker_tp = boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::threadpool_scheduler&lt;boost::asynchronous::lockfree_queue&lt;> > (4,10));
+                    new boost::asynchronous::threadpool_scheduler&lt;boost::asynchronous::lockfree_queue&lt;> > (4));
 
         // for tcp communication we use an asio-based scheduler with 3 threads
         auto asio_workers = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::asio_scheduler&lt;>(3));
@@ -1386,15 +1543,14 @@ public:
                             <para>A composite pool which binds both pools together into one stealing
                                 unit. You could even set the worker pool to 0 thread, in which case
                                 the worker will get its work done when the asio threads have nothing
-                                to do. Only non- multiqueue schedulers support this. This composite
-                                pool is now made to be the worker pool of this object using
+                                to do. Only non- multiqueue schedulers support this. The worker pool
+                                is now made to be the worker pool of this object using
                                     <code>set_worker()</code>.</para>
                         </listitem>
                     </itemizedlist></para>
                 <para>We then create our communication objects inside the asio pool.</para>
-                <para><emphasis role="underline">Note</emphasis>: at the moment, asio pools can
-                    steal from other pools but not be stolen from. Let's move on to the most
-                    interesting part:</para>
+                <para><emphasis role="underline">Note</emphasis>: asio pools can steal from other
+                    pools but not be stolen from. Let's move on to the most interesting part:</para>
                 <programlisting>void get_data()
 {
     // provide this callback (executing in our thread) to all asio servants as task result. A string will contain the page
@@ -1511,15 +1667,15 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                                 avoid races.</para>
                         </listitem>
                         <listitem>
-                            <para>The timer callback shall not be called in the servant making the
+                            <para>The timer callback shall not be called if the servant making the
                                 request has been deleted (it can be an awfully long time until the
                                 callback).</para>
                         </listitem>
                     </itemizedlist></para>
-                <para>Asynchronous itself has no timer, but Boost.Asio has, so the library provides
-                    a wrapper around it and will allow us to create a timer using an io_service
-                    running in its own thread or in an asio threadpool, also provided by the
-                    library.</para>
+                <para>Asynchronous itself has no timer, but Boost.Asio does, so the library provides
+                    a wrapper around it and will allow us to create a timer using an
+                    asio::io_service running in its own thread or in an asio threadpool, provided by
+                    the library.</para>
                 <sect2>
                     <title>Constructing a timer</title>
                     <para>One first needs an <code>asio_scheduler</code> with at least one
@@ -1527,8 +1683,7 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                     <programlisting>boost::asynchronous::any_shared_scheduler_proxy&lt;> asio_sched = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::asio_scheduler&lt;>(1));               
                     </programlisting>
                     <para>The Servant living in its ActiveObject thread then creates a timer (as
-                        attribute to keep it alive as destroying the object will cancel the timer)
-                        using this scheduler and a timer value:</para>
+                        attribute to keep it alive) using this scheduler and a timer value:</para>
                     <programlisting> boost::asynchronous::asio_deadline_timer_proxy m_timer (asio_sched,boost::posix_time::milliseconds(1000));                   
                     </programlisting>
                     <para>It can now start the timer using <code>trackable_servant</code> (its base
@@ -1540,57 +1695,60 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                 std::cout &lt;&lt; "timer expired? "&lt;&lt; std::boolalpha &lt;&lt; (bool)err &lt;&lt; std::endl; //true if expired, false if cancelled
             } 
             );                  </programlisting>
-                    <para>Canceling the timer means destroying (and possibly recreating) the timer
-                        object:</para>
+                    <para>Canceling or recreating the timer means destroying (and possibly
+                        recreating) the timer object:</para>
                     <programlisting> m_timer =  boost::asynchronous::asio_deadline_timer_proxy(get_worker(),boost::posix_time::milliseconds(1000));                                   
                     </programlisting>
-                    <para>The <link xlink:href="examples/example_asio_deadline_timer.cpp">following
-                            example </link> displays a servant using an asio scheduler as a thread
-                        pool and creating there its timer object. Not how the timer is created using
-                            <code>trackable_servant</code> (its base
-                            class)<code>::get_worker()</code>.</para>
+                    <para>Alternatively, asio_deadline_timer_proxy offers a reset(duration) member,
+                        which is more efficient than recreating a proxy. The <link
+                            xlink:href="examples/example_asio_deadline_timer.cpp">following example
+                        </link> displays a servant using an asio scheduler as a thread pool and
+                        creating there its timer object. Note how the timer is created using the
+                        worker scheduler of its owner.</para>
                 </sect2>
             </sect1>
             <sect1>
                 <title><command xml:id="callback_continuations"/>Continuation tasks</title>
                 <para>A common limitation of threadpools is support for recursive tasks: tasks start
-                    other tasks, which start other tasks, until all threads in the threadpool are
-                    busy waiting. At this point, one could add more threads, but threads are
-                    expensive. Similarly, you might post a task which posts more tasks and wait for
-                    them to complete to do a merge of the part-results. Of course you can achieve
-                    this with a controller object or state machine in a single-threaded scheduler
-                    waiting for callbacks, but for very small tasks, using callbacks might just be
-                    too expensive. In such cases, Asynchronous provides continuations: a task
-                    executes, does something then creates a continuation which will wake up when
-                    ready.</para>
-                <para>A common example of recursive tasks is a parallel fibonacci. Usually, this
-                    means a task calculating fib(n) will start a fib(n-1) and fib(n-2) and blocks
-                    until both are done. These tasks will start more tasks, etc. until a cutoff
-                    number, at which point recursion stops and fibonacci is calculated serially.
-                    This approach has some problems: to avoid thread explosion, we would need
-                    fibers, which are not available in Boost at the time of this writing, and even
-                    in fibers, tasks would block, which means interrupting them is not possible,
-                    which we would want to avoid. In any case, blocking simply isn't part of the
-                    asynchronous philosophy of the library. Let's have a look how callback
-                    continuation tasks let us implement a parallel fibonacci.</para>
-                <para>First of all, we need a serial fibonacci to use for the cutoff. This is a
-                    classical one:</para>
-                <programlisting> long serial_fib( long n ) {
+                    other tasks, which start other tasks and wait for them to complete to do a merge
+                    of the part-results. Unfortunately, all threads in the threadpool will soon be
+                    busy waiting and no task will ever complete. One can achieve this with a
+                    controller object or state machine in a single-threaded scheduler waiting for
+                    callbacks, but for very small tasks, using callbacks might just be too
+                    expensive. In such cases, Asynchronous provides continuations: a task executes,
+                    does something then creates a continuation which will be excuted as soon as all
+                    child tasks complete.</para>
+                <sect2>
+                    <title>General</title>
+                    <para>The Hello World of recursive tasks is a parallel fibonacci. The naive
+                        algorithm creates a task calculating fib(n). For this it will start a fib(n-1)
+                        and fib(n-2) and block until both are done. These tasks will start more tasks,
+                        etc. until a cutoff number, at which point recursion stops and fibonacci is
+                        calculated serially. This approach has some problems: to avoid thread explosion,
+                        we would need fibers, which are not available in Boost at the time of this
+                        writing. Even with fibers, tasks would block, which means interrupting them is
+                        not possible, and a stack will have to be paid for both. Performance will also
+                        suffer. Furthermore, blocking simply isn't part of the asynchronous philosophy
+                        of the library. Let's have a look how callback continuation tasks let us
+                        implement a parallel fibonacci.</para>
+                    <para>First of all, we need a serial fibonacci when n is less than the cutoff. This
+                        is a classical one:</para>
+                    <programlisting> long serial_fib( long n ) {
     if( n&lt;2 )
         return n;
     else
         return serial_fib(n-1)+serial_fib(n-2);
 }</programlisting>
-                <para> We now need a recursive fibonacci task: </para>
-                <programlisting>// our recursive fibonacci tasks. Needs to inherit continuation_task&lt;value type returned by this task>
-struct fib_task : public boost::asynchronous::continuation_task&lt;long>
+                    <para> We now need a recursive-looking fibonacci task: </para>
+                    <programlisting>// our recursive fibonacci tasks. Needs to inherit continuation_task&lt;value type returned by this task>
+struct fib_task : public <emphasis role="bold">boost::asynchronous::continuation_task&lt;long></emphasis>
 {
     fib_task(long n,long cutoff):n_(n),cutoff_(cutoff){}
     // called inside of threadpool
     void operator()()const
     {
         // the result of this task, will be either set directly if &lt; cutoff, otherwise when taks is ready
-        boost::asynchronous::continuation_result&lt;long> task_res = this_task_result();
+        boost::asynchronous::<emphasis role="bold">continuation_result&lt;long> task_res = this_task_result()</emphasis>;
         if (n_&lt;cutoff_)
         {
             // n &lt; cutoff => execute immediately
@@ -1599,9 +1757,9 @@ struct fib_task : public boost::asynchronous::continuation_task&lt;long>
         else
         {
             // n>= cutoff, create 2 new tasks and when both are done, set our result (res(task1) + res(task2))
-            boost::asynchronous::create_callback_continuation(
-                        // called when subtasks are done, set our result
-                        [task_res](std::tuple&lt;boost::asynchronous::expected&lt;long>,boost::asynchronous::expected&lt;long> > res)
+            boost::asynchronous::<emphasis role="bold">create_callback_continuation</emphasis>(
+                        // called when subtasks are done, set result of the calling task
+                        [task_res](std::tuple&lt;boost::asynchronous::expected&lt;long>,boost::asynchronous::expected&lt;long> > res) mutable
                         {
                             long r = std::get&lt;0>(res).get() + std::get&lt;1>(res).get();
                             task_res.set_value(r);
@@ -1614,71 +1772,83 @@ struct fib_task : public boost::asynchronous::continuation_task&lt;long>
     long n_;
     long cutoff_;
 };             </programlisting>
-                <para> Our task need to inherit
+                    <para> Our task need to inherit
                         <code>boost::asynchronous::continuation_task&lt;R></code> where R is the
-                    type later returned. This class provides us with <code>this_task_result()</code>
-                    where we set the task result. This is done either immediately if n &lt; cutoff
-                    (first if clause), or (else clause) using a continuation.</para>
-                <para>If n>= cutoff, we create a continuation task. This is a sleeping task, which
-                    will get activated when all required tasks complete. In this case, we have two
-                    fibonacci sub tasks. The template argument is the return type of the
-                    continuation. We create two sub-tasks, for n-1 and n-2 and when they complete,
-                    the completion functor passed as first argument is called.</para>
-                <para>Note that <code>boost::asynchronous::create_continuation</code> is a variadic
-                    function, there can be any number of sub-tasks. The completion functor takes as
-                    single argument a tuple of futures, one for each subtask. The template argument
-                    of the future is the template argument of
+                        returned type. This class provides us with <code>this_task_result()</code> where
+                        we set the task result. This is done either immediately if n &lt; cutoff (first
+                        if clause), or (else clause) using a continuation.</para>
+                    <para>If n>= cutoff, we create a continuation. This is a sleeping task, which will
+                        get activated when all required tasks complete. In this case, we have two
+                        fibonacci sub tasks. The template argument is the return type of the
+                        continuation. We create two sub-tasks, for n-1 and n-2 and when they complete,
+                        the completion functor passed as first argument is called.</para>
+                    <para>Note that <code>boost::asynchronous::create_continuation</code> is a variadic
+                        function, there can be any number of sub-tasks. The completion functor takes as
+                        single argument a tuple of <code>expected</code>, one for each subtask. The
+                        template argument of the future is the template argument of
                         <code>boost::asynchronous::continuation_task</code> of each subtask. In this
-                    case, all are long, but it's not a requirement.</para>
-                <para>When this completion functor is called, we set our result to be result of
-                    first task + result of second task and return.</para>
-                <para>The main particularity of this solution is that a task does not block until
-                    sub-tasks complete but instead provides an asynchronous functor.</para>
-                <para>All what we still need to do is create the first task. In the tradition of
-                    Asynchronous, we do it inside an asynchronous servant which posts the first task
-                    and waits for a callback:</para>
-                <programlisting>struct Servant : boost::asynchronous::trackable_servant&lt;>
+                        case, all are of type long, but it's not a requirement.</para>
+                    <para>When this completion functor is called, we set our result to be result of
+                        first task + result of second task. </para>
+                    <para>The main particularity of this solution is that a task does not block until
+                        sub-tasks complete but instead provides a functor to be called asynchronously as
+                        soon as subtasks complete.</para>
+                    <para>All what we still need to do is create the first task. In the tradition of
+                        Asynchronous, we show it inside an asynchronous servant which posts the first
+                        task and waits for a callback, but the same is of course possible using
+                        <code>post_future</code>:</para>
+                    <programlisting>struct Servant : boost::asynchronous::trackable_servant&lt;>
 {
 ...
    void calc_fibonacci(long n,long cutoff)
    {
       post_callback(
+            // work
             [n,cutoff]()
             {
                 // a top-level continuation is the first one in a recursive serie.
                 // Its result will be passed to callback
-                return boost::asynchronous::top_level_callback_continuation&lt;long>(fib_task(n,cutoff));
-            },// work
+                <emphasis role="bold">return</emphasis> boost::asynchronous::<emphasis role="bold">top_level_callback_continuation&lt;long></emphasis>(fib_task(n,cutoff));
+            },
             // callback with fibonacci result.
             [](boost::asynchronous::expected&lt;long> res){...}// callback functor.
         );                                 
    }  
 };          </programlisting>
-                <para> We call <code>post_callback</code>, which, as usual, ensures that the
-                    callback is posted to the right thread and the servant lifetime is tracked. The
-                    posted task calls
-                        <code>boost::asynchronous::top_level_continuation&lt;task-return-type></code>
-                    to create the first, top-level continuation, passing it a first fib_task. This
-                    is non-blocking, a special version of <code>post_callback</code> recognizes a
-                    continuation and will call its callback (with a
-                        <code>expected&lt;task-return-type></code>) only when the calculation is
-                    finished.</para>
-                <para>As usual, calling get() on the expected is non-blocking, one gets either the
-                    result or an exception if thrown by a task.</para>
-                <para>Please have a look at the <link xlink:href="examples/example_fibonacci.cpp"
+                    <para> We call <code>post_callback</code>, which, as usual, ensures that the
+                        callback is posted to the right thread and the servant lifetime is tracked.
+                        The posted task calls
+                            <code>boost::asynchronous::top_level_callback_continuation&lt;task-return-type></code>
+                        to create the first, top-level continuation, passing it a first fib_task.
+                        This is non-blocking, a special version of <code>post_callback</code>
+                        recognizes a continuation and will call its callback (with a
+                            <code>expected&lt;task-return-type></code>) only when the calculation is
+                        finished, not when the "work" lambda returns. For this to work, <emphasis
+                            role="bold">it is essential not to forget the return
+                            statement</emphasis>. Without it, the compiler will unhappily remark
+                        that an <code>expected&lt;void></code> cannot be casted to an
+                            <code>expected&lt;long></code>, or worse if one expects an
+                            <code>expected&lt;void></code>, the callback would be called to
+                        early.</para>
+                    <para>As usual, calling get() on the expected is non-blocking, one gets either the
+                        result or an exception if thrown by a task.</para>
+                    <para>Please have a look at the <link xlink:href="examples/example_fibonacci.cpp"
                         >complete example</link>.</para>
-                <para>And what about logging? We don't want to give up this feature of course and
-                    would like to know how long all these fib_task took to complete. This is done
-                    through minor changes. As always we need a job:</para>
-                <programlisting>typedef boost::asynchronous::any_loggable&lt;boost::chrono::high_resolution_clock> servant_job;                                                 </programlisting>
-                <para> We give the logged name of the task in the constructor of fib_task, for
-                    example fib_task_xxx:</para>
-                <programlisting>fib_task(long n,long cutoff)
+                </sect2>
+                <sect2>
+                    <title>Logging</title>
+                    <para>What about logging? We don't want to give up this feature of course and
+                        would like to know how long all these fib_task took to complete. This is
+                        done through minor changes. As always we need a job:</para>
+                    <programlisting>typedef boost::asynchronous::any_loggable&lt;boost::chrono::high_resolution_clock> servant_job;                                                 </programlisting>
+                    <para> We give the logged name of the task in the constructor of fib_task, for
+                        example fib_task_xxx:</para>
+                    <programlisting>fib_task(long n,long cutoff)
         : boost::asynchronous::continuation_task&lt;long>("fib_task_" + boost::lexical_cast&lt;std::string>(n))
         ,n_(n),cutoff_(cutoff){}                                                </programlisting>
-                <para>And call <code>boost::asynchronous::create_continuation_job</code> instead of
+                    <para>And call <code>boost::asynchronous::create_continuation_job</code> instead of
                         <code>boost::asynchronous::create_continuation</code>:</para>
-                <programlisting>boost::asynchronous::<emphasis role="bold">create_callback_continuation_job</emphasis>&lt;servant_job>(
+                    <programlisting>boost::asynchronous::<emphasis role="bold">create_callback_continuation_job</emphasis>&lt;servant_job>(
                         [task_res](std::tuple&lt;boost::asynchronous::expected&lt;long>,boost::asynchronous::expected&lt;long> > res)
                         {
                             long r = std::get&lt;0>(res).get() + std::get&lt;1>(res).get();
@@ -1687,10 +1857,10 @@ struct fib_task : public boost::asynchronous::continuation_task&lt;long>
                         fib_task(n_-1,cutoff_),
                         fib_task(n_-2,cutoff_)
 );                                              </programlisting>
-                <para> Inside the servant we might optionally want the version of post_callback with
-                    name, and we need to use <code>top_level_continuation_job</code> instead of
+                    <para> Inside the servant we might optionally want the version of post_callback with
+                        name, and we need to use <code>top_level_continuation_job</code> instead of
                         <code>top_level_continuation</code>:</para>
-                <programlisting>post_callback(
+                    <programlisting>post_callback(
               [n,cutoff]()
               {
                    return boost::asynchronous::<emphasis role="bold">top_level_callback_continuation_job</emphasis>&lt;long,servant_job>(fib_task(n,cutoff));
@@ -1700,37 +1870,155 @@ struct fib_task : public boost::asynchronous::continuation_task&lt;long>
               <emphasis role="bold">"calc_fibonacci"</emphasis>
         );                             
                 </programlisting>
-                <para> The previous example has been <link
+                    <para> The previous example has been <link
                         xlink:href="examples/example_fibonacci_log.cpp">rewritten with logs and a
                         display of all tasks</link> (beware, with higher fibonacci numbers, this can
-                    become a long list).</para>
-                <para>Limitation: in the current implementation, tasks are logged, but the
-                    continuation callback is not. If it might take long, post a (loggable)
-                    task.</para>
-                <para>Note: to improve performance, the last task passed to <emphasis role="bold"
-                        >create_callback_continuation(_job)</emphasis> is not posted but executed
-                    directly so it will execute under the name of the task calling <emphasis
-                        role="bold">create_callback_continuation(_job)</emphasis>.</para>
-                <para><emphasis role="bold"><emphasis role="underline">Important note about
-                            exception safety</emphasis></emphasis>. The passed <emphasis role="bold"
-                        >expected</emphasis> contains either a result or an exception. Calling get()
-                    will throw contained exceptions. You should catch it, in the continuation
-                    callback and in the task itself. Asynchronous will handle the exception, but it
-                    cannot set the <emphasis role="bold">continuation_result</emphasis>, which will
-                    never be set and the callback part of post_callback never called. This simple
-                    example does not throw, so we save ourselves the cost, but more complicated
-                    algorithms should take care of this.</para>
+                        become a long list).</para>
+                    <para><emphasis role="underline">Limitation</emphasis>: in the current
+                        implementation, tasks are logged, but the continuation callback is not. If it
+                        might take long, one should post a (loggable) task.</para>
+                    <para><emphasis role="underline">Note</emphasis>: to improve performance, the last
+                        task passed to <emphasis role="bold"
+                            >create_callback_continuation(_job)</emphasis> is not posted but executed
+                        directly so it will execute under the name of the task calling <emphasis
+                            role="bold">create_callback_continuation(_job)</emphasis>.</para>
+                    <para><emphasis role="bold"><emphasis role="underline">Important note about
+                        exception safety</emphasis></emphasis>. The passed <emphasis role="bold"
+                            >expected</emphasis> contains either a result or an exception. Calling get()
+                        will throw contained exceptions. You should catch it, in the continuation
+                        callback and in the task itself. Asynchronous will handle the exception, but it
+                        cannot set the <emphasis role="bold">continuation_result</emphasis>, which will
+                        never be set and the callback part of post_callback never called. This simple
+                        example does not throw, so we save ourselves the cost, but more complicated
+                        algorithms should take care of this.</para>
+                </sect2>
+                <sect2>
+                    <title>Creating a variable number of tasks for a continuation</title>
+                    <para>It is sometimes not possible to know at compile-time the number of tasks
+                        or even the types of tasks used in the creation of a continuation. In this
+                        cases, Asynchronous provides more possibilities: <itemizedlist>
+                            <listitem>
+                                <para>Pack all subtasks of a same type into a std::vector, then pass
+                                    it to <code>create_callback_continuation or
+                                        create_callback_continuation_job</code>. In this case, we
+                                    know that these subtasks all have the same type, so our
+                                    continuation is called with a
+                                        <code>vector&lt;expected&lt;return_type>></code>:</para>
+                                            <programlisting>struct sub_task : public boost::asynchronous::continuation_task&lt;long>
+{
+    // some task with long as result type
+};
+struct main_task : public boost::asynchronous::continuation_task&lt;long>
+{
+  void operator()()
+  {
+     boost::asynchronous::continuation_result&lt;long> task_res = this_task_result();
+     <emphasis role="bold">std::vector&lt;sub_task></emphasis> subs;
+     subs.push_back(sub_task());
+     subs.push_back(sub_task());
+     subs.push_back(sub_task()); 
+                                         
+     boost::asynchronous::<emphasis role="bold">create_callback_continuation</emphasis>(
+          [task_res](<emphasis role="bold">std::vector&lt;boost::asynchronous::expected&lt;long>></emphasis> res)
+          {
+             long r = res[0].get() + res[1].get() + res[2].get();
+             task_res.set_value(r);
+          },
+          <emphasis role="bold">std::move(subs)</emphasis>);
+   }
+};</programlisting>
+                            </listitem>
+                            <listitem>
+                                <para>If the subtasks have different type, but a common result type,
+                                    we can pack them into a
+                                    <code>std::vector&lt;boost::asynchronous::any_continuation_task&lt;return_type>></code>
+                                    instead, the rest of the code staying the same:</para>
+                                        <programlisting><emphasis role="bold">#include &lt;boost/asynchronous/any_continuation_task.hpp></emphasis>
+
+struct sub_task : public boost::asynchronous::continuation_task&lt;long>
+{
+    // some task with long as result type
+};
+struct main_task2 : public boost::asynchronous::continuation_task&lt;long>
+{
+    void operator()()
+    {
+        boost::asynchronous::continuation_result&lt;long> task_res = this_task_result();
+        <emphasis role="bold">std::vector&lt;boost::asynchronous::any_continuation_task&lt;long>></emphasis> subs;
+        subs.push_back(sub_task());
+        subs.push_back(sub_task2());
+        subs.push_back(sub_task3());
+
+        boost::asynchronous::<emphasis role="bold">create_callback_continuation</emphasis>(
+             [task_res](<emphasis role="bold">std::vector&lt;boost::asynchronous::expected&lt;long>></emphasis> res)
+             {
+                 long r = res[0].get() + res[1].get() + res[2].get();
+                  task_res.set_value(r);
+             },
+             <emphasis role="bold">std::move(subs)</emphasis>);
+    }
+};</programlisting>
+                            </listitem>
+                            <listitem>
+                                <para>Of course, if we have continuations in the first place,
+                                    returned by
+                                        <code>top_level_callback_continuation&lt;task-return-type></code>
+                                    or
+                                        <code>top_level_callback_continuation&lt;task-return-type></code>,
+                                    as all of Asynchronous' algorithms do, these can be packed into
+                                    a vector as well:</para>
+                                <programlisting>struct main_task3 : public boost::asynchronous::continuation_task&lt;long>
+{
+    void operator()()
+    {
+        boost::asynchronous::continuation_result&lt;long> task_res = this_task_result();
+        <emphasis role="bold">std::vector&lt;boost::asynchronous::detail::callback_continuation&lt;long>></emphasis> subs;
+        std::vector&lt;long> data1(10000,1);
+        std::vector&lt;long> data2(10000,1);
+        std::vector&lt;long> data3(10000,1);
+        subs.<emphasis role="bold">push_back</emphasis>(boost::asynchronous::<emphasis role="bold">parallel_reduce</emphasis>(std::move(data1),
+                                                            [](long const&amp; a, long const&amp; b)
+                                                            {
+                                                              return a + b;
+                                                            },1000));
+        subs.<emphasis role="bold">push_back</emphasis>(boost::asynchronous::<emphasis role="bold">parallel_reduce</emphasis>(std::move(data2),
+                                                            [](long const&amp; a, long const&amp; b)
+                                                            {
+                                                              return a + b;
+                                                            },1000));
+        subs.<emphasis role="bold">push_back</emphasis>(boost::asynchronous::<emphasis role="bold">parallel_reduce</emphasis>(std::move(data3),
+                                                            [](long const&amp; a, long const&amp; b)
+                                                            {
+                                                              return a + b;
+                                                            },1000));
+
+        boost::asynchronous::<emphasis role="bold">create_callback_continuation</emphasis>(
+                        [task_res](<emphasis role="bold">std::vector&lt;boost::asynchronous::expected&lt;long>></emphasis> res)
+                        {
+                            long r = res[0].get() + res[1].get() + res[2].get();
+                            task_res.set_value(r);
+                        },
+                        <emphasis role="bold">std::move(subs)</emphasis>);
+    }
+};</programlisting>                                
+                            </listitem>
+                        </itemizedlist></para>
+                </sect2>
+                <sect2>
+                    <title>Creating a continuation from a simple functor</title>
+                    <para>TODO</para>
+                </sect2>
             </sect1>
             <sect1>
-                <title><command xml:id="continuations"/>Future-based continuations</title>
-                <para>The continuations shown above are the fastest offered by Asynchronous but they
-                    are slightly harder to implement because one has to divide its work in tasks.
-                    Asynchronous also offers "simple" continuations, which are future-based, which
-                    makes them easy to use and at the same time allow simple adaptation to libraries
-                    offering only futures in their interface. Consider the following trivial
-                    example. We consider we have a task, called sub_task doing whatever we want. We
-                    want to divide our work between sub_task instances, getting a callback when
-                    done. We can write continuation task:</para>
+                <title><command xml:id="continuations"/>Future-based continuations</title>              
+                <para>The continuations shown above are the fastest offered by Asynchronous.
+                    Sometimes, however, we are forced to use libraries returning us only a future.
+                    In this case, Asynchronous also offers "simple" continuations, which are
+                    future-based. Consider the following trivial example. We consider we have a
+                    task, called sub_task. We will simulate the future-returning library using
+                        <code>post_future</code>. We want to divide our work between sub_task
+                    instances, getting a callback when all complete. We can create a continuation
+                    using these futures:</para>
                 <programlisting>// our main algo task. Needs to inherit continuation_task&lt;value type returned by this task>
 struct main_task : public boost::asynchronous::continuation_task&lt;long>
 {
@@ -1785,14 +2073,11 @@ struct main_task : public boost::asynchronous::continuation_task&lt;long>
                     future. We then call <emphasis role="bold">create_continuation(_job)</emphasis>,
                     passing it the futures. When all futures are ready (have a value or an
                     exception), the callback is called, with 3 futures containing the result.</para>
-                <para>Advantages:<itemizedlist>
-                        <listitem>
-                            <para>simple to use</para>
-                        </listitem>
+                <para>Advantage:<itemizedlist>
                         <listitem>
                             <para>can be used with any library returning a boost::future</para>
                         </listitem>
-                </itemizedlist></para>
+                    </itemizedlist></para>
                 <para>Drawbacks:<itemizedlist>
                         <listitem>
                             <para>lesser performance</para>
@@ -1861,8 +2146,9 @@ struct main_task : public boost::asynchronous::continuation_task&lt;long>
                     <emphasis role="bold">std::move(fus)</emphasis>);
     }
     };                                            </programlisting>
-                <para>Please have a look at <link xlink:href="examples/example_continuation_algo2.cpp">the complete
-                    example</link></para>
+                <para>The drawback is that in this case, all futures must be of the same type.
+                    Please have a look at <link xlink:href="examples/example_continuation_algo2.cpp"
+                        >the complete example</link></para>
             </sect1>
             <sect1>
                 <title><command xml:id="distributing"/>Distributing work among machines</title>
