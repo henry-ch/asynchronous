@@ -126,11 +126,11 @@ struct main_task3 : public boost::asynchronous::continuation_task<long>
                         std::move(subs));
     }
 };
-struct main_task4 : public boost::asynchronous::continuation_task<long>
+struct main_task4 : public boost::asynchronous::continuation_task<int>
 {
     void operator()()
     {
-        boost::asynchronous::continuation_result<long> task_res = this_task_result();
+        boost::asynchronous::continuation_result<int> task_res = this_task_result();
         std::vector<boost::asynchronous::any_continuation_task<int>> subs;
         subs.push_back(boost::asynchronous::make_lambda_continuation_wrapper([](){return 15;}));
         subs.push_back(boost::asynchronous::make_lambda_continuation_wrapper([](){return 22;}));
@@ -139,7 +139,7 @@ struct main_task4 : public boost::asynchronous::continuation_task<long>
         boost::asynchronous::create_callback_continuation(
                         [task_res](std::vector<boost::asynchronous::expected<int>> res)
                         {
-                            long r = res[0].get() + res[1].get() + res[2].get();
+                            int r = res[0].get() + res[1].get() + res[2].get();
                             task_res.set_value(r);
                         },
                         std::move(subs));
@@ -254,11 +254,11 @@ struct Servant : boost::asynchronous::trackable_servant<>
                 []()
                 {
                     BOOST_CHECK_MESSAGE(contains_id(tpids.begin(),tpids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
-                    return boost::asynchronous::top_level_callback_continuation<long>(main_task4());
+                    return boost::asynchronous::top_level_callback_continuation<int>(main_task4());
                  }// work
                ,
                // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
-               [this](boost::asynchronous::expected<long> res){
+               [this](boost::asynchronous::expected<int> res){
                             BOOST_CHECK_MESSAGE(!contains_id(tpids.begin(),tpids.end(),boost::this_thread::get_id()),"do_it callback executed in the wrong thread(pool)");
                             BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
                             BOOST_CHECK_MESSAGE(res.has_value(),"callback has a blocking future.");
