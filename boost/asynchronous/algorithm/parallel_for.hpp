@@ -49,6 +49,17 @@ struct for_helper
         }
     }
 };
+template <int args, class Iterator, class Func>
+struct for_helper<args,Iterator,Func,typename ::boost::enable_if<std::is_integral<Iterator>>::type>
+{
+    void operator()(Iterator beg, Iterator end, Func& func)
+    {
+        for (; beg != end; ++beg)
+        {
+            func(beg);
+        }
+    }
+};
 template <class Iterator, class Func>
 struct for_helper<2,Iterator,Func,void>
 {
