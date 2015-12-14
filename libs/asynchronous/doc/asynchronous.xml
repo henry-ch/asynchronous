@@ -3290,7 +3290,7 @@ boost::asynchronous::any_shared_scheduler_proxy&lt;> pool =
                     </itemizedlist></para>
             </sect1>
             <sect1>
-                <title>No cycle, ever!</title>
+                <title>No cycle, ever</title>
                  <para>This is one of the first things one learns in a design class. Cycles are
                     evil. Everybody knows it. And yet, designs are often made without care in a too
                     agile process, dependency within an application is not thought out carefully

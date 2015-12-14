@@ -1,18 +1,19 @@
 <html><head>
       <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-   <title>Logging tasks</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s05.html" title="Interrupting tasks"><link rel="next" href="ch03s07.html" title="Queue container with priority"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Logging tasks</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s05.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch03s07.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Logging tasks"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e623"></a><span class="command"><strong><a name="logging_tasks"></a></strong></span>Logging tasks</h2></div></div></div><p>Developers are notoriously famous for being bad at guessing which part of
-                    their code is inefficient or has potential for long execution time. This is bad
-                    in itself, but even worse for a control class like our post-callback servant as
-                    it reduces responsiveness. Knowing how long a posted call or a callback lasts is
-                    therefore very useful. Knowing how long take tasks executing in the threadpools
-                    is also essential to plan what hardware one needs for an application(4 cores? Or
-                    100?). We need to know what our program is doing. Asynchronous provides some
-                    logging per task to help there. Let's have a look at some code. It's also time
-                    to start using our template parameters for <code class="code">trackable_servant</code>, in
-                    case you wondered why they are here.</p><pre class="programlisting">// we will be using loggable jobs internally
+   <title>Logging tasks</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s05.html" title="Interrupting tasks"><link rel="next" href="ch03s07.html" title="Generating HTML diagnostics"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Logging tasks</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s05.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch03s07.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Logging tasks"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e677"></a><span class="command"><strong><a name="logging_tasks"></a></strong></span>Logging tasks</h2></div></div></div><p>Developers are notoriously famous for being bad at guessing which part of
+                    their code is inefficient. This is bad in itself, but even worse for a control
+                    class like our post-callback servant as it reduces responsiveness. Knowing how
+                    long a posted tasks or a callback lasts is therefore very useful. Knowing how
+                    long take tasks executing in the threadpools is also essential to plan what
+                    hardware one needs for an application(4 cores? Or 100?). We need to know what
+                    our program is doing. Asynchronous provides logging per task to help there.
+                    Let's have a look at some code. It's also time to start using our template
+                    parameters for <code class="code">trackable_servant</code>, in case you wondered why they are
+                    here.</p><pre class="programlisting">// we will be using loggable jobs internally
 typedef boost::asynchronous::any_loggable&lt;boost::chrono::high_resolution_clock&gt; <span class="bold"><strong>servant_job</strong></span>;
 // the type of our log
 typedef std::map&lt;std::string,std::list&lt;boost::asynchronous::diagnostic_item&lt;boost::chrono::high_resolution_clock&gt; &gt; &gt; <span class="bold"><strong>diag_type</strong></span>;
+
 // we log our scheduler and our threadpool scheduler (both use servant_job)
 struct Servant : boost::asynchronous::trackable_servant&lt;<span class="bold"><strong>servant_job</strong></span>,<span class="bold"><strong>servant_job</strong></span>&gt;
 {
@@ -70,9 +71,9 @@ for (auto mit = single_thread_sched_diag.begin(); mit != single_thread_sched_dia
           std::cout &lt;&lt; "job waited in us: " &lt;&lt; boost::chrono::nanoseconds((*jit).get_started_time() - (*jit).<span class="bold"><strong>get_posted_time()</strong></span>).count() / 1000 &lt;&lt; std::endl;
           std::cout &lt;&lt; "job lasted in us: " &lt;&lt; boost::chrono::nanoseconds((*jit).get_finished_time() - (*jit).<span class="bold"><strong>get_started_time()</strong></span>).count() / 1000 &lt;&lt; std::endl;
           std::cout &lt;&lt; "job interrupted? "  &lt;&lt; std::boolalpha &lt;&lt; (*jit).<span class="bold"><strong>is_interrupted()</strong></span> &lt;&lt; std::endl;
+          std::cout &lt;&lt; "job failed? "  &lt;&lt; std::boolalpha &lt;&lt; (*jit).<span class="bold"><strong>is_failed()</strong></span> &lt;&lt; std::endl; // did this job throw an exception?
      }
 }              </pre><p>It goes similarly with the threapool scheduler, with the slight difference
                     that we ask the Servant to deliver diagnostic information through a proxy
                     member. The <a class="link" href="examples/example_log.cpp" target="_top">complete example</a>
-                    shows all this, plus an interrupted job (you might have noticed in the previous
-                    listing that a diagnostic offers an <code class="code">is_interrupted</code> member).</p></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch03s05.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="ch03.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ch03s07.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Interrupting tasks&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Queue container with priority</td></tr></table></div></body></html>
+                    shows all this, plus an interrupted job.</p></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch03s05.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="ch03.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ch03s07.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Interrupting tasks&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Generating HTML diagnostics</td></tr></table></div></body></html>

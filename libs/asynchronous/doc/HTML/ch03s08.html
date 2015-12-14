@@ -1,9 +1,80 @@
 <html><head>
       <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-   <title>Multiqueue Schedulers' priority</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s07.html" title="Queue container with priority"><link rel="next" href="ch03s09.html" title="Threadpool Schedulers with several queues"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Multiqueue Schedulers' priority</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s07.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch03s09.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Multiqueue Schedulers' priority"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e826"></a>Multiqueue Schedulers' priority</h2></div></div></div><p>A multiqueue_... threadpool scheduler has a queue for each thread. This
-                    reduces contention, making these faster than single queue schedulers, like
-                    threadpool_scheduler. Furthermore, these schedulers support priority: the
-                    priority given in post_future or post_callback is the (1-based) position of the
-                    queue we want to post to. 0 means "any queue". A queue of priority 1 has a
-                    higher priority than a queue qith priority 2, etc. </p><p>Each queue is serving one thread, but threads steal from each other's queue,
-                    according to the priority.</p></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch03s07.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="ch03.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ch03s09.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Queue container with priority&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Threadpool Schedulers with several queues</td></tr></table></div></body></html>
+   <title>Queue container with priority</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s07.html" title="Generating HTML diagnostics"><link rel="next" href="ch03s09.html" title="Multiqueue Schedulers' priority"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Queue container with priority</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s07.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch03s09.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Queue container with priority"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e766"></a>Queue container with priority</h2></div></div></div><p>Sometimes, all jobs posted to a scheduler do not have the same priority. For
+                    threadpool schedulers, <code class="code">composite_threadpool_scheduler</code> is an option.
+                    For a single-threaded scheduler, Asynchronous does not provide a priority queue
+                    but a queue container, which itself contains any number of queues, of different
+                    types if needed. This has several advantages:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>Priority is defined simply by posting to the queue with the
+                                desired priority, so there is no need for expensive priority
+                                algorithms.</p></li><li class="listitem"><p>Reduced contention if many threads of a threadpool post something
+                                to the queue of a single-threaded scheduler. If no priority is
+                                defined, one queue will be picked, according to a configurable
+                                policy, reducing contention on a single queue.</p></li><li class="listitem"><p>It is possible to mix queues.</p></li><li class="listitem"><p>It is possible to build a queue container of queue containers,
+                                etc.</p></li></ul></div><p>Note: This applies to any scheduler. We'll start with single-threaded
+                    schedulers used by managing servants for simplicity, but it is possible to have
+                    composite schedulers using queue containers for finest granularity and least
+                    contention.</p><p>First, we need to create a single-threaded scheduler with several queues for
+                    our servant to live in, for example, one threadsafe list and three lockfree
+                    queues:</p><pre class="programlisting">boost::asynchronous::any_shared_scheduler_proxy&lt;&gt; scheduler = 
+                           boost::asynchronous::create_shared_scheduler_proxy(
+                                new boost::asynchronous::single_thread_scheduler&lt;
+                                        boost::asynchronous::any_queue_container&lt;&gt; &gt;
+                        (boost::asynchronous::any_queue_container_config&lt;boost::asynchronous::<span class="bold"><strong>threadsafe_list</strong></span>&lt;&gt; &gt;(<span class="bold"><strong>1</strong></span>),
+                         boost::asynchronous::any_queue_container_config&lt;boost::asynchronous::<span class="bold"><strong>lockfree_queue</strong></span>&lt;&gt; &gt;(<span class="bold"><strong>3</strong></span>,100)
+                         ));</pre><p><code class="code">any_queue_container</code> takes as constructor arguments a variadic
+                    sequence of <code class="code">any_queue_container_config</code>, with a queue type as
+                    template argument, and in the constructor the number of objects of this queue
+                    (in the above example, one <code class="code">threadsafe_list</code> and 3
+                        <code class="code">lockfree_queue</code> instances, then the parameters that these queues
+                    require in their constructor (100 is the capacity of the underlying
+                        <code class="code">boost::lockfree_queue</code>). This means, that our
+                        <code class="code">single_thread_scheduler</code> has 4 queues:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>a threadsafe_list at index 1</p></li><li class="listitem"><p>lockfree queues at indexes 2,3,4</p></li><li class="listitem"><p>&gt;= 4 means the queue with the least priority.</p></li><li class="listitem"><p>0 means "any queue" and is the default</p></li></ul></div><p>The scheduler will handle these queues as having priorities: as long as there
+                    are work items in the first queue, take them, if there are no, try in the
+                    second, etc. If all queues are empty, the thread gives up his time slice and
+                    sleeps until some work item arrives. If no priority is defined by posting, a
+                    queue will be chosen (by default randomly, but this can be configured with a
+                    policy). This has the advantage of reducing contention of the queue, even when
+                    not using priorities. The servant defines the priority of the tasks it provides.
+                    While this might seem surprising, it is a design choice to avoid that the coder
+                    using a servant proxy interface would have to think about it, as you will see in
+                    the second listing. To define a priority for a servant proxy, there is a second
+                    field in the macros:</p><pre class="programlisting">class ServantProxy : public boost::asynchronous::servant_proxy&lt;ServantProxy,Servant&gt;
+{
+public:
+    template &lt;class Scheduler&gt;
+    ServantProxy(Scheduler s):
+        boost::asynchronous::servant_proxy&lt;ServantProxy,Servant&gt;(s)
+    {}
+    <span class="bold"><strong>BOOST_ASYNC_SERVANT_POST_CTOR(3)</strong></span>
+    <span class="bold"><strong>BOOST_ASYNC_SERVANT_POST_DTOR(4)</strong></span>
+    BOOST_ASYNC_FUTURE_MEMBER(start_async_work,<span class="bold"><strong>1</strong></span>)
+};</pre><p>BOOST_ASYNC_FUTURE_MEMBER and other similar macros can be given an optional
+                    priority parameter, in this case 1, which is our threadsafe list. Notice how you
+                    can then define the priority of the posted servant constructor and
+                    destructor.</p><pre class="programlisting">ServantProxy proxy(scheduler);
+boost::future&lt;boost::future&lt;int&gt;&gt; fu = proxy.start_async_work();</pre><p>Calling our proxy member stays unchanged because the macro defines the
+                    priority of the call.</p><p>We also have an extended version of <code class="code">post_callback</code>, called by a
+                    servant posting work to a threadpool:</p><pre class="programlisting">post_callback(
+       [](){return 42;},// work
+       [this](boost::asynchronous::expected&lt;int&gt; res){}// callback functor.
+       ,"",
+       <span class="bold"><strong>2</strong></span>, // work prio
+       <span class="emphasis"><em>2</em></span>  // callback prio
+);</pre><p>Note the two added priority values: the first one for the task posted to the
+                    threadpool, the second for the priority of the callback posted back to the
+                    servant scheduler. The string is the log name of the task, which we choose to
+                    ignore here.</p><p>The priority is in any case an indication, the scheduler is free to ignore it
+                    if not supported. In the <a class="link" href="examples/example_queue_container.cpp" target="_top">example</a>, the single threaded scheduler will honor the request, but
+                    the threadpool has a normal queue and cannot honor the request, but a threadpool
+                    with an <code class="code">any_queue_container</code> or a
+                        <code class="code">composite_threadpool_scheduler</code> can. The <a class="link" href="examples/example_queue_container_log.cpp" target="_top">same example</a>
+                    can be rewritten to also support logging.</p><p><code class="code">any_queue_container</code> has two template arguments. The first, the
+                    job type, is as always by default, a callable (<code class="code">any_callable</code>) job.
+                    The second is the policy which Asynchronous uses to find the desired queue for a
+                    job. The default is <code class="code">default_find_position</code>, which is as described
+                    above, 0 means any position, all other values map to a queue, priorities &gt;=
+                    number of queues means last queue. Any position is by default random
+                        (<code class="code">default_random_push_policy</code>), but you might pick
+                        <code class="code">sequential_push_policy</code>, which keeps an atomic counter to post
+                    jobs to queues in a sequential order.</p><p>If you plan to build a queue container of queue containers, you'll probably
+                    want to provide your own policy.</p></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch03s07.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="ch03.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ch03s09.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Generating HTML diagnostics&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Multiqueue Schedulers' priority</td></tr></table></div></body></html>

@@ -1,118 +1,166 @@
 <html><head>
       <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-   <title>Future-based continuations</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s13.html" title="Continuation tasks"><link rel="next" href="ch03s15.html" title="Distributing work among machines"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Future-based continuations</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s13.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch03s15.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Future-based continuations"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e1248"></a><span class="command"><strong><a name="continuations"></a></strong></span>Future-based continuations</h2></div></div></div><p>The continuations shown above are the fastest offered by Asynchronous but they
-                    are slightly harder to implement because one has to divide its work in tasks.
-                    Asynchronous also offers "simple" continuations, which are future-based, which
-                    makes them easy to use and at the same time allow simple adaptation to libraries
-                    offering only futures in their interface. Consider the following trivial
-                    example. We consider we have a task, called sub_task doing whatever we want. We
-                    want to divide our work between sub_task instances, getting a callback when
-                    done. We can write continuation task:</p><pre class="programlisting">// our main algo task. Needs to inherit continuation_task&lt;value type returned by this task&gt;
-struct main_task : public boost::asynchronous::continuation_task&lt;long&gt;
+   <title>asio_scheduler</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s13.html" title="Processor binding"><link rel="next" href="ch03s15.html" title="Timers"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">asio_scheduler</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s13.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch03s15.html">Next</a></td></tr></table><hr></div><div class="sect1" title="asio_scheduler"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e1067"></a><span class="command"><strong><a name="asio_scheduler"></a></strong></span>asio_scheduler</h2></div></div></div><p>Asynchronous supports the possibility to use Boost.Asio as a threadpool
+                    provider. This has several advantages:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>asio_scheduler is delivered with a way to access Asio's io_service
+                                from a servant object living inside the scheduler.</p></li><li class="listitem"><p>asio_scheduler handles the necessary work for creating a pool of
+                                threads for multithreaded-multi-io_service communication.</p></li><li class="listitem"><p>asio_scheduler threads implement work-stealing from other
+                                Asynchronous schedulers. This allows communication threads to help
+                                other threadpools when no I/O communication is happening. This helps
+                                reducing thread oversubscription.</p></li><li class="listitem"><p>One has all the usual goodies of Asynchronous: safe callbacks,
+                                object tracking, servant proxies, etc.</p></li></ul></div><p>Let's create a simple but powerful example to illustrate its usage. We want to
+                    create a TCP client, which connects several times to the same server, gets data
+                    from it (in our case, the Boost license will do), then checks if the data is
+                    coherent by comparing the results two-by-two. Of course, the client has to be
+                    perfectly asynchronous and never block. We also want to guarantee some threads
+                    for the communication and some for the calculation work. We also want to
+                    communication threads to "help" by stealing some work if necessary.</p><p>Let's start by creating a TCP client using Boost.Asio. A slightly modified
+                    version of the async TCP client from the Asio documentation will do. All we
+                    change is pass it a callback which it will call when the requested data is
+                    ready. We now pack it into an Asynchronous trackable servant:</p><pre class="programlisting">// Objects of this type are made to live inside an asio_scheduler,
+// they get their associated io_service object from Thread Local Storage
+struct AsioCommunicationServant : boost::asynchronous::trackable_servant&lt;&gt;
 {
-    void operator()()const
+    AsioCommunicationServant(boost::asynchronous::any_weak_scheduler&lt;&gt; scheduler,
+                             const std::string&amp; server, const std::string&amp; path)
+        : boost::asynchronous::trackable_servant&lt;&gt;(scheduler)
+        , m_client(*<span class="bold"><strong>boost::asynchronous::get_io_service&lt;&gt;()</strong></span>,server,path)
+    {}
+    void test(std::function&lt;void(std::string)&gt; cb)
     {
-        // the result of this task
-       <span class="bold"><strong> boost::asynchronous::continuation_result&lt;long&gt; task_res = this_task_result();</strong></span>
-
-        // we start calculation, then while doing this we see new tasks which can be posted and done concurrently to us
-        // when all are done, we will set the result
-        // to post tasks, we need a scheduler
-        boost::asynchronous::any_weak_scheduler&lt;&gt; weak_scheduler = boost::asynchronous::get_thread_scheduler&lt;&gt;();
-        boost::asynchronous::any_shared_scheduler&lt;&gt; locked_scheduler = weak_scheduler.lock();
-        if (!locked_scheduler.is_valid())
-            // ok, we are shutting down, ok give up
-            return;
-        // simulate algo work
-        boost::this_thread::sleep(boost::posix_time::milliseconds(100));
-        // let's say we just found a subtask
-        boost::future&lt;int&gt; fu1 = boost::asynchronous::post_future(locked_scheduler,sub_task());
-        // simulate more algo work
-        boost::this_thread::sleep(boost::posix_time::milliseconds(100));
-        // let's say we just found a subtask
-        boost::future&lt;int&gt; fu2 = boost::asynchronous::post_future(locked_scheduler,sub_task());
-        // simulate algo work
-        boost::this_thread::sleep(boost::posix_time::milliseconds(100));
-        // let's say we just found a subtask
-        boost::future&lt;int&gt; fu3 = boost::asynchronous::post_future(locked_scheduler,sub_task());
-
-        // our algo is now done, wrap all and return
-        boost::asynchronous::<span class="bold"><strong>create_continuation</strong></span>(
-                    // called when subtasks are done, set our result
-                    [task_res](std::tuple&lt;boost::future&lt;int&gt;,boost::future&lt;int&gt;,boost::future&lt;int&gt; &gt; res)
-                    {
-                        try
-                        {
-                            long r = std::get&lt;0&gt;(res).get() + std::get&lt;1&gt;(res).get()+ std::get&lt;2&gt;(res).get();
-                            <span class="bold"><strong>task_res.set_value(r);</strong></span>
-                        }
-                        catch(std::exception&amp; e)
-                        {
-                            <span class="bold"><strong>task_res.set_exception(boost::copy_exception(e));</strong></span>
-                        }
-                    },
-                    // future results of recursive tasks
-                    <span class="bold"><strong>std::move(fu1),std::move(fu2),std::move(fu3)</strong></span>);
+        // just forward call to asio asynchronous http client
+        // the only change being the (safe) callback which will be called when http get is done
+        m_client.request_content(cb);
     }
-    };                                               </pre><p>Please have a look at <a class="link" href="examples/example_continuation_algo.cpp" target="_top">the complete
-                    example</a></p><p>Our tasks starts by posting 3 instances of sub_task, each time getting a
-                    future. We then call <span class="bold"><strong>create_continuation(_job)</strong></span>,
-                    passing it the futures. When all futures are ready (have a value or an
-                    exception), the callback is called, with 3 futures containing the result.</p><p>Advantages:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>simple to use</p></li><li class="listitem"><p>can be used with any library returning a boost::future</p></li></ul></div><p>Drawbacks:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>lesser performance</p></li><li class="listitem"><p>the thread calling <span class="bold"><strong>create_continuation(_job)</strong></span> polls until all futures
-                                are set. If this thread is busy, the callback is delayed.</p></li></ul></div><p><span class="bold"><strong><span class="underline">Important
-                        note</span></strong></span>: Like for the previous callback continuations,
-                    tasks and continuation callbacks should catch exceptions.</p><p><span class="bold"><strong>create_continuation(_job)</strong></span> has a wider
-                    interface. It can also take a vector of futures instead of a variadic
-                    version, for example:</p><pre class="programlisting">// our main algo task. Needs to inherit continuation_task&lt;value type returned by this task&gt;
-struct main_task : public boost::asynchronous::continuation_task&lt;long&gt;
+private:
+    client m_client; //client is from Asio example
+};</pre><p>The main noteworthy thing to notice is the call to <span class="bold"><strong>boost::asynchronous::get_io_service&lt;&gt;()</strong></span>, which, using
+                    thread-local-storage, gives us the io_service associated with this thread (one
+                    io_service per thread). This is needed by the Asio TCP client. Also noteworthy
+                    is the argument to <code class="code">test()</code>, a callback when the data is available. </p><p>Wait a minute, is this not unsafe (called from an asio worker thread)? It is
+                    but it will be made safe in a minute.</p><p>We now need a proxy so that this communication servant can be safely used by
+                    others, as usual:</p><pre class="programlisting">class AsioCommunicationServantProxy: public boost::asynchronous::servant_proxy&lt;AsioCommunicationServantProxy,AsioCommunicationServant &gt;
 {
-    void operator()()const
+public:
+    // ctor arguments are forwarded to AsioCommunicationServant
+    template &lt;class Scheduler&gt;
+    AsioCommunicationServantProxy(Scheduler s,const std::string&amp; server, const std::string&amp; path):
+        boost::asynchronous::servant_proxy&lt;AsioCommunicationServantProxy,AsioCommunicationServant &gt;(s,server,path)
+    {}
+    // we offer a single member for posting
+    BOOST_ASYNC_POST_MEMBER(test)
+};                   </pre><p>A single member, <code class="code">test</code>, is used in the proxy. The constructor
+                    takes the server and relative path to the desired page. We now need a manager
+                    object, which will trigger the communication, wait for data, check that the data
+                    is coherent:</p><pre class="programlisting">struct Servant : boost::asynchronous::trackable_servant&lt;&gt;
+{
+    Servant(boost::asynchronous::any_weak_scheduler&lt;&gt; scheduler,const std::string&amp; server, const std::string&amp; path)
+        : boost::asynchronous::trackable_servant&lt;&gt;(scheduler)
+        , m_check_string_count(0)
     {
-        // the result of this task
-        boost::asynchronous::continuation_result&lt;long&gt; task_res = this_task_result();
+        // as worker we use a simple threadpool scheduler with 4 threads (0 would also do as the asio pool steals)
+        auto worker_tp = boost::asynchronous::create_shared_scheduler_proxy(
+                    new boost::asynchronous::threadpool_scheduler&lt;boost::asynchronous::lockfree_queue&lt;&gt; &gt; (4));
 
-        // we start calculation, then while doing this we see new tasks which can be posted and done concurrently to us
-        // when all are done, we will set the result
-        // to post tasks, we need a scheduler
-        boost::asynchronous::any_weak_scheduler&lt;&gt; weak_scheduler = boost::asynchronous::get_thread_scheduler&lt;&gt;();
-        boost::asynchronous::any_shared_scheduler&lt;&gt; locked_scheduler = weak_scheduler.lock();
-        if (!locked_scheduler.is_valid())
-            // ok, we are shutting down, ok give up
-            return;
-        // simulate algo work
-        std::vector&lt;boost::future&lt;int&gt; &gt; fus;
-        boost::this_thread::sleep(boost::posix_time::milliseconds(100));
-        // let's say we just found a subtask
-        boost::future&lt;int&gt; fu1 = boost::asynchronous::post_future(locked_scheduler,sub_task());
-        fus.emplace_back(std::move(fu1));
-        // simulate more algo work
-        boost::this_thread::sleep(boost::posix_time::milliseconds(100));
-        // let's say we just found a subtask
-        boost::future&lt;int&gt; fu2 = boost::asynchronous::post_future(locked_scheduler,sub_task());
-        fus.emplace_back(std::move(fu2));
-        // simulate algo work
-        boost::this_thread::sleep(boost::posix_time::milliseconds(100));
-        // let's say we just found a subtask
-        boost::future&lt;int&gt; fu3 = boost::asynchronous::post_future(locked_scheduler,sub_task());
-        fus.emplace_back(std::move(fu3));
+        // for tcp communication we use an asio-based scheduler with 3 threads
+        auto asio_workers = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::asio_scheduler&lt;&gt;(3));
 
-        // our algo is now done, wrap all and return
-        boost::asynchronous::<span class="bold"><strong>create_continuation</strong></span>(
-                    // called when subtasks are done, set our result
-                    [task_res](std::vector&lt;boost::future&lt;int&gt;&gt; res)
-                    {
-                        try
-                        {
-                            long r = res[0].get() + res[1].get() + res[2].get();
-                            task_res.set_value(r);
-                        }
-                        catch(std::exception&amp; e)
-                        {
-                            task_res.set_exception(boost::copy_exception(e));
-                        }
-                    },
-                    // future results of recursive tasks
-                    <span class="bold"><strong>std::move(fus)</strong></span>);
+        // we create a composite pool whose only goal is to allow asio worker threads to steal tasks from the threadpool
+        m_pools = boost::asynchronous::create_shared_scheduler_proxy(
+                    new boost::asynchronous::composite_threadpool_scheduler&lt;&gt; (worker_tp,asio_workers));
+
+        set_worker(worker_tp);
+        // we create one asynchronous communication manager in each thread
+        m_asio_comm.push_back(AsioCommunicationServantProxy(asio_workers,server,path));
+        m_asio_comm.push_back(AsioCommunicationServantProxy(asio_workers,server,path));
+        m_asio_comm.push_back(AsioCommunicationServantProxy(asio_workers,server,path));
     }
-    };                                            </pre><p>Please have a look at <a class="link" href="examples/example_continuation_algo2.cpp" target="_top">the complete
-                    example</a></p></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch03s13.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="ch03.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ch03s15.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Continuation tasks&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Distributing work among machines</td></tr></table></div></body></html>
+... //to be continued                 
+                </pre><p>We create 3 pools:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>A worker pool for calculations (page comparisons)</p></li><li class="listitem"><p>An asio threadpool with 3 threads in which we create 3
+                                communication objects.</p></li><li class="listitem"><p>A composite pool which binds both pools together into one stealing
+                                unit. You could even set the worker pool to 0 thread, in which case
+                                the worker will get its work done when the asio threads have nothing
+                                to do. Only non- multiqueue schedulers support this. The worker pool
+                                is now made to be the worker pool of this object using
+                                    <code class="code">set_worker()</code>.</p></li></ul></div><p>We then create our communication objects inside the asio pool.</p><p><span class="underline">Note</span>: asio pools can steal from other
+                    pools but not be stolen from. Let's move on to the most interesting part:</p><pre class="programlisting">void get_data()
+{
+    // provide this callback (executing in our thread) to all asio servants as task result. A string will contain the page
+    std::function&lt;void(std::string)&gt; f =            
+...
+    m_asio_comm[0].test(make_safe_callback(f));
+    m_asio_comm[1].test(make_safe_callback(f));
+    m_asio_comm[2].test(make_safe_callback(f));
+}</pre><p>We skip the body of f for the moment. f is a task which will be posted to each
+                    communication servant so that they can do the same work:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>call the same http get on an asio servants</p></li><li class="listitem"><p>at each callback, check if we got all three callbacks</p></li><li class="listitem"><p>if yes, post some work to worker threadpool, compare the returned
+                                strings (should be all the same)</p></li><li class="listitem"><p>if all strings equal as they should be, cout the page</p></li></ul></div><p>All this will be doine in a single functor. This functor is passed to each
+                    communication servant, packed into a make_safe_callback, which, as its name
+                    says, transforms the unsafe functor into one which posts this callback functor
+                    to the manager thread and also tracks it to check if still alive at the time of
+                    the callback. By calling <code class="code">test()</code>, we trigger the 3 communications,
+                    and f will be called 3 times. The body of f is:</p><pre class="programlisting">std::function&lt;void(std::string)&gt; f =
+                [this](std::string s)
+                {
+                   this-&gt;m_requested_data.push_back(s);
+                   // poor man's state machine saying we got the result of our asio requests :)
+                   if (this-&gt;m_requested_data.size() == 3)
+                   {
+                       // ok, this has really been called for all servants, compare.
+                       // but it could be long, so we will post it to threadpool
+                       std::cout &lt;&lt; "got all tcp data, parallel check it's correct" &lt;&lt; std::endl;
+                       std::string s1 = this-&gt;m_requested_data[0];
+                       std::string s2 = this-&gt;m_requested_data[1];
+                       std::string s3 = this-&gt;m_requested_data[2];
+                       // this callback (executing in our thread) will be called after each comparison
+                       auto cb1 = [this,s1](boost::asynchronous::expected&lt;bool&gt; res)
+                       {
+                          if (res.get())
+                              ++this-&gt;m_check_string_count;
+                          else
+                              std::cout &lt;&lt; "uh oh, the pages do not match, data not confirmed" &lt;&lt; std::endl;
+                          if (this-&gt;m_check_string_count ==2)
+                          {
+                              // we started 2 comparisons, so it was the last one, data confirmed
+                              std::cout &lt;&lt; "data has been confirmed, here it is:" &lt;&lt; std::endl;
+                              std::cout &lt;&lt; s1;
+                          }
+                       };
+                       auto cb2=cb1;
+                       // post 2 string comparison tasks, provide callback where the last step will run
+                       this-&gt;post_callback([s1,s2](){return s1 == s2;},std::move(cb1));
+                       this-&gt;post_callback([s2,s3](){return s2 == s3;},std::move(cb2));
+                   }
+                };        
+                </pre><p> We start by checking if this is the third time this functor is called (this,
+                    the manager, is nicely serving as holder, kind of poor man's state machine
+                    counting to 3). If yes, we prepare a call to the worker pool to compare the 3
+                    returned strings 2 by 2 (cb1, cb2). Again, simple state machine, if the callback
+                    is called twice, we are done comparing string 1 and 2, and 2 and 3, in which
+                    case the page is confirmed and cout'ed. The last 2 lines trigger the work and
+                    post to our worker pool (which is the threadpool scheduler, or, if stealing
+                    happens, the asio pool) two comparison tasks and the callbacks.</p><p>Our manager is now ready, we still need to create for it a proxy so that it
+                    can be called from the outside world asynchronously, then create it in its own
+                    thread, as usual:</p><pre class="programlisting">class ServantProxy : public boost::asynchronous::servant_proxy&lt;ServantProxy,Servant&gt;
+{
+public:
+    template &lt;class Scheduler&gt;
+    ServantProxy(Scheduler s,const std::string&amp; server, const std::string&amp; path):
+        boost::asynchronous::servant_proxy&lt;ServantProxy,Servant&gt;(s,server,path)
+    {}
+    // get_data is posted, no future, no callback
+    BOOST_ASYNC_POST_MEMBER(get_data)
+};
+...              
+auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
+                                new boost::asynchronous::single_thread_scheduler&lt;
+                                     boost::asynchronous::threadsafe_list&lt;&gt; &gt;);
+{
+   ServantProxy proxy(scheduler,"www.boost.org","/LICENSE_1_0.txt");
+   // call member, as if it was from Servant
+   proxy.get_data();
+   // if too short, no problem, we will simply give up the tcp requests
+   // this is simply to simulate a main() doing nothing but waiting for a termination request
+   boost::this_thread::sleep(boost::posix_time::milliseconds(2000));
+}
+                </pre><p> As usual, <a class="link" href="examples/example_asio_http_client.cpp" target="_top">here the
+                        complete, ready-to-use example</a> and the implementation of the <a class="link" href="examples/asio/asio_http_async_client.hpp" target="_top">Boost.Asio HTTP
+                        client</a>. </p></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch03s13.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="ch03.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ch03s15.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Processor binding&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Timers</td></tr></table></div></body></html>

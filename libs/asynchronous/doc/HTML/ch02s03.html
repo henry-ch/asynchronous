@@ -1,40 +1,11 @@
 <html><head>
       <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-   <title>Object lifetime</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch02.html" title="Chapter&nbsp;2.&nbsp;Features"><link rel="prev" href="ch02s02.html" title="Shutting down"><link rel="next" href="ch02s04.html" title="Servant Proxies"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Object lifetime</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch02s02.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;2.&nbsp;Features</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch02s04.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Object lifetime"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e265"></a>Object lifetime</h2></div></div></div><p>There are subtle bugs when living in a multithreaded world. Consider the
-                    following class:</p><p>
-                    </p><pre class="programlisting">struct Unsafe
-{
-  void foo()
-  {
-    m_mutex.lock();
-    // call private member
-    m_mutex.unlock();
-  }
-private:
-  void foobar()
-  {
-    //we are already locked when called, do something while locked
-  }
-  boost::mutex m_mutex;
-};            </pre><p>
-                </p><p>This is called a thread-safe interface pattern. Public members lock, private
-                    do not. Simple enough, right? Unfortunately, it doesn't fly.</p><p>First one has the risk of deadlock if a private member calls a public one
-                    while being called from another public member. Forget to check one path of
-                    execution within a class implementation and we get a nice deadlock. You'll have
-                    to test every single path of execution to prove your code is correct. And this
-                    at every change.</p><p>Anyway, let's face it, for any complex class, where there's a mutex, there is
-                    a race or a deadlock...</p><p>But even worse, the principle itself is not correct in C++. It supposes that a
-                    class can protect itself. Well, no, it can't. Why? One cannot protect the
-                    destructor. If the object (and the mutex) gets destroyed when a thread waits for
-                    it in foo(), we get a crash or an exception. We can mitigate this with the use
-                    of a shared_ptr, then we have no destructor call while someone waits for the
-                    mutex. Unfortunately, we still have a risk of a signal, callback, etc. all those
-                    things mixing badly with threads.</p><p>What you need is protect your object with a shared_ptr and have no other way
-                    to access the object. Asynchronous provides this.</p><p>There are more lifetime issues, even without mutexes. If you have ever used
-                    Boost.Asio, a common mistake and an easy one is when a callback is called in the
-                    proactor thread after an asynchronous operation, but the object called is long
-                    gone and the callback invalid. Asynchronous provides <span class="command"><strong><a class="command" href="ch03s03.html#trackable_servant">trackable_servant</a></strong></span> which makes sure
-                    that a callback is not called if the object which called the asynchronous
-                    operation is gone. It also prevents a task posted in a threadpool to be called
-                    if this condition occurs, which improves performance. It also provides a safe
-                    callback for use as Boost.Asio or similar.</p></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch02s02.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="ch02.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ch02s04.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Shutting down&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Servant Proxies</td></tr></table></div></body></html>
+   <title>Shutting down</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch02.html" title="Chapter&nbsp;2.&nbsp;Features of Boost.Asynchronous"><link rel="prev" href="ch02s02.html" title="Better Architecture"><link rel="next" href="ch02s04.html" title="Object lifetime"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Shutting down</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch02s02.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;2.&nbsp;Features of Boost.Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch02s04.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Shutting down"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e280"></a>Shutting down</h2></div></div></div><p>Shutting down a thread turns out to be harder in practice than expected, as
+                    shown by several posts of surprise on the Boost mailing lists when Boost.Thread
+                    tried to match the C++ Standard. Asynchronous hides all these ugly details. What
+                    users see is a scheduler proxy object, which can be shared by any number of
+                    objects, and running any number of threads, managed by a scheduler. The
+                    scheduler proxy object manages the lifetime of the scheduler. </p><p>When the last instance of the scheduler object is destroyed, the scheduler
+                    thread is stopped. When the last instance of a scheduler proxy is destroyed, the
+                    scheduler thread is joined. It's as simple as that. This makes threads shared
+                    objects. </p></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch02s02.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="ch02.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ch02s04.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Better Architecture&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Object lifetime</td></tr></table></div></body></html>

@@ -1,167 +1,88 @@
 <html><head>
       <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-   <title>asio_scheduler</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s10.html" title="Composite Threadpool Scheduler"><link rel="next" href="ch03s12.html" title="Timers"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">asio_scheduler</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s10.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch03s12.html">Next</a></td></tr></table><hr></div><div class="sect1" title="asio_scheduler"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e959"></a><span class="command"><strong><a name="asio_scheduler"></a></strong></span>asio_scheduler</h2></div></div></div><p>Asynchronous supports the possibility to use Boost.Asio as a threadpool
-                    provider. This has several advantages:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>asio_scheduler is delivered with a way to access Asio's io_service
-                                from a servant object living inside the scheduler.</p></li><li class="listitem"><p>asio_scheduler handles the necessary work for creating a pool of
-                                threads for multithreaded-multi-io_service communication.</p></li><li class="listitem"><p>asio_scheduler threads implement work-stealing from other
-                                Asynchronous schedulers. This allows communication threads to help
-                                other threadpools when no I/O communication is happening. This helps
-                                reducing thread oversubscription.</p></li><li class="listitem"><p>One has all the usual goodies of Asynchronous: safe callbacks,
-                                object tracking, servant proxies, etc.</p></li></ul></div><p>Let's create a simple but powerful example to illustrate its usage. We want to
-                    create a TCP client, which connects several times to the same server, gets data
-                    from it (in our case, the Boost license will do), then checks if the data is
-                    coherent by comparing the results two-by-two. Of course, the client has to be
-                    perfectly asynchronous and never block. We also want to guarantee some threads
-                    for the communication and some for the calculation work. We also want to
-                    communication threads to "help" by stealing some work if necessary.</p><p>Let's start by creating a TCP client using Boost.Asio. A slightly modified
-                    version of the async TCP client from the Asio documentation will do. All we
-                    change is pass it a callback which it will call when the requested data is
-                    ready. We now pack it into an Asynchronous trackable client:</p><pre class="programlisting">// Objects of this type are made to live inside an asio_scheduler,
-// they get their associated io_service object from TLS
-struct AsioCommunicationServant : boost::asynchronous::trackable_servant&lt;&gt;
-{
-    AsioCommunicationServant(boost::asynchronous::any_weak_scheduler&lt;&gt; scheduler,
-                             const std::string&amp; server, const std::string&amp; path)
-        : boost::asynchronous::trackable_servant&lt;&gt;(scheduler)
-        , m_client(*<span class="bold"><strong>boost::asynchronous::get_io_service&lt;&gt;()</strong></span>,server,path)
-    {}
-    void test(std::function&lt;void(std::string)&gt; cb)
-    {
-        // just forward call to asio asynchronous http client
-        // the only change being the (safe) callback which will be called when http get is done
-        m_client.request_content(cb);
-    }
-private:
-    client m_client; //client is from Asio example
-};</pre><p>The main noteworthy thing to notice is the call to <span class="bold"><strong>boost::asynchronous::get_io_service&lt;&gt;()</strong></span>, which, using
-                    thread-local-storage, gives us the io_service associated with this thread (one
-                    io_service per thread). This is needed by the Asio TCP client. Also noteworthy
-                    is the argument to <code class="code">test()</code>, a callback when the data is available. </p><p>Wait a minute, is this not unsafe (called from an asio worker thread)? It is
-                    but it will be made safe in a minute.</p><p>We now need a proxy so that this communication servant can be safely used by
-                    others, as usual:</p><pre class="programlisting">class AsioCommunicationServantProxy: public boost::asynchronous::servant_proxy&lt;AsioCommunicationServantProxy,AsioCommunicationServant &gt;
-{
-public:
-    // ctor arguments are forwarded to AsioCommunicationServant
-    template &lt;class Scheduler&gt;
-    AsioCommunicationServantProxy(Scheduler s,const std::string&amp; server, const std::string&amp; path):
-        boost::asynchronous::servant_proxy&lt;AsioCommunicationServantProxy,AsioCommunicationServant &gt;(s,server,path)
-    {}
-    // we offer a single member for posting
-    BOOST_ASYNC_POST_MEMBER(test)
-};                   </pre><p>A single member, <code class="code">test</code>, is used in the proxy. The constructor
-                    takes the server and relative path to the desired page. We now need a manager
-                    object, which will trigger the communication, wait for data, check that the data
-                    is coherent:</p><pre class="programlisting">struct Servant : boost::asynchronous::trackable_servant&lt;&gt;
-{
-    Servant(boost::asynchronous::any_weak_scheduler&lt;&gt; scheduler,const std::string&amp; server, const std::string&amp; path)
-        : boost::asynchronous::trackable_servant&lt;&gt;(scheduler)
-        , m_check_string_count(0)
-    {
-        // as worker we use a simple threadpool scheduler with 4 threads (0 would also do as the asio pool steals)
-        auto worker_tp = boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::threadpool_scheduler&lt;boost::asynchronous::lockfree_queue&lt;&gt; &gt; (4,10));
+   <title>Composite Threadpool Scheduler</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s10.html" title="Threadpool Schedulers with several queues"><link rel="next" href="ch03s12.html" title="More flexibility in dividing servants among threads"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Composite Threadpool Scheduler</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s10.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch03s12.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Composite Threadpool Scheduler"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e937"></a>Composite Threadpool Scheduler</h2></div></div></div><div class="sect2" title="Usage"><div class="titlepage"><div><div><h3 class="title"><a name="d0e940"></a>Usage</h3></div></div></div><p>When a project becomes more complex, having a single threadpool for the whole
+                    application does not offer enough flexibility in load planning. It is pretty
+                    hard to avoid either oversubscription (more busy threads than available hardware
+                    threads) or undersubscription. One would need one big threadpool with exactly
+                    the number of threads available in the hardware. Unfortunately, if we have a
+                    hardware with, say 12 hardware threads, parallelizing some work using all 12
+                    might be slowlier than using only 8. One would need different threadpools of
+                    different number of threads for the application. This, however, has the serious
+                    drawback that there is a risk that some threadpools will be in overload, while
+                    others are out of work unless we have work stealing between different
+                    threadpools.</p><p>The second issue is task priority. One can define priorities with several
+                    queues or a queue container, but this ensures that only highest priority tasks
+                    get executed if the system is coming close to overload. Ideally, it would be
+                    great if we could decide how much compute power we give to each task
+                    type.</p><p>This is what <code class="code">composite_threadpool_scheduler</code> solves. This pool
+                        supports, like any other pool, the
+                        <code class="code">any_shared_scheduler_proxy</code>concept so you can use it in place of
+                        the ones we used so far. The pool is composed of other pools
+                            (<code class="code">any_shared_scheduler_proxy</code> pools). It implements work
+                        stealing between pools if a) the pools support it and b) the queue of a pool
+                        also does. For example, we can create the following worker pool made of 3
+                        sub-pools:</p><p>
+                    </p><pre class="programlisting">// create a composite threadpool made of:
+// a multiqueue_threadpool_scheduler, 1 thread, with a lockfree_queue of capacity 100. 
+// This scheduler does not steal from other schedulers, but will lend its queue for stealing
+boost::asynchronous::any_shared_scheduler_proxy&lt;&gt; tp = boost::asynchronous::create_shared_scheduler_proxy( 
+               new boost::asynchronous::multiqueue_threadpool_scheduler&lt;boost::asynchronous::lockfree_queue&lt;&gt; &gt; (1,100));
 
-        // for tcp communication we use an asio-based scheduler with 3 threads
-        auto asio_workers = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::asio_scheduler&lt;&gt;(3));
+// a stealing_multiqueue_threadpool_scheduler, 3 threads, each with a threadsafe_list
+// this scheduler will steal from other schedulers if it can. In this case it will manage only with tp, not tp3
+boost::asynchronous::any_shared_scheduler_proxy&lt;&gt; tp2 = boost::asynchronous::create_shared_scheduler_proxy( 
+                    new boost::asynchronous::stealing_multiqueue_threadpool_scheduler&lt;boost::asynchronous::threadsafe_list&lt;&gt; &gt; (3));
 
-        // we create a composite pool whose only goal is to allow asio worker threads to steal tasks from the threadpool
-        m_pools = boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::composite_threadpool_scheduler&lt;&gt; (worker_tp,asio_workers));
+// a multiqueue_threadpool_scheduler, 4 threads, each with a lockfree_spsc_queue of capacity 100
+// this is safe because there will be no stealing as the queue does not support it, and only the servant single-thread scheduler will be the producer
+boost::asynchronous::any_shared_scheduler_proxy&lt;&gt; tp3 = boost::asynchronous::create_shared_scheduler_proxy( 
+               new boost::asynchronous::multiqueue_threadpool_scheduler&lt;boost::asynchronous::lockfree_spsc_queue&lt;&gt; &gt; (4,100));
 
-        set_worker(worker_tp);
-        // we create one asynchronous communication manager in each thread
-        m_asio_comm.push_back(AsioCommunicationServantProxy(asio_workers,server,path));
-        m_asio_comm.push_back(AsioCommunicationServantProxy(asio_workers,server,path));
-        m_asio_comm.push_back(AsioCommunicationServantProxy(asio_workers,server,path));
-    }
-... //to be continued                 
-                </pre><p>We create 3 pools:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>A worker pool for calculations (page comparisons)</p></li><li class="listitem"><p>An asio threadpool with 3 threads in which we create 3
-                                communication objects.</p></li><li class="listitem"><p>A composite pool which binds both pools together into one stealing
-                                unit. You could even set the worker pool to 0 thread, in which case
-                                the worker will get its work done when the asio threads have nothing
-                                to do. Only non- multiqueue schedulers support this. This composite
-                                pool is now made to be the worker pool of this object using
-                                    <code class="code">set_worker()</code>.</p></li></ul></div><p>We then create our communication objects inside the asio pool.</p><p><span class="underline">Note</span>: at the moment, asio pools can
-                    steal from other pools but not be stolen from. Let's move on to the most
-                    interesting part:</p><pre class="programlisting">void get_data()
-{
-    // provide this callback (executing in our thread) to all asio servants as task result. A string will contain the page
-    std::function&lt;void(std::string)&gt; f =            
-...
-    m_asio_comm[0].test(make_safe_callback(f));
-    m_asio_comm[1].test(make_safe_callback(f));
-    m_asio_comm[2].test(make_safe_callback(f));
-}</pre><p>We skip the body of f for the moment. f is a task which will be posted to each
-                    communication servant so that they can do the same work:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>call the same http get on an asio servants</p></li><li class="listitem"><p>at each callback, check if we got all three callbacks</p></li><li class="listitem"><p>if yes, post some work to worker threadpool, compare the returned
-                                strings (should be all the same)</p></li><li class="listitem"><p>if all strings equal as they should be, cout the page</p></li></ul></div><p>All this will be doine in a single functor. This functor is passed to each
-                    communication servant, packed into a make_safe_callback, which, as its name
-                    says, transforms the unsafe functor into one which posts this callback functor
-                    to the manager thread and also tracks it to check if still alive at the time of
-                    the callback. By calling <code class="code">test()</code>, we trigger the 3 communications,
-                    and f will be called 3 times. The body of f is:</p><pre class="programlisting">std::function&lt;void(std::string)&gt; f =
-                [this](std::string s)
-                {
-                   this-&gt;m_requested_data.push_back(s);
-                   // poor man's state machine saying we got the result of our asio requests :)
-                   if (this-&gt;m_requested_data.size() == 3)
-                   {
-                       // ok, this has really been called for all servants, compare.
-                       // but it could be long, so we will post it to threadpool
-                       std::cout &lt;&lt; "got all tcp data, parallel check it's correct" &lt;&lt; std::endl;
-                       std::string s1 = this-&gt;m_requested_data[0];
-                       std::string s2 = this-&gt;m_requested_data[1];
-                       std::string s3 = this-&gt;m_requested_data[2];
-                       // this callback (executing in our thread) will be called after each comparison
-                       auto cb1 = [this,s1](boost::asynchronous::expected&lt;bool&gt; res)
-                       {
-                          if (res.get())
-                              ++this-&gt;m_check_string_count;
-                          else
-                              std::cout &lt;&lt; "uh oh, the pages do not match, data not confirmed" &lt;&lt; std::endl;
-                          if (this-&gt;m_check_string_count ==2)
-                          {
-                              // we started 2 comparisons, so it was the last one, data confirmed
-                              std::cout &lt;&lt; "data has been confirmed, here it is:" &lt;&lt; std::endl;
-                              std::cout &lt;&lt; s1;
-                          }
-                       };
-                       auto cb2=cb1;
-                       // post 2 string comparison tasks, provide callback where the last step will run
-                       this-&gt;post_callback([s1,s2](){return s1 == s2;},std::move(cb1));
-                       this-&gt;post_callback([s2,s3](){return s2 == s3;},std::move(cb2));
-                   }
-                };        
-                </pre><p> We start by checking if this is the third time this functor is called (this,
-                    the manager, is nicely serving as holder, kind of poor man's state machine
-                    counting to 3). If yes, we prepare a call to the worker pool to compare the 3
-                    returned strings 2 by 2 (cb1, cb2). Again, simple state machine, if the callback
-                    is called twice, we are done comparing string 1 and 2, and 2 and 3, in which
-                    case the page is confirmed and cout'ed. The last 2 lines trigger the work and
-                    post to our worker pool (which is the threadpool scheduler, or, if stealing
-                    happens, the asio pool) two comparison tasks and the callbacks.</p><p>Our manager is now ready, we still need to create for it a proxy so that it
-                    can be called from the outside world asynchronously, then create it in its own
-                    thread, as usual:</p><pre class="programlisting">class ServantProxy : public boost::asynchronous::servant_proxy&lt;ServantProxy,Servant&gt;
-{
-public:
-    template &lt;class Scheduler&gt;
-    ServantProxy(Scheduler s,const std::string&amp; server, const std::string&amp; path):
-        boost::asynchronous::servant_proxy&lt;ServantProxy,Servant&gt;(s,server,path)
-    {}
-    // get_data is posted, no future, no callback
-    BOOST_ASYNC_POST_MEMBER(get_data)
-};
-...              
-auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                                new boost::asynchronous::single_thread_scheduler&lt;
-                                     boost::asynchronous::threadsafe_list&lt;&gt; &gt;);
-{
-   ServantProxy proxy(scheduler,"www.boost.org","/LICENSE_1_0.txt");
-   // call member, as if it was from Servant
-   proxy.get_data();
-   // if too short, no problem, we will simply give up the tcp requests
-   // this is simply to simulate a main() doing nothing but waiting for a termination request
-   boost::this_thread::sleep(boost::posix_time::milliseconds(2000));
-}
-                </pre><p> As usual, <a class="link" href="examples/example_asio_http_client.cpp" target="_top">here the
-                        complete, ready-to-use example</a> and the implementation of the <a class="link" href="examples/asio/asio_http_async_client.hpp" target="_top">Boost.Asio HTTP
-                        client</a>. </p></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch03s10.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="ch03.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ch03s12.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Composite Threadpool Scheduler&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Timers</td></tr></table></div></body></html>
+// create a composite pool made of the 3 previous ones
+boost::asynchronous::any_shared_scheduler_proxy&lt;&gt; tp_worker =
+             boost::make_shared&lt;boost::asynchronous::composite_threadpool_scheduler&lt;&gt; &gt; (tp,tp2,tp3);
+                    </pre><p>
+                </p><p>We can use this pool:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>As a big worker pool. In this case, the priority argument we use
+                                for posting refers to the (1-based) index of the subpool
+                                (post_callback(func1,func2,"task name",<span class="bold"><strong>1</strong></span>,0);). "1" means post to the first pool. But
+                                another pool could steal the work.</p></li><li class="listitem"><p>As a pool container, but different parts of the code will get to
+                                see only the subpools. For example, the pools tp, tp2 and tp3 can
+                                still be used independently as a worker pool. Calling
+                                composite_threadpool_scheduler&lt;&gt;::get_scheduler(std::size_t
+                                index_of_pool) will also give us the corresponding pool (1-based, as
+                                always).</p></li></ul></div><p>Another example of why to use this pool is reusing threads allocated to an
+                        asio-based communication for helping other schedulers. Addng an asio
+                        scheduler to a composite pool will allow the threads of this scheduler to
+                        help (steal) other pools when no communication is currently happening. </p><p>Stealing is done with priority. A stealing pool first tries to steal from the
+                        first pool, then from the second, etc.</p><p>The <a class="link" href="examples/example_composite_threadpool.cpp" target="_top">following
+                        example</a> shows a complete servant implementation, and the <span class="command"><strong><a class="command" href="ch03s14.html#asio_scheduler">ASIO section</a></strong></span> will show how an ASIO
+                    pool can steal.</p><p>The threadpool schedulers we saw so far are not stealing from other pools. The
+                        single-queue schedulers are not stealing, and the multiqueue schedulers
+                        steal from the queues of other threads of the same pool. The
+                        scheduler-stealing schedulers usually indicate this by appending a
+                            <code class="code">stealing_</code> to their name:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p><code class="code">stealing_threadpool_scheduler</code> is a
+                                        <code class="code">threadpool_scheduler</code> which steals from other
+                                    pools.</p></li><li class="listitem"><p><code class="code">stealing_multiqueue_threadpool_scheduler</code> is a
+                                        <code class="code">multiqueue_threadpool scheduler</code> which steals
+                                    from other pools.</p></li><li class="listitem"><p><code class="code">asio_scheduler steals</code>.</p></li></ul></div><p>The only difference with their not stealing equivalent is that they steal from
+                        other schedulers. To achieve this, they need a composite_scheduler to tell
+                        them from which schedulers they can steal.</p><p>Not all schedulers offer to be stolen from. A
+                            <code class="code">single_thread_scheduler</code> does not as it would likely bring
+                        race conditions to active objects.</p><p>Another interesting usage will be when planning for extra machines to help a
+                        threadpool by processing some of the work: work can be stolen from a
+                        threadpool by a <span class="command"><strong><a class="command" href="ch03s18.html#distributing">tcp_server_scheduler</a></strong></span> from which other machines can get it.
+                        Just pack both pools in a <code class="code">composite_threadpool_scheduler</code> and
+                        you're ready to go.</p></div><div class="sect2" title="Priority"><div class="titlepage"><div><div><h3 class="title"><a name="d0e1029"></a>Priority</h3></div></div></div><p>A composite supports priority. The first pool passed in the constructor of
+                        the composite pool has priority 1, the second 2, etc. 0 means "any pool" and
+                        n where n &gt; number of pools will me modulo-ed.</p><p>Posting to this scheduler using post_future or post_callback using a given
+                        priority will post to the according pool. If a pool supports stealing from
+                        other pools (stealing_... pools), it will try to steal from other pools,
+                        starting with the highest priority, but only if the to be stolen from pools
+                        supports it. For example, we try to post to the first pool, callback to any
+                        queue.</p><pre class="programlisting">post_callback(
+               [](){},// work
+               [this](boost::asynchronous::expected&lt;int&gt;){},// callback functor.
+               "", // task and callback name
+               1,  // work priority, highest
+               0   // callback anywhere
+);</pre></div></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch03s10.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="ch03.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ch03s12.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Threadpool Schedulers with several queues&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;More flexibility in dividing servants among threads</td></tr></table></div></body></html>
