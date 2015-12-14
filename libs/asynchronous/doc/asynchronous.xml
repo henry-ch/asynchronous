@@ -2006,7 +2006,33 @@ struct main_task2 : public boost::asynchronous::continuation_task&lt;long>
                 </sect2>
                 <sect2>
                     <title>Creating a continuation from a simple functor</title>
-                    <para>TODO</para>
+                    <para>For very simple tasks, it is in a post C++11 world annoying to have to
+                        write a functor class like our above sub_task. For such cases, Asynchronous
+                        provides a simple helper function:</para>
+                    <para><code>auto make_lambda_continuation_wrapper(functor f, std::string
+                            const&amp; name="")</code> where auto will be a
+                            <code>continuation_task</code>. We can replace our first case above by a
+                        more concise:</para>
+                    <programlisting>struct main_task4 : public boost::asynchronous::continuation_task&lt;int>
+{
+    void operator()()
+    {
+        // 15, 22,5 are of type int
+        boost::asynchronous::continuation_result&lt;<emphasis role="bold">int</emphasis>> task_res = this_task_result();
+        <emphasis role="bold">std::vector&lt;boost::asynchronous::any_continuation_task&lt;int>></emphasis> subs;
+        subs.push_back(boost::asynchronous::<emphasis role="bold">make_lambda_continuation_wrapper</emphasis>([](){return 15;}));
+        subs.push_back(boost::asynchronous::<emphasis role="bold">make_lambda_continuation_wrapper</emphasis>([](){return 22;}));
+        subs.push_back(boost::asynchronous::<emphasis role="bold">make_lambda_continuation_wrapper</emphasis>([](){return 5;}));
+
+        boost::asynchronous::create_callback_continuation(
+                        [task_res](std::vector&lt;boost::asynchronous::expected&lt;int>> res)
+                        {
+                            int r = res[0].get() + res[1].get() + res[2].get();
+                            task_res.set_value(r);
+                        },
+                        <emphasis role="bold">std::move(subs)</emphasis>);
+    }
+};</programlisting>
                 </sect2>
             </sect1>
             <sect1>
@@ -2157,14 +2183,15 @@ struct main_task : public boost::asynchronous::continuation_task&lt;long>
                     some time later you realize you need more power. Ok, there is no i7 with more
                     cores and an Extreme Edition will be quite expensive for only a little more
                     power so you decide to go for a Xeon. A 12-core E5-2697v2 2.7GHz will go for
-                    almost $3000 which means $250 per core, and for this you have a lesser
+                    almost $3000 which means $250 per core, and for this you also have a lesser
                     frequency. And if you need later even more power, well, it will become really
                     expensive. Can Asynchronous help us use more power for cheap, and at best, with
                     little work? It does, as you guess ;-)</para>
                 <para>Asynchronous provides a special pool, <code>tcp_server_scheduler</code>, which
                     will behave like any other scheduler but will not execute work itself, waiting
-                    instead for clients to connect and get some work. The client execute the work on
-                    behalf of the <code>tcp_server_scheduler</code> and send it back the results. </para>
+                    instead for clients to connect and steal some work. The client execute the work
+                    on behalf of the <code>tcp_server_scheduler</code> and sends it back the
+                    results. </para>
                 <para>For this to work, there is however a condition: jobs must be (boost)
                     serializable to be transferred to the client. So does the returned value.</para>
                 <para>Let's start with a <link xlink:href="examples/example_tcp_server.cpp">simplest
@@ -2177,15 +2204,15 @@ struct Servant : boost::asynchronous::trackable_servant&lt;boost::asynchronous::
   {
         // let's build our pool step by step. First we need a worker pool
         // possibly for us, and we want to share it with the tcp pool for its serialization work
-        boost::asynchronous::any_shared_scheduler_proxy&lt;> workers = boost::asynchronous::create_shared_scheduler_proxy(
-            new boost::asynchronous::threadpool_scheduler&lt;boost::asynchronous::lockfree_queue&lt;> >(3));
+        boost::asynchronous::any_shared_scheduler_proxy&lt;> workers = boost::asynchronous::make_shared_scheduler_proxy&lt;
+                                                                            boost::asynchronous::threadpool_scheduler&lt;boost::asynchronous::lockfree_queue&lt;>>>(3);
 
         // we use a tcp pool using the 3 worker threads we just built
         // our server will listen on "localhost" port 12345
-        auto pool= boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::<emphasis role="bold">tcp_server_scheduler</emphasis>&lt;
-                            boost::asynchronous::lockfree_queue&lt;boost::asynchronous::<emphasis role="bold">any_serializable</emphasis>> >
-                                (workers,"localhost",12345));
+        auto pool= boost::asynchronous::make_shared_scheduler_proxy&lt;
+                    boost::asynchronous::tcp_server_scheduler&lt;
+                            boost::asynchronous::lockfree_queue&lt;boost::asynchronous::any_serializable>>>
+                                (workers,"localhost",12345);
         // and this will be the worker pool for post_callback
         set_worker(pool);
   }
@@ -2256,8 +2283,7 @@ for (int i =0 ;i &lt; 10 ; ++i)
     int threads = (argc>3) ? strtol(argv[3],0,0) : 4;
     cout &lt;&lt; "Starting connecting to " &lt;&lt; server_address &lt;&lt; " port " &lt;&lt; server_port &lt;&lt; " with " &lt;&lt; threads &lt;&lt; " threads" &lt;&lt; endl;
 
-    auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
-                new boost::asynchronous::asio_scheduler&lt;>);
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy&lt;boost::asynchronous::asio_scheduler&lt;>>()
     {
         std::function&lt;void(std::string const&amp;,boost::asynchronous::tcp::server_reponse,std::function&lt;void(boost::asynchronous::tcp::client_request const&amp;)>)> 
         executor=
@@ -2276,9 +2302,9 @@ for (int i =0 ;i &lt; 10 ; ++i)
             }
         };
 
-        auto pool = boost::asynchronous::create_shared_scheduler_proxy(
-                        new boost::asynchronous::threadpool_scheduler&lt;
-                            boost::asynchronous::lockfree_queue&lt;boost::asynchronous::any_serializable> >(threads));
+        auto pool = boost::asynchronous::make_shared_scheduler_proxy&lt;
+                          boost::asynchronous::threadpool_scheduler&lt;
+                            boost::asynchronous::lockfree_queue&lt;boost::asynchronous::any_serializable>>>(threads);
         boost::asynchronous::tcp::<emphasis role="bold">simple_tcp_client_proxy proxy</emphasis>(scheduler,pool,server_address,server_port,executor,
                                                                     0/*ms between calls to server*/);
         boost::future&lt;boost::future&lt;void> > fu = proxy.run();
@@ -2293,14 +2319,13 @@ for (int i =0 ;i &lt; 10 ; ++i)
                 <para>We create a single-threaded <code>asio_scheduler</code> for the communication
                     (in our case, this is sufficient, your case might vary) to the server.</para>
                 <para>The client then defines an executor function. This function will be called
-                    when a job is stolen by the client. As Asynchronous does not know what the job
-                    is, you will need to "help" by creating an instance of the task using its name.
-                    Calling <code>deserialize_and_call_task</code> will, well, deserialize the task
-                    data into our dummy task, then call it. We also choose to return an exception is
-                    the task is not known to us.</para>
+                    when work is stolen by the client. As Asynchronous does not know what the work
+                    type is, we will need to "help" by creating an instance of the task using its
+                    name. Calling <code>deserialize_and_call_task</code> will, well, deserialize the
+                    task data into our dummy task, then call it. We also choose to return an
+                    exception is the task is not known to us.</para>
                 <para>Next, we need a pool of threads to execute the work. Usually, you will want
-                    more than one thread. Remember, we want to use our several 6-core-i7s,
-                    right?</para>
+                    more than one thread as we want to use all our cores.</para>
                 <para>The simplest client that Asynchronous offers is a
                         <code>simple_tcp_client_proxy</code> proxy. We say simple, because it is
                     only a client. Later on, we will see a more powerful tool.
@@ -2332,9 +2357,8 @@ for (int i =0 ;i &lt; 10 ; ++i)
                     a different <code>simple_tcp_client_proxy</code> which would be connecting to another
                     server.</para>
                 <para>The server is also quite flexible. It scales well and can handle as many
-                    clients as you wish.</para>
-                <para>This is only the beginning of our distributed chapter. Let's now revisit our
-                    Fibonacci example to make it distributed too.</para>
+                    clients as one wishes.</para>
+                <para>This is only the beginning of our distributed chapter.</para>
                 <sect2>
                     <title>A distributed, parallel Fibonacci</title>
                     <para>Lets's revisit our parallel Fibonacci example. We realize that with higher
@@ -2346,7 +2370,7 @@ for (int i =0 ;i &lt; 10 ; ++i)
                             <code>boost::asynchronous::top_level_continuation</code> in our
                         post_callback to make Asynchronous aware of the later return value. The
                         difference now is that even this one-liner lambda could be serialized and
-                        sent away, wo we need to make it a <code>serializable_task</code>:</para>
+                        sent away, so we need to make it a <code>serializable_task</code>:</para>
                     <programlisting>struct serializable_fib_task : public boost::asynchronous::<emphasis role="bold">serializable_task</emphasis>
 {
     serializable_fib_task(long n,long cutoff):boost::asynchronous::<emphasis role="bold">serializable_task("serializable_fib_task")</emphasis>,n_(n),cutoff_(cutoff){}
@@ -2423,9 +2447,9 @@ struct fib_task : public boost::asynchronous::continuation_task&lt;long>
     long n_;
     long cutoff_;
 };</programlisting>
-                <para> The few changes are highlighted. It needs to be a serializable task with its
-                        own name in the constructor, and it needs serialization members. That's it,
-                        we're ready to distribute!</para>
+                <para>The few changes are highlighted. The task needs to be a serializable task with
+                        its own name in the constructor, and it needs serialization members. That's
+                        it, we're ready to distribute!</para>
                     <para>As we previously said, we will reuse our previous TCP example, using
                             <code>serializable_fib_task</code> as the main posted task. This gives
                         us <link xlink:href="examples/example_tcp_server_fib.cpp">this example</link>.</para>
@@ -2476,7 +2500,7 @@ boost::asynchronous::tcp::simple_tcp_client_proxy client_proxy(cscheduler,pool,s
                             boost::asynchronous::tcp::<emphasis role="bold"
                             >deserialize_and_call_task</emphasis> was used for normal tasks, we now
                         have boost::asynchronous::tcp::<emphasis role="bold"
-                            >deserialize_and_call_top_level_callback_0ontinuation_task</emphasis>
+                            >deserialize_and_call_top_level_callback_continuation_task</emphasis>
                         for our top-level continuation task, and boost::asynchronous::tcp::<emphasis
                             role="bold">deserialize_and_call_callback_continuation_task</emphasis>
                         for the continuation-sub-task.</para>
@@ -2534,9 +2558,9 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                         packing a client and a server in the same application. But we need a bit
                         more: our last client would steal work so fast, every 10ms that it would
                         starve the server or other potential client applications, so we're going to
-                        tell it to only steal if its work queues goes under a certain amount, which
-                        we will empirically determine, according to our hardware, network speed,
-                        etc.</para>
+                        tell it to only steal if the size of its work queues are under a certain
+                        amount, which we will empirically determine, according to our hardware,
+                        network speed, etc.</para>
                     <programlisting>int main(int argc, char* argv[])
 {
     std::string server_address = (argc>1) ? argv[1]:"localhost";
@@ -2731,11 +2755,10 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
             </sect1>
             <sect1>
                 <title><command xml:id="parallel_algos"/>Parallel Algorithms (Christophe Henry / Tobias Holl)</title>
-                <para>Asynchronous supports out of the box some asynchronous parallel algorithms,
-                    with more to come, as well as interesting combination usages. These algorithms
-                    are continuation-based for simpler usage, often faster callback-based ones will
-                    be added later. All these algorithms also support distributed calculations as
-                    long as the user-provided functors are (meaning they must be
+                <para>Asynchronous supports out of the box quite some asynchronous parallel
+                    algorithms, as well as interesting combination usages. These algorithms are
+                    callback-continuation-based. Some of these algorithms also support distributed
+                    calculations as long as the user-provided functors are (meaning they must be
                     serializable).</para>
                 <para>What is the point of adding yet another set of parallel algorithms which can
                     be found elsewhere? Because truly asynchronous algorithms are hard to find. By
@@ -3161,7 +3184,68 @@ boost::asynchronous::detail::callback_continuation&lt;long,Job>
 <emphasis role="bold">parallel_sort</emphasis>(Range range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
 <emphasis role="bold">parallel_stable_sort</emphasis>(Range range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</programlisting>
                     <para>Please have a look at the <link xlink:href="examples/example_parallel_count.cpp">complete example</link>.</para>
-                </sect2>
+                </sect2>                
+            </sect1>
+            <sect1>
+                <title>Parallel containers</title>
+                <para>TODO example.</para>
+                <para>Any gain made by using a parallel algorithm can be reduced to nothing if the
+                    calling codes spends most of its time creating a std::vector. Interestingly,
+                    most parallel libraries provide parallel algorithms, but very few offer parallel
+                    data structures. This is unfortunate because a container can be parallelized
+                    with a great gain as long as the contained type either has a non-simple
+                    constructor / destructor or simply is big enough, as our tests show (see
+                    test/perf/perf_vector.cpp). Though memory allocating is not parallel,
+                    constructors can be made so. Reallocating and resizing can also greatly
+                    benefit.</para>
+                <para>Asynchronous fills this gap by providing boost::asynchronous::vector. It can
+                    be used as a parallel, synchronous type. Apart from the construction, it looks
+                    and feels very much like a std::vector with an added threadpool. In this case,
+                        <emphasis role="underline">it cannot be posted to its own threadpool without
+                        releasing it</emphasis> (see release_scheduler / set_scheduler). It is
+                    defined in:</para>
+                <para>#include &lt;boost/asynchronous/container/vector.hpp> </para>
+                <para>The vector supports the same constructors that std::vector, with as extra
+                    parameters, the threadpool for parallel work, and a cutoff. Optionally, a name
+                    used for logging and a threadpool priority can be given, for example:</para>
+                <programlisting>struct LongOne;
+boost::asynchronous::any_shared_scheduler_proxy&lt;> pool = 
+               boost::asynchronous::make_shared_scheduler_proxy&lt;
+                    boost::asynchronous::multiqueue_threadpool_scheduler&lt;
+                            boost::asynchronous::lockfree_queue&lt;>
+                        >>(tpsize,tasks);
+
+<emphasis role="bold">boost::asynchronous::vector</emphasis>&lt;LongOne> vec (pool,1024 /* cutoff */, /* std::vector ctor arguments */ 10000,LongOne()
+                                            // optional, name for logging, priority in the threadpool
+                                            , "vector", 1);                </programlisting>
+                <para>At this point, asynchronous::vector can be used like std::vector, with the
+                    difference that constructor, destructor, operator=, assign, clear, push_back,
+                    emplace_back, reserve, resize, erase, insert are executed in parallel in the
+                    given threadpool.</para>
+                <para>The vector adds a few members compared to std::vector:<itemizedlist>
+                        <listitem>
+                            <para>release_scheduler(): removes the threadpool from vector. At this
+                                point, the vector is no more parallel, but can live from within the
+                                pool.</para>
+                        </listitem>
+                        <listitem>
+                            <para>set_scheduler(): (re)sets scheduler, so that vector is again
+                                parallel. At this point, the vector cannot live from within the
+                                pool.</para>
+                        </listitem>
+                        <listitem>
+                            <para>long get_cutoff() const: returns the cutoff as given in
+                                constructor.</para>
+                        </listitem>
+                        <listitem>
+                            <para>std::string get_name() const: the logged name, as given in the
+                                constructor.</para>
+                        </listitem>
+                        <listitem>
+                            <para>std::size_t get_prio()const: the priority, as given in the
+                                constructor.</para>
+                        </listitem>
+                    </itemizedlist></para>
             </sect1>
         </chapter>
         <chapter>
@@ -3206,7 +3290,7 @@ boost::asynchronous::detail::callback_continuation&lt;long,Job>
                     </itemizedlist></para>
             </sect1>
             <sect1>
-                <title>No cycle, never!</title>
+                <title>No cycle, ever!</title>
                  <para>This is one of the first things one learns in a design class. Cycles are
                     evil. Everybody knows it. And yet, designs are often made without care in a too
                     agile process, dependency within an application is not thought out carefully
@@ -3321,34 +3405,34 @@ class lockfree_stack;</programlisting>
                     all calls to a single queue and executes them in order. Using
                         <code>any_queue_container</code> as queue will however allow it to support
                     task priority.</para>
-                <para>This scheduler does not steal from other queues or pools, only stealing_
-                    threadpools do this, and does not get stolen from to avoid races.</para>
+                <para>This scheduler does not steal from other queues or pools, and does not get
+                    stolen from to avoid races.</para>
                 <para>Declaration:</para>
-                <programlisting>template&lt;class Queue>
+                <programlisting>template&lt;class Queue, class CPULoad>
 class single_thread_scheduler;               </programlisting>
                 <para>Creation:</para>
                 <programlisting>boost::asynchronous::any_shared_scheduler_proxy&lt;> scheduler = 
-    boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::single_thread_scheduler&lt;
-                          boost::asynchronous::threadsafe_list&lt;> >);  
+    boost::asynchronous::make_shared_scheduler_proxy&lt;
+         boost::asynchronous::<emphasis role="bold">single_thread_scheduler</emphasis>&lt;
+            boost::asynchronous::lockfree_queue&lt;>>>();  
 
 boost::asynchronous::any_shared_scheduler_proxy&lt;> scheduler = 
-    boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::single_thread_scheduler&lt;
-                          boost::asynchronous::lockfree_queue&lt;> >(10)); // size of queue
+    boost::asynchronous::make_shared_scheduler_proxy&lt;
+       boost::asynchronous::<emphasis role="bold">single_thread_scheduler</emphasis>&lt;
+          boost::asynchronous::lockfree_queue&lt;>>>(10); // size of queue
                 </programlisting>
                 <para>Or, using logging:</para>
                 <programlisting>typedef boost::asynchronous::any_loggable&lt;boost::chrono::high_resolution_clock> <emphasis role="bold">servant_job</emphasis>;
 
 boost::asynchronous::any_shared_scheduler_proxy&lt;<emphasis role="bold">servant_job</emphasis>> scheduler = 
-    boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::single_thread_scheduler&lt;
-                          boost::asynchronous::threadsafe_list&lt;<emphasis role="bold">servant_job</emphasis>> >);                                      
+    boost::asynchronous::make_shared_scheduler_proxy&lt;
+                                boost::asynchronous::single_thread_scheduler&lt;
+                                     boost::asynchronous::threadsafe_list&lt;<emphasis role="bold">servant_job</emphasis>>>>();                                      
                 
 boost::asynchronous::any_shared_scheduler_proxy&lt;<emphasis role="bold">servant_job</emphasis>> scheduler = 
-    boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::single_thread_scheduler&lt;
-                          boost::asynchronous::lockfree_queue&lt;<emphasis role="bold">servant_job</emphasis>> >(10)); // size of queue</programlisting>
+    boost::asynchronous::make_shared_scheduler_proxy&lt;
+                                boost::asynchronous::single_thread_scheduler&lt;
+                                     boost::asynchronous::lockfree_queue&lt;<emphasis role="bold">servant_job</emphasis>>>>(10); // size of queue</programlisting>
                 <para>
                     <table frame="all">
                         <title>#include
@@ -3385,6 +3469,78 @@ boost::asynchronous::any_shared_scheduler_proxy&lt;<emphasis role="bold">servant
                 </para>
             </sect1>
             <sect1>
+                <title>multiple_thread_scheduler</title>
+                <para>The scheduler is an extended version of single_thread_scheduler, where all
+                    servants are operated by only one thread at a time, though not always the same
+                    one. It creates a n (servants) to m (threads) dependency. The advantages of this
+                    scheduler is that one long task will not block other servants, more flexibility
+                    in distributing threads among servants, and better cache behaviour (a thread
+                    tries to serve servants in order).</para>
+                <para>This scheduler does not steal from other queues or pools, and does not get
+                    stolen from to avoid races.</para>
+                <para>Declaration:</para>
+                <programlisting>template&lt;class Queue, class CPULoad>
+class multiple_thread_scheduler;               </programlisting>
+                <para>Creation:</para>
+                <programlisting>boost::asynchronous::any_shared_scheduler_proxy&lt;> scheduler = 
+    boost::asynchronous::make_shared_scheduler_proxy&lt;
+           boost::asynchronous::<emphasis role="bold">multiple_thread_scheduler</emphasis>&lt;
+              boost::asynchronous::lockfree_queue&lt;>>>(n,m); // n: max number of servants, m: number of worker threads
+
+boost::asynchronous::any_shared_scheduler_proxy&lt;> scheduler = 
+    boost::asynchronous::make_shared_scheduler_proxy&lt;
+           boost::asynchronous::<emphasis role="bold">multiple_thread_scheduler</emphasis>&lt;
+              boost::asynchronous::lockfree_queue&lt;>>>(n,m,10); // n: max number of servants, m: number of worker threads, 10: size of queue
+ 
+                </programlisting>
+                <para>Or, using logging:</para>
+                <programlisting>typedef boost::asynchronous::any_loggable&lt;boost::chrono::high_resolution_clock> <emphasis role="bold">servant_job</emphasis>;
+
+boost::asynchronous::any_shared_scheduler_proxy&lt;<emphasis role="bold">servant_job</emphasis>> scheduler = 
+    boost::asynchronous::make_shared_scheduler_proxy&lt;
+                                boost::asynchronous::single_thread_scheduler&lt;
+                                     boost::asynchronous::threadsafe_list&lt;<emphasis role="bold">servant_job</emphasis>>>>(n,m); // n: max number of servants, m: number of worker threads
+                
+boost::asynchronous::any_shared_scheduler_proxy&lt;<emphasis role="bold">servant_job</emphasis>> scheduler = 
+    boost::asynchronous::make_shared_scheduler_proxy&lt;
+                                boost::asynchronous::single_thread_scheduler&lt;
+                                     boost::asynchronous::lockfree_queue&lt;<emphasis role="bold">servant_job</emphasis>>>>(n,m,10); // n: max number of servants, m: number of worker threads, 10: size of queue</programlisting>
+                <para>
+                    <table frame="all">
+                        <title>#include
+                            &lt;boost/asynchronous/scheduler/single_thread_scheduler.hpp></title>
+                        <tgroup cols="2">
+                            <colspec colname="c1" colnum="1" colwidth="1.0*"/>
+                            <colspec colname="c2" colnum="2" colwidth="1.0*"/>
+                            <thead>
+                                <row>
+                                    <entry>Characteristics</entry>
+                                    <entry/>
+                                </row>
+                            </thead>
+                            <tbody>
+                                <row>
+                                    <entry>Number of threads</entry>
+                                    <entry>1..n</entry>
+                                </row>
+                                <row>
+                                    <entry>Can be stolen from?</entry>
+                                    <entry>No</entry>
+                                </row>
+                                <row>
+                                    <entry>Can steal from other threads in this pool?</entry>
+                                    <entry>No</entry>
+                                </row>
+                                <row>
+                                    <entry>Can steal from other threads in other pools?</entry>
+                                    <entry>No</entry>
+                                </row>
+                            </tbody>
+                        </tgroup>
+                    </table>
+                </para>
+            </sect1>
+            <sect1>
                 <title>threadpool_scheduler</title>
                 <para>The simplest and easiest threadpool using a single queue, though multiqueue
                     behavior could be done using <code>any_queue_container</code>. The advantage is
@@ -3394,31 +3550,31 @@ boost::asynchronous::any_shared_scheduler_proxy&lt;<emphasis role="bold">servant
                 <para>This pool does not steal from other pool's queues.</para>
                 <para>Use this pool as default for a quickstart with Asynchronous.</para>
                 <para>Declaration:</para>
-                <programlisting>template&lt;class Queue>
+                <programlisting>template&lt;class Queue,class CPULoad>
 class threadpool_scheduler;</programlisting>
                 <para>Creation:</para>
                 <programlisting>boost::asynchronous::any_shared_scheduler_proxy&lt;> scheduler = 
-    boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::threadpool_scheduler&lt;
-                          boost::asynchronous::threadsafe_list&lt;> >(4)); // 4 threads in pool  
+    boost::asynchronous::make_shared_scheduler_proxy&lt;
+                    boost::asynchronous::threadpool_scheduler&lt;
+                          boost::asynchronous::threadsafe_list&lt;>>>(4); // 4 threads in pool  
 
 boost::asynchronous::any_shared_scheduler_proxy&lt;> scheduler = 
-    boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::threadpool_scheduler&lt;
-                          boost::asynchronous::lockfree_queue&lt;> >(4,10)); // size of queue=10, 4 threads in pool
+    boost::asynchronous::make_shared_scheduler_proxy&lt;
+                    boost::asynchronous::threadpool_scheduler&lt;
+                          boost::asynchronous::lockfree_queue&lt;>>>(4,10); // size of queue=10, 4 threads in pool
                 </programlisting>
                 <para>Or, using logging:</para>
                 <programlisting>typedef boost::asynchronous::any_loggable&lt;boost::chrono::high_resolution_clock> <emphasis role="bold">servant_job</emphasis>;
 
 boost::asynchronous::any_shared_scheduler_proxy&lt;<emphasis role="bold">servant_job</emphasis>> scheduler = 
-    boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::threadpool_scheduler&lt;
-                          boost::asynchronous::threadsafe_list&lt;<emphasis role="bold">servant_job</emphasis>> >(4)); // 4 threads in pool                                      
+    boost::asynchronous::make_shared_scheduler_proxy&lt;
+                    boost::asynchronous::threadpool_scheduler&lt;
+                          boost::asynchronous::threadsafe_list&lt;<emphasis role="bold">servant_job</emphasis>>>>(4); // 4 threads in pool                                      
                 
 boost::asynchronous::any_shared_scheduler_proxy&lt;<emphasis role="bold">servant_job</emphasis>> scheduler = 
-    boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::threadpool_scheduler&lt;
-                          boost::asynchronous::lockfree_queue&lt;<emphasis role="bold">servant_job</emphasis>> >(4,10)); // size of queue=10, 4 threads in pool  </programlisting>
+    boost::asynchronous::make_shared_scheduler_proxy&lt;
+                    boost::asynchronous::threadpool_scheduler&lt;
+                          boost::asynchronous::lockfree_queue&lt;<emphasis role="bold">servant_job</emphasis>>>>(4,10); // size of queue=10, 4 threads in pool  </programlisting>
                 <para>
                     <table frame="all">
                         <title>#include
@@ -3461,31 +3617,31 @@ boost::asynchronous::any_shared_scheduler_proxy&lt;<emphasis role="bold">servant
                 <para>This pool does not steal from other pool's queues though pool threads do steal
                     from each other's queues.</para>
                 <para>Declaration:</para>
-                <programlisting>template&lt;class Queue,class FindPosition=boost::asynchronous::default_find_position&lt; > >
+                <programlisting>template&lt;class Queue,class FindPosition=boost::asynchronous::default_find_position&lt; >, class CPULoad >
 class multiqueue_threadpool_scheduler;</programlisting>
                 <para>Creation:</para>
                 <programlisting>boost::asynchronous::any_shared_scheduler_proxy&lt;> scheduler = 
-    boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::multiqueue_threadpool_scheduler&lt;
-                          boost::asynchronous::threadsafe_list&lt;> >(4)); // 4 threads in pool  
+    boost::asynchronous::make_shared_scheduler_proxy&lt;
+                    boost::asynchronous::multiqueue_threadpool_scheduler&lt;
+                          boost::asynchronous::threadsafe_list&lt;>>>(4); // 4 threads in pool  
 
 boost::asynchronous::any_shared_scheduler_proxy&lt;> scheduler = 
-    boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::multiqueue_threadpool_scheduler&lt;
-                          boost::asynchronous::lockfree_queue&lt;> >(4,10)); // size of queue=10, 4 threads in pool
+    boost::asynchronous::make_shared_scheduler_proxy&lt;
+                    boost::asynchronous::multiqueue_threadpool_scheduler&lt;
+                          boost::asynchronous::lockfree_queue&lt;>>>(4,10); // size of queue=10, 4 threads in pool
                 </programlisting>
                 <para>Or, using logging:</para>
                 <programlisting>typedef boost::asynchronous::any_loggable&lt;boost::chrono::high_resolution_clock> <emphasis role="bold">servant_job</emphasis>;
 
 boost::asynchronous::any_shared_scheduler_proxy&lt;<emphasis role="bold">servant_job</emphasis>> scheduler = 
-    boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::multiqueue_threadpool_scheduler&lt;
-                          boost::asynchronous::threadsafe_list&lt;<emphasis role="bold">servant_job</emphasis>> >(4)); // 4 threads in pool                                      
+    boost::asynchronous::make_shared_scheduler_proxy&lt;
+                    boost::asynchronous::multiqueue_threadpool_scheduler&lt;
+                          boost::asynchronous::threadsafe_list&lt;<emphasis role="bold">servant_job</emphasis>>>>(4); // 4 threads in pool                                      
                 
 boost::asynchronous::any_shared_scheduler_proxy&lt;<emphasis role="bold">servant_job</emphasis>> scheduler = 
-    boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::multiqueue_threadpool_scheduler&lt;
-                          boost::asynchronous::lockfree_queue&lt;<emphasis role="bold">servant_job</emphasis>> >(4,10)); // size of queue=10, 4 threads in pool  </programlisting>
+    boost::asynchronous::make_shared_scheduler_proxy&lt;
+                    boost::asynchronous::multiqueue_threadpool_scheduler&lt;
+                          boost::asynchronous::lockfree_queue&lt;<emphasis role="bold">servant_job</emphasis>>>>(4,10); // size of queue=10, 4 threads in pool  </programlisting>
                 <para>
                     <table frame="all">
                         <title>#include
@@ -3528,19 +3684,19 @@ boost::asynchronous::any_shared_scheduler_proxy&lt;<emphasis role="bold">servant
                     Not used within a <code>composite_threadpool_scheduler</code>, it is a standard
                         <code>threadpool_scheduler</code>.</para>
                 <para>Declaration:</para>
-                <programlisting>template&lt;class Queue,bool /* InternalOnly */ = true >
+                <programlisting>template&lt;class Queue,class CPULoad, bool /* InternalOnly */ = true >
 class stealing_threadpool_scheduler;</programlisting>
                 <para>Creation if used within a <code>composite_threadpool_scheduler</code>:</para>
                 <programlisting>boost::asynchronous::any_shared_scheduler_proxy&lt;> scheduler = 
-    boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::stealing_threadpool_scheduler&lt;
-                          boost::asynchronous::threadsafe_list&lt;> >(4)); // 4 threads in pool</programlisting>
+    boost::asynchronous::make_shared_scheduler_proxy&lt;
+                    boost::asynchronous::stealing_threadpool_scheduler&lt;
+                          boost::asynchronous::threadsafe_list&lt;>>>(4); // 4 threads in pool</programlisting>
                 <para> However, if used stand-alone, which has little interest outside of unit
                     tests, we need to add a template parameter to inform it:</para>
                 <programlisting>boost::asynchronous::any_shared_scheduler_proxy&lt;> scheduler = 
-    boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::stealing_threadpool_scheduler&lt;
-                          boost::asynchronous::threadsafe_list&lt;><emphasis role="bold">,true</emphasis> >(4)); // 4 threads in pool</programlisting>
+    boost::asynchronous::make_shared_scheduler_proxy&lt;
+                    boost::asynchronous::stealing_threadpool_scheduler&lt;
+                          boost::asynchronous::threadsafe_list&lt;><emphasis role="bold">,true</emphasis> >>(4); // 4 threads in pool</programlisting>
                 <para>
                     <table frame="all">
                         <title>#include
@@ -3585,20 +3741,20 @@ class stealing_threadpool_scheduler;</programlisting>
                         <code>composite_threadpool_scheduler</code>, it is a standard
                         <code>multiqueue_threadpool_scheduler</code>.</para>
                 <para>Declaration:</para>
-                <programlisting>template&lt;class Queue,class FindPosition=boost::asynchronous::default_find_position&lt; >,bool /* InternalOnly */= true  >
+                <programlisting>template&lt;class Queue,class FindPosition=boost::asynchronous::default_find_position&lt; >,class CPULoad, bool /* InternalOnly */= true  >
 class stealing_multiqueue_threadpool_scheduler;</programlisting>
                 <para>Creation if used within a <code>composite_threadpool_scheduler</code>:</para>
                 <programlisting>boost::asynchronous::any_shared_scheduler_proxy&lt;> scheduler = 
-    boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::stealing_multiqueue_threadpool_scheduler&lt;
-                          boost::asynchronous::threadsafe_list&lt;> >(4)); // 4 threads in pool  
+    boost::asynchronous::make_shared_scheduler_proxy&lt;
+                    boost::asynchronous::stealing_multiqueue_threadpool_scheduler&lt;
+                          boost::asynchronous::threadsafe_list&lt;>>>(4); // 4 threads in pool  
                 </programlisting>
                 <para> However, if used stand-alone, which has little interest outside of unit
                     tests, we need to add a template parameter to inform it:</para>
                 <programlisting>boost::asynchronous::any_shared_scheduler_proxy&lt;> scheduler = 
-    boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::stealing_multiqueue_threadpool_scheduler&lt;
-                          boost::asynchronous::threadsafe_list&lt;>,boost::asynchronous::default_find_position&lt;>,<emphasis role="bold">true</emphasis>  >(4)); // 4 threads in pool  </programlisting>
+    boost::asynchronous::make_shared_scheduler_proxy&lt;
+                    boost::asynchronous::stealing_multiqueue_threadpool_scheduler&lt;
+                          boost::asynchronous::threadsafe_list&lt;>,boost::asynchronous::default_find_position&lt;>,<emphasis role="bold">true</emphasis>  >>(4); // 4 threads in pool  </programlisting>
                 <para>
                     <table frame="all">
                         <title>#include
@@ -3649,16 +3805,16 @@ class stealing_multiqueue_threadpool_scheduler;</programlisting>
                 <programlisting>// create a composite threadpool made of:
 // a multiqueue_threadpool_scheduler, 0 thread
 // This scheduler does not steal from other schedulers, but will lend its queues for stealing
-auto tp = boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::threadpool_scheduler&lt;boost::asynchronous::lockfree_queue&lt;> > (0,100));
+auto tp = boost::asynchronous::make_shared_scheduler_proxy&lt;
+                    boost::asynchronous::threadpool_scheduler&lt;boost::asynchronous::lockfree_queue&lt;>>> (0,100);
 
 // a stealing_multiqueue_threadpool_scheduler, 3 threads, each with a threadsafe_list
 // this scheduler will steal from other schedulers if it can. In this case it will manage only with tp, not tp3
-auto tp2 = boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::stealing_multiqueue_threadpool_scheduler&lt;boost::asynchronous::threadsafe_list&lt;> > (3));
+auto tp2 = boost::asynchronous::make_shared_scheduler_proxy&lt;
+                    boost::asynchronous::stealing_multiqueue_threadpool_scheduler&lt;boost::asynchronous::threadsafe_list&lt;>>> (3);
 
 // composite pool made of the previous 2
-auto tp_worker = boost::asynchronous::create_shared_scheduler_proxy(new <emphasis role="bold">boost::asynchronous::composite_threadpool_scheduler&lt;> (tp,tp2)</emphasis>); 
+auto tp_worker = boost::asynchronous::make_shared_scheduler_proxy&lt;<emphasis role="bold">boost::asynchronous::composite_threadpool_scheduler&lt;>>(tp,tp2)</emphasis>; 
                 </programlisting>
                 <para>Declaration:</para>
                 <programlisting>template&lt;class Job = boost::asynchronous::any_callable,
@@ -3708,12 +3864,12 @@ class composite_threadpool_scheduler;
                         <code>composite_threadpool_scheduler</code>, it will steal jobs from other
                     pool's queues.</para>
                 <para>Declaration:</para>
-                <programlisting>template&lt;class FindPosition=boost::asynchronous::default_find_position&lt; boost::asynchronous::sequential_push_policy > >
+                <programlisting>template&lt;class FindPosition=boost::asynchronous::default_find_position&lt; boost::asynchronous::sequential_push_policy >, class CPULoad >
 class asio_scheduler;</programlisting>
                 <para>Creation:</para>
                 <programlisting>boost::asynchronous::any_shared_scheduler_proxy&lt;> scheduler = 
-    boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::asio_scheduler&lt;>(4)); // 4 threads in pool</programlisting>
+    boost::asynchronous::make_shared_scheduler_proxy&lt;
+                    boost::asynchronous::asio_scheduler&lt;>>(4); // 4 threads in pool</programlisting>
                 <para>
                     <table frame="all">
                         <title>#include
@@ -3751,16 +3907,99 @@ class asio_scheduler;</programlisting>
             </sect1>
         </chapter>
         <chapter>
-            <title>Compiler</title>
+            <title>Compiler, linker, settings</title>
             <sect1>
                 <title>C++ 11</title>
-                <para>Asynchronous is C++11-only. Please check that your compiler has C++11 enabled
-                    (-std=c++0x or -std=c++11 in different versions of gcc)</para>
+                <para>Asynchronous is C++11/14-only. Please check that your compiler has C++11
+                    enabled (-std=c++0x or -std=c++11 in different versions of gcc). Usually, C++14
+                    is recommended.</para>
             </sect1>
             <sect1>
                 <title>Supported compilers</title>
-                <para>At the moment, Asynchronous has only be tested with gcc versions from 4.7 to
-                    4.8 and clang 3.3-3.4.</para>
+                <para>Asynchronous is tested and ok with: <itemizedlist>
+                        <listitem>
+                            <para>gcc: >= 4.9</para>
+                        </listitem>
+                        <listitem>
+                            <para>clang: >= 3.5</para>
+                        </listitem>
+                        <listitem>
+                            <para>VS2015 with a limitation: BOOST_ASYNC_FUTURE/POST_MEMBER_1(or _2
+                                or _3) as variadic macros are not supported</para>
+                        </listitem>
+                        <listitem>
+                            <para>Intel ICC >= 13.</para>
+                        </listitem>
+                    </itemizedlist></para>
+            </sect1>
+            <sect1>
+                <title>Supported targets</title>
+                <para>Asynchronous has been tested on Linux and Windows PCs, Intel and AMD, with the
+                    above compilers, and with mingw.</para>
+                <para>Asynchronous being based on Boost.Thread, can also work on Intel Xeon Phi with
+                    a minor change: within Boost, all usage of boost::shared_ptr must be replaced by
+                    std::shared_ptr. Strongly recommended is linking with tbbmalloc_proxy for better
+                    performance.</para>
+            </sect1>
+            <sect1>
+                <title>Linking</title>
+                <para>Asynchronous is header-only, but requires Boost libraries which are not. One
+                    should link with: boost_system, boost_thread, boost_chrono and boost_date_time
+                    if logging is required</para>
+            </sect1>
+            <sect1>
+                <title>Compile-time switches</title>
+                <para>The following symbols will, when defined, influence the behaviour of the library:<itemizedlist>
+                        <listitem>
+                            <para>BOOST_ASYNCHRONOUS_DEFAULT_JOB replaces
+                                boost::asynchronous::any_callable by the required job type.</para>
+                        </listitem>
+                        <listitem>
+                            <para>BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS: forces Asynchronous to
+                                only provide servant_proxy macros with all their arguments to avoid
+                                accidental forgetting. Precisely:<itemizedlist>
+                                    <listitem>
+                                        <para>BOOST_ASYNC_FUTURE_MEMBER /BOOST_ASYNC_POST_MEMBER
+                                            require priority</para>
+                                    </listitem>
+                                    <listitem>
+                                        <para>BOOST_ASYNC_FUTURE_MEMBER_LOG /
+                                            BOOST_ASYNC_POST_MEMBER_LOG require task name and
+                                            priority</para>
+                                    </listitem>
+                                    <listitem>
+                                        <para>make_safe_callback requires name and priority</para>
+                                    </listitem>
+                                    <listitem>
+                                        <para>make_lambda_continuation_wrapper requires task
+                                            name</para>
+                                    </listitem>
+                                    <listitem>
+                                        <para>parallel algorithms require task name and
+                                            priority</para>
+                                    </listitem>
+                                    <listitem>
+                                        <para>asynchronous::vector requires as last arguments name
+                                            and priority</para>
+                                    </listitem>
+                                </itemizedlist></para>
+                        </listitem>
+                        <listitem>
+                            <para>BOOST_ASYNCHRONOUS_NO_SAVING_CPU_LOAD: overrides default of
+                                Asynchronous: schedulers will run at full speed. This can slightly
+                                increase speed, at the cost of high CPU load.</para>
+                        </listitem>
+                        <listitem>
+                            <para>BOOST_ASYNCHRONOUS_PRCTL_SUPPORT: Allows naming of threads if
+                                sys/prctl is supported (Linux).</para>
+                        </listitem>
+                        <listitem>
+                            <para>BOOST_ASYNCHRONOUS_USE_BOOST_SPREADSORT: in older Boost versions,
+                                Spreasort was not included. This switch will provide
+                                parallel_spreadsort, parallel_quick_spreadsort and
+                                parallel_spreadsort_inplace</para>
+                        </listitem>
+                    </itemizedlist></para>
             </sect1>
         </chapter>
     </part>
