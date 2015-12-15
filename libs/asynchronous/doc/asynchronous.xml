@@ -3188,7 +3188,6 @@ boost::asynchronous::detail::callback_continuation&lt;long,Job>
             </sect1>
             <sect1>
                 <title>Parallel containers</title>
-                <para>TODO example.</para>
                 <para>Any gain made by using a parallel algorithm can be reduced to nothing if the
                     calling codes spends most of its time creating a std::vector. Interestingly,
                     most parallel libraries provide parallel algorithms, but very few offer parallel
@@ -3245,7 +3244,8 @@ boost::asynchronous::any_shared_scheduler_proxy&lt;> pool =
                             <para>std::size_t get_prio()const: the priority, as given in the
                                 constructor.</para>
                         </listitem>
-                    </itemizedlist></para>
+                </itemizedlist></para>
+                <para><link xlink:href="examples/example_vector.cpp">This example</link> displays some basic usage of vector.</para>
             </sect1>
         </chapter>
         <chapter>
