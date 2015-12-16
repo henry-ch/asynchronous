@@ -2774,6 +2774,667 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                     argument. This allows to combine algorithms functional way, for example this
                     (more to come):</para>
                 <programlisting>return <emphasis role="bold">parallel_for</emphasis>(<emphasis role="bold">parallel_for</emphasis>(<emphasis role="bold">parallel_for</emphasis>(...)));</programlisting>
+                <para>Asynchronous implements the following algorithms. It is also indicated whether
+                    the algorithm supports arguments passed as iterators, moved range, or
+                    continuation. Indicated is also whether the algorithm is distributable.<table
+                        frame="all">
+                        <title>Non-modifying Algorithms, in boost/asynchronous/algorithm</title>
+                        <tgroup cols="5">
+                            <colspec colname="c1" colnum="1" colwidth="1.0*"/>
+                            <colspec colname="c2" colnum="2" colwidth="1.0*"/>
+                            <colspec colname="c3" colnum="3" colwidth="1.0*"/>
+                            <colspec colname="c4" colnum="4" colwidth="1.0*"/>
+                            <colspec colname="c5" colnum="5" colwidth="1.0*"/>
+                            <thead>
+                                <row>
+                                    <entry>Name</entry>
+                                    <entry>Description</entry>
+                                    <entry>Header</entry>
+                                    <entry>Input Parameters</entry>
+                                    <entry>Distributable</entry>
+                                </row>
+                            </thead>
+                            <tbody>
+                                <row>
+                                    <entry>parallel_all_of</entry>
+                                    <entry>checks if a predicate is true for all of the elements in
+                                        a range </entry>
+                                    <entry>parallel_all_of.hpp</entry>
+                                    <entry>Iterators, continuation</entry>
+                                    <entry>No</entry>
+                                </row>
+                                <row>
+                                    <entry>parallel_any_of</entry>
+                                    <entry>checks if a predicate is true for any of the elements in
+                                        a range </entry>
+                                    <entry>parallel_any_of.hpp</entry>
+                                    <entry>Iterators, continuation</entry>
+                                    <entry>No</entry>
+                                </row>
+                                <row>
+                                    <entry>parallel_none_of</entry>
+                                    <entry>checks if a predicate is true for none of the elements in
+                                        a range </entry>
+                                    <entry>parallel_none_of.hpp</entry>
+                                    <entry>Iterators, continuation</entry>
+                                    <entry>No</entry>
+                                </row>
+                                <row>
+                                    <entry>parallel_for_each</entry>
+                                    <entry>aplpies a functor to a range of elements and accumulates
+                                        the result into the functor</entry>
+                                    <entry>parallel_for_each.hpp</entry>
+                                    <entry>Iterators</entry>
+                                    <entry>No</entry>
+                                </row>
+                                <row>
+                                    <entry>parallel_for</entry>
+                                    <entry>applies a function to a range of elements</entry>
+                                    <entry>parallel_for.hpp</entry>
+                                    <entry>Iterators, moved range, continuation</entry>
+                                    <entry>Yes</entry>
+                                </row>
+                                <row>
+                                    <entry>parallel_count</entry>
+                                    <entry>returns the number of elements satisfying specific
+                                        criteria </entry>
+                                    <entry>parallel_count.hpp</entry>
+                                    <entry>Iterators, moved range, continuation</entry>
+                                    <entry>Yes</entry>
+                                </row>
+                                <row>
+                                    <entry>parallel_count_if</entry>
+                                    <entry>returns the number of elements satisfying specific
+                                        criteria </entry>
+                                    <entry>parallel_count_if.hpp</entry>
+                                    <entry>Iterators, moved range, continuation</entry>
+                                    <entry>No</entry>
+                                </row>
+                                <row>
+                                    <entry>parallel_equal</entry>
+                                    <entry>determines if two sets of elements are the same </entry>
+                                    <entry>parallel_equal.hpp</entry>
+                                    <entry>Iterators</entry>
+                                    <entry>No</entry>
+                                </row>
+                                <row>
+                                    <entry>parallel_mismatch</entry>
+                                    <entry>finds the first position where two ranges differ</entry>
+                                    <entry>parallel_mismatch.hpp</entry>
+                                    <entry>Iterators</entry>
+                                    <entry>No</entry>
+                                </row>
+                                <row>
+                                    <entry>parallel_find_all</entry>
+                                    <entry>finds all the elements satisfying specific criteria </entry>
+                                    <entry>parallel_find_all.hpp</entry>
+                                    <entry>Iterators, moved range, continuation</entry>
+                                    <entry>Yes</entry>
+                                </row>
+                                <row>
+                                    <entry>parallel_find_end</entry>
+                                    <entry>finds the last sequence of elements in a certain
+                                        range</entry>
+                                    <entry>parallel_find_end.hpp</entry>
+                                    <entry>Iterators, continuation</entry>
+                                    <entry>No</entry>
+                                </row>
+                                <row>
+                                    <entry>parallel_find_first_of</entry>
+                                    <entry>searches for any one of a set of elements</entry>
+                                    <entry>parallel_find_first_of.hpp</entry>
+                                    <entry>Iterators, continuation</entry>
+                                    <entry>No</entry>
+                                </row>
+                                <row>
+                                    <entry>parallel_adjacent_find</entry>
+                                    <entry>finds the first two adjacent items that are equal (or
+                                        satisfy a given predicate)</entry>
+                                    <entry>parallel_adjacent_find.hpp</entry>
+                                    <entry>Iterators</entry>
+                                    <entry>No</entry>
+                                </row>
+                                <row>
+                                    <entry>parallel_lexicographical_compare</entry>
+                                    <entry>returns true if one range is lexicographically less than
+                                        another</entry>
+                                    <entry>parallel_lexicographical_compare.hpp</entry>
+                                    <entry>Iterators</entry>
+                                    <entry>No</entry>
+                                </row>
+                                <row>
+                                    <entry>parallel_search</entry>
+                                    <entry>searches for a range of elements</entry>
+                                    <entry>parallel_search.hpp</entry>
+                                    <entry>Iterators, continuation</entry>
+                                    <entry>No</entry>
+                                </row>
+                                <row>
+                                    <entry>parallel_search_n</entry>
+                                    <entry>searches for a number consecutive copies of an element in
+                                        a range</entry>
+                                    <entry>parallel_search_n.hpp</entry>
+                                    <entry>Iterators, continuation</entry>
+                                    <entry>No</entry>
+                                </row>
+                                <row>
+                                    <entry>parallel_scan</entry>
+                                    <entry>does a custom scan over a range of elements</entry>
+                                    <entry>parallel_scan.hpp</entry>
+                                    <entry/>
+                                    <entry>No</entry>
+                                </row>
+                                <row>
+                                    <entry>parallel_inclusive_scan</entry>
+                                    <entry>does an inclusive scan over a range of elements</entry>
+                                    <entry>parallel_inclusive_scan.hpp</entry>
+                                    <entry/>
+                                    <entry>No</entry>
+                                </row>
+                                <row>
+                                    <entry>parallel_exclusive_scan</entry>
+                                    <entry>does an exclusive scan over a range of elements</entry>
+                                    <entry>parallel_exclusive_scan.hpp</entry>
+                                    <entry/>
+                                    <entry>No</entry>
+                                </row>
+                            </tbody>
+                        </tgroup>
+                    </table></para><para></para>
+                <table frame="all">
+                    <title>Modifying Algorithms, in boost/asynchronous/algorithm</title>
+                    <tgroup cols="5">
+                        <colspec colname="c1" colnum="1" colwidth="1.0*"/>
+                        <colspec colname="c2" colnum="2" colwidth="1.0*"/>
+                        <colspec colname="c3" colnum="3" colwidth="1.0*"/>
+                        <colspec colname="c4" colnum="4" colwidth="1.0*"/>
+                        <colspec colname="c5" colnum="5" colwidth="1.0*"/>
+                        <thead>
+                            <row>
+                                <entry>Name</entry>
+                                <entry>Description</entry>
+                                <entry>Header</entry>
+                                <entry>Parameters taken</entry>
+                                <entry>Distributable</entry>
+                            </row>
+                        </thead>
+                    <tbody>
+                        <row>
+                            <entry>parallel_copy</entry>
+                            <entry>copies a range of elements to a new location</entry>
+                            <entry>parallel_copy.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_copy_if</entry>
+                            <entry>copies a the elements to a new location for which the given
+                                predicate is true. </entry>
+                            <entry>parallel_copy_if.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_move</entry>
+                            <entry>moves a range of elements to a new location</entry>
+                            <entry>parallel_move.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_fill</entry>
+                            <entry>assigns a range of elements a certain value </entry>
+                            <entry>parallel_fill.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_transform</entry>
+                            <entry>applies a function to a range of elements</entry>
+                            <entry>parallel_transform.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_generate</entry>
+                            <entry>saves the result of a function in a range </entry>
+                            <entry>parallel_generate.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_remove_copy</entry>
+                            <entry>copies a range of elements that are not equal to a specific
+                                value</entry>
+                            <entry>parallel_remove_copy.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_remove_copy_if</entry>
+                            <entry>copies a range of elements omitting those that satisfy specific
+                                criteria</entry>
+                            <entry>parallel_remove_copy.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_replace</entry>
+                            <entry>replaces all values with a specific value with another value </entry>
+                            <entry>parallel_replace.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_replace_if</entry>
+                            <entry>replaces all values satisfying specific criteria with another value </entry>
+                            <entry>parallel_replace.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_reverse</entry>
+                            <entry>reverses the order of elements in a range </entry>
+                            <entry>parallel_reverse.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_reverse_move</entry>
+                            <entry>reverses the order of elements in a range</entry>
+                            <entry>parallel_reverse.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_swap_ranges</entry>
+                            <entry>swaps two ranges of elements</entry>
+                            <entry>parallel_swap_ranges.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_transform_inclusive_scan</entry>
+                            <entry>does an inclusive scan over a range of elements after applying a
+                                function to each element </entry>
+                            <entry>parallel_transform_inclusive_scan.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_transform_exclusive_scan</entry>
+                            <entry>does an exclusive scan over a range of elements after applying a
+                                function to each element</entry>
+                            <entry>parallel_transform_exclusive_scan.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                    </tbody>
+                   </tgroup>
+                </table><para></para>
+                <table frame="all">
+                    <title>Partitioning Operations, in boost/asynchronous/algorithm</title>
+                    <tgroup cols="5">
+                        <colspec colname="c1" colnum="1" colwidth="1.0*"/>
+                        <colspec colname="c2" colnum="2" colwidth="1.0*"/>
+                        <colspec colname="c3" colnum="3" colwidth="1.0*"/>
+                        <colspec colname="c4" colnum="4" colwidth="1.0*"/>
+                        <colspec colname="c5" colnum="5" colwidth="1.0*"/>
+                        <thead>
+                            <row>
+                                <entry>Name</entry>
+                                <entry>Description</entry>
+                                <entry>Header</entry>
+                                <entry>Parameters taken</entry>
+                                <entry>Distributable</entry>
+                            </row>
+                        </thead>
+                    <tbody>
+                        <row>
+                            <entry>parallel_is_partitioned</entry>
+                            <entry>determines if the range is partitioned by the given predicate</entry>
+                            <entry>parallel_is_partitioned.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_partition</entry>
+                            <entry>divides a range of elements into two groups</entry>
+                            <entry>parallel_partition.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_stable_partition</entry>
+                            <entry>divides elements into two groups while preserving their relative
+                                order</entry>
+                            <entry>parallel_stable_partition.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_partition_copy</entry>
+                            <entry>copies a range dividing the elements into two groups</entry>
+                            <entry>parallel_partition_copy.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                    </tbody>
+                  </tgroup>
+                </table>
+                <para></para>
+                <table frame="all">
+                    <title>Sorting Operations, in boost/asynchronous/algorithm</title>
+                    <tgroup cols="5">
+                        <colspec colname="c1" colnum="1" colwidth="1.0*"/>
+                        <colspec colname="c2" colnum="2" colwidth="1.0*"/>
+                        <colspec colname="c3" colnum="3" colwidth="1.0*"/>
+                        <colspec colname="c4" colnum="4" colwidth="1.0*"/>
+                        <colspec colname="c5" colnum="5" colwidth="1.0*"/>
+                        <thead>
+                            <row>
+                                <entry>Name</entry>
+                                <entry>Description</entry>
+                                <entry>Header</entry>
+                                <entry>Parameters taken</entry>
+                                <entry>Distributable</entry>
+                            </row>
+                        </thead>
+                    <tbody>
+                        <row>
+                            <entry>parallel_is_sorted</entry>
+                            <entry>checks whether a range is sorted according to the given predicate </entry>
+                            <entry>parallel_is_sorted.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_is_reverse_sorted</entry>
+                            <entry>checks whether a range is reverse sorted according to the given
+                                predicate</entry>
+                            <entry>parallel_is_sorted.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_sort</entry>
+                            <entry>sorts a range according to the given predicate </entry>
+                            <entry>parallel_sort.hpp</entry>
+                            <entry/>
+                            <entry>Yes</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_sort_inplace</entry>
+                            <entry>sorts a range according to the given predicate using inplace
+                                merge</entry>
+                            <entry>parallel_sort_inplace.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_spreadsort_inplace</entry>
+                            <entry>sorts a range according to the given predicate using a
+                                Boost.Spreadsort algorithm and inplace merge</entry>
+                            <entry>parallel_sort_inplace.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_stable_sort_inplace</entry>
+                            <entry>sorts a range of elements while preserving order between equal
+                                elements using inplace merge</entry>
+                            <entry>parallel_sort_inplace.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_spreadsort</entry>
+                            <entry>sorts a range according to the given predicate using a
+                                Boost.Spreadsort algorithm</entry>
+                            <entry>parallel_sort.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_stable_sort</entry>
+                            <entry>sorts a range of elements while preserving order between equal
+                                elements</entry>
+                            <entry>parallel_stable_sort.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_partial_sort</entry>
+                            <entry>sorts the first N elements of a range </entry>
+                            <entry>parallel_partial_sort.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_quicksort</entry>
+                            <entry>sorts a range according to the given predicate using a
+                                quicksort</entry>
+                            <entry>parallel_quicksort.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_quick_spreadsort</entry>
+                            <entry>sorts a range according to the given predicate using a quicksort and
+                                a Boost.Spreadsort algorithm</entry>
+                            <entry>parallel_quicksort.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_nth_element</entry>
+                            <entry>partially sorts the given range making sure that it is partitioned
+                                by the given element </entry>
+                            <entry>parallel_nth_element.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                    </tbody>
+                  </tgroup>
+                </table>
+                <para></para>
+                <table frame="all">
+                    <title>Numeric Algorithms in boost/asynchronous/algorithm</title>
+                    <tgroup cols="5">
+                        <colspec colname="c1" colnum="1" colwidth="1.0*"/>
+                        <colspec colname="c2" colnum="2" colwidth="1.0*"/>
+                        <colspec colname="c3" colnum="3" colwidth="1.0*"/>
+                        <colspec colname="c4" colnum="4" colwidth="1.0*"/>
+                        <colspec colname="c5" colnum="5" colwidth="1.0*"/>
+                        <thead>
+                            <row>
+                                <entry>Name</entry>
+                                <entry>Description</entry>
+                                <entry>Header</entry>
+                                <entry>Parameters taken</entry>
+                                <entry>Distributable</entry>
+                            </row>
+                        </thead>
+                    <tbody>
+                        <row>
+                            <entry>parallel_iota</entry>
+                            <entry>fills a range with successive increments of the starting value</entry>
+                            <entry>parallel_iota.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_reduce</entry>
+                            <entry>sums up a range of elements </entry>
+                            <entry>parallel_reduce.hpp</entry>
+                            <entry/>
+                            <entry>Yes</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_inner_product</entry>
+                            <entry>computes the inner product of two ranges of elements </entry>
+                            <entry>parallel_inner_product.hpp</entry>
+                            <entry/>
+                            <entry>Yes</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_partial_sum</entry>
+                            <entry>computes the partial sum of a range of elements </entry>
+                            <entry>parallel_partial_sum.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                    </tbody>
+                  </tgroup>
+                </table>
+                <para></para>
+                <table frame="all">
+                    <title>Algorithms Operating on Sorted Sequences in
+                        boost/asynchronous/algorithm</title>
+                    <tgroup cols="5">
+                        <colspec colname="c1" colnum="1" colwidth="1.0*"/>
+                        <colspec colname="c2" colnum="2" colwidth="1.0*"/>
+                        <colspec colname="c3" colnum="3" colwidth="1.0*"/>
+                        <colspec colname="c4" colnum="4" colwidth="1.0*"/>
+                        <colspec colname="c5" colnum="5" colwidth="1.0*"/>
+                        <thead>
+                            <row>
+                                <entry>Name</entry>
+                                <entry>Description</entry>
+                                <entry>Header</entry>
+                                <entry>Parameters taken</entry>
+                                <entry>Distributable</entry>
+                            </row>
+                        </thead>
+                    <tbody>
+                        <row>
+                            <entry>parallel_merge</entry>
+                            <entry>merges two sorted ranges </entry>
+                            <entry>parallel_merge.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                    </tbody>
+                  </tgroup>
+                </table>
+                <para></para>
+                <table frame="all">
+                    <title>Minimum/maximum operations in boost/asynchronous/algorithm</title>
+                    <tgroup cols="5">
+                        <colspec colname="c1" colnum="1" colwidth="1.0*"/>
+                        <colspec colname="c2" colnum="2" colwidth="1.0*"/>
+                        <colspec colname="c3" colnum="3" colwidth="1.0*"/>
+                        <colspec colname="c4" colnum="4" colwidth="1.0*"/>
+                        <colspec colname="c5" colnum="5" colwidth="1.0*"/>
+                        <thead>
+                            <row>
+                                <entry>Name</entry>
+                                <entry>Description</entry>
+                                <entry>Header</entry>
+                                <entry>Parameters taken</entry>
+                                <entry>Distributable</entry>
+                            </row>
+                        </thead>
+                    <tbody>
+                        <row>
+                            <entry>parallel_extremum</entry>
+                            <entry>returns an extremum(smaller/ greater) of the given values according
+                                to a given predicate </entry>
+                            <entry>parallel_extremum.hpp</entry>
+                            <entry/>
+                            <entry>Yes</entry>
+                        </row>
+                    </tbody>
+                  </tgroup>
+                </table>
+                <para></para>
+                <table frame="all">
+                    <title>Miscellaneous Algorithms in boost/asynchronous/algorithm</title>
+                    <tgroup cols="5">
+                        <colspec colname="c1" colnum="1" colwidth="1.0*"/>
+                        <colspec colname="c2" colnum="2" colwidth="1.0*"/>
+                        <colspec colname="c3" colnum="3" colwidth="1.0*"/>
+                        <colspec colname="c4" colnum="4" colwidth="1.0*"/>
+                        <colspec colname="c5" colnum="5" colwidth="1.0*"/>
+                        <thead>
+                            <row>
+                                <entry>Name</entry>
+                                <entry>Description</entry>
+                                <entry>Header</entry>
+                                <entry>Parameters taken</entry>
+                                <entry>Distributable</entry>
+                            </row>
+                        </thead>
+                    <tbody>
+                        <row>
+                            <entry>parallel_invoke</entry>
+                            <entry>invokes a variable number of operations in parallel</entry>
+                            <entry>parallel_invoke.hpp</entry>
+                            <entry/>
+                            <entry>Yes</entry>
+                        </row>
+                        <row>
+                            <entry>if_then_else</entry>
+                            <entry>invokes algorithms based on the result of a function</entry>
+                            <entry>if_then_else.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                    </tbody>   
+                  </tgroup>                        
+                </table>
+                <para></para>
+                <table frame="all">
+                    <title>(Boost) Geometry Algorithms in
+                        boost/asynchronous/algorithm/geometry</title>
+                    <tgroup cols="5">
+                        <colspec colname="c1" colnum="1" colwidth="1.0*"/>
+                        <colspec colname="c2" colnum="2" colwidth="1.0*"/>
+                        <colspec colname="c3" colnum="3" colwidth="1.0*"/>
+                        <colspec colname="c4" colnum="4" colwidth="1.0*"/>
+                        <colspec colname="c5" colnum="5" colwidth="1.0*"/>
+                        <thead>
+                            <row>
+                                <entry>Name</entry>
+                                <entry>Description</entry>
+                                <entry>Header</entry>
+                                <entry>Parameters taken</entry>
+                                <entry>Distributable</entry>
+                            </row>
+                        </thead>
+                    <tbody>
+                        <row>
+                            <entry>parallel_geometry_intersection_of_x</entry>
+                            <entry>calculates the intersection of many geometries </entry>
+                            <entry>parallel_geometry_intersection_of_x.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_geometry_union_of_x</entry>
+                            <entry>combines many geometries which each other </entry>
+                            <entry>parallel_geometry_union_of_x.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_intersection</entry>
+                            <entry>calculates the intersection of two geometries</entry>
+                            <entry>parallel_intersection.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                        <row>
+                            <entry>parallel_union</entry>
+                            <entry>combines two geometries which each other</entry>
+                            <entry>parallel_union.hpp</entry>
+                            <entry/>
+                            <entry>No</entry>
+                        </row>
+                    </tbody>
+                  </tgroup>
+                </table>
+                <para></para>
                 <sect2>
                     <title>parallel_for</title>
                     <para>There are four versions of this algorithm:</para>
