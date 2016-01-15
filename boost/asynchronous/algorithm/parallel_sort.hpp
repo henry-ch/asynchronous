@@ -64,101 +64,116 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
                        Func func,long cutoff,const std::string& task_name, std::size_t prio,
                        boost::asynchronous::continuation_result<void> task_res)
     {
-        // advance up to cutoff
-        Iterator it = boost::asynchronous::detail::find_cutoff(beg,cutoff,end);
-        // if not at end, recurse, otherwise execute here
-        if ((it == end)&&(depth %2 == 0))
+        try
         {
-            // if already reverse sorted, only reverse
-            if (std::is_sorted(beg,it,boost::asynchronous::detail::reverse_sorted<Func>(func)))
+            // advance up to cutoff
+            Iterator it = boost::asynchronous::detail::find_cutoff(beg,cutoff,end);
+            // if not at end, recurse, otherwise execute here
+            if ((it == end)&&(depth %2 == 0))
             {
-                std::reverse(beg,end);
+                // if already reverse sorted, only reverse
+                if (std::is_sorted(beg,it,boost::asynchronous::detail::reverse_sorted<Func>(func)))
+                {
+                    std::reverse(beg,end);
+                }
+                // if already sorted, done
+                else if (!std::is_sorted(beg,it,func))
+                {
+                    Sort()(beg,it,func);
+                }
+                task_res.set_value();
             }
-            // if already sorted, done
-            else if (!std::is_sorted(beg,it,func))
+            else
             {
-                Sort()(beg,it,func);
+                auto it2 = beg2+std::distance(beg,it);
+                auto merge_task_name = task_name + "_merge";
+                boost::asynchronous::create_callback_continuation_job<Job>(
+                            // called when subtasks are done, set our result
+                            [task_res,func,beg,end,it,beg2,end2,it2,depth,cutoff,merge_task_name,prio,merge_memory]
+                            (std::tuple<boost::asynchronous::expected<void>,boost::asynchronous::expected<void> > res) mutable
+                            {
+                                try
+                                {
+                                    // get to check that no exception
+                                    std::get<0>(res).get();
+                                    std::get<1>(res).get();
+                                    // merge both sorted sub-ranges
+                                    auto on_done_fct = [task_res,depth,merge_memory](std::tuple<boost::asynchronous::expected<void> >&& merge_res)
+                                    {
+                                        try
+                                        {
+                                            // get to check that no exception
+                                            std::get<0>(merge_res).get();
+                                            // we need to clean up before returning value (in case a shutdown would be under way)
+                                            if (depth == 0 && !boost::has_trivial_destructor<value_type>::value)
+                                            {
+                                                merge_memory->clear([task_res,merge_memory]()mutable{task_res.set_value();});
+                                            }
+                                            else
+                                            {
+                                                task_res.set_value();
+                                            }
+                                        }
+                                        catch(std::exception& e)
+                                        {
+                                            if (depth == 0)
+                                            {
+                                                merge_memory->clear([task_res,merge_memory,e]()mutable
+                                                                    {task_res.set_exception(boost::copy_exception(e));});
+                                            }
+                                            else
+                                            {
+                                                task_res.set_exception(boost::copy_exception(e));
+                                            }
+                                        }
+                                    };
+                                    if (depth%2 == 0)
+                                    {
+                                        // merge into first range
+                                        auto c = boost::asynchronous::parallel_merge<value_type*,value_type*,Iterator,Func,Job>
+                                                (beg2,it2,it2,end2,beg,func,cutoff,merge_task_name,prio);
+                                        c.on_done(std::move(on_done_fct));
+                                    }
+                                    else
+                                    {
+                                        // merge into second range
+                                        auto c = boost::asynchronous::parallel_merge<Iterator,Iterator,value_type*,Func,Job>
+                                                (beg,it,it,end,beg2,func,cutoff,merge_task_name,prio);
+                                        c.on_done(std::move(on_done_fct));
+                                    }
+                                }
+                                catch(std::exception& e)
+                                {
+                                    if (depth == 0)
+                                    {
+                                        merge_memory->clear([task_res,merge_memory,e]()mutable
+                                                            {task_res.set_exception(boost::copy_exception(e));});
+                                    }
+                                    else
+                                    {
+                                        task_res.set_exception(boost::copy_exception(e));
+                                    }
+                                }
+                            },
+                            // recursive tasks
+                            parallel_sort_fast_helper<Iterator,Func,Job,Sort>
+                                (beg,it,depth+1,merge_memory,beg2,it2,func,cutoff,task_name,prio),
+                            parallel_sort_fast_helper<Iterator,Func,Job,Sort>
+                                (it,end,depth+1,merge_memory,it2,end2,func,cutoff,task_name,prio)
+                   );
             }
-            task_res.set_value();
         }
-        else
+        catch(std::exception& e)
         {
-            auto it2 = beg2+std::distance(beg,it);
-            auto merge_task_name = task_name + "_merge";
-            boost::asynchronous::create_callback_continuation_job<Job>(
-                        // called when subtasks are done, set our result
-                        [task_res,func,beg,end,it,beg2,end2,it2,depth,cutoff,merge_task_name,prio,merge_memory]
-                        (std::tuple<boost::asynchronous::expected<void>,boost::asynchronous::expected<void> > res) mutable
-                        {
-                            try
-                            {
-                                // get to check that no exception
-                                std::get<0>(res).get();
-                                std::get<1>(res).get();
-                                // merge both sorted sub-ranges
-                                auto on_done_fct = [task_res,depth,merge_memory](std::tuple<boost::asynchronous::expected<void> >&& merge_res)
-                                {
-                                    try
-                                    {
-                                        // get to check that no exception
-                                        std::get<0>(merge_res).get();
-                                        // we need to clean up before returning value (in case a shutdown would be under way)
-                                        if (depth == 0 && !boost::has_trivial_destructor<value_type>::value)
-                                        {
-                                            merge_memory->clear([task_res,merge_memory]()mutable{task_res.set_value();});
-                                        }
-                                        else
-                                        {
-                                            task_res.set_value();
-                                        }
-                                    }
-                                    catch(std::exception& e)
-                                    {
-                                        if (depth == 0)
-                                        {
-                                            merge_memory->clear([task_res,merge_memory,e]()mutable
-                                                                {task_res.set_exception(boost::copy_exception(e));});
-                                        }
-                                        else
-                                        {
-                                            task_res.set_exception(boost::copy_exception(e));
-                                        }
-                                    }
-                                };
-                                if (depth%2 == 0)
-                                {
-                                    // merge into first range
-                                    auto c = boost::asynchronous::parallel_merge<value_type*,value_type*,Iterator,Func,Job>
-                                            (beg2,it2,it2,end2,beg,func,cutoff,merge_task_name,prio);
-                                    c.on_done(std::move(on_done_fct));
-                                }
-                                else
-                                {
-                                    // merge into second range
-                                    auto c = boost::asynchronous::parallel_merge<Iterator,Iterator,value_type*,Func,Job>
-                                            (beg,it,it,end,beg2,func,cutoff,merge_task_name,prio);
-                                    c.on_done(std::move(on_done_fct));
-                                }
-                            }
-                            catch(std::exception& e)
-                            {
-                                if (depth == 0)
-                                {
-                                    merge_memory->clear([task_res,merge_memory,e]()mutable
-                                                        {task_res.set_exception(boost::copy_exception(e));});
-                                }
-                                else
-                                {
-                                    task_res.set_exception(boost::copy_exception(e));
-                                }
-                            }
-                        },
-                        // recursive tasks
-                        parallel_sort_fast_helper<Iterator,Func,Job,Sort>
-                            (beg,it,depth+1,merge_memory,beg2,it2,func,cutoff,task_name,prio),
-                        parallel_sort_fast_helper<Iterator,Func,Job,Sort>
-                            (it,end,depth+1,merge_memory,it2,end2,func,cutoff,task_name,prio)
-               );
+            if (depth == 0)
+            {
+                merge_memory->clear([task_res,merge_memory,e]()mutable
+                                    {task_res.set_exception(boost::copy_exception(e));});
+            }
+            else
+            {
+                task_res.set_exception(boost::copy_exception(e));
+            }
         }
     }
 
@@ -167,7 +182,24 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
         boost::asynchronous::continuation_result<void> task_res = this_task_result();
         try
         {
-            if (depth_ == 0)
+            // do we need to parallelize? If not, no need to allocate memory and we save ourselves the else clause
+            auto it = boost::asynchronous::detail::find_cutoff(beg_,cutoff_,end_);
+            if ((depth_ == 0) && (end_ == it))
+            {
+                // if already reverse sorted, only reverse
+                if (std::is_sorted(beg_,it,boost::asynchronous::detail::reverse_sorted<Func>(func_)))
+                {
+                    std::reverse(beg_,end_);
+                }
+                // if already sorted, done
+                else if (!std::is_sorted(beg_,it,func_))
+                {
+                    Sort()(beg_,it,func_);
+                }
+                task_res.set_value();
+                return;
+            }
+            else if (depth_ == 0)
             {
                 // optimization for cases where we are already sorted
                 auto beg = beg_;

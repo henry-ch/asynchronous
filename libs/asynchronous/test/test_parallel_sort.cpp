@@ -583,10 +583,43 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         std::sort(data_copy.begin(),data_copy.end(),std::less<some_type>());
                         BOOST_CHECK_MESSAGE(data_copy == this->m_data3,"parallel_sort gave a wrong value.");
                         // reset
-                        generate(this->m_data);
-                        //std::cout << "ctor cpt:" << ctor_count.load() << std::endl;
-                        //std::cout << "dtor cpt:" << dtor_count.load() << std::endl;
-                        //BOOST_CHECK_MESSAGE(ctor_count.load()==dtor_count.load(),"wrong number of ctors/dtors called.");
+                        data_copy.clear();
+                        this->m_data3.clear();
+                        BOOST_CHECK_MESSAGE(ctor_count.load()==dtor_count.load(),"wrong number of ctors/dtors called.");
+                        aPromise->set_value();
+           }// callback functor.
+        );
+        return fu;
+    }
+    boost::shared_future<void> parallel_sort_check_dtors_no_parallel()
+    {
+        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant async work not posted.");
+        // we need a promise to inform caller when we're done
+        boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
+        boost::shared_future<void> fu = aPromise->get_future();
+        boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
+        std::vector<boost::thread::id> ids = tp.thread_ids();
+        generate(m_data3);
+        auto data_copy = m_data3;
+        // start long tasks
+        post_callback(
+           [ids,this](){
+                    BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
+
+                    BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
+                    return boost::asynchronous::parallel_sort(this->m_data3.begin(),this->m_data3.end(),std::less<some_type>(),11000);
+                    },// work
+           [aPromise,ids,data_copy,this](boost::asynchronous::expected<void> res) mutable{
+                        BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
+                        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
+                        BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
+                        BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
+                        std::sort(data_copy.begin(),data_copy.end(),std::less<some_type>());
+                        BOOST_CHECK_MESSAGE(data_copy == this->m_data3,"parallel_sort gave a wrong value.");
+                        // reset
+                        data_copy.clear();
+                        this->m_data3.clear();
+                        BOOST_CHECK_MESSAGE(ctor_count.load()==dtor_count.load(),"wrong number of ctors/dtors called.");
                         aPromise->set_value();
            }// callback functor.
         );
@@ -620,6 +653,7 @@ public:
     BOOST_ASYNC_FUTURE_MEMBER(start_parallel_already_sorted)
     BOOST_ASYNC_FUTURE_MEMBER(start_parallel_sort_exception)
     BOOST_ASYNC_FUTURE_MEMBER(parallel_sort_check_dtors)
+    BOOST_ASYNC_FUTURE_MEMBER(parallel_sort_check_dtors_no_parallel)
 #else
     BOOST_ASYNC_FUTURE_MEMBER_1(start_parallel_sort)
     BOOST_ASYNC_FUTURE_MEMBER_1(start_parallel_stable_sort)
@@ -635,6 +669,7 @@ public:
     BOOST_ASYNC_FUTURE_MEMBER_1(start_parallel_already_sorted)
     BOOST_ASYNC_FUTURE_MEMBER_1(start_parallel_sort_exception)
     BOOST_ASYNC_FUTURE_MEMBER_1(parallel_sort_check_dtors)
+    BOOST_ASYNC_FUTURE_MEMBER_1(parallel_sort_check_dtors_no_parallel)
 #endif
 };
 
@@ -649,6 +684,29 @@ BOOST_AUTO_TEST_CASE( test_parallel_sort_check_dtors )
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
         boost::shared_future<boost::shared_future<void> > fuv = proxy.parallel_sort_check_dtors();
+        try
+        {
+            boost::shared_future<void> resfuv = fuv.get();
+            resfuv.get();
+        }
+        catch(...)
+        {
+            BOOST_FAIL( "unexpected exception" );
+        }
+    }
+    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
+}
+
+BOOST_AUTO_TEST_CASE( test_parallel_sort_check_dtors_no_parallel )
+{
+    servant_dtor=false;
+    {
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<>>>();
+
+        main_thread_id = boost::this_thread::get_id();
+        ServantProxy proxy(scheduler);
+        boost::shared_future<boost::shared_future<void> > fuv = proxy.parallel_sort_check_dtors_no_parallel();
         try
         {
             boost::shared_future<void> resfuv = fuv.get();
