@@ -3385,8 +3385,8 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                 </table>
                 <para></para>
                 <table frame="all">
-                    <title>(Boost) Geometry Algorithms in
-                        boost/asynchronous/algorithm/geometry</title>
+                    <title>(Boost) Geometry Algorithms in boost/asynchronous/algorithm/geometry
+                        (compatible with boost geometry 1.58)</title>
                     <tgroup cols="5">
                         <colspec colname="c1" colnum="1" colwidth="1.0*"/>
                         <colspec colname="c2" colnum="2" colwidth="1.0*"/>
