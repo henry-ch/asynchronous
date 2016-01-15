@@ -1,6 +1,6 @@
 <html><head>
       <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-   <title>A servant using another servant proxy</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s03.html" title="Using a threadpool"><link rel="next" href="ch03s05.html" title="Interrupting tasks"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">A servant using another servant proxy</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s03.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch03s05.html">Next</a></td></tr></table><hr></div><div class="sect1" title="A servant using another servant proxy"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e567"></a>A servant using another servant proxy</h2></div></div></div><p>Often, in a layered design, you'll need that a servant in a single-threaded
+   <title>A servant using another servant proxy</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s03.html" title="Using a threadpool from within a servant"><link rel="next" href="ch03s05.html" title="Interrupting tasks"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">A servant using another servant proxy</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s03.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch03s05.html">Next</a></td></tr></table><hr></div><div class="sect1" title="A servant using another servant proxy"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e597"></a>A servant using another servant proxy</h2></div></div></div><p>Often, in a layered design, you'll need that a servant in a single-threaded
                     scheduler calls a member of a servant living in another one. And you'll want to
                     get a callback, not a future, because you absolutely refuse to block waiting for
                     a future (and you'll be very right of course!). Ideally, except for main(), you
@@ -40,4 +40,29 @@ struct Servant2 : boost::asynchronous::trackable_servant&lt;&gt;
                         <code class="code">Servant2</code> goes out of scope, it will shutdown
                         <code class="code">Servant</code>'s scheduler, then will his scheduler be shutdown
                     (provided no more object is living there), and all threads joined. The <a class="link" href="examples/example_two_simple_servants.cpp" target="_top">complete example
-                    </a> shows a few more calls too.</p></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch03s03.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="ch03.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ch03s05.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Using a threadpool&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Interrupting tasks</td></tr></table></div></body></html>
+                    </a> shows a few more calls too.</p><p>Asynchronous offers a different syntax to achieve the same result. Which one
+                    you use is a matter of taste, both are equivalent. The second method is with
+                    BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK(_LOG if you need logging). It takes a
+                    callback as argument, other arguments are forwarded. Combined with
+                    <code class="code">make_safe_callback</code>, one gets the same effect (safe call) as above.</p><pre class="programlisting">// Proxy for a basic servant 
+class ServantProxy : public boost::asynchronous::servant_proxy&lt;ServantProxy,Servant&gt;
+{
+public:
+    template &lt;class Scheduler&gt;
+    ServantProxy(Scheduler s, int data):
+        boost::asynchronous::servant_proxy&lt;ServantProxy,Servant&gt;(s, data)
+    {}
+    BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK(foo) // say, foo takes an int as argument
+};   </pre><pre class="programlisting">// Servant using the first one
+struct Servant2 : boost::asynchronous::trackable_servant&lt;&gt;
+{
+    Servant2(boost::asynchronous::any_weak_scheduler&lt;&gt; scheduler,ServantProxy worker)
+        :boost::asynchronous::trackable_servant&lt;&gt;(scheduler)
+        ,m_worker(worker) // the proxy allowing access to Servant
+    void doIt()    
+    {                 
+         m_worker.foo(make_safe_callback([](boost::asynchronous::expected&lt;void&gt; res) // expected&lt;return type of foo&gt; 
+                                        {/* callback code*/}), 
+                      42 /* arguments of foo*/); 
+    }
+};</pre></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch03s03.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="ch03.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ch03s05.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Using a threadpool from within a servant&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Interrupting tasks</td></tr></table></div></body></html>

@@ -2,7 +2,6 @@
 #include <boost/asynchronous/scheduler/tcp/simple_tcp_client.hpp>
 #include <boost/asynchronous/extensions/asio/asio_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
-#include <boost/asynchronous/queue/guarded_deque.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/scheduler/threadpool_scheduler.hpp>
 
@@ -72,6 +71,7 @@ int main(int argc, char* argv[])
             else if (task_name=="dummy_parallel_reduce_subtask")
             {
                 boost::asynchronous::parallel_reduce_range_move_helper<vector<long>,
+                                                                       dummy_parallel_reduce_subtask,
                                                                        dummy_parallel_reduce_subtask,
                                                                        long,
                                                                        boost::asynchronous::any_serializable> t;
@@ -146,7 +146,7 @@ int main(int argc, char* argv[])
             // guarded_deque supports queue size
             auto pool = boost::asynchronous::make_shared_scheduler_proxy<
                           boost::asynchronous::threadpool_scheduler<
-                            boost::asynchronous::guarded_deque<boost::asynchronous::any_serializable>>>(threads);
+                            boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable>>>(threads);
             // more advanced policy
 // g++ in uncooperative, clang no
 #if defined(__clang__)

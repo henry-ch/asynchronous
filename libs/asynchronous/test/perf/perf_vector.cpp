@@ -78,12 +78,12 @@ int main( int argc, const char *argv[] )
     duration1 = (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000);
     std::cout << "Construction of std::vector<LongOne>(" << stdv.size() << ") took in ms: " << duration1 << std::endl;
 
-    pool = boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::multiqueue_threadpool_scheduler<
+    pool = boost::asynchronous::make_shared_scheduler_proxy<
+                    boost::asynchronous::multiqueue_threadpool_scheduler<
                             boost::asynchronous::lockfree_queue<>/*,
                             boost::asynchronous::default_find_position< boost::asynchronous::sequential_push_policy>,
                             boost::asynchronous::no_cpu_load_saving*/
-                        >(tpsize,tasks));
+                        >>(tpsize,tasks);
     // set processor affinity to improve cache usage. We start at core 0, until tpsize-1
     pool.processor_bind(0);
     // creation asynchronous

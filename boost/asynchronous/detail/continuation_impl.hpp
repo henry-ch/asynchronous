@@ -385,7 +385,13 @@ struct lambda_continuation_wrapper<Func,void> : public boost::asynchronous::cont
 };
 
 template <class Func>
-auto make_lambda_continuation_wrapper(Func f, std::string const& name) -> lambda_continuation_wrapper<Func,decltype(f())>
+auto make_lambda_continuation_wrapper(Func f,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                                      std::string const& name)
+#else
+                                      std::string const& name="")
+#endif
+-> lambda_continuation_wrapper<Func,decltype(f())>
 {
     return lambda_continuation_wrapper<Func,decltype(f())>(std::move(f),name);
 }

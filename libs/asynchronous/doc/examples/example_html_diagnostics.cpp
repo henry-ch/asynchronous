@@ -6,7 +6,7 @@
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
-#include <boost/asynchronous/scheduler/threadpool_scheduler.hpp>
+#include <boost/asynchronous/scheduler/multiqueue_threadpool_scheduler.hpp>
 #include <boost/asynchronous/servant_proxy.hpp>
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/checks.hpp>
@@ -36,12 +36,12 @@ public:
         std::iota(m_data.begin(), m_data.end(), 0);
     }
 
-    void on_callback(long long result)
+    void on_callback(long long /*result*/)
     {
         m_promise->set_value();
     }
 
-    boost::future<void> start_async_work()
+    boost::future<void> foo()
     {
         boost::future<void> fu = m_promise->get_future();
 
@@ -82,7 +82,7 @@ public:
                [this](boost::asynchronous::expected<long long> res){
                    this->on_callback(res.get());
                },
-               "post_callback",
+               "foo",
                0,
                0
         );
@@ -102,9 +102,11 @@ public:
         boost::asynchronous::servant_proxy<ServantProxy, Servant, job, 20000>(s, p)
     {}
 
-    BOOST_ASYNC_FUTURE_MEMBER_LOG(start_async_work, "start_async_work", 0);
+    BOOST_ASYNC_FUTURE_MEMBER_LOG(foo, "foo", 0);
     BOOST_ASYNC_SERVANT_POST_CTOR_LOG("ctor", 0);
+    BOOST_ASYNC_SERVANT_POST_DTOR_LOG("dtor", 0);
 };
+
 
 
 void test_html_diagnostics(int argc, char *argv[])
@@ -119,14 +121,18 @@ void test_html_diagnostics(int argc, char *argv[])
     // Create schedulers
     auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
                                 boost::asynchronous::single_thread_scheduler<
-                                     boost::asynchronous::lockfree_queue<job>>>(std::string("<Scheduler>"));
+                                     boost::asynchronous::lockfree_queue<job>>>(std::string("Servant")); // scheduler name
     auto pool = boost::asynchronous::make_shared_scheduler_proxy<
-                                boost::asynchronous::threadpool_scheduler<
-                                     boost::asynchronous::lockfree_queue<job>>>(6, std::string("Threadpool"), 12);
+                                boost::asynchronous::multiqueue_threadpool_scheduler<
+                                     boost::asynchronous::lockfree_queue<job>>>(
+                                        boost::thread::hardware_concurrency(),            // number of threads
+                                        std::string("Threadpool"),                        // scheduler name
+                                        20);                                              // queue parameter
 
     auto formatter_scheduler = boost::asynchronous::make_shared_scheduler_proxy<
                                 boost::asynchronous::single_thread_scheduler<
-                                     boost::asynchronous::lockfree_queue<job>>>(std::string("Formatter scheduler"));
+                                     boost::asynchronous::lockfree_queue<job>>>
+                                             (std::string("Formatter scheduler"));        // scheduler name
 
 
     typedef boost::asynchronous::html_formatter::formatter<> html_formatter_t;
@@ -138,7 +144,7 @@ void test_html_diagnostics(int argc, char *argv[])
     {
         // Create proxy
         ServantProxy proxy(scheduler, pool);
-        boost::future<boost::future<void> > fu = proxy.start_async_work();
+        boost::future<boost::future<void> > fu = proxy.foo();
 
         // Sleep
         boost::this_thread::sleep_for(boost::chrono::milliseconds(std::atoi(argv[3])));

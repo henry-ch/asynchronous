@@ -1,12 +1,31 @@
 <html><head>
       <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-   <title>asio_scheduler</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch06.html" title="Chapter&nbsp;6.&nbsp;Schedulers"><link rel="prev" href="ch06s06.html" title="composite_threadpool_scheduler"><link rel="next" href="ch07.html" title="Chapter&nbsp;7.&nbsp;Compiler"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">asio_scheduler</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch06s06.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;6.&nbsp;Schedulers</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch07.html">Next</a></td></tr></table><hr></div><div class="sect1" title="asio_scheduler"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e2716"></a>asio_scheduler</h2></div></div></div><p>This pool brings the infrastructure and access to io_service for an integrated
-                    usage of Boost.Asio. Furthermore, if used withing a
-                        <code class="code">composite_threadpool_scheduler</code>, it will steal jobs from other
-                    pool's queues.</p><p>Declaration:</p><pre class="programlisting">template&lt;class FindPosition=boost::asynchronous::default_find_position&lt; boost::asynchronous::sequential_push_policy &gt; &gt;
-class asio_scheduler;</pre><p>Creation:</p><pre class="programlisting">boost::asynchronous::any_shared_scheduler_proxy&lt;&gt; scheduler = 
-    boost::asynchronous::create_shared_scheduler_proxy(
-                    new boost::asynchronous::asio_scheduler&lt;&gt;(4)); // 4 threads in pool</pre><p>
-                    </p><div class="table"><a name="d0e2734"></a><p class="title"><b>Table&nbsp;6.7.&nbsp;#include
-                            &lt;boost/asynchronous/extensions/asio/asio_scheduler.hpp&gt;</b></p><div class="table-contents"><table summary="#include&#xA;                            <boost/asynchronous/extensions/asio/asio_scheduler.hpp&gt;" border="1"><colgroup><col><col></colgroup><thead><tr><th>Characteristics</th><th>&nbsp;</th></tr></thead><tbody><tr><td>Number of threads</td><td><span class="bold"><strong>1</strong></span>-n</td></tr><tr><td>Can be stolen from?</td><td>No*</td></tr><tr><td>Can steal from other threads in this pool?</td><td>Yes</td></tr><tr><td>Can steal from other threads in other pools?</td><td>Yes</td></tr></tbody></table></div></div><p><br class="table-break">
-                </p></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch06s06.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="ch06.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ch07.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">composite_threadpool_scheduler&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Chapter&nbsp;7.&nbsp;Compiler</td></tr></table></div></body></html>
+   <title>composite_threadpool_scheduler</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch06.html" title="Chapter&nbsp;6.&nbsp;Schedulers"><link rel="prev" href="ch06s06.html" title="stealing_multiqueue_threadpool_scheduler"><link rel="next" href="ch06s08.html" title="asio_scheduler"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">composite_threadpool_scheduler</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch06s06.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;6.&nbsp;Schedulers</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch06s08.html">Next</a></td></tr></table><hr></div><div class="sect1" title="composite_threadpool_scheduler"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e3044"></a>composite_threadpool_scheduler</h2></div></div></div><p>This pool owns no thread by itself. Its job is to contain other pools,
+                    accessible by the priority given by posting, and share all queues of its
+                    subpools among them. Only the stealing_* pools and <code class="code">asio_scheduler</code>
+                    will make use of this and steal from other pools though.</p><p>For creation we need to create other pool of stealing or not stealing, stolen
+                    from or not, schedulers. stealing_xxx pools will try to steal jobs from other
+                    pool of the same composite, but only if these schedulers support this. Other
+                    threadpools will not steal but get stolen from.
+                        <code class="code">single_thread_scheduler</code> will not steal or get stolen
+                    from.</p><pre class="programlisting">// create a composite threadpool made of:
+// a multiqueue_threadpool_scheduler, 0 thread
+// This scheduler does not steal from other schedulers, but will lend its queues for stealing
+auto tp = boost::asynchronous::make_shared_scheduler_proxy&lt;
+                    boost::asynchronous::threadpool_scheduler&lt;boost::asynchronous::lockfree_queue&lt;&gt;&gt;&gt; (0,100);
+
+// a stealing_multiqueue_threadpool_scheduler, 3 threads, each with a threadsafe_list
+// this scheduler will steal from other schedulers if it can. In this case it will manage only with tp, not tp3
+auto tp2 = boost::asynchronous::make_shared_scheduler_proxy&lt;
+                    boost::asynchronous::stealing_multiqueue_threadpool_scheduler&lt;boost::asynchronous::threadsafe_list&lt;&gt;&gt;&gt; (3);
+
+// composite pool made of the previous 2
+auto tp_worker = boost::asynchronous::make_shared_scheduler_proxy&lt;<span class="bold"><strong>boost::asynchronous::composite_threadpool_scheduler&lt;&gt;&gt;(tp,tp2)</strong></span>; 
+                </pre><p>Declaration:</p><pre class="programlisting">template&lt;class Job = boost::asynchronous::any_callable,
+         class FindPosition=boost::asynchronous::default_find_position&lt; &gt;,
+         class Clock = boost::chrono::high_resolution_clock  &gt;
+class composite_threadpool_scheduler;                 
+                </pre><p>
+                    </p><div class="table"><a name="d0e3068"></a><p class="title"><b>Table&nbsp;6.7.&nbsp;#include
+                            &lt;boost/asynchronous/scheduler/composite_threadpool_scheduler.hpp&gt;</b></p><div class="table-contents"><table summary="#include&#xA;                            <boost/asynchronous/scheduler/composite_threadpool_scheduler.hpp&gt;" border="1"><colgroup><col><col></colgroup><thead><tr><th>Characteristics</th><th>&nbsp;</th></tr></thead><tbody><tr><td>Number of threads</td><td>0</td></tr><tr><td>Can be stolen from?</td><td>Yes</td></tr><tr><td>Can steal from other threads in this pool?</td><td>N/A</td></tr><tr><td>Can steal from other threads in other pools?</td><td>No</td></tr></tbody></table></div></div><p><br class="table-break">
+                </p></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch06s06.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="ch06.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ch06s08.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">stealing_multiqueue_threadpool_scheduler&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;asio_scheduler</td></tr></table></div></body></html>
