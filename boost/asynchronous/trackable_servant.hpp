@@ -346,7 +346,7 @@ private:
             if (sched.is_valid())
             {
                 std::vector<boost::thread::id> ids = sched.thread_ids();
-                if ((std::find(ids.begin(),ids.end(),boost::this_thread::get_id()) != ids.end()))
+                if (ids.size() == 1 && (ids[0] == boost::this_thread::get_id()))
                 {
                     // our thread, call if servant alive
                    boost::asynchronous::move_bind( boost::asynchronous::check_alive([func_ptr](Args... args){(*func_ptr)(std::move(args)...);},tracking),
