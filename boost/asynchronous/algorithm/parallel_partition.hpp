@@ -30,7 +30,22 @@ namespace boost { namespace asynchronous
 {
 namespace detail
 {
-// used by algorithms based on parallel_partitions
+template <class It, class Func>
+void median_of_three(It it1, It it2, It it3, Func& func)
+{
+    if (func(*it2,*it1))
+    {
+        std::iter_swap(it1,it2);
+    }
+    if (func(*it3,*it1))
+    {
+        std::iter_swap(it1,it3);
+    }
+    if (func(*it3,*it2))
+    {
+        std::iter_swap(it2,it3);
+    }
+}
 template <class It, class Func>
 auto median_of_medians(It beg, It end, Func& func)
 -> typename std::remove_reference<decltype(*beg)>::type
@@ -42,22 +57,22 @@ auto median_of_medians(It beg, It end, Func& func)
     {
         std::size_t offset = dist/2;
         std::vector<typename std::remove_reference<decltype(*beg)>::type> temp1 = {*beg, *(beg+offset), *(end-1)};
-        std::nth_element(temp1.begin(),temp1.begin()+1,temp1.end(),func);
+        boost::asynchronous::detail::median_of_three(temp1.begin(),temp1.begin()+1,temp1.begin()+2,func);
         return *(temp1.begin()+1);
     }
 
     std::size_t offset = dist/8;
     std::vector<typename std::remove_reference<decltype(*beg)>::type> temp1 = {*beg, *(beg+offset), *(beg+offset*2)};
-    std::nth_element(temp1.begin(),temp1.begin()+1,temp1.end(),func);
+    boost::asynchronous::detail::median_of_three(temp1.begin(),temp1.begin()+1,temp1.begin()+2,func);
 
     std::vector<typename std::remove_reference<decltype(*beg)>::type> temp2 = {*(beg+ 3*offset), *(beg+offset*4), *(end-(3*offset+1))};
-    std::nth_element(temp2.begin(),temp2.begin()+1,temp2.end(),func);
+    boost::asynchronous::detail::median_of_three(temp2.begin(),temp2.begin()+1,temp2.begin()+2,func);
 
     std::vector<typename std::remove_reference<decltype(*beg)>::type> temp3 = {*(end-(2*offset+1)), *(end-(offset+1)), *(end-1)};
-    std::nth_element(temp3.begin(),temp3.begin()+1,temp3.end(),func);
+    boost::asynchronous::detail::median_of_three(temp3.begin(),temp3.begin()+1,temp3.begin()+2,func);
 
     std::vector<typename std::remove_reference<decltype(*beg)>::type> res = {*(temp1.begin()+1), *(temp2.begin()+1), *(temp3.begin()+1)};
-    std::nth_element(res.begin(),res.begin()+1,res.end(),func);
+    boost::asynchronous::detail::median_of_three(res.begin(),res.begin()+1,res.begin()+2,func);
 
     return *(res.begin()+1);
 }

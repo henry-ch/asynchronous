@@ -41,7 +41,7 @@ private:
         }
     };
     std::vector<std::unique_ptr<bucket_type> > m_buckets;
-    Hash m_hasher;
+    const Hash m_hasher;
 
     struct current_type
     {

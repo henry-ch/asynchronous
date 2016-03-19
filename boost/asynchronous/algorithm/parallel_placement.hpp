@@ -109,7 +109,7 @@ struct parallel_placement_helper: public boost::asynchronous::continuation_task<
                                     {
                                         for (std::size_t j = 0; j < (end-it); ++j)
                                         {
-                                            ((T*)(data.get())+(j+beg))->~T();
+                                            ((T*)(data.get())+(j+it))->~T();
                                         }
                                         task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_handled,res1.second));
                                     }
