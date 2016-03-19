@@ -144,7 +144,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
 
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
-                    return boost::asynchronous::parallel_reverse_move(std::move(this->m_data1),100);
+                    return boost::asynchronous::parallel_reverse(std::move(this->m_data1),100);
                     },// work
            [aPromise,ids,data_copy,this](boost::asynchronous::expected<std::vector<int>> res) mutable{
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");

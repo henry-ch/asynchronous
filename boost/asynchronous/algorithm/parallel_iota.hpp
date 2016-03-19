@@ -95,16 +95,16 @@ struct parallel_iota_inplace_helper : public boost::asynchronous::continuation_t
 
 }
 
-template <typename Iterator, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+template <typename Iterator, typename T, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<void, Job>
-parallel_iota(Iterator begin, Iterator end, typename boost::asynchronous::detail::iterator_value_type<Iterator>::type start, long cutoff,
+parallel_iota(Iterator begin, Iterator end, T const& value, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
               const std::string& task_name, std::size_t prio)
 #else
               const std::string& task_name="", std::size_t prio=0)
 #endif
 {
-    return boost::asynchronous::top_level_callback_continuation_job<void, Job>(boost::asynchronous::detail::parallel_iota_inplace_helper<Iterator, Job>(begin, end, start, cutoff, task_name, prio));
+    return boost::asynchronous::top_level_callback_continuation_job<void, Job>(boost::asynchronous::detail::parallel_iota_inplace_helper<Iterator, Job>(begin, end, value, cutoff, task_name, prio));
 }
 
 namespace detail {
@@ -172,9 +172,9 @@ struct parallel_iota_generate_helper : public boost::asynchronous::continuation_
 
 }
 
-template <typename Range, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+template <typename Range, typename T, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::enable_if<boost::has_range_iterator<Range>, boost::asynchronous::detail::callback_continuation<Range, Job>>::type
-parallel_iota(Range && range, typename boost::asynchronous::detail::range_value_type<Range>::type start, long cutoff,
+parallel_iota(Range && range, T const& value, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
               const std::string& task_name, std::size_t prio)
 #else
@@ -182,7 +182,7 @@ parallel_iota(Range && range, typename boost::asynchronous::detail::range_value_
 #endif
 {
     auto range_ptr = boost::make_shared<Range>(std::forward<Range>(range));
-    return boost::asynchronous::top_level_callback_continuation_job<Range, Job>(boost::asynchronous::detail::parallel_iota_generate_helper<Range, Job>(range_ptr, start, cutoff, task_name, prio));
+    return boost::asynchronous::top_level_callback_continuation_job<Range, Job>(boost::asynchronous::detail::parallel_iota_generate_helper<Range, Job>(range_ptr, value, cutoff, task_name, prio));
 }
 
 }}

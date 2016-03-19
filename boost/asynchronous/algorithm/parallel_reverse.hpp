@@ -112,8 +112,8 @@ parallel_reverse(Iterator beg, Iterator end, long cutoff,
 }
 
 template <class Range, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-boost::asynchronous::detail::callback_continuation<Range,Job>
-parallel_reverse_move(Range&& range,long cutoff,
+typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<Range,Job> >::type
+parallel_reverse(Range&& range,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                    const std::string& task_name, std::size_t prio)
 #else
@@ -203,7 +203,7 @@ struct parallel_reverse_continuation_range_helper<Continuation,Job,
                 try
                 {
                     auto new_continuation =
-                       boost::asynchronous::parallel_reverse_move<typename Continuation::return_type, Job>(std::move(std::get<0>(continuation_res).get()),cutoff,task_name,prio);
+                       boost::asynchronous::parallel_reverse<typename Continuation::return_type, Job>(std::move(std::get<0>(continuation_res).get()),cutoff,task_name,prio);
                     new_continuation.on_done([task_res](std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& new_continuation_res)
                     {
                         task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
