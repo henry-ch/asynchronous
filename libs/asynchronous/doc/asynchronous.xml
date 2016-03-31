@@ -2820,7 +2820,7 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                                     <entry>No</entry>
                                 </row>
                                 <row>
-                                    <entry>parallel_for_each</entry>
+                                    <entry><command xlink:href="#parallel_for_each">parallel_for_each</command></entry>
                                     <entry>aplpies a functor to a range of elements and accumulates
                                         the result into the functor</entry>
                                     <entry>parallel_for_each.hpp</entry>
@@ -2918,21 +2918,21 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                                     <entry>No</entry>
                                 </row>
                                 <row>
-                                    <entry>parallel_scan</entry>
+                                    <entry><command xlink:href="#parallel_scan">parallel_scan</command></entry>
                                     <entry>does a custom scan over a range of elements</entry>
                                     <entry>parallel_scan.hpp</entry>
                                     <entry>Iterators, moved range, continuation</entry>
                                     <entry>No</entry>
                                 </row>
                                 <row>
-                                    <entry>parallel_inclusive_scan</entry>
+                                    <entry><command xlink:href="#parallel_inclusive_scan">parallel_inclusive_scan</command></entry>
                                     <entry>does an inclusive scan over a range of elements</entry>
                                     <entry>parallel_inclusive_scan.hpp</entry>
                                     <entry>Iterators, moved range, continuation</entry>
                                     <entry>No</entry>
                                 </row>
                                 <row>
-                                    <entry>parallel_exclusive_scan</entry>
+                                    <entry><command xlink:href="#parallel_exclusive_scan">parallel_exclusive_scan</command></entry>
                                     <entry>does an exclusive scan over a range of elements</entry>
                                     <entry>parallel_exclusive_scan.hpp</entry>
                                     <entry>Iterators, moved range, continuation</entry>
@@ -3047,7 +3047,7 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                             <entry>No</entry>
                         </row>
                         <row>
-                            <entry>parallel_transform_inclusive_scan</entry>
+                            <entry><command xlink:href="#parallel_transform_inclusive_scan">parallel_transform_inclusive_scan</command></entry>
                             <entry>does an inclusive scan over a range of elements after applying a
                                 function to each element </entry>
                             <entry>parallel_transform_inclusive_scan.hpp</entry>
@@ -3055,7 +3055,7 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                             <entry>No</entry>
                         </row>
                         <row>
-                            <entry>parallel_transform_exclusive_scan</entry>
+                            <entry><command xlink:href="#parallel_transform_exclusive_scan">parallel_transform_exclusive_scan</command></entry>
                             <entry>does an exclusive scan over a range of elements after applying a
                                 function to each element</entry>
                             <entry>parallel_transform_exclusive_scan.hpp</entry>
@@ -3091,7 +3091,7 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                             <entry>No</entry>
                         </row>
                         <row>
-                            <entry>parallel_partition</entry>
+                            <entry><command xlink:href="#parallel_partition">parallel_partition</command></entry>
                             <entry>divides a range of elements into two groups</entry>
                             <entry>parallel_partition.hpp</entry>
                             <entry>Iterators, moved range, continuation</entry>
@@ -3106,7 +3106,7 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                             <entry>No</entry>
                         </row>
                         <row>
-                            <entry>parallel_partition_copy</entry>
+                            <entry><command xlink:href="#parallel_partition_copy">parallel_partition_copy</command></entry>
                             <entry>copies a range dividing the elements into two groups</entry>
                             <entry>parallel_partition_copy.hpp</entry>
                             <entry>Iterators</entry>
@@ -3367,7 +3367,7 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                             <entry>Yes</entry>
                         </row>
                         <row>
-                            <entry>if_then_else</entry>
+                            <entry><command xlink:href="#if_then_else">if_then_else</command></entry>
                             <entry>invokes algorithms based on the result of a function</entry>
                             <entry>if_then_else.hpp</entry>
                             <entry>if/then/else clauses</entry>
@@ -3429,6 +3429,66 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                   </tgroup>
                 </table>
                 <para></para>
+                <sect2>
+                    <title>Finding the best cutoff</title>
+                    <para>The algorithms described above all make use of a cutoff, which is the
+                        number of elements where the algorithm should stop going parallel and
+                        execute sequentially. It is sometimes also named grain size in the
+                        literrature. Finding the best value can often make quite a big difference in
+                        execution time. Unfortunately, the best cutoff differs greatly between
+                        different processors or even machines. To make this task easier,
+                        Asynchronous provides a helper function, <emphasis role="bold"
+                            >find_best_cutoff</emphasis>, which helps finding the best cutoff. For
+                        best results, it makes sense to use it at deployment time. <emphasis
+                            role="bold">find_best_cutoff</emphasis> can be found in
+                        boost/asynchronous/helpers.hpp.</para>
+                    <programlisting>template &lt;class Func, class Scheduler>
+std::tuple&lt;std::size_t,std::vector&lt;std::size_t>> find_best_cutoff(Scheduler s, Func f,
+                                                     std::size_t cutoff_begin,
+                                                     std::size_t cutoff_end,
+                                                     std::size_t steps,
+                                                     std::size_t retries,
+                                                     const std::string&amp; task_name="",
+                                                     std::size_t prio=0 )</programlisting>
+                    <para><emphasis role="underline">Return value</emphasis>: A tuple containing the
+                        best cutoff and a std::vector containing the elapsed times of this best
+                        cutoff.</para>
+                    <para><emphasis role="underline">Parameters</emphasis>: <itemizedlist>
+                            <listitem>
+                                <para>Scheduler s: the scheduler which will execute the algorithm we
+                                    want to optimize</para>
+                            </listitem>
+                            <listitem>
+                                <para>Func f: a unary predicate which will be called for every
+                                    cutoff value. It must have a signature of the form
+                                    Unspecified-Continuation f (std::size_t cutoff); which will
+                                    return a continuation, which is what algorithms described in the
+                                    next sections will return.</para>
+                            </listitem>
+                            <listitem>
+                                <para>cutoff_begin, cutoff_end: the range of cutoffs to test</para>
+                            </listitem>
+                            <listitem>
+                                <para>steps: step between two possible cutoff values. This is needed
+                                    because testing every possible cutoff would take very
+                                    long.</para>
+                            </listitem>
+                            <listitem>
+                                <para>retries: how many times the same cutoff value will be used.
+                                    Using retries will give us a better mean vakue for a given
+                                    cutoff.</para>
+                            </listitem>
+                            <listitem>
+                                <para>task_name: the name displayed in the scheduler
+                                    diagnostics</para>
+                            </listitem>
+                            <listitem>
+                                <para>prio: task priority </para>
+                            </listitem>
+                    </itemizedlist></para>
+                    <para>Please have a look at <link xlink:href="examples/example_cutoff_sort.cpp"
+                        >this example finding the best cutoff for a parallel_sort</link>.</para>
+                </sect2>
                 <sect2>
                     <title><command xml:id="parallel_for"/>parallel_for</title>
                     <para>Applies a functor to every element of the range [beg,end) .</para>
@@ -3659,6 +3719,46 @@ parallel_for(Range range,Func func,long cutoff,const std::string&amp; task_name=
                     <para>Please have a look at the <link xlink:href="examples/example_parallel_for_tcp.cpp">complete server example</link>.</para>
                 </sect2>
                 <sect2>
+                    <title><command xml:id="parallel_for_each"/>parallel_for_each</title>
+                    <para>Applies a functor to every element of the range [beg,end). This functor
+                        can save data. It is merged at different steps with other instances of this
+                        functor. The algorithm returns the last merged instance.</para>
+                    <programlisting>template &lt;class Iterator, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Func</emphasis>,Job>
+<emphasis role="bold">parallel_all_of</emphasis>(Iterator begin, Iterator end,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</programlisting>
+                    <para>The version taking iterators requires that the iterators stay valid until
+                        completion. It is the programmer's job to ensure this.</para>
+                    <para><emphasis role="underline">Return value</emphasis>: A merged instance of a
+                        functor of type Func.</para>
+                    <para><emphasis role="underline">Parameters</emphasis>: <itemizedlist>
+                        <listitem>
+                            <para>begin, end: the range of elements to search</para>
+                        </listitem>
+                        <listitem>
+                            <para>func: a class / struct object with a:</para>
+                                <para>
+                                    <itemizedlist>
+                                        <listitem>
+                                            <para>void operator()(const Type&amp; a)</para>
+                                        </listitem>
+                                        <listitem>
+                                            <para>void merge (Func const&amp; f)</para>
+                                        </listitem>
+                                    </itemizedlist>
+                                </para>
+                        </listitem>
+                        <listitem>
+                            <para>cutoff: the maximum size of a sequential chunk</para>
+                        </listitem>
+                        <listitem>
+                            <para>task_name: the name displayed in the scheduler diagnostics</para>
+                        </listitem>
+                        <listitem>
+                            <para>prio: task priority </para>
+                        </listitem>
+                    </itemizedlist></para>
+                </sect2>
+                <sect2>
                     <title><command xml:id="parallel_all_of"/>parallel_all_of</title>
                     <para>Checks if unary predicate p returns true for all elements in the range
                         [begin, end). </para>
@@ -3690,7 +3790,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">bool
                                 <para>cutoff: the maximum size of a sequential chunk</para>
                             </listitem>
                             <listitem>
-                                <para>taks_name: the name displayed in the scheduler
+                                <para>task_name: the name displayed in the scheduler
                                     diagnostics</para>
                             </listitem>
                             <listitem>
@@ -3730,7 +3830,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">bool
                                 <para>cutoff: the maximum size of a sequential chunk</para>
                             </listitem>
                             <listitem>
-                                <para>taks_name: the name displayed in the scheduler
+                                <para>task_name: the name displayed in the scheduler
                                     diagnostics</para>
                             </listitem>
                             <listitem>
@@ -3770,7 +3870,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">bool
                                 <para>cutoff: the maximum size of a sequential chunk</para>
                             </listitem>
                             <listitem>
-                                <para>taks_name: the name displayed in the scheduler
+                                <para>task_name: the name displayed in the scheduler
                                     diagnostics</para>
                             </listitem>
                             <listitem>
@@ -3810,7 +3910,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">bool
                                 <para>cutoff: the maximum size of a sequential chunk</para>
                             </listitem>
                             <listitem>
-                                <para>taks_name: the name displayed in the scheduler
+                                <para>task_name: the name displayed in the scheduler
                                     diagnostics</para>
                             </listitem>
                             <listitem>
@@ -3852,7 +3952,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">std:
                                 <para>cutoff: the maximum size of a sequential chunk</para>
                             </listitem>
                             <listitem>
-                                <para>taks_name: the name displayed in the scheduler
+                                <para>task_name: the name displayed in the scheduler
                                     diagnostics</para>
                             </listitem>
                             <listitem>
@@ -3898,7 +3998,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Iter
                                 <para>cutoff: the maximum size of a sequential chunk</para>
                             </listitem>
                             <listitem>
-                                <para>taks_name: the name displayed in the scheduler
+                                <para>task_name: the name displayed in the scheduler
                                     diagnostics</para>
                             </listitem>
                             <listitem>
@@ -3943,7 +4043,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Iter
                                 <para>cutoff: the maximum size of a sequential chunk</para>
                             </listitem>
                             <listitem>
-                                <para>taks_name: the name displayed in the scheduler
+                                <para>task_name: the name displayed in the scheduler
                                     diagnostics</para>
                             </listitem>
                             <listitem>
@@ -3982,7 +4082,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Iter
                                 <para>cutoff: the maximum size of a sequential chunk</para>
                             </listitem>
                             <listitem>
-                                <para>taks_name: the name displayed in the scheduler
+                                <para>task_name: the name displayed in the scheduler
                                     diagnostics</para>
                             </listitem>
                             <listitem>
@@ -4021,7 +4121,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">bool
                                 <para>cutoff: the maximum size of a sequential chunk</para>
                             </listitem>
                             <listitem>
-                                <para>taks_name: the name displayed in the scheduler
+                                <para>task_name: the name displayed in the scheduler
                                     diagnostics</para>
                             </listitem>
                             <listitem>
@@ -4066,7 +4166,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Iter
                                 <para>cutoff: the maximum size of a sequential chunk</para>
                             </listitem>
                             <listitem>
-                                <para>taks_name: the name displayed in the scheduler
+                                <para>task_name: the name displayed in the scheduler
                                     diagnostics</para>
                             </listitem>
                             <listitem>
@@ -4110,13 +4210,220 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Iter
                                 <para>cutoff: the maximum size of a sequential chunk</para>
                             </listitem>
                             <listitem>
-                                <para>taks_name: the name displayed in the scheduler
+                                <para>task_name: the name displayed in the scheduler
                                     diagnostics</para>
                             </listitem>
                             <listitem>
                                 <para>prio: task priority </para>
                             </listitem>
                         </itemizedlist></para>
+                </sect2>
+                <sect2>
+                    <title><command xml:id="parallel_scan"/>parallel_scan</title>
+                    <para>Computes all partial reductions of a collection. For every output
+                        position, a reduction of the input up to that point is computed. This is the
+                        basic, most flexible underlying implementation of parallel_exclusive_scan,
+                        parallel_inclusive_scan, parallel_transform_exclusive_scan,
+                        parallel_transform_inclusive_scan.</para>
+                    <para>The operator, represented by the Combine function, must be
+                        associative.</para>
+                    <para>The algorithm works by doing two passes on the sequence: the first pass
+                        uses the Reduce function, the second pass uses the result of Reduce in
+                        Combine. Scan will output the result.</para>
+                    <programlisting>// version for iterators
+template &lt;class Iterator, class OutIterator, class T, class Reduce, class Combine, class Scan, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;OutIterator,Job>
+<emphasis role="bold">parallel_scan</emphasis>(Iterator beg, Iterator end, OutIterator out, T init, Reduce r, Combine c, Scan s, long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+
+// version for moved ranges
+template &lt;class Range, class OutRange, class T, class Reduce, class Combine, class Scan, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">std::pair&lt;Range,OutRange></emphasis>,Job>
+<emphasis role="bold">parallel_scan</emphasis>(Range&amp;&amp; range,OutRange&amp;&amp; out_range,T init,Reduce r, Combine c, Scan s, long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+
+// version for a single moved range (in/out)
+template &lt;class Range, class T, class Reduce, class Combine, class Scan, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Range</emphasis>,Job>
+<emphasis role="bold">parallel_scan</emphasis>(Range&amp;&amp; range,T init,Reduce r, Combine c, Scan s, long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+
+// version for continuation
+template &lt;class Range, class T, class Reduce, class Combine, class Scan, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Unspecified-Range</emphasis>,Job>
+<emphasis role="bold">parallel_scan</emphasis>(Range range,T init,Reduce r, Combine c, Scan s, long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</programlisting>
+                    <para>The algorithm requires that the iterators stay valid until completion. It
+                        is the programmer's job to ensure this.</para>
+                    <para><emphasis role="underline">Parameters</emphasis>: <itemizedlist>
+                        <listitem>
+                                <para>begin, end / range: the range of elements to scan.</para>
+                            </listitem>
+                            <listitem>
+                                <para>out: the beginning of the output range.</para>
+                            </listitem>
+                            <listitem>
+                                <para>out_range: the output range.</para>
+                            </listitem>
+                            <listitem>
+                                <para>init: initial value, combined with the first scanned
+                                    element.</para>
+                            </listitem>
+                        <listitem>
+                                <para>Reduce: binary predicate which returns an accumulated value.
+                                    The signature of the function should be equivalent to the
+                                    following: Ret reduce(Iterator,Iterator); The type Ret must be
+                                    such that an object of type Iterator can be dereferenced and
+                                    assigned a value of type Ret.</para>
+                            </listitem>
+                            <listitem>
+                                <para>Combine: binary predicate which combines two elements, like
+                                    std::plus would do. The signature of the function should be
+                                    equivalent to the following: Ret combine(const Type&amp;,const
+                                    Type&amp;); The type Ret must be such that an object of type
+                                    Iterator can be dereferenced and assigned a value of type
+                                    Ret.</para>
+                            </listitem>
+                            <listitem>
+                                <para>Scan: assigns the result to the out range / iterator. The
+                                    signature of the function should be equivalent to the following:
+                                    void scan(Iterator beg, Iterator end, OutIterator out, T
+                                    init).</para>
+                            </listitem>
+                        <listitem>
+                            <para>cutoff: the maximum size of a sequential chunk</para>
+                        </listitem>
+                        <listitem>
+                            <para>task_name: the name displayed in the scheduler diagnostics</para>
+                        </listitem>
+                        <listitem>
+                            <para>prio: task priority </para>
+                        </listitem>
+                        <listitem>
+                            <para>Last version returns a Range of the type returned by
+                                    continuation</para>
+                        </listitem>
+                    </itemizedlist></para>
+                </sect2>
+                <sect2>
+                    <title><command xml:id="parallel_inclusive_scan"/>parallel_inclusive_scan</title>
+                    <para>Computes all partial reductions of a collection. For every output
+                        position, a reduction of the input up to that point is computed. The nth
+                        output value is a reduction over the first n input values.</para>
+                    <programlisting>// version for iterators
+template &lt;class Iterator, class OutIterator, class T, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;OutIterator,Job>
+<emphasis role="bold">parallel_inclusive_scan</emphasis>(Iterator beg, Iterator end, OutIterator out, T init, Func f, long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+
+// version for moved ranges
+template &lt;class Range, class OutRange, class T, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">std::pair&lt;Range,OutRange></emphasis>,Job>
+<emphasis role="bold">parallel_inclusive_scan</emphasis>(Range&amp;&amp; range,OutRange&amp;&amp; out_range, T init, Func f, long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+
+// version for a single moved range (in/out)
+template &lt;class Range, class T, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Range</emphasis>,Job>
+<emphasis role="bold">parallel_inclusive_scan</emphasis>(Range&amp;&amp; range,T init,Func f, long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+
+// version for continuation
+template &lt;class Range, class T, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Unspecified-Range</emphasis>,Job>
+<emphasis role="bold">parallel_inclusive_scan</emphasis>(Range range,T init,Func f, long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</programlisting>
+                    <para>The algorithm requires that the iterators stay valid until completion. It
+                        is the programmer's job to ensure this.</para>
+                    <para><emphasis role="underline">Parameters</emphasis>: <itemizedlist>
+                        <listitem>
+                            <para>begin, end / range: the range of elements to scan.</para>
+                        </listitem>
+                        <listitem>
+                            <para>out: the beginning of the output range.</para>
+                        </listitem>
+                        <listitem>
+                            <para>out_range: the output range.</para>
+                        </listitem>
+                        <listitem>
+                            <para>init: initial value, combined with the first scanned
+                                element.</para>
+                        </listitem>
+                            <listitem>
+                                <para>Func: binary operation function object that will be applied.
+                                    The signature of the function should be equivalent to the
+                                    following: Ret fun(const Type &amp;a, const Type &amp;b); The
+                                    type Ret must be such that an object of type  OutIterator can be
+                                    dereferenced and assigned a value of type Ret</para>
+                            </listitem>
+                        <listitem>
+                            <para>cutoff: the maximum size of a sequential chunk</para>
+                        </listitem>
+                        <listitem>
+                            <para>task_name: the name displayed in the scheduler diagnostics</para>
+                        </listitem>
+                        <listitem>
+                            <para>prio: task priority </para>
+                        </listitem>
+                        <listitem>
+                            <para>Last version returns a Range of the type returned by
+                                continuation</para>
+                        </listitem>
+                    </itemizedlist></para>
+                </sect2>               
+                <sect2>
+                    <title><command xml:id="parallel_exclusive_scan"/>parallel_exclusive_scan</title>
+                    <para>Computes all partial reductions of a collection. For every output
+                        position, a reduction of the input up to that point is computed. The nth
+                        output value is a reduction over the first n- input values.</para>
+                    <programlisting>// version for iterators
+template &lt;class Iterator, class OutIterator, class T, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;OutIterator,Job>
+<emphasis role="bold">parallel_exclusive_scan</emphasis>(Iterator beg, Iterator end, OutIterator out, T init, Func f, long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+
+// version for moved ranges
+template &lt;class Range, class OutRange, class T, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">std::pair&lt;Range,OutRange></emphasis>,Job>
+<emphasis role="bold">parallel_exclusive_scan</emphasis>(Range&amp;&amp; range,OutRange&amp;&amp; out_range, T init, Func f, long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+
+// version for a single moved range (in/out)
+template &lt;class Range, class T, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Range</emphasis>,Job>
+<emphasis role="bold">parallel_exclusive_scan</emphasis>(Range&amp;&amp; range,T init,Func f, long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+
+// version for continuation
+template &lt;class Range, class T, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Unspecified-Range</emphasis>,Job>
+<emphasis role="bold">parallel_exclusive_scan</emphasis>(Range range,T init,Func f, long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</programlisting>
+                    <para>The algorithm requires that the iterators stay valid until completion. It
+                        is the programmer's job to ensure this.</para>
+                    <para><emphasis role="underline">Parameters</emphasis>: <itemizedlist>
+                        <listitem>
+                            <para>begin, end / range: the range of elements to scan.</para>
+                        </listitem>
+                        <listitem>
+                            <para>out: the beginning of the output range.</para>
+                        </listitem>
+                        <listitem>
+                            <para>out_range: the output range.</para>
+                        </listitem>
+                        <listitem>
+                            <para>init: initial value, combined with the first scanned
+                                element.</para>
+                        </listitem>
+                        <listitem>
+                            <para>Func: binary operation function object that will be applied.
+                                The signature of the function should be equivalent to the
+                                following: Ret fun(const Type &amp;a, const Type &amp;b); The
+                                type Ret must be such that an object of type  OutIterator can be
+                                dereferenced and assigned a value of type Ret</para>
+                        </listitem>
+                        <listitem>
+                            <para>cutoff: the maximum size of a sequential chunk</para>
+                        </listitem>
+                        <listitem>
+                            <para>task_name: the name displayed in the scheduler diagnostics</para>
+                        </listitem>
+                        <listitem>
+                            <para>prio: task priority </para>
+                        </listitem>
+                        <listitem>
+                            <para>Last version returns a Range of the type returned by
+                                continuation</para>
+                        </listitem>
+                    </itemizedlist></para>
                 </sect2>
                 <sect2>
                     <title><command xml:id="parallel_copy"/>parallel_copy</title>
@@ -4150,8 +4457,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">void
                             <para>cutoff: the maximum size of a sequential chunk</para>
                         </listitem>
                         <listitem>
-                            <para>taks_name: the name displayed in the scheduler
-                                diagnostics</para>
+                            <para>task_name: the name displayed in the scheduler diagnostics</para>
                         </listitem>
                         <listitem>
                             <para>prio: task priority </para>
@@ -4183,8 +4489,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">void
                             <para>cutoff: the maximum size of a sequential chunk</para>
                         </listitem>
                         <listitem>
-                            <para>taks_name: the name displayed in the scheduler
-                                diagnostics</para>
+                            <para>task_name: the name displayed in the scheduler diagnostics</para>
                         </listitem>
                         <listitem>
                             <para>prio: task priority </para>
@@ -4224,8 +4529,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Unsp
                             <para>cutoff: the maximum size of a sequential chunk</para>
                         </listitem>
                         <listitem>
-                            <para>taks_name: the name displayed in the scheduler
-                                diagnostics</para>
+                            <para>task_name: the name displayed in the scheduler diagnostics</para>
                         </listitem>
                         <listitem>
                                 <para>prio: task priority </para>
@@ -4263,8 +4567,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Unsp
                             <para>cutoff: the maximum size of a sequential chunk</para>
                         </listitem>
                         <listitem>
-                            <para>taks_name: the name displayed in the scheduler
-                                diagnostics</para>
+                            <para>task_name: the name displayed in the scheduler diagnostics</para>
                         </listitem>
                         <listitem>
                                 <para>prio: task priority </para>
@@ -4309,7 +4612,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Resu
                                 <para>cutoff: the maximum size of a sequential chunk</para>
                             </listitem>
                             <listitem>
-                                <para>taks_name: the name displayed in the scheduler
+                                <para>task_name: the name displayed in the scheduler
                                     diagnostics</para>
                             </listitem>
                             <listitem>
@@ -4319,27 +4622,26 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Resu
                                 <para>3rd version takes a variadic number of input ranges</para>
                             </listitem>
                             <listitem>
-                                <para>func in first version : unary predicate which returns ​true
-                                    for the required elements. The signature of the function should
-                                    be equivalent to the following: Ret pred(const Type &amp;a); The
+                                <para>func in first version : unary predicate which returns a new
+                                    value. The signature of the function should be equivalent to the
+                                    following: Ret pred(const Type &amp;a); The type Ret must be
+                                    such that an object of type ResultIterator can be dereferenced
+                                    and assigned a value of type Ret</para>
+                            </listitem>
+                            <listitem>
+                                <para>func in second version : binary predicate which returns a new
+                                    value. The signature of the function should be equivalent to the
+                                    following: Ret pred(const Type1 &amp;a,const Type2 &amp;b); The
                                     type Ret must be such that an object of type ResultIterator can
                                     be dereferenced and assigned a value of type Ret</para>
                             </listitem>
                             <listitem>
-                                <para>func in second version : binary predicate which returns ​true
-                                    for the required elements. The signature of the function should
-                                    be equivalent to the following: Ret pred(const Type1
-                                    &amp;a,const Type2 &amp;b); The type Ret must be such that an
+                                <para>func in third version : n-ary predicate which returns a new
+                                    value. The signature of the function should be equivalent to the
+                                    following: Ret pred(const Type1 &amp;a,const Type2
+                                    &amp;b...,const TypeN &amp;n); The type Ret must be such that an
                                     object of type ResultIterator can be dereferenced and assigned a
                                     value of type Ret</para>
-                            </listitem>
-                            <listitem>
-                                <para>func in third version : n-ary predicate which returns ​true
-                                    for the required elements. The signature of the function should
-                                    be equivalent to the following: Ret pred(const Type1
-                                    &amp;a,const Type2 &amp;b...,const TypeN &amp;n); The type Ret
-                                    must be such that an object of type ResultIterator can be
-                                    dereferenced and assigned a value of type Ret</para>
                             </listitem>
                         </itemizedlist></para>
                 </sect2>
@@ -4368,18 +4670,17 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Unsp
                                 <para>begin, end / range: the range of elements to assign </para>
                             </listitem>
                             <listitem>
-                                <para>func: unary predicate which returns ​true for the required
-                                    elements. The signature of the function should be equivalent to
-                                    the following: Ret pred(); The type Ret must be such that an
-                                    object of type Iterator can be dereferenced and assigned a value
-                                    of type Ret.</para>
+                                <para>func: unary predicate which returns ​a new value. The
+                                    signature of the function should be equivalent to the following:
+                                    Ret pred(); The type Ret must be such that an object of type
+                                    Iterator can be dereferenced and assigned a value of type
+                                    Ret.</para>
                             </listitem>
                         <listitem>
                             <para>cutoff: the maximum size of a sequential chunk</para>
                         </listitem>
                         <listitem>
-                            <para>taks_name: the name displayed in the scheduler
-                                diagnostics</para>
+                            <para>task_name: the name displayed in the scheduler diagnostics</para>
                         </listitem>
                         <listitem>
                             <para>prio: task priority </para>
@@ -4424,7 +4725,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Iter
                                 <para>cutoff: the maximum size of a sequential chunk</para>
                             </listitem>
                             <listitem>
-                                <para>taks_name: the name displayed in the scheduler
+                                <para>task_name: the name displayed in the scheduler
                                     diagnostics</para>
                             </listitem>
                             <listitem>
@@ -4478,8 +4779,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Unsp
                             <para>cutoff: the maximum size of a sequential chunk</para>
                         </listitem>
                         <listitem>
-                            <para>taks_name: the name displayed in the scheduler
-                                diagnostics</para>
+                            <para>task_name: the name displayed in the scheduler diagnostics</para>
                         </listitem>
                         <listitem>
                             <para>prio: task priority </para>
@@ -4517,8 +4817,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Unsp
                             <para>cutoff: the maximum size of a sequential chunk</para>
                         </listitem>
                         <listitem>
-                            <para>taks_name: the name displayed in the scheduler
-                                diagnostics</para>
+                            <para>task_name: the name displayed in the scheduler diagnostics</para>
                         </listitem>
                         <listitem>
                                 <para>prio: task priority </para>
@@ -4548,11 +4847,124 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Iter
                             <para>cutoff: the maximum size of a sequential chunk</para>
                         </listitem>
                         <listitem>
-                            <para>taks_name: the name displayed in the scheduler
-                                diagnostics</para>
+                            <para>task_name: the name displayed in the scheduler diagnostics</para>
                         </listitem>
                         <listitem>
                             <para>prio: task priority </para>
+                        </listitem>
+                    </itemizedlist></para>
+                </sect2>
+                <sect2>
+                    <title><command xml:id="parallel_transform_inclusive_scan"/>parallel_transform_inclusive_scan</title>
+                    <para>Computes all partial reductions of a collection. For every output
+                        position, a reduction of the input up to that point is computed. The nth
+                        output value is a reduction over the first n input values. This algorithm
+                        applies a transformation to the input element before scan. Fusing transform
+                        and scan avoids having to process two passes on the element and saves
+                        time.</para>
+                    <programlisting>// version for iterators
+template &lt;class Iterator, class OutIterator, class T, class Func, class Transform, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;OutIterator,Job>
+<emphasis role="bold">parallel_transform_inclusive_scan</emphasis>(Iterator beg, Iterator end, OutIterator out, T init, Func f, Transform t, long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</programlisting>
+                    <para>The algorithm requires that the iterators stay valid until completion. It
+                        is the programmer's job to ensure this.</para>
+                    <para><emphasis role="underline">Parameters</emphasis>: <itemizedlist>
+                        <listitem>
+                            <para>begin, end / range: the range of elements to scan.</para>
+                        </listitem>
+                        <listitem>
+                            <para>out: the beginning of the output range.</para>
+                        </listitem>
+                        <listitem>
+                            <para>out_range: the output range.</para>
+                        </listitem>
+                        <listitem>
+                            <para>init: initial value, combined with the first scanned
+                                element.</para>
+                        </listitem>
+                        <listitem>
+                            <para>Func: binary operation function object that will be applied.
+                                The signature of the function should be equivalent to the
+                                following: Ret fun(const Type &amp;a, const Type &amp;b); The
+                                type Ret must be such that an object of type OutIterator can be
+                                dereferenced and assigned a value of type Ret</para>
+                        </listitem>
+                        <listitem>
+                            <para>Transform: unary operation function object that will be
+                                applied. The signature of the function should be equivalent to
+                                the following: Ret fun(const Type &amp;a); The type Ret must be
+                                such that an object of type OutIterator can be dereferenced and
+                                assigned a value of type Ret</para>
+                        </listitem>
+                        <listitem>
+                            <para>cutoff: the maximum size of a sequential chunk</para>
+                        </listitem>
+                        <listitem>
+                            <para>task_name: the name displayed in the scheduler diagnostics</para>
+                        </listitem>
+                        <listitem>
+                            <para>prio: task priority </para>
+                        </listitem>
+                        <listitem>
+                            <para>Last version returns a Range of the type returned by
+                                continuation</para>
+                        </listitem>
+                    </itemizedlist></para>
+                </sect2>
+                <sect2>
+                    <title><command xml:id="parallel_transform_exclusive_scan"/>parallel_transform_exclusive_scan</title>
+                    <para>Computes all partial reductions of a collection. For every output
+                        position, a reduction of the input up to that point is computed. The nth
+                        output value is a reduction over the first n-1 input values. This algorithm
+                        applies a transformation to the input element before scan. Fusing transform
+                        and scan avoids having to process two passes on the element and saves
+                        time.</para>
+                    <programlisting>// version for iterators
+template &lt;class Iterator, class OutIterator, class T, class Func, class Transform, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;OutIterator,Job>
+<emphasis role="bold">parallel_transform_exclusive_scan</emphasis>(Iterator beg, Iterator end, OutIterator out, T init, Func f, Transform t, long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</programlisting>
+                    <para>The algorithm requires that the iterators stay valid until completion. It
+                        is the programmer's job to ensure this.</para>
+                    <para><emphasis role="underline">Parameters</emphasis>: <itemizedlist>
+                        <listitem>
+                            <para>begin, end / range: the range of elements to scan.</para>
+                        </listitem>
+                        <listitem>
+                            <para>out: the beginning of the output range.</para>
+                        </listitem>
+                        <listitem>
+                            <para>out_range: the output range.</para>
+                        </listitem>
+                        <listitem>
+                            <para>init: initial value, combined with the first scanned
+                                element.</para>
+                        </listitem>
+                        <listitem>
+                            <para>Func: binary operation function object that will be applied.
+                                The signature of the function should be equivalent to the
+                                following: Ret fun(const Type &amp;a, const Type &amp;b); The
+                                type Ret must be such that an object of type OutIterator can be
+                                dereferenced and assigned a value of type Ret</para>
+                        </listitem>
+                        <listitem>
+                            <para>Transform: unary operation function object that will be
+                                applied. The signature of the function should be equivalent to
+                                the following: Ret fun(const Type &amp;a); The type Ret must be
+                                such that an object of type OutIterator can be dereferenced and
+                                assigned a value of type Ret</para>
+                        </listitem>
+                        <listitem>
+                            <para>cutoff: the maximum size of a sequential chunk</para>
+                        </listitem>
+                        <listitem>
+                            <para>task_name: the name displayed in the scheduler diagnostics</para>
+                        </listitem>
+                        <listitem>
+                            <para>prio: task priority </para>
+                        </listitem>
+                        <listitem>
+                            <para>Last version returns a Range of the type returned by
+                                continuation</para>
                         </listitem>
                     </itemizedlist></para>
                 </sect2>
@@ -4583,8 +4995,58 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">bool
                             <para>cutoff: the maximum size of a sequential chunk</para>
                         </listitem>
                         <listitem>
-                            <para>taks_name: the name displayed in the scheduler
-                                diagnostics</para>
+                            <para>task_name: the name displayed in the scheduler diagnostics</para>
+                        </listitem>
+                        <listitem>
+                            <para>prio: task priority </para>
+                        </listitem>
+                    </itemizedlist></para>
+                </sect2>
+                <sect2>
+                    <title><command xml:id="parallel_partition"/>parallel_partition</title>
+                    <para>Reorders the elements in the range [begin, end) in such a way that all
+                        elements for which the predicate func returns true precede the elements for
+                        which predicate func returns false </para>
+                    <programlisting>// version with iterators
+template &lt;class Iterator, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Iterator</emphasis>,Job>
+<emphasis role="bold">parallel_partition</emphasis>(Iterator begin, Iterator end,Func func,const uint32_t thread_num = boost::thread::hardware_concurrency(),const std::string&amp; task_name="", std::size_t prio=0);
+
+// version with moved range
+template &lt;class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">std::pair&lt;Range,decltype(range.begin())></emphasis>,Job>
+<emphasis role="bold">parallel_partition</emphasis>(Range&amp;&amp; range,Func func,const uint32_t thread_num = boost::thread::hardware_concurrency(),const std::string&amp; task_name="", std::size_t prio=0);
+
+// version with continuation
+template &lt;class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">std::pair&lt;Unspecified-Range,Unspecified-Range-Iterator></emphasis>,Job>
+<emphasis role="bold">parallel_partition</emphasis>(Range&amp;&amp; range,Func func,const uint32_t thread_num = boost::thread::hardware_concurrency(),const std::string&amp; task_name="", std::size_t prio=0);</programlisting>
+                    <para>The version taking iterators requires that the iterators stay valid until
+                        completion. It is the programmer's job to ensure this.</para>
+                    <para><emphasis role="underline">Return value</emphasis>: an iterator to the
+                        first element of the second group for the first version. A pair of a range
+                        and an iterator to the first element of the second group of this range for
+                        the second and third.</para>
+                    <para><emphasis role="underline">Parameters</emphasis>: <itemizedlist>
+                        <listitem>
+                            <para>begin, end: the range of elements to partition</para>
+                            <para>Or a continuation, coming from another algorithm.</para>
+                        </listitem>
+                        <listitem>
+                                <para>func: unary predicate function. The signature of the function
+                                    should be equivalent to the following: bool pred(const Type
+                                    &amp;a);</para>
+                            </listitem>
+                            <listitem>
+                                <para>thread_num: this algorithm being not a divide and conquer, it
+                                    requires the number of threads which will be used. By default
+                                    boost::thread::hardware_concurrency() is used.</para>
+                            </listitem>
+                        <listitem>
+                            <para>cutoff: the maximum size of a sequential chunk</para>
+                        </listitem>
+                        <listitem>
+                            <para>task_name: the name displayed in the scheduler diagnostics</para>
                         </listitem>
                         <listitem>
                             <para>prio: task priority </para>
@@ -4599,7 +5061,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">bool
                         preserved. </para>
                     <programlisting>template &lt;class Iterator, class Iterator2, class Func,class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Iterator2</emphasis>,Job>
-<emphasis role="bold">parallel_stable_partition</emphasis>(Iterator beg, Iterator end, Iterator2 out, Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+<emphasis role="bold">parallel_stable_partition</emphasis>(Iterator begin, Iterator end, Iterator2 out, Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
 
 // version taking ownership of the container to be sorted
 template &lt;class Range, class Func,class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
@@ -4649,13 +5111,55 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">std:
                                 <para>cutoff: the maximum size of a sequential chunk</para>
                             </listitem>
                             <listitem>
-                                <para>taks_name: the name displayed in the scheduler
+                                <para>task_name: the name displayed in the scheduler
                                     diagnostics</para>
                             </listitem>
                             <listitem>
                                 <para>prio: task priority </para>
                             </listitem>
                         </itemizedlist></para>
+                </sect2> 
+                <sect2>
+                    <title><command xml:id="parallel_partition_copy"/>parallel_partition_copy</title>
+                    <para>Copies the elements from the range [begin, end) to two output ranges in
+                        such a way that all elements for which the predicate func returns true are
+                        in the first range and all the others are in the second range. Relative
+                        order of the elements is preserved. </para>
+                    <programlisting>template &lt;class Iterator, class OutputIt1, class OutputIt2, class Func,class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">std::pair&lt;OutputIt1, OutputIt2></emphasis>,Job>
+<emphasis role="bold">parallel_partition_copy</emphasis>(Iterator begin, Iterator end, OutputIt1 out_true, OutputIt2 out_false, Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</programlisting>
+                    <para>The version taking iterators requires that the iterators stay valid until
+                        completion. It is the programmer's job to ensure this.</para>
+                    <para><emphasis role="underline">Returns</emphasis>: a pair of iterators to the
+                        first element of the first and second group</para>
+                    <para><emphasis role="underline">Parameters</emphasis>: <itemizedlist>
+                        <listitem>
+                                <para>begin, end: the range of elements to reorder.</para>
+                            </listitem>
+                            <listitem>
+                                <para>out_true: the beginning of the range for which func returns
+                                    true.</para>
+                            </listitem>
+                            <listitem>
+                                <para>out_false: the beginning of the range for which func returns
+                                    false.</para>
+                            </listitem>
+                        <listitem>
+                            <para>func: unary predicate which returns ​true if the element should be
+                                    in the first range. The signature of the predicate function
+                                    should be equivalent to the following: bool func(const Type
+                                    &amp;a); </para>
+                        </listitem>
+                        <listitem>
+                            <para>cutoff: the maximum size of a sequential chunk</para>
+                        </listitem>
+                        <listitem>
+                            <para>task_name: the name displayed in the scheduler diagnostics</para>
+                        </listitem>
+                        <listitem>
+                            <para>prio: task priority </para>
+                        </listitem>
+                    </itemizedlist></para>
                 </sect2> 
                 <sect2>
                     <title><command xml:id="parallel_is_sorted"/>parallel_is_sorted</title>
@@ -4682,8 +5186,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">bool
                             <para>cutoff: the maximum size of a sequential chunk</para>
                         </listitem>
                         <listitem>
-                            <para>taks_name: the name displayed in the scheduler
-                                diagnostics</para>
+                            <para>task_name: the name displayed in the scheduler diagnostics</para>
                         </listitem>
                         <listitem>
                             <para>prio: task priority </para>
@@ -4715,8 +5218,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">bool
                             <para>cutoff: the maximum size of a sequential chunk</para>
                         </listitem>
                         <listitem>
-                            <para>taks_name: the name displayed in the scheduler
-                                diagnostics</para>
+                            <para>task_name: the name displayed in the scheduler diagnostics</para>
                         </listitem>
                         <listitem>
                             <para>prio: task priority </para>
@@ -4754,8 +5256,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Rang
                             <para>cutoff: the maximum size of a sequential chunk</para>
                         </listitem>
                         <listitem>
-                            <para>taks_name: the name displayed in the scheduler
-                                diagnostics</para>
+                            <para>task_name: the name displayed in the scheduler diagnostics</para>
                         </listitem>
                         <listitem>
                             <para>prio: task priority </para>
@@ -4797,7 +5298,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">decl
                                 <para>cutoff: the maximum size of a sequential chunk</para>
                             </listitem>
                             <listitem>
-                                <para>taks_name: the name displayed in the scheduler
+                                <para>task_name: the name displayed in the scheduler
                                     diagnostics</para>
                             </listitem>
                             <listitem>
@@ -4874,8 +5375,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">T</e
                             <para>cutoff: the maximum size of a sequential chunk</para>
                         </listitem>
                         <listitem>
-                            <para>taks_name: the name displayed in the scheduler
-                                diagnostics</para>
+                            <para>task_name: the name displayed in the scheduler diagnostics</para>
                         </listitem>
                         <listitem>
                             <para>prio: task priority </para>
@@ -4930,8 +5430,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Unsp
                             <para>cutoff: the maximum size of a sequential chunk</para>
                         </listitem>
                         <listitem>
-                            <para>taks_name: the name displayed in the scheduler
-                                diagnostics</para>
+                            <para>task_name: the name displayed in the scheduler diagnostics</para>
                         </listitem>
                         <listitem>
                             <para>prio: task priority </para>
@@ -4978,8 +5477,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">void
                             <para>cutoff: the maximum size of a sequential chunk</para>
                         </listitem>
                         <listitem>
-                            <para>taks_name: the name displayed in the scheduler
-                                diagnostics</para>
+                            <para>task_name: the name displayed in the scheduler diagnostics</para>
                         </listitem>
                         <listitem>
                             <para>prio: task priority </para>
@@ -5037,6 +5535,113 @@ boost::asynchronous::detail::<emphasis role="bold">callback_continuation</emphas
                             example</link>.</para>
                 </sect2>
                 <sect2>
+                    <title><command xml:id="if_then_else"/>if_then_else</title>
+                    <para><emphasis role="underline">Description</emphasis>: Executes a then or an
+                        else clause passed as continuations depending on an if clause. If clause is
+                        a functor returning a bool. Then and Else clauses are functors returning a
+                        continuation. Typically, if_then_else is called after an algorithm returning
+                        a continuation for further processing.</para>
+                    <programlisting>template &lt;class IfClause, class ThenClause, class ElseClause, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+Unspecified-Continuation-Type
+<emphasis role="bold">if_then_else</emphasis>((IfClause if_clause, ThenClause then_clause, ElseClause else_clause, const std::string&amp; task_name="");</programlisting>
+                    <para><emphasis role="underline">Parameters</emphasis>: <itemizedlist>
+                        <listitem>
+                            <para>if_clause: unary predicate function which returns a bool. The
+                                    signature of the function should be equivalent to the following:
+                                    bool pred(const Type &amp;a); where Type is returned by a
+                                    previous algorithm</para>
+                        </listitem>
+                        <listitem>
+                            <para>then_clause: unary predicate function which returns a
+                                    continuation. The signature of the function should be equivalent
+                                    to the following: Unspecified-Continuation pred(const Type
+                                    &amp;a); where Type is returned by a previous algorithm.</para>
+                        </listitem>
+                        <listitem>
+                            <para>else_clause: unary predicate function which returns a
+                                    continuation. The signature of the function should be equivalent
+                                    to the following: Unspecified-Continuation pred(const Type
+                                    &amp;a); where Type is returned by a previous algorithm. </para>
+                        </listitem>
+                        <listitem>
+                            <para>task_name: the name displayed in the scheduler diagnostics</para>
+                        </listitem>
+                    </itemizedlist></para>
+                    <para><emphasis role="underline">Returns</emphasis>: A continuation of the type
+                        returned by then_clause or else_clause. Both must return the same
+                        continuation type.</para>
+                    <para><emphasis role="underline">Example:</emphasis> the following code calls a
+                        parallel_for (1) based on the result of another algorithm, a parallel_for
+                        (4). Both then_clause (2) and else_clause (3) will return a continuation
+                        representing a different parallel_for. The if-clause (5) makes the
+                        decision.</para>
+                    <programlisting>post_callback(
+           // task
+           [this](){
+                    // the outer algorithm (1). Called with a continuation returned by if_then_else
+                    return boost::asynchronous::parallel_for(
+                                    boost::asynchronous::if_then_else(
+                                        // if clause (5). Here, always true.
+                                        [](std::vector&lt;int> const&amp;){return true;},
+                                        // then clause. Will be called, as if-clause (5) returns true. Returns a continuation
+                                        [](std::vector&lt;int> res)
+                                        {
+                                            std::vector&lt;unsigned int> new_result(res.begin(),res.end());
+                                            // This algorithm (2) will be called after (4)
+                                            return boost::asynchronous::parallel_for(
+                                                                std::move(new_result),
+                                                                [](unsigned int const&amp; i)
+                                                                {
+                                                                   const_cast&lt;unsigned int&amp;>(i) += 3;
+                                                                },1500);
+                                        },
+                                        // else clause. Will NOT be called, as if-clause returns true. Returns a continuation
+                                        [](std::vector&lt;int> res)
+                                        {
+                                            std::vector&lt;unsigned int> new_result(res.begin(),res.end());
+                                            // This algorithm (3) would be called after (4) if (5) returned false.
+                                            return boost::asynchronous::parallel_for(
+                                                                std::move(new_result),
+                                                                [](unsigned int const&amp; i)
+                                                                {
+                                                                   const_cast&lt;unsigned int&amp;>(i) += 4;
+                                                                },1500);
+                                        }
+                                    )
+                                    // argument of if_then_else, a continuation (4)
+                                    (
+                                        boost::asynchronous::parallel_for(
+                                                                         std::move(this->m_data),
+                                                                         [](int const&amp; i)
+                                                                         {
+                                                                            const_cast&lt;int&amp;>(i) += 2;
+                                                                         },1500)
+                                    ),
+                        [](unsigned int const&amp; i)
+                        {
+                           const_cast&lt;unsigned int&amp;>(i) += 1;
+                        },1500
+                    );
+                    },
+           // callback functor
+           [](boost::asynchronous::expected&lt;std::vector&lt;unsigned int>> res){
+                        auto modified_vec = res.get();
+                        auto it = modified_vec.begin();
+                        BOOST_CHECK_MESSAGE(*it == 7,"data[0] is wrong: "+ std::to_string(*it));
+                        std::advance(it,100);
+                        BOOST_CHECK_MESSAGE(*it == 7,"data[100] is wrong: "+ std::to_string(*it));
+                        std::advance(it,900);
+                        BOOST_CHECK_MESSAGE(*it == 7,"data[1000] is wrong: "+ std::to_string(*it));
+                        std::advance(it,8999);
+                        BOOST_CHECK_MESSAGE(*it == 7,"data[9999] is wrong: "+ std::to_string(*it));
+                        auto r = std::accumulate(modified_vec.begin(),modified_vec.end(),0,[](int a, int b){return a+b;});
+                        BOOST_CHECK_MESSAGE((r == 70000),
+                                            ("result of parallel_for after if/else was " + std::to_string(r) +
+                                             ", should have been 70000"));
+           }
+        );</programlisting>
+                </sect2>
+                <sect2>
                     <title><command xml:id="parallel_geometry_intersection_of_x"/>parallel_geometry_intersection_of_x</title>
                     <para>Calculate the intersection of any number of (Boost.Geometry) geometries.
                         The free function intersection calculates the spatial set theoretic
@@ -5070,8 +5675,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Unsp
                                 geometries</para>
                         </listitem>
                         <listitem>
-                            <para>taks_name: the name displayed in the scheduler
-                                diagnostics</para>
+                            <para>task_name: the name displayed in the scheduler diagnostics</para>
                         </listitem>
                         <listitem>
                             <para>prio: task priority </para>
@@ -5120,7 +5724,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Unsp
                                     geometries</para>
                             </listitem>
                             <listitem>
-                                <para>taks_name: the name displayed in the scheduler
+                                <para>task_name: the name displayed in the scheduler
                                     diagnostics</para>
                             </listitem>
                             <listitem>
@@ -5151,7 +5755,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Coll
                                 <para>geometry1, geometry2: the geometries to combine</para>
                             </listitem>
                             <listitem>
-                                <para>taks_name: the name displayed in the scheduler
+                                <para>task_name: the name displayed in the scheduler
                                     diagnostics</para>
                             </listitem>
                             <listitem>
@@ -5182,7 +5786,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Coll
                                 <para>geometry1, geometry2: the geometries to combine</para>
                             </listitem>
                             <listitem>
-                                <para>taks_name: the name displayed in the scheduler
+                                <para>task_name: the name displayed in the scheduler
                                     diagnostics</para>
                             </listitem>
                             <listitem>
@@ -5219,7 +5823,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Coll
                                 <para>cutoff: the maximum size of a sequential chunk</para>
                             </listitem>
                             <listitem>
-                                <para>taks_name: the name displayed in the scheduler
+                                <para>task_name: the name displayed in the scheduler
                                     diagnostics</para>
                             </listitem>
                             <listitem>
@@ -5297,7 +5901,7 @@ decltype(boost::asynchronous::parallel_reduce(...))
                                 <para>cutoff: the maximum size of a sequential chunk</para>
                             </listitem>
                             <listitem>
-                                <para>taks_name: the name displayed in the scheduler
+                                <para>task_name: the name displayed in the scheduler
                                     diagnostics</para>
                             </listitem>
                             <listitem>
@@ -5352,7 +5956,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">long
                                 <para>cutoff: the maximum size of a sequential chunk</para>
                             </listitem>
                             <listitem>
-                                <para>taks_name: the name displayed in the scheduler
+                                <para>task_name: the name displayed in the scheduler
                                     diagnostics</para>
                             </listitem>
                             <listitem>
@@ -5364,15 +5968,27 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">long
                 </sect2>
                 <sect2>
                     <title><command xml:id="parallel_sort"/>parallel_sort / parallel_stable_sort /
-                        parallel_spreadsort</title>
+                        parallel_spreadsort / parallel_sort_inplace / parallel_stable_sort_inplace /
+                        parallel_spreadsort_inplace</title>
                     <para>parallel_sort / parallel_stable_sort implement a parallel mergesort.
                         parallel_spreadsort is a parallel version of Boost.Spreadsort if
-                        BOOST_ASYNCHRONOUS_USE_BOOST_SPREADSORT is defined.</para>
+                        BOOST_ASYNCHRONOUS_USE_BOOST_SPREADSORT is defined. They all use a parallel
+                        mergesort. For the sequential part, parallel_sort uses std::sort,
+                        parallel_stable_sort uses std::stable_sort, parallel_spreadsort uses
+                        Boost.Spreadsort.</para>
+                    <para>parallel_sort_inplace / parallel_stable_sort_inplace /
+                        parallel_spreadsort_inplace use an inplace merge to save memory, at the cost
+                        of a performance penalty. For the sequential part, parallel_sort_inplace
+                        uses std::sort, parallel_stable_sort_inplace uses std::stable_sort,
+                        parallel_spreadsort_inplace uses Boost.Spreadsort.</para>
                     <programlisting>template &lt;class Iterator, class Func,class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">void</emphasis>,Job>
 <emphasis role="bold">parallel_sort</emphasis>(Iterator beg, Iterator end,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
 <emphasis role="bold">parallel_stable_sort</emphasis>(Iterator beg, Iterator end,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
 <emphasis role="bold">parallel_spreadsort</emphasis>(Iterator beg, Iterator end,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+<emphasis role="bold">parallel_sort_inplace</emphasis>(Iterator beg, Iterator end,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+<emphasis role="bold">parallel_stable_sort_inplace</emphasis>(Iterator beg, Iterator end,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+<emphasis role="bold">parallel_spreadsort_inplace</emphasis>(Iterator beg, Iterator end,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
 
 // version taking ownership of the container to be sorted
 template &lt;class Iterator, class Func,class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
@@ -5380,13 +5996,19 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Rang
 <emphasis role="bold">parallel_sort</emphasis>(Range&amp;&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
 <emphasis role="bold">parallel_stable_sort</emphasis>(Range&amp;&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
 <emphasis role="bold">parallel_spreadsort</emphasis>(Range&amp;&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+<emphasis role="bold">parallel_sort_inplace</emphasis>(Range&amp;&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+<emphasis role="bold">parallel_stable_sort_inplace</emphasis>(Range&amp;&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+<emphasis role="bold">parallel_spreadsort_inplace</emphasis>(Range&amp;&amp; range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
 
 // version taking a continuation of a range as first argument
 template &lt;class Iterator, class Func,class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Range</emphasis>,Job>
 <emphasis role="bold">parallel_sort</emphasis>(Range range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
 <emphasis role="bold">parallel_stable_sort</emphasis>(Range range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
-<emphasis role="bold">parallel_spreadsort</emphasis>(Range range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</programlisting>
+<emphasis role="bold">parallel_spreadsort</emphasis>(Range range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+<emphasis role="bold">parallel_sort_inplace</emphasis>(Range range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+<emphasis role="bold">parallel_stable_sort_inplace</emphasis>(Range range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);
+<emphasis role="bold">parallel_spreadsort_inplace</emphasis>(Range range,Func func,long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</programlisting>
                     <para>The version taking iterators requires that the iterators stay valid until
                         completion. It is the programmer's job to ensure this.</para>
                     <para><emphasis role="underline">Parameters</emphasis>: <itemizedlist>
@@ -5407,7 +6029,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Rang
                                 <para>cutoff: the maximum size of a sequential chunk</para>
                             </listitem>
                             <listitem>
-                                <para>taks_name: the name displayed in the scheduler
+                                <para>task_name: the name displayed in the scheduler
                                     diagnostics</para>
                             </listitem>
                             <listitem>
@@ -5446,7 +6068,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">void
                                 <para>cutoff: the maximum size of a sequential chunk</para>
                             </listitem>
                             <listitem>
-                                <para>taks_name: the name displayed in the scheduler
+                                <para>task_name: the name displayed in the scheduler
                                     diagnostics</para>
                             </listitem>
                             <listitem>
@@ -5485,7 +6107,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">void
                                 <para>cutoff: the maximum size of a sequential chunk</para>
                             </listitem>
                             <listitem>
-                                <para>taks_name: the name displayed in the scheduler
+                                <para>task_name: the name displayed in the scheduler
                                     diagnostics</para>
                             </listitem>
                             <listitem>
@@ -5527,8 +6149,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">void
                                     algorithm</para>
                             </listitem>
                         <listitem>
-                            <para>taks_name: the name displayed in the scheduler
-                                diagnostics</para>
+                            <para>task_name: the name displayed in the scheduler diagnostics</para>
                         </listitem>
                         <listitem>
                             <para>prio: task priority </para>
