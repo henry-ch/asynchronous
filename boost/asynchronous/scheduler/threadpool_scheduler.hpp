@@ -190,9 +190,6 @@ public:
             if (popped)
             {
                 cpu_load.popped_job();
-                // automatic closing of log
-                boost::asynchronous::detail::job_diagnostic_closer<typename Q::job_type,diag_type> closer
-                        (&job,diagnostics.get());
                 // log time
                 boost::asynchronous::job_traits<typename Q::job_type>::set_started_time(job);
                 // log current
@@ -200,6 +197,8 @@ public:
                 // execute job
                 job();
                 boost::asynchronous::job_traits<typename Q::job_type>::reset_current_diagnostic(index,diagnostics.get());
+                boost::asynchronous::job_traits<typename Q::job_type>::set_finished_time(job);
+                boost::asynchronous::job_traits<typename Q::job_type>::add_diagnostic(job,diagnostics.get());
             }
             else
             {
@@ -231,6 +230,8 @@ public:
             if (popped)
             {
                 boost::asynchronous::job_traits<typename Q::job_type>::set_failed(job);
+                boost::asynchronous::job_traits<typename Q::job_type>::set_finished_time(job);
+                boost::asynchronous::job_traits<typename Q::job_type>::add_diagnostic(job,diagnostics.get());
                 boost::asynchronous::job_traits<typename Q::job_type>::reset_current_diagnostic(index,diagnostics.get());
             }
         }
