@@ -31,6 +31,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                    boost::asynchronous::threadpool_scheduler<
                                                     boost::asynchronous::lockfree_queue<>>>(1))
         , m_ready(new boost::promise<void>)
+        , m_posted(0)
     {
     }
     ~Servant(){BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant dtor not posted.");}
@@ -73,9 +74,31 @@ struct Servant : boost::asynchronous::trackable_servant<>
         apromise.set_value(interruptible);
         return std::make_pair(m_ready,fu2);
     }
+    boost::shared_future<void> test_no_interrupt()
+    {
+        boost::shared_future<void> fu = m_promise.get_future();
+        // start long tasks
+        for (int i = 0; i < 10000 ;++i)
+        {
+            interruptible_post_callback(
+                   [this](){++m_posted;},
+                   [this](boost::asynchronous::expected<void> )
+                   {
+                     ++m_cb;
+                     if (m_cb == 10000)
+                     {
+                         m_promise.set_value();
+                     }
+                   });
+        }
+        return fu;
+    }
 
 private:
     boost::shared_ptr<boost::promise<void> > m_ready;
+    boost::promise<void> m_promise;
+    std::atomic<int> m_posted;
+    int m_cb=0;
 };
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>
 {
@@ -87,9 +110,11 @@ public:
 #ifndef _MSC_VER
     BOOST_ASYNC_FUTURE_MEMBER(start_async_work)
     BOOST_ASYNC_FUTURE_MEMBER(start_async_work2)
+    BOOST_ASYNC_FUTURE_MEMBER(test_no_interrupt)
 #else
     BOOST_ASYNC_FUTURE_MEMBER_1(start_async_work)
     BOOST_ASYNC_FUTURE_MEMBER_1(start_async_work2)
+    BOOST_ASYNC_FUTURE_MEMBER_1(test_no_interrupt)
 #endif
 };
 }
@@ -133,6 +158,27 @@ BOOST_AUTO_TEST_CASE( test_interrupt_not_running_task )
             i.interrupt();
             // now let the job try to execute
             res.first->set_value();
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE( test_no_interrupt )
+{
+    {
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<>>>();
+
+        main_thread_id = boost::this_thread::get_id();
+        ServantProxy proxy(scheduler);
+        boost::shared_future<boost::shared_future<void> > fuv = proxy.test_no_interrupt();
+        try
+        {
+            boost::shared_future<void> resfuv = fuv.get();
+            resfuv.get();
+        }
+        catch(...)
+        {
+            BOOST_FAIL( "unexpected exception" );
         }
     }
 }
