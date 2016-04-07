@@ -74,20 +74,40 @@ struct Servant : boost::asynchronous::trackable_servant<>
         apromise.set_value(interruptible);
         return std::make_pair(m_ready,fu2);
     }
-    boost::shared_future<void> test_no_interrupt()
+    boost::shared_future<int> test_no_interrupt(int runs, int disturbances)
     {
-        boost::shared_future<void> fu = m_promise.get_future();
+        boost::shared_future<int> fu = m_promise.get_future();
         // start long tasks
-        for (int i = 0; i < 10000 ;++i)
+        for (int i = 0; i < runs ;++i)
         {
             interruptible_post_callback(
                    [this](){++m_posted;},
-                   [this](boost::asynchronous::expected<void> )
+                   [this,runs](boost::asynchronous::expected<void> )
                    {
                      ++m_cb;
-                     if (m_cb == 10000)
+                     if (m_cb == 2*runs)
                      {
-                         m_promise.set_value();
+                         m_promise.set_value(m_cb);
+                     }
+                   });
+        }
+        for (int i = 0; i < disturbances ;++i)
+        {
+            interruptible_post_callback(
+                   [](){},
+                   [](boost::asynchronous::expected<void> )
+                   {});
+        }
+        for (int i = 0; i < runs ;++i)
+        {
+            interruptible_post_callback(
+                   [this](){++m_posted;},
+                   [this,runs](boost::asynchronous::expected<void> )
+                   {
+                     ++m_cb;
+                     if (m_cb == 2*runs)
+                     {
+                         m_promise.set_value(m_cb);
                      }
                    });
         }
@@ -96,7 +116,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
 
 private:
     boost::shared_ptr<boost::promise<void> > m_ready;
-    boost::promise<void> m_promise;
+    boost::promise<int> m_promise;
     std::atomic<int> m_posted;
     int m_cb=0;
 };
@@ -170,11 +190,12 @@ BOOST_AUTO_TEST_CASE( test_no_interrupt )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.test_no_interrupt();
+        boost::shared_future<boost::shared_future<int> > fuv = proxy.test_no_interrupt(10000,1000);
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
-            resfuv.get();
+            boost::shared_future<int> resfuv = fuv.get();
+            int res = resfuv.get();
+            BOOST_CHECK_MESSAGE(res==20000,"not matching number of callbacks.");
         }
         catch(...)
         {
