@@ -84,7 +84,7 @@ struct interruptible_job : public boost::asynchronous::job_traits<Job>::diagnost
         if (m_state->is_interrupted())
         {
             // remove state from tss
-            //boost::asynchronous::get_interrupt_state<>(boost::shared_ptr<boost::asynchronous::detail::interrupt_state>(),true);
+            boost::asynchronous::get_interrupt_state<>(boost::shared_ptr<boost::asynchronous::detail::interrupt_state>(),true);
             return;
         }
         m_worker->set_value(Scheduler::m_self_thread.get()->m_thread);
@@ -93,7 +93,7 @@ struct interruptible_job : public boost::asynchronous::job_traits<Job>::diagnost
         if (m_state->is_interrupted())
         {
             // remove state from tss
-            //boost::asynchronous::get_interrupt_state<>(boost::shared_ptr<boost::asynchronous::detail::interrupt_state>(),true);
+            boost::asynchronous::get_interrupt_state<>(boost::shared_ptr<boost::asynchronous::detail::interrupt_state>(),true);
             return;
         }
         m_job();
