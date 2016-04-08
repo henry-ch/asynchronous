@@ -12,9 +12,10 @@
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/scheduler/threadpool_scheduler.hpp>
 #include <boost/asynchronous/servant_proxy.hpp>
-#include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/checks.hpp>
 #include <boost/asynchronous/trackable_servant.hpp>
+#include <boost/asynchronous/algorithm/parallel_for.hpp>
+
 #include <boost/test/unit_test.hpp>
 
 namespace
@@ -111,6 +112,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                    [this](){++m_posted;},
                    [this,runs](boost::asynchronous::expected<void> )
                    {
+                     //boost::this_thread::sleep(boost::posix_time::milliseconds(10));
                      ++m_cb;
                      if (m_cb == 2*runs)
                      {
@@ -120,7 +122,69 @@ struct Servant : boost::asynchronous::trackable_servant<>
         }
         return fu;
     }
-
+    boost::shared_future<int> test_no_interrupt_continuation(int runs, int disturbances)
+    {
+        this->set_worker(boost::asynchronous::make_shared_scheduler_proxy<
+                         boost::asynchronous::threadpool_scheduler<
+                          boost::asynchronous::lockfree_queue<>>>(10));
+        boost::shared_future<int> fu = m_promise.get_future();
+        for (int i = 0; i < disturbances ;++i)
+        {
+            m_interruptibles.push_back(interruptible_post_callback(
+                   [](){boost::this_thread::sleep(boost::posix_time::milliseconds(10));},
+                   [](boost::asynchronous::expected<void> ){}));
+        }
+        // start long tasks
+        for (int i = 0; i < runs ;++i)
+        {
+            interruptible_post_callback(
+                   [this](){
+                        ++m_posted;
+                        std::vector<int> data(10000,1);
+                        return boost::asynchronous::parallel_for(std::move(data),
+                                                        [](int& i)
+                                                        {
+                                                          i += 2;
+                                                        },1500);
+                   },
+                   [this,runs](boost::asynchronous::expected<std::vector<int>> )
+                   {
+                     //boost::this_thread::sleep(boost::posix_time::milliseconds(10));
+                     ++m_cb;
+                     if (m_cb == 2*runs)
+                     {
+                         m_promise.set_value(m_cb);
+                     }
+                   });
+        }
+        for (auto& i : m_interruptibles)
+        {
+            i.interrupt();
+        }
+        for (int i = 0; i < runs ;++i)
+        {
+            interruptible_post_callback(
+                   [this]()
+                   {
+                      ++m_posted;
+                      std::vector<int> data(10000,1);
+                      return boost::asynchronous::parallel_for(std::move(data),
+                                                      [](int& i)
+                                                      {
+                                                        i += 2;
+                                                      },1500);
+                   },
+                   [this,runs](boost::asynchronous::expected<std::vector<int>> )
+                   {
+                     ++m_cb;
+                     if (m_cb == 2*runs)
+                     {
+                         m_promise.set_value(m_cb);
+                     }
+                   });
+        }
+        return fu;
+    }
 private:
     boost::shared_ptr<boost::promise<void> > m_ready;
     boost::promise<int> m_promise;
@@ -139,10 +203,12 @@ public:
     BOOST_ASYNC_FUTURE_MEMBER(start_async_work)
     BOOST_ASYNC_FUTURE_MEMBER(start_async_work2)
     BOOST_ASYNC_FUTURE_MEMBER(test_no_interrupt)
+    BOOST_ASYNC_FUTURE_MEMBER(test_no_interrupt_continuation)
 #else
     BOOST_ASYNC_FUTURE_MEMBER_1(start_async_work)
     BOOST_ASYNC_FUTURE_MEMBER_1(start_async_work2)
     BOOST_ASYNC_FUTURE_MEMBER_1(test_no_interrupt)
+    BOOST_ASYNC_FUTURE_MEMBER_1(test_no_interrupt_continuation)
 #endif
 };
 }
@@ -198,12 +264,34 @@ BOOST_AUTO_TEST_CASE( test_no_interrupt )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<int> > fuv = proxy.test_no_interrupt(10000,10);
+        boost::shared_future<boost::shared_future<int> > fuv = proxy.test_no_interrupt(1000,10);
         try
         {
             boost::shared_future<int> resfuv = fuv.get();
             int res = resfuv.get();
-            BOOST_CHECK_MESSAGE(res==20000,"not matching number of callbacks: " << res);
+            BOOST_CHECK_MESSAGE(res==2000,"not matching number of callbacks: " << res);
+        }
+        catch(...)
+        {
+            BOOST_FAIL( "unexpected exception" );
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE( test_no_interrupt_continuation )
+{
+    {
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<>>>();
+
+        main_thread_id = boost::this_thread::get_id();
+        ServantProxy proxy(scheduler);
+        boost::shared_future<boost::shared_future<int> > fuv = proxy.test_no_interrupt_continuation(1000,10);
+        try
+        {
+            boost::shared_future<int> resfuv = fuv.get();
+            int res = resfuv.get();
+            BOOST_CHECK_MESSAGE(res==2000,"not matching number of callbacks: " << res);
         }
         catch(...)
         {
