@@ -89,6 +89,33 @@ BOOST_AUTO_TEST_CASE( test_vector_ctor_size )
     BOOST_CHECK_MESSAGE(ctor_count.load()==dtor_count.load(),"wrong number of ctors/dtors called.");
 }
 
+BOOST_AUTO_TEST_CASE( test_vector_empty_ctor_size_std )
+{
+    {
+        boost::asynchronous::vector<some_type> v;
+        BOOST_CHECK_MESSAGE(v.size()==0,"vector size should be 0.");
+
+        // check iterators
+        auto cpt = std::count_if(v.begin(),v.end(),[](some_type const & i){return i.data == 0;});
+        BOOST_CHECK_MESSAGE(cpt==0,"vector should have 0 int with value 0.");
+    }
+}
+
+BOOST_AUTO_TEST_CASE( test_vector_ctor_size_std )
+{
+    {
+        boost::asynchronous::vector<some_type> v(10000 /* number of elements */);
+        BOOST_CHECK_MESSAGE(v.size()==10000,"vector size should be 10000.");
+
+        // check iterators
+        auto cpt = std::count_if(v.begin(),v.end(),[](some_type const & i){return i.data == 0;});
+        BOOST_CHECK_MESSAGE(cpt==10000,"vector should have 10000 int with value 0.");
+        BOOST_CHECK_MESSAGE(v[500].data == 0,"vector[500] should have value 0.");
+    }
+    // vector is destroyed, check we got one dtor for each ctor
+    BOOST_CHECK_MESSAGE(ctor_count.load()==dtor_count.load(),"wrong number of ctors/dtors called.");
+}
+
 BOOST_AUTO_TEST_CASE( test_vector_ctor_size_value )
 {
     {
@@ -103,12 +130,25 @@ BOOST_AUTO_TEST_CASE( test_vector_ctor_size_value )
         BOOST_CHECK_MESSAGE(cpt==10000,"vector should have 10000 int with value 42.");
         BOOST_CHECK_MESSAGE(v[500].data == 42,"vector[500] should have value 42.");
     }
-
-    //std::cout << "ctor cpt:" << ctor_count.load() << std::endl;
-    //std::cout << "dtor cpt:" << dtor_count.load() << std::endl;
     // vector is destroyed, check we got one dtor for each ctor
     BOOST_CHECK_MESSAGE(ctor_count.load()==dtor_count.load(),"wrong number of ctors/dtors called.");
 }
+
+BOOST_AUTO_TEST_CASE( test_vector_ctor_size_value_std )
+{
+    {
+        boost::asynchronous::vector<some_type> v(10000 /* number of elements */, some_type(42));
+        BOOST_CHECK_MESSAGE(v.size()==10000,"vector size should be 10000.");
+
+        // check iterators
+        auto cpt = std::count_if(v.begin(),v.end(),[](some_type const & i){return i.data == 42;});
+        BOOST_CHECK_MESSAGE(cpt==10000,"vector should have 10000 int with value 42.");
+        BOOST_CHECK_MESSAGE(v[500].data == 42,"vector[500] should have value 42.");
+    }
+    // vector is destroyed, check we got one dtor for each ctor
+    BOOST_CHECK_MESSAGE(ctor_count.load()==dtor_count.load(),"wrong number of ctors/dtors called.");
+}
+
 
 BOOST_AUTO_TEST_CASE( test_vector_ctor_iterators )
 {
@@ -124,6 +164,28 @@ BOOST_AUTO_TEST_CASE( test_vector_ctor_iterators )
         }
 
         boost::asynchronous::vector<some_type> v(scheduler, 100 /* cutoff */, source.begin(),source.end());
+        BOOST_CHECK_MESSAGE(v.size()==10000,"vector size should be 10000.");
+
+        // check iterators
+        BOOST_CHECK_MESSAGE(v[500].data == 500,"vector[500] should have value 500.");
+        BOOST_CHECK_MESSAGE(v[100].data == 100,"vector[100] should have value 100.");
+        BOOST_CHECK_MESSAGE(v[800].data == 800,"vector[800] should have value 800.");
+    }
+    // vector is destroyed, check we got one dtor for each ctor
+    BOOST_CHECK_MESSAGE(ctor_count.load()==dtor_count.load(),"wrong number of ctors/dtors called.");
+}
+
+BOOST_AUTO_TEST_CASE( test_vector_ctor_iterators_std )
+{
+    {
+        std::vector<some_type> source(10000);
+        int i=0;
+        for(auto& e:source)
+        {
+            e = some_type(i++);
+        }
+
+        boost::asynchronous::vector<some_type> v(source.begin(),source.end());
         BOOST_CHECK_MESSAGE(v.size()==10000,"vector size should be 10000.");
 
         // check iterators
@@ -157,6 +219,22 @@ BOOST_AUTO_TEST_CASE( test_vector_ctor_initializer_list )
                                                                             boost::asynchronous::lockfree_queue<>>>(8);
 
         boost::asynchronous::vector<some_type> v(scheduler, 100 /* cutoff */, {1,2,3,4,5});
+        BOOST_CHECK_MESSAGE(v.size()==5,"vector size should be 5.");
+        BOOST_CHECK_MESSAGE(!v.empty(),"vector should not be empty.");
+        BOOST_CHECK_MESSAGE(v[0].data == 1,"vector[0] should have value 1.");
+        BOOST_CHECK_MESSAGE(v[1].data == 2,"vector[1] should have value 2.");
+        BOOST_CHECK_MESSAGE(v[2].data == 3,"vector[2] should have value 3.");
+        BOOST_CHECK_MESSAGE(v[3].data == 4,"vector[3] should have value 4.");
+        BOOST_CHECK_MESSAGE(v[4].data == 5,"vector[4] should have value 5.");
+    }
+    // vector is destroyed, check we got one dtor for each ctor
+    BOOST_CHECK_MESSAGE(ctor_count.load()==dtor_count.load(),"wrong number of ctors/dtors called.");
+}
+
+BOOST_AUTO_TEST_CASE( test_vector_ctor_initializer_list_std )
+{
+    {
+        boost::asynchronous::vector<some_type> v({1,2,3,4,5});
         BOOST_CHECK_MESSAGE(v.size()==5,"vector size should be 5.");
         BOOST_CHECK_MESSAGE(!v.empty(),"vector should not be empty.");
         BOOST_CHECK_MESSAGE(v[0].data == 1,"vector[0] should have value 1.");

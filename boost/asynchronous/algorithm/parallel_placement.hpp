@@ -32,6 +32,96 @@ enum class parallel_placement_helper_enum
 };
 using parallel_placement_helper_result = std::pair<boost::asynchronous::detail::parallel_placement_helper_enum,boost::exception_ptr>;
 
+template <class T,class Iterator>
+void serial_placement(Iterator beg, Iterator end,char* data)
+{
+    for (std::size_t i = 0; i < (end - beg); ++i)
+    {
+        try
+        {
+            new (((T*)data)+ (i+beg)) T;
+        }
+        catch (std::exception& e)
+        {
+            // we need to cleanup
+            for (std::size_t j = 0; j < i; ++j)
+            {
+                ((T*)(data)+(j+beg))->~T();
+            }
+        }
+        catch (...)
+        {
+            // we need to cleanup
+            for (std::size_t j = 0; j < i; ++j)
+            {
+                ((T*)(data)+(j+beg))->~T();
+            }
+        }
+    }
+}
+template <class T,class Iterator>
+void serial_placement(Iterator beg, Iterator end,char* data,T init)
+{
+    for (std::size_t i = 0; i < (end - beg); ++i)
+    {
+        try
+        {
+            new (((T*)data)+ (i+beg)) T(init);
+        }
+        catch (std::exception& e)
+        {
+            // we need to cleanup
+            for (std::size_t j = 0; j < i; ++j)
+            {
+                ((T*)(data)+(j+beg))->~T();
+            }
+        }
+        catch (...)
+        {
+            // we need to cleanup
+            for (std::size_t j = 0; j < i; ++j)
+            {
+                ((T*)(data)+(j+beg))->~T();
+            }
+        }
+    }
+}
+template <class T,class Iterator,class Iterator2>
+void serial_placement_it(Iterator beg, Iterator end,char* data,Iterator2 it2)
+{
+    for (std::size_t i = 0; i < (end - beg); ++i,++it2)
+    {
+        try
+        {
+            new (((T*)data)+ (i+beg)) T(*it2);
+        }
+        catch (std::exception& e)
+        {
+            // we need to cleanup
+            for (std::size_t j = 0; j < i; ++j)
+            {
+                ((T*)(data)+(j+beg))->~T();
+            }
+        }
+        catch (...)
+        {
+            // we need to cleanup
+            for (std::size_t j = 0; j < i; ++j)
+            {
+                ((T*)(data)+(j+beg))->~T();
+            }
+        }
+    }
+}
+template <class T,class Iterator>
+void serial_dtor(Iterator beg, Iterator end,char* data)
+{
+    for (std::size_t i = 0; i < (end - beg); ++i)
+    {
+        ((T*)(data)+(i+beg))->~T();
+    }
+}
+
 template <class T, class Job>
 struct parallel_placement_helper: public boost::asynchronous::continuation_task<boost::asynchronous::detail::parallel_placement_helper_result>
 {
