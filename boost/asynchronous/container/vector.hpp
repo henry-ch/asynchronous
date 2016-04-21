@@ -92,14 +92,14 @@ public:
     enum { default_capacity = 10 };
 
     // standard ctors (no scheduler)
-    // TODO with allocator
-    explicit vector()
+    explicit vector(const Alloc& alloc)
     : m_data()
     , m_cutoff(1000)
     , m_task_name("")
     , m_prio(0)
     , m_size(0)
     , m_capacity(default_capacity)
+    , m_allocator(alloc)
     {
         boost::shared_ptr<T> raw (m_allocator.allocate(default_capacity),
                                   [this](T* p){this->m_allocator.deallocate(p,default_capacity);});
@@ -107,9 +107,16 @@ public:
         m_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>>(0,raw,m_cutoff,m_task_name,m_prio);
     }
 
-    explicit vector( size_type n,const T& value = T())
+    vector()
+    : vector(Alloc())
+    {
+    }
+
+
+    vector( size_type n,const T& value = T(),const Alloc& alloc = Alloc() )
         : m_size(n)
         , m_capacity(n)
+        , m_allocator(alloc)
     {
         boost::shared_ptr<T> raw (m_allocator.allocate(n),[this,n](T* p){this->m_allocator.deallocate(p,n);});
         m_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>>(n,raw,m_cutoff,m_task_name,m_prio);
@@ -117,10 +124,11 @@ public:
     }
 
     template< class InputIt >
-    vector(InputIt first, InputIt last)
+    vector(InputIt first, InputIt last,const Alloc& alloc = Alloc())
         : m_cutoff(1000)
         , m_task_name("")
         , m_prio(0)
+        , m_allocator(alloc)
     {
         auto n = std::distance(first,last);
         m_size=n;
@@ -130,11 +138,11 @@ public:
         boost::asynchronous::detail::serial_placement_it<T,std::size_t,InputIt>((std::size_t)0,n,(char*)raw.get(),first);
     }
 
-    vector( std::initializer_list<T> init
-            /*,const Alloc& = Alloc()*/ )
+    vector( std::initializer_list<T> init,const Alloc& alloc= Alloc() )
      : m_cutoff(1000)
      , m_task_name("")
      , m_prio(0)
+     , m_allocator(alloc)
     {
         auto n = std::distance(init.begin(),init.end());
         auto first = init.begin();
@@ -163,9 +171,9 @@ public:
     explicit vector(boost::asynchronous::any_shared_scheduler_proxy<Job> scheduler,long cutoff,
            size_type n,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-           const std::string& task_name, std::size_t prio)
+           const std::string& task_name, std::size_t prio,const Alloc& alloc = Alloc())
 #else
-           const std::string& task_name="", std::size_t prio=0)
+           const std::string& task_name="", std::size_t prio=0,const Alloc& alloc = Alloc())
 #endif
         : m_scheduler(scheduler)
         , m_cutoff(cutoff)
@@ -173,6 +181,7 @@ public:
         , m_prio(prio)
         , m_size(n)
         , m_capacity(n)
+        , m_allocator(alloc)
     {
         boost::shared_ptr<T> raw (m_allocator.allocate(n),[this,n](T* p){this->m_allocator.deallocate(p,n);});
         m_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>>(n,raw,cutoff,task_name,prio);
@@ -194,9 +203,9 @@ public:
     }
     explicit vector(boost::asynchronous::any_shared_scheduler_proxy<Job> scheduler,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-           const std::string& task_name, std::size_t prio)
+           const std::string& task_name, std::size_t prio,const Alloc& alloc = Alloc())
 #else
-           const std::string& task_name="", std::size_t prio=0)
+           const std::string& task_name="", std::size_t prio=0,const Alloc& alloc = Alloc())
 #endif
         : m_scheduler(scheduler)
         , m_cutoff(cutoff)
@@ -204,6 +213,7 @@ public:
         , m_prio(prio)
         , m_size(0)
         , m_capacity(default_capacity)
+        , m_allocator(alloc)
     {
         boost::shared_ptr<T> raw (m_allocator.allocate(default_capacity),
                                   [this](T* p){this->m_allocator.deallocate(p,default_capacity);});
@@ -214,9 +224,9 @@ public:
            size_type n,
            T const& value,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-           const std::string& task_name, std::size_t prio)
+           const std::string& task_name, std::size_t prio,const Alloc& alloc = Alloc())
 #else
-           const std::string& task_name="", std::size_t prio=0)
+           const std::string& task_name="", std::size_t prio=0,const Alloc& alloc = Alloc())
 #endif
         : m_scheduler(scheduler)
         , m_cutoff(cutoff)
@@ -224,6 +234,7 @@ public:
         , m_prio(prio)
         , m_size(n)
         , m_capacity(n)
+        , m_allocator(alloc)
     {
         boost::shared_ptr<T> raw (m_allocator.allocate(n),[this,n](T* p){this->m_allocator.deallocate(p,n);});
 
@@ -248,14 +259,15 @@ public:
     vector(boost::asynchronous::any_shared_scheduler_proxy<Job> scheduler,long cutoff,
            InputIt first, InputIt last,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-           const std::string& task_name, std::size_t prio)
+           const std::string& task_name, std::size_t prio,const Alloc& alloc = Alloc())
 #else
-           const std::string& task_name="", std::size_t prio=0)
+           const std::string& task_name="", std::size_t prio=0,const Alloc& alloc = Alloc())
 #endif
         : m_scheduler(scheduler)
         , m_cutoff(cutoff)
         , m_task_name(task_name)
         , m_prio(prio)
+        , m_allocator(alloc)
     {
         auto n = std::distance(first,last);
         m_size=n;
