@@ -99,8 +99,13 @@ public:
     , m_task_name("")
     , m_prio(0)
     , m_size(0)
-    , m_capacity(0)
-    {}
+    , m_capacity(default_capacity)
+    {
+        boost::shared_ptr<T> raw (m_allocator.allocate(default_capacity),
+                                  [this](T* p){this->m_allocator.deallocate(p,default_capacity);});
+
+        m_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>>(0,raw,m_cutoff,m_task_name,m_prio);
+    }
 
     explicit vector( size_type n,const T& value = T())
         : m_size(n)
@@ -141,7 +146,7 @@ public:
     }
 
     // only for use from within a threadpool using make_asynchronous_range
-    vector(long cutoff,size_type n,
+    explicit vector(long cutoff,size_type n,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
            const std::string& task_name, std::size_t prio)
 #else
@@ -155,7 +160,7 @@ public:
     {
     }
 
-    vector(boost::asynchronous::any_shared_scheduler_proxy<Job> scheduler,long cutoff,
+    explicit vector(boost::asynchronous::any_shared_scheduler_proxy<Job> scheduler,long cutoff,
            size_type n,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
            const std::string& task_name, std::size_t prio)
@@ -187,7 +192,7 @@ public:
             boost::asynchronous::detail::serial_placement<T,std::size_t>((std::size_t)0,n,(char*)raw.get(),T());
         }
     }
-    vector(boost::asynchronous::any_shared_scheduler_proxy<Job> scheduler,long cutoff,
+    explicit vector(boost::asynchronous::any_shared_scheduler_proxy<Job> scheduler,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
            const std::string& task_name, std::size_t prio)
 #else
@@ -205,7 +210,7 @@ public:
 
         m_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>>(0,raw,cutoff,task_name,prio);
     }
-    vector(boost::asynchronous::any_shared_scheduler_proxy<Job> scheduler,long cutoff,
+    explicit vector(boost::asynchronous::any_shared_scheduler_proxy<Job> scheduler,long cutoff,
            size_type n,
            T const& value,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -404,6 +409,7 @@ public:
         else if(!!m_data)
         {
             boost::asynchronous::detail::serial_dtor<T,std::size_t>((std::size_t)0,m_data->size_,(char*)m_data->data());
+            m_data->size_=0;
         }
     }
     allocator_type get_allocator() const
@@ -699,6 +705,7 @@ public:
         else if(!!m_data)
         {
             boost::asynchronous::detail::serial_dtor<T,std::size_t>((std::size_t)0,m_data->size_,(char*)m_data->data());
+            m_data->size_=0;
         }
         m_size=0;
     }
@@ -843,7 +850,7 @@ public:
             }
             else if(!!m_data)
             {
-                boost::asynchronous::detail::serial_dtor<T,std::size_t>((std::size_t)0,m_data->size_,(char*)m_data->data());
+                boost::asynchronous::detail::serial_dtor<T,std::size_t>((std::size_t)count,s,(char*)m_data->data());
             }
         }
     }
@@ -967,6 +974,7 @@ public:
             else
             {
                 boost::asynchronous::detail::serial_dtor<T,std::size_t>((std::size_t)0,temp_deleter->size_,(char*)temp_deleter->data());
+                temp_deleter->size_=0;
             }
             // remove our excess elements
             resize(size()-(last - first));
@@ -1119,6 +1127,7 @@ public:
         else
         {
             boost::asynchronous::detail::serial_dtor<T,std::size_t>((std::size_t)0,temp_deleter->size_,(char*)temp_deleter->data());
+            temp_deleter->size_=0;
         }
         // update size
         m_size += (last-first);
@@ -1264,6 +1273,7 @@ public:
         else
         {
             boost::asynchronous::detail::serial_dtor<T,std::size_t>((std::size_t)0,temp_deleter->size_,(char*)temp_deleter->data());
+            temp_deleter->size_=0;
         }
         // update size
         ++m_size;
@@ -1408,6 +1418,7 @@ public:
         else
         {
             boost::asynchronous::detail::serial_dtor<T,std::size_t>((std::size_t)0,temp_deleter->size_,(char*)temp_deleter->data());
+            temp_deleter->size_=0;
         }
         // update size
         ++m_size;
@@ -1553,6 +1564,7 @@ public:
         else
         {
             boost::asynchronous::detail::serial_dtor<T,std::size_t>((std::size_t)0,temp_deleter->size_,(char*)temp_deleter->data());
+            temp_deleter->size_=0;
         }
         // update size
         m_size += count;
@@ -1710,6 +1722,7 @@ private:
         else if(!!m_data)
         {
             boost::asynchronous::detail::serial_dtor<T,std::size_t>((std::size_t)0,m_data->size_,(char*)m_data->data());
+            m_data->size_=0;
         }
         std::swap(m_data,new_data);
 
