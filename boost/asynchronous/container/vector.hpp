@@ -363,7 +363,7 @@ public:
 #else
             const std::string& task_name="", std::size_t prio=0
 #endif
-            /*,const Alloc& = Alloc()*/ )
+           ,const Alloc& = Alloc() )
      : m_scheduler(scheduler)
      , m_cutoff(cutoff)
      , m_task_name(task_name)
@@ -684,11 +684,16 @@ public:
     {
         return std::numeric_limits<size_type>::max();
     }
-    void swap( this_type& other )
+    void swap( this_type& other ) noexcept
     {
+        using std::swap;
         std::swap(m_data,other.m_data);
         std::swap(m_size,other.m_size);
         std::swap(m_capacity,other.m_capacity);
+    }
+    friend void swap(boost::asynchronous::vector<T, Job, Alloc>& x, boost::asynchronous::vector<T, Job, Alloc>& y)
+    {
+      x.swap(y);
     }
 
     void clear()
@@ -997,6 +1002,122 @@ public:
     {
         return erase(pos,pos+1);
     }
+    template< class... Args >
+    iterator emplace( const_iterator orgpos,  Args&&... args)
+    {
+        auto distance_begin_pos = orgpos-cbegin();
+        // check if we need to reallocate
+        if (size()+1 > capacity())
+        {
+            auto new_capacity = calc_new_capacity(size()+1);
+            reallocate_helper(new_capacity);
+        }
+        iterator pos = begin() + distance_begin_pos;
+        // we need move twice data after pos as parallel_move does not support overlapping ranges
+        // first we create a temporary buffer and move our data after pos to temporary buffer
+        auto n = cend() - pos;
+        boost::shared_array<char> raw (new char[n * sizeof(T)]);
+        auto cutoff = m_cutoff;
+        auto task_name = m_task_name;
+        auto prio = m_prio;
+        if (m_scheduler.is_valid())
+        {
+            auto fu = boost::asynchronous::post_future(m_scheduler,
+            [n,raw,cutoff,task_name,prio]()mutable
+            {
+                return boost::asynchronous::parallel_placement<T,Job>(0,n,raw,cutoff,task_name+"_vector_insert_placement",prio);
+            },
+            task_name+"_vector_insert_placement_top",prio);
+            // if exception, will be forwarded
+            auto placement_result = fu.get();
+            if (placement_result.first != boost::asynchronous::detail::parallel_placement_helper_enum::success)
+            {
+                boost::rethrow_exception(placement_result.second);
+            }
+        }
+        else
+        {
+            boost::asynchronous::detail::serial_placement<T,std::size_t>((std::size_t)0,(std::size_t)n,(char*)raw.get(),T());
+        }
+
+        // move to temporary buffer
+        auto temp_begin = (iterator)raw.get();
+        auto cur_begin = pos;
+        auto cur_end = cend();
+        if (m_scheduler.is_valid())
+        {
+            auto fu2 = boost::asynchronous::post_future(m_scheduler,
+            [cur_end,cur_begin,temp_begin,cutoff,task_name,prio]()mutable
+            {
+                return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                        ((iterator)cur_begin,(iterator)cur_end,temp_begin,cutoff,task_name+"_vector_insert_move",prio);
+            },
+            task_name+"_vector_insert_move_top",prio);
+            // if exception, will be forwarded
+            fu2.get();
+        }
+        else
+        {
+            std::move((iterator)cur_begin,(iterator)cur_end,temp_begin);
+        }
+        // we need to add the missing placement new's
+        auto to_add = 1;
+        auto where = ((iterator)m_data->data())+ size();
+        boost::asynchronous::detail::serial_placement<T,std::size_t>((std::size_t)0,(std::size_t)to_add,(char*)where,T());
+
+        // add input using placement new
+        ((T*) pos)->~T();
+        new ((T*) pos) T(std::forward<Args...>(args...));
+
+        // move back from temporary
+        auto temp_end = temp_begin + n;
+        auto beg_move_back = pos + 1;
+        if (m_scheduler.is_valid())
+        {
+            auto fu5 = boost::asynchronous::post_future(m_scheduler,
+            [temp_begin,temp_end,beg_move_back,cutoff,task_name,prio]()mutable
+            {
+                return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                        (temp_begin,temp_end,(iterator)beg_move_back,cutoff,task_name+"_vector_insert_move_2",prio);
+            },
+            task_name+"_vector_insert_move_2_top",prio);
+            // if exception, will be forwarded
+            fu5.get();
+        }
+        else
+        {
+            std::move(temp_begin,temp_end,(iterator)beg_move_back);
+        }
+        // call dtors on temp
+        boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> temp_deleter =
+                boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
+        if (m_scheduler.is_valid())
+        {
+            auto fu6 =
+            boost::asynchronous::post_future(m_scheduler,
+                                             boost::asynchronous::move_bind(
+                                                 [](boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> data)mutable
+                                                 {
+                                                    return boost::asynchronous::top_level_callback_continuation_job<void,Job>(
+                                                     boost::asynchronous::detail::move_only<boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>
+                                                        (std::move(data)));
+                                                 },
+                                                 std::move(temp_deleter)),
+                                             task_name+"_vector_insert_delete",prio);
+
+            fu6.get();
+        }
+        else
+        {
+            boost::asynchronous::detail::serial_dtor<T,std::size_t>((std::size_t)0,temp_deleter->size_,(char*)temp_deleter->data());
+            temp_deleter->size_=0;
+        }
+        // update size
+        ++m_size;
+        ++m_data->size_;
+
+        return begin() + distance_begin_pos;
+    }
     template< class InputIt >
     iterator insert( const_iterator orgpos, InputIt first, InputIt last )
     {
@@ -1207,43 +1328,10 @@ public:
         // we need to add the missing placement new's
         auto to_add = 1;
         auto where = ((iterator)m_data->data())+ size();
-        if (m_scheduler.is_valid())
-        {
-            auto fu3 = boost::asynchronous::post_future(m_scheduler,
-            [to_add,where,cutoff,task_name,prio]()mutable
-            {
-                return boost::asynchronous::parallel_placement<T,Job>(0,to_add,(char*)where,T(),cutoff,task_name+"_vector_insert_placement_2",prio);
-            },
-            task_name+"_vector_insert_placement_2_top",prio);
-            // if exception, will be forwarded
-            auto placement_result2 = fu3.get();
-            if (placement_result2.first != boost::asynchronous::detail::parallel_placement_helper_enum::success)
-            {
-                boost::rethrow_exception(placement_result2.second);
-            }
-        }
-        else
-        {
-            boost::asynchronous::detail::serial_placement<T,std::size_t>((std::size_t)0,(std::size_t)to_add,(char*)where,T());
-        }
+        boost::asynchronous::detail::serial_placement<T,std::size_t>((std::size_t)0,(std::size_t)to_add,(char*)where,T());
 
         // copy input
-        T a[1] = {value};
-        if (m_scheduler.is_valid())
-        {
-            auto fu4 = boost::asynchronous::post_future(m_scheduler,
-            [a,pos,cutoff,task_name,prio]()mutable
-            {
-                return boost::asynchronous::parallel_copy<T*,iterator,Job>
-                        (a,a+1,(iterator)pos,cutoff,task_name+"_vector_insert_copy",prio);
-            },
-            task_name+"_vector_insert_copy_top",prio);
-            fu4.get();
-        }
-        else
-        {
-            std::copy(a,a+1,(iterator)pos);
-        }
+        *pos = value;
         // move back from temporary
         auto temp_end = temp_begin + n;
         auto beg_move_back = pos + 1;
@@ -1937,7 +2025,5 @@ bool operator>( const boost::asynchronous::vector<T,Job,Alloc>& lhs,
 }
 
 }} // boost::async
-
-
 
 #endif /* BOOST_ASYNCHRONOUS_CONTAINER_VECTOR_HPP */

@@ -8,7 +8,7 @@
             <email>christophe.j.henry@gmail.com</email>
         </author>
         <copyright>
-            <year>20015</year>
+            <year>2015</year>
             <holder>
                 <phrase> Distributed under the Boost Software License, Version 1.0. (See
                     accompanying file LICENSE_1_0.txt or copy at <link
@@ -6166,14 +6166,16 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">void
                     with a great gain as long as the contained type either has a non-simple
                     constructor / destructor or simply is big enough, as our tests show (see
                     test/perf/perf_vector.cpp). Though memory allocating is not parallel,
-                    constructors can be made so. Reallocating and resizing can also greatly
-                    benefit.</para>
+                    constructors can be made so. Reallocating and resizing, adding elements can also
+                    greatly benefit.</para>
                 <para>Asynchronous fills this gap by providing boost::asynchronous::vector. It can
-                    be used as a parallel, synchronous type. Apart from the construction, it looks
-                    and feels very much like a std::vector with an added threadpool. In this case,
-                        <emphasis role="underline">it cannot be posted to its own threadpool without
-                        releasing it</emphasis> (see release_scheduler / set_scheduler). It is
-                    defined in:</para>
+                    be used like std::vector by default.</para>
+                <para>However, it can also be used as a parallel, synchronous type if provided a
+                    threadpool. Apart from the construction, it looks and feels very much like a
+                    std::vector. In this case, <emphasis role="underline">it cannot be posted to its
+                        own threadpool without releasing it</emphasis> (see release_scheduler /
+                    set_scheduler) as it would create a cycle, and therefore a possible deadlock. It
+                    is defined in:</para>
                 <para>#include &lt;boost/asynchronous/container/vector.hpp> </para>
                 <para>The vector supports the same constructors that std::vector, with as extra
                     parameters, the threadpool for parallel work, and a cutoff. Optionally, a name
@@ -6216,7 +6218,318 @@ boost::asynchronous::any_shared_scheduler_proxy&lt;> pool =
                                 constructor.</para>
                         </listitem>
                 </itemizedlist></para>
-                <para><link xlink:href="examples/example_vector.cpp">This example</link> displays some basic usage of vector.</para>
+                <para><link xlink:href="examples/example_vector.cpp">This example</link> displays
+                    some basic usage of vector.</para>
+                <table frame="all">
+                    <title>#include
+                        &lt;boost/asynchronous/container/vector.hpp></title>
+                    <tgroup cols="3">
+                        <colspec colname="c1" colnum="1" colwidth="1.0*"/>
+                        <colspec colname="c2" colnum="2" colwidth="1.27*"/>
+                        <colspec colname="newCol3" colnum="3" colwidth="2.53*"/>
+                        <thead>
+                            <row>
+                                <entry>Public Member functions as in std::vector</entry>
+                                <entry>Description</entry>
+                                <entry>Parallel if threadpool?</entry>
+                            </row>
+                        </thead>
+                        <tbody>
+                            <row>
+                                <entry>(constructor)</entry>
+                                <entry>constructs the vector</entry>
+                                <entry>Yes</entry>
+                            </row>
+                            <row>
+                                <entry>(destructor)</entry>
+                                <entry>destructs the vector</entry>
+                                <entry>Yes</entry>
+                            </row>
+                            <row>
+                                <entry>operator=</entry>
+                                <entry>assigns values to the container</entry>
+                                <entry>Yes</entry>
+                            </row>
+                            <row>
+                                <entry>assign</entry>
+                                <entry>assigns values to the container </entry>
+                                <entry>Yes</entry>
+                            </row>
+                            <row>
+                                <entry>get_allocator</entry>
+                                <entry>returns the associated allocator </entry>
+                                <entry>No</entry>
+                            </row>
+                            <row>
+                                <entry>at</entry>
+                                <entry>access specified element with bounds checking </entry>
+                                <entry>No</entry>
+                            </row>
+                            <row>
+                                <entry>operator[]</entry>
+                                <entry>access specified element </entry>
+                                <entry>No</entry>
+                            </row>
+                            <row>
+                                <entry>front</entry>
+                                <entry>access the first element </entry>
+                                <entry>No</entry>
+                            </row>
+                            <row>
+                                <entry>back</entry>
+                                <entry>access the last element </entry>
+                                <entry>No</entry>
+                            </row>
+                            <row>
+                                <entry>data</entry>
+                                <entry>direct access to the underlying array </entry>
+                                <entry>No</entry>
+                            </row>
+                            <row>
+                                <entry>begin / cbegin </entry>
+                                <entry>returns an iterator to the beginning</entry>
+                                <entry>No</entry>
+                            </row>
+                            <row>
+                                <entry>end / cend </entry>
+                                <entry>returns an iterator to the end </entry>
+                                <entry>No</entry>
+                            </row>
+                            <row>
+                                <entry>rbegin / crbegin </entry>
+                                <entry>returns a reverse iterator to the beginning </entry>
+                                <entry>No</entry>
+                            </row>
+                            <row>
+                                <entry>rend / crend </entry>
+                                <entry>returns a reverse iterator to the end </entry>
+                                <entry>No</entry>
+                            </row>
+                            <row>
+                                <entry>empty</entry>
+                                <entry>checks whether the container is empty </entry>
+                                <entry>No</entry>
+                            </row>
+                            <row>
+                                <entry>size</entry>
+                                <entry>returns the number of elements </entry>
+                                <entry>No</entry>
+                            </row>
+                            <row>
+                                <entry>max_size</entry>
+                                <entry>returns the maximum possible number of elements</entry>
+                                <entry>No</entry>
+                            </row>
+                            <row>
+                                <entry>reserve</entry>
+                                <entry>reserves storage </entry>
+                                <entry>Yes</entry>
+                            </row>
+                            <row>
+                                <entry>capacity</entry>
+                                <entry>returns the number of elements that can be held in currently
+                                    allocated storage </entry>
+                                <entry>Yes</entry>
+                            </row>
+                            <row>
+                                <entry>shrink_to_fit </entry>
+                                <entry>reduces memory usage by freeing unused memory</entry>
+                                <entry>Yes</entry>
+                            </row>
+                            <row>
+                                <entry>clear</entry>
+                                <entry>clears the contents </entry>
+                                <entry>Yes</entry>
+                            </row>
+                            <row>
+                                <entry>insert</entry>
+                                <entry>inserts elements </entry>
+                                <entry>Yes</entry>
+                            </row>
+                            <row>
+                                <entry>emplace</entry>
+                                <entry>constructs element in-place </entry>
+                                <entry>Yes</entry>
+                            </row>
+                            <row>
+                                <entry>erase</entry>
+                                <entry>erases elements</entry>
+                                <entry>Yes</entry>
+                            </row>
+                            <row>
+                                <entry>push_back</entry>
+                                <entry>adds an element to the end </entry>
+                                <entry>Yes</entry>
+                            </row>
+                            <row>
+                                <entry>emplace_back</entry>
+                                <entry>constructs an element in-place at the end </entry>
+                                <entry>Yes</entry>
+                            </row>
+                            <row>
+                                <entry>pop_back</entry>
+                                <entry>removes the last element</entry>
+                                <entry>No</entry>
+                            </row>
+                            <row>
+                                <entry>resize</entry>
+                                <entry>changes the number of elements stored</entry>
+                                <entry>Yes</entry>
+                            </row>
+                            <row>
+                                <entry>swap</entry>
+                                <entry>swaps the contents </entry>
+                                <entry>No</entry>
+                            </row>
+                            <row>
+                                <entry>operator==</entry>
+                                <entry>lexicographically compares the values in the vector </entry>
+                                <entry>Yes</entry>
+                            </row>
+                            <row>
+                                <entry>operator!=</entry>
+                                <entry>lexicographically compares the values in the vector </entry>
+                                <entry>Yes</entry>
+                            </row>
+                            <row>
+                                <entry>operator&lt; </entry>
+                                <entry>lexicographically compares the values in the vector </entry>
+                                <entry>Yes</entry>
+                            </row>
+                            <row>
+                                <entry>operator&lt;= </entry>
+                                <entry>lexicographically compares the values in the vector </entry>
+                                <entry>Yes</entry>
+                            </row>
+                            <row>
+                                <entry>operator> </entry>
+                                <entry>lexicographically compares the values in the vector </entry>
+                                <entry>Yes</entry>
+                            </row>
+                            <row>
+                                <entry>operator>=</entry>
+                                <entry>lexicographically compares the values in the vector </entry>
+                                <entry>Yes</entry>
+                            </row>
+                        </tbody>
+                    </tgroup>
+                </table>
+                <para>All these members have the same signature as std::vector. Only some
+                    constructors are new. First the standard ones:</para>
+                <programlisting>         vector();
+
+explicit vector( const Allocator&amp; alloc );	
+
+         vector( size_type count,
+                 const T&amp; value = T(),
+                 const Allocator&amp; alloc = Allocator());
+
+template&lt; class InputIt >
+vector( InputIt first, InputIt last,
+        const Allocator&amp; alloc = Allocator() );
+
+vector( const vector&amp; other );
+
+vector( vector&amp;&amp; other )
+
+vector( std::initializer_list&lt;T> init,
+        const Allocator&amp; alloc = Allocator() );</programlisting>
+                <para>There are variants taking a scheduler making them a servant with parallel capabilities:</para>
+                <programlisting>explicit vector(boost::asynchronous::any_shared_scheduler_proxy&lt;Job> scheduler,
+                long cutoff,
+                const std::string&amp; task_name="", 
+                std::size_t prio=0,
+                const Alloc&amp; alloc = Alloc());
+
+explicit vector( boost::asynchronous::any_shared_scheduler_proxy&lt;Job> scheduler,
+                 long cutoff,
+                 size_type count,
+                 const std::string&amp; task_name="", 
+                 std::size_t prio=0,
+                 const Allocator&amp; alloc = Allocator());
+	
+explicit vector( boost::asynchronous::any_shared_scheduler_proxy&lt;Job> scheduler,
+                 long cutoff,
+                 size_type count,
+                 const T&amp; value = T(),
+                 const std::string&amp; task_name="", 
+                 std::size_t prio=0,
+                 const Allocator&amp; alloc = Allocator());
+
+         template&lt; class InputIt >
+         vector( boost::asynchronous::any_shared_scheduler_proxy&lt;Job> scheduler,
+                 long cutoff,
+                 InputIt first, InputIt last,
+                 const std::string&amp; task_name="", 
+                 std::size_t prio=0,
+                 const Allocator&amp; alloc = Allocator() );
+
+         vector( boost::asynchronous::any_shared_scheduler_proxy&lt;Job> scheduler,
+                 long cutoff,
+                 std::initializer_list&lt;T> init,
+                 const std::string&amp; task_name="", 
+                 std::size_t prio=0,
+                 const Allocator&amp; alloc = Allocator() );</programlisting>
+                <para>Some new members have also been added to handle the new functionality:</para>
+                <table frame="all">
+                    <title>#include
+                        &lt;boost/asynchronous/container/vector.hpp></title>
+                    <tgroup cols="3">
+                        <colspec colname="c1" colnum="1" colwidth="1.0*"/>
+                        <colspec colname="c2" colnum="2" colwidth="1.25*"/>
+                        <colspec colname="newCol3" colnum="3" colwidth="2.5*"/>
+                        <thead>
+                            <row>
+                                <entry>Public Member functions as in std::vector</entry>
+                                <entry>Description</entry>
+                                <entry>Parallel if threadpool?</entry>
+                            </row>
+                        </thead>
+                        <tbody>
+                            <row>
+                                <entry>void
+                                    set_scheduler(any_shared_scheduler_proxy&lt;Job>)</entry>
+                                <entry>adds / replaces the scheduler pool</entry>
+                                <entry>No</entry>
+                            </row>
+                            <row>
+                                <entry>void release_scheduler()</entry>
+                                <entry>Removes the scheduler pool. vector is now "standard"</entry>
+                                <entry>No</entry>
+                            </row>
+                            <row>
+                                <entry>long get_cutoff()const</entry>
+                                <entry>returns cutoff</entry>
+                                <entry>No</entry>
+                            </row>
+                            <row>
+                                <entry>void set_cutoff(long)</entry>
+                                <entry>sets cutoff </entry>
+                                <entry>No</entry>
+                            </row>
+                            <row>
+                                <entry>std::string get_name() const</entry>
+                                <entry>returns vector name, used in task names</entry>
+                                <entry>No</entry>
+                            </row>
+                            <row>
+                                <entry>void set_name(std::string const&amp;)</entry>
+                                <entry>sets vector name, used in task names</entry>
+                                <entry>No</entry>
+                            </row>
+                            <row>
+                                <entry>std::size_t get_prio()const</entry>
+                                <entry>returns vector task priority in threadpool</entry>
+                                <entry>No</entry>
+                            </row>
+                            <row>
+                                <entry>void set_prio(std::size_t)</entry>
+                                <entry>set vector task priority in threadpool</entry>
+                                <entry>No</entry>
+                            </row>                            
+                        </tbody>
+                    </tgroup>
+                </table>
             </sect1>
         </chapter>
         <chapter>

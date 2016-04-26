@@ -645,7 +645,7 @@ BOOST_AUTO_TEST_CASE( test_vector_swap )
         v.push_back(some_type(41));
         // test swap
         boost::asynchronous::vector<some_type> v2(scheduler, 100 /* cutoff */);
-        v.swap(v2);
+        std::swap(v,v2);
 
         BOOST_CHECK_MESSAGE(v2[0].data == 42,"vector[0] should have value 42.");
         BOOST_CHECK_MESSAGE(v2[1].data == 41,"vector[1] should have value 41.");
@@ -668,7 +668,7 @@ BOOST_AUTO_TEST_CASE( test_vector_swap_std )
         v.push_back(some_type(41));
         // test swap
         boost::asynchronous::vector<some_type> v2;
-        v.swap(v2);
+        std::swap(v,v2);
 
         BOOST_CHECK_MESSAGE(v2[0].data == 42,"vector[0] should have value 42.");
         BOOST_CHECK_MESSAGE(v2[1].data == 41,"vector[1] should have value 41.");
@@ -1312,6 +1312,77 @@ BOOST_AUTO_TEST_CASE( test_vector_insert_std)
         BOOST_CHECK_MESSAGE(v[999].data == 999,"vector[999] should have value 999.");
         BOOST_CHECK_MESSAGE(v[1000].data == 1,"vector[1000] should have value 1.");
         BOOST_CHECK_MESSAGE(v[9104].data == 8000,"vector[9104] should have value 8000.");
+    }
+    // vector is destroyed, check we got one dtor for each ctor
+    BOOST_CHECK_MESSAGE(ctor_count.load()==dtor_count.load(),"wrong number of ctors/dtors called.");
+}
+
+BOOST_AUTO_TEST_CASE( test_vector_emplace)
+{
+    {
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<>>>(8);
+
+        boost::asynchronous::vector<some_type> v(scheduler, 100 /* cutoff */);
+        for (auto i = 0; i < 10000; ++i)
+        {
+            v.push_back(some_type(i));
+        }
+        std::vector<some_type> v2(1000,some_type(20000));
+        v.insert(v.cbegin() + 1000, v2.cbegin(), v2.cend());
+        BOOST_CHECK_MESSAGE(v.size() == 11000,"vector size should be 11000.");
+        BOOST_CHECK_MESSAGE(v[999].data == 999,"vector[999] should have value 999.");
+        BOOST_CHECK_MESSAGE(v[1000].data == 20000,"vector[1000] should have value 20000.");
+        BOOST_CHECK_MESSAGE(v[1999].data == 20000,"vector[1999] should have value 20000.");
+        BOOST_CHECK_MESSAGE(v[10999].data == 9999,"vector[10999] should have value 9999.");
+        BOOST_CHECK_MESSAGE(v[9000].data == 8000,"vector[9000] should have value 8000.");
+
+        v.emplace(v.cbegin() + 1000,41);
+        BOOST_CHECK_MESSAGE(v.size() == 11001,"vector size should be 11001.");
+        BOOST_CHECK_MESSAGE(v[999].data == 999,"vector[999] should have value 999.");
+        BOOST_CHECK_MESSAGE(v[1000].data == 41,"vector[1000] should have value 20000.");
+        BOOST_CHECK_MESSAGE(v[9001].data == 8000,"vector[9001] should have value 8000.");
+
+        v.emplace(v.cbegin() + 1000,some_type(42));
+        BOOST_CHECK_MESSAGE(v.size() == 11002,"vector size should be 11002.");
+        BOOST_CHECK_MESSAGE(v[999].data == 999,"vector[999] should have value 999.");
+        BOOST_CHECK_MESSAGE(v[1000].data == 42,"vector[1000] should have value 42.");
+        BOOST_CHECK_MESSAGE(v[9002].data == 8000,"vector[9002] should have value 8000.");
+
+    }
+    // vector is destroyed, check we got one dtor for each ctor
+    BOOST_CHECK_MESSAGE(ctor_count.load()==dtor_count.load(),"wrong number of ctors/dtors called.");
+}
+
+BOOST_AUTO_TEST_CASE( test_vector_emplace_std)
+{
+    {
+        boost::asynchronous::vector<some_type> v;
+        for (auto i = 0; i < 10000; ++i)
+        {
+            v.push_back(some_type(i));
+        }
+        std::vector<some_type> v2(1000,some_type(20000));
+        v.insert(v.cbegin() + 1000, v2.cbegin(), v2.cend());
+        BOOST_CHECK_MESSAGE(v.size() == 11000,"vector size should be 11000.");
+        BOOST_CHECK_MESSAGE(v[999].data == 999,"vector[999] should have value 999.");
+        BOOST_CHECK_MESSAGE(v[1000].data == 20000,"vector[1000] should have value 20000.");
+        BOOST_CHECK_MESSAGE(v[1999].data == 20000,"vector[1999] should have value 20000.");
+        BOOST_CHECK_MESSAGE(v[10999].data == 9999,"vector[10999] should have value 9999.");
+        BOOST_CHECK_MESSAGE(v[9000].data == 8000,"vector[9000] should have value 8000.");
+
+        v.emplace(v.cbegin() + 1000,41);
+        BOOST_CHECK_MESSAGE(v.size() == 11001,"vector size should be 11001.");
+        BOOST_CHECK_MESSAGE(v[999].data == 999,"vector[999] should have value 999.");
+        BOOST_CHECK_MESSAGE(v[1000].data == 41,"vector[1000] should have value 20000.");
+        BOOST_CHECK_MESSAGE(v[9001].data == 8000,"vector[9001] should have value 8000.");
+
+        v.emplace(v.cbegin() + 1000,some_type(42));
+        BOOST_CHECK_MESSAGE(v.size() == 11002,"vector size should be 11002.");
+        BOOST_CHECK_MESSAGE(v[999].data == 999,"vector[999] should have value 999.");
+        BOOST_CHECK_MESSAGE(v[1000].data == 42,"vector[1000] should have value 42.");
+        BOOST_CHECK_MESSAGE(v[9002].data == 8000,"vector[9002] should have value 8000.");
+
     }
     // vector is destroyed, check we got one dtor for each ctor
     BOOST_CHECK_MESSAGE(ctor_count.load()==dtor_count.load(),"wrong number of ctors/dtors called.");
