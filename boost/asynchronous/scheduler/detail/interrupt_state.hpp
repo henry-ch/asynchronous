@@ -15,26 +15,14 @@ struct interrupt_state
         boost::mutex::scoped_lock lock(m_mutex);
         return (m_state == 2);
     }
-    bool is_interrupted_int()const
-    {
-        return (m_state == 2);
-    }
     bool is_completed()const
     {
         boost::mutex::scoped_lock lock(m_mutex);
         return (m_state == 1);
     }
-    bool is_completed_int()const
-    {
-        return (m_state == 1);
-    }
     bool is_running()const
     {
         boost::mutex::scoped_lock lock(m_mutex);
-        return (m_state == 3);
-    }
-    bool is_running_int()const
-    {
         return (m_state == 3);
     }
     void interrupt(boost::shared_future<boost::thread*> fworker)
@@ -87,9 +75,9 @@ struct interrupt_state
     }
     void run()
     {
-        if (!is_interrupted())
+        boost::mutex::scoped_lock lock(m_mutex);
+        if (!is_interrupted_int())
         {
-            boost::mutex::scoped_lock lock(m_mutex);
             m_state = 3;
         }
     }
@@ -105,6 +93,18 @@ struct interrupt_state
         m_interruptibles.push_back(i);
     }
 private:
+    bool is_interrupted_int()const
+    {
+        return (m_state == 2);
+    }
+    bool is_completed_int()const
+    {
+        return (m_state == 1);
+    }
+    bool is_running_int()const
+    {
+        return (m_state == 3);
+    }
     // 0: not interrupted
     // 1: completed
     // 2: interrupted
