@@ -96,7 +96,24 @@ struct interruptible_job : public boost::asynchronous::job_traits<Job>::diagnost
             boost::asynchronous::get_interrupt_state<>(boost::shared_ptr<boost::asynchronous::detail::interrupt_state>(),true);
             return;
         }
-        m_job();
+        try
+        {
+            m_job();
+        }
+        catch(boost::thread_interrupted&)
+        {
+            throw;
+        }
+        // other exceptions
+        catch(...)
+        {
+            // exception but not interrupted
+            this->set_interrupted(false);
+            m_state->complete();
+            // remove state from tss
+            boost::asynchronous::get_interrupt_state<>(boost::shared_ptr<boost::asynchronous::detail::interrupt_state>(),true);
+            throw;
+        }
         // ok we were not interrupted
         this->set_interrupted(false);
         m_state->complete();
