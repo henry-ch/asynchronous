@@ -12,6 +12,7 @@
 
 #include <vector>
 #include <tuple>
+#include <numeric>
 #include <boost/chrono/chrono.hpp>
 #include <boost/asynchronous/post.hpp>
 

@@ -15,6 +15,7 @@
 #include <cstddef>
 #include <tuple>
 #include <atomic>
+#include <numeric>
 
 #ifndef BOOST_THREAD_PROVIDES_FUTURE
 #define BOOST_THREAD_PROVIDES_FUTURE
@@ -299,7 +300,7 @@ public:
             auto s = queues->size();
             for (std::size_t i = 0 ; i < s ; ++i)
             {
-                current_servant = (++current_servant)%s;
+                current_servant = (current_servant+1)%s;
                 // used slot, check if we can take it
                 bool expected = false;
                 if ((*queues)[current_servant].m_taken.compare_exchange_strong(expected,true))

@@ -11,6 +11,7 @@
 #define BOOST_ASYNCHRON_PARALLEL_IOTA_HPP
 
 #include <algorithm>
+#include <numeric>
 
 #include <boost/asynchronous/detail/continuation_impl.hpp>
 #include <boost/asynchronous/continuation_task.hpp>

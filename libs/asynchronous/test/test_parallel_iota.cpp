@@ -106,7 +106,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         std::vector<int> r = res.get();
-                        for (std::size_t index = 0; index < r.size(); ++index) {
+                        for (int index = 0; index < (int)r.size(); ++index) {
                             BOOST_CHECK_MESSAGE((r[index] == index), ("r[" + std::to_string(index) + "] is wrong: " + std::to_string(r[index])));
                         }
                         // reset
