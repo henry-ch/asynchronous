@@ -570,9 +570,15 @@ private:
             }
             // remove from group and join
             boost::thread_group cleanup_group;
+            {
+                boost::mutex::scoped_lock lock(m_current_number_of_workers_mutex);
+                for (std::set<boost::thread*>::iterator it = to_join_threads.begin(); it != to_join_threads.end();++it)
+                {
+                    m_group->remove_thread(*it);
+                }
+            }
             for (std::set<boost::thread*>::iterator it = to_join_threads.begin(); it != to_join_threads.end();++it)
             {
-                m_group->remove_thread(*it);
                 cleanup_group.add_thread(*it);
             }
             // join. Not blocking as all these threads are finished
