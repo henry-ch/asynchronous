@@ -92,6 +92,34 @@ struct Servant : boost::asynchronous::trackable_servant<>
         return apromise->get_future();
     }
 
+    boost::shared_future<void> test_many_tasks(size_t cpt)
+    {
+        this->set_worker(boost::asynchronous::make_shared_scheduler_proxy<
+                         boost::asynchronous::io_threadpool_scheduler<
+                                 boost::asynchronous::lockfree_queue<>>>(8,16));
+        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant test_many_tasks not posted.");
+        m_current=0;
+        boost::shared_ptr<boost::promise<void> > apromise(new boost::promise<void>);
+        boost::promise<void> block_promise;
+        boost::shared_future<void> fub = block_promise.get_future();
+        // start long tasks
+        for (size_t i = 0; i< cpt ; ++i)
+        {
+            post_callback(
+               []()mutable{boost::this_thread::sleep(boost::posix_time::milliseconds(10));},
+               [this,cpt,apromise](boost::asynchronous::expected<void>)
+               {
+                    ++this->m_current;
+                    if (this->m_current == cpt)
+                    {
+                        apromise->set_value();
+                    }
+               }
+            );
+        }
+        return apromise->get_future();
+    }
+
 boost::shared_ptr<boost::promise<void> > m_dtor_done;
 size_t m_counter;
 size_t m_current;
@@ -106,6 +134,7 @@ public:
         boost::asynchronous::servant_proxy<ServantProxy,Servant>(s)
     {}
     BOOST_ASYNC_FUTURE_MEMBER(start_async_work)
+    BOOST_ASYNC_FUTURE_MEMBER(test_many_tasks)
 };
 
 }
@@ -185,6 +214,25 @@ BOOST_AUTO_TEST_CASE( test_io_threadpool_scheduler_5_2 )
            fuv = proxy.start_async_work(2);
            // wait for task to start
            fud = fuv.get();
+           fud.get();
+       }
+    }
+    // at this point, the dtor has been called
+    BOOST_CHECK_MESSAGE(dtor_called,"servant dtor not called.");
+}
+BOOST_AUTO_TEST_CASE( test_io_threadpool_many_tasks )
+{
+    dtor_called =false;
+    main_thread_id = boost::this_thread::get_id();
+    {
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<>>>();
+
+       {
+           ServantProxy proxy(scheduler);
+           boost::shared_future<boost::shared_future<void> > fuv = proxy.test_many_tasks(1000);
+           // wait for task to start
+           boost::shared_future<void> fud = fuv.get();
            fud.get();
        }
     }
