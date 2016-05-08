@@ -106,12 +106,13 @@ struct Servant : boost::asynchronous::trackable_servant<>
         for (size_t i = 0; i< cpt ; ++i)
         {
             post_callback(
-               []()mutable{boost::this_thread::sleep(boost::posix_time::milliseconds(10));},
+               []()mutable{},
                [this,cpt,apromise](boost::asynchronous::expected<void>)
                {
                     ++this->m_current;
                     if (this->m_current == cpt)
                     {
+                        //std::cout << "task done" << std::endl;
                         apromise->set_value();
                     }
                }
@@ -234,8 +235,10 @@ BOOST_AUTO_TEST_CASE( test_io_threadpool_many_tasks )
            // wait for task to start
            boost::shared_future<void> fud = fuv.get();
            fud.get();
+           //std::cout << "before dtor" << std::endl;
        }
     }
+    //std::cout << "after dtor" << std::endl;
     // at this point, the dtor has been called
     BOOST_CHECK_MESSAGE(dtor_called,"servant dtor not called.");
 }

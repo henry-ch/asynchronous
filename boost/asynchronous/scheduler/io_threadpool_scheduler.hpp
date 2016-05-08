@@ -96,6 +96,7 @@ public:
             boost::promise<boost::thread*> new_thread_promise;
             boost::shared_future<boost::thread*> fu = new_thread_promise.get_future();
             boost::function<void()> d = boost::bind(&io_threadpool_scheduler::internal_data::basic_thread_not_busy,m_data);
+            boost::mutex::scoped_lock lock(m_data->m_current_number_of_workers_mutex);
             boost::thread* new_thread =
                     m_data->m_group->create_thread(
                         boost::bind(&io_threadpool_scheduler::run_always,this->m_queue,
@@ -110,7 +111,7 @@ public:
         return std::vector<boost::asynchronous::any_queue_ptr<job_type> >();
     }
     ~io_threadpool_scheduler()
-    {        
+    {
         for (size_t i = 0; i< m_data->m_min_number_of_workers;++i)
         {
             auto fct = m_diagnostics_fct;
@@ -137,6 +138,8 @@ public:
     //TODO move?
     boost::asynchronous::any_joinable get_worker()const
     {
+        boost::mutex::scoped_lock lock(m_data->m_current_number_of_workers_mutex);
+        m_data->m_joining = true;
         return boost::asynchronous::any_joinable (boost::asynchronous::detail::worker_wrap<boost::thread_group>(m_data->m_group));
     }
 
@@ -169,7 +172,7 @@ public:
     {
         boost::mutex::scoped_lock lock(m_data->m_current_number_of_workers_mutex);
         if ((m_data->m_current_number_of_workers+1 <= m_data->m_max_number_of_workers) &&
-            (m_data->m_current_number_of_workers+1 > m_data->m_min_number_of_workers))
+            (m_data->m_current_number_of_workers+1 > m_data->m_min_number_of_workers) && !m_data->m_joining)
         {
             ++m_data->m_current_number_of_workers;
             //lock.unlock();
@@ -186,7 +189,7 @@ public:
             m_data->m_thread_ids.insert(new_thread->get_id());
             new_thread_promise.set_value(new_thread);
         }
-        else
+        else if (!m_data->m_joining)
         {
             ++m_data->m_current_number_of_workers;
         }
@@ -310,7 +313,13 @@ public:
     }
     void processor_bind(unsigned int p)
     {
-        for (size_t i = 0; i< m_data->m_thread_ids.size();++i)
+        std::size_t idsize=0;
+        {
+            boost::mutex::scoped_lock lock(m_data->m_current_number_of_workers_mutex);
+            idsize = m_data->m_thread_ids.size();
+        }
+
+        for (size_t i = 0; i< idsize;++i)
         {
             boost::asynchronous::detail::processor_bind_task task(p+i);
             boost::asynchronous::any_callable job(std::move(task));
@@ -530,7 +539,7 @@ private:
            {
                --m_current_number_of_workers;
            }
-           return res;
+           return res && !m_joining;
         }
         void basic_thread_not_busy()
         {
@@ -592,6 +601,8 @@ private:
         std::set<boost::thread*> m_done_threads;
         boost::weak_ptr<this_type> m_weak_self;
         boost::shared_ptr<boost::thread_group> m_group;
+        // remembers if the thread group has already been given for joining. If yes, no thread will be created
+        bool m_joining=false;
         // protects m_done_threads
         boost::mutex m_done_threads_mutex;
         // protects m_current_number_of_workers
