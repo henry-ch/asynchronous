@@ -95,6 +95,7 @@ struct any_queue_concept
     virtual bool try_steal(JOB&)=0;
     virtual std::vector<std::size_t> get_queue_size()const=0;
     virtual std::vector<std::size_t> get_max_queue_size() const=0;
+    virtual void reset_max_queue_size()=0;
 };
 template <class JOB>
 struct any_queue_ptr: boost::shared_ptr<boost::asynchronous::any_queue_concept<JOB> >

@@ -62,6 +62,13 @@ public:
         res_vec.push_back(res);
         return res_vec;
     }
+    void reset_max_queue_size()
+    {
+        for (typename std::vector<boost::shared_ptr<queue_type> >::const_iterator it = m_queues.begin(); it != m_queues.end();++it)
+        {
+            (*it)->reset_max_queue_size();
+        }
+    }
 
     std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues()
     {

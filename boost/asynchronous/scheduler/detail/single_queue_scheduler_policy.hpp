@@ -43,6 +43,11 @@ public:
     {
         return m_queue->get_max_queue_size();
     }
+    void reset_max_queue_size()
+    {
+        m_queue->reset_max_queue_size();
+    }
+
 #ifndef BOOST_NO_RVALUE_REFERENCES
     void post(typename queue_type::job_type job, std::size_t prio)
     {

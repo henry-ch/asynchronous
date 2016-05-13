@@ -44,6 +44,10 @@ public:
         res.push_back(Size::max_size());
         return res;
     }
+    void reset_max_queue_size()
+    {
+        Size::reset_max_size();
+    }
 #ifndef BOOST_NO_CXX11_VARIADIC_TEMPLATES
     template<typename... Args>
     lockfree_stack(Args... args):m_queue(std::move(args)...){}

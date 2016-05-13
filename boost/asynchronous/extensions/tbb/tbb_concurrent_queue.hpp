@@ -36,6 +36,11 @@ public:
         // not implemented
         return std::vector<std::size_t>();
     }
+    void reset_max_queue_size()
+    {
+        // not implemented
+    }
+
     void push(JOB && j, std::size_t)
     {
         m_queue.push(std::forward<JOB>(j));

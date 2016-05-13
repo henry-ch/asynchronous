@@ -54,6 +54,11 @@ public:
     {
         return m_scheduler->get_max_queue_size();
     }
+    void reset_max_queue_size()
+    {
+        m_scheduler->reset_max_queue_size();
+    }
+
 #ifndef BOOST_NO_RVALUE_REFERENCES
     void post(job_type job) const
     {
@@ -206,6 +211,11 @@ public:
     {
         return m_impl->get_max_queue_size();
     }
+    void reset_max_queue_size()
+    {
+        m_impl->reset_max_queue_size();
+    }
+
 #ifndef BOOST_NO_RVALUE_REFERENCES
     void post(job_type job) const
     {

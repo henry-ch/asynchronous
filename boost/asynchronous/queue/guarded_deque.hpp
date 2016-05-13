@@ -45,9 +45,14 @@ public:
     }
     std::vector<std::size_t> get_max_queue_size() const
     {
-        // not inplemented
+        // not implemented
         return std::vector<std::size_t>();
     }
+    void reset_max_queue_size()
+    {
+        // not implemented
+    }
+
     bool is_not_empty() const
     {
         return !m_jobs.empty();

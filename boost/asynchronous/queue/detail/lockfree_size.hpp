@@ -23,6 +23,7 @@ struct no_lockfree_size
     void decrease(){}
     std::size_t size() const {return 0;}
     std::size_t max_size() const {return 0;}
+    void reset_max_size(){}
 };
 
 struct lockfree_size
@@ -34,6 +35,7 @@ struct lockfree_size
     void decrease(){--m_size;}
     std::size_t size() const {return m_size;}
     std::size_t max_size() const {return 0;}
+    void reset_max_size(){}
 private:
     std::atomic<std::size_t> m_size;
 };
@@ -58,7 +60,10 @@ struct lockfree_size_max_size
     void decrease(){--m_size;}
     std::size_t size() const {return m_size;}
     std::size_t max_size() const {return m_max_size;}
-    void reset_max_size(){m_max_size=0;}
+    void reset_max_size()
+    {
+        m_max_size = 0;
+    }
 
 private:
     std::atomic<std::size_t> m_size;

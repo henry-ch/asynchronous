@@ -78,6 +78,9 @@ BOOST_AUTO_TEST_CASE( test_lockfree_max_size )
 
     auto max_size = scheduler.get_max_queue_size()[0];
     BOOST_CHECK_MESSAGE((max_size == 6) || (max_size == 7),"wrong get_max_queue_size");
+    scheduler.reset_max_queue_size();
+    max_size = scheduler.get_max_queue_size()[0];
+    BOOST_CHECK_MESSAGE(max_size == 0,"max_queue_size should be 0");
 }
 
 BOOST_AUTO_TEST_CASE( post_single_thread_scheduler )

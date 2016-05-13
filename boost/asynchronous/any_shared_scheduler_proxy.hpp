@@ -154,6 +154,10 @@ public:
     {
         return (*my_ptr).get_max_queue_size();
     }
+    void reset_max_queue_size()
+    {
+        (*my_ptr).reset_max_queue_size();
+    }
     boost::asynchronous::scheduler_diagnostics get_diagnostics(std::size_t prio=0)const
     {
         return (*my_ptr).get_diagnostics(prio);
@@ -214,6 +218,7 @@ struct any_shared_scheduler_proxy_concept
     virtual bool is_valid() const =0;
     virtual std::vector<std::size_t> get_queue_size()const=0;
     virtual std::vector<std::size_t> get_max_queue_size()const=0;
+    virtual void reset_max_queue_size()=0;
     virtual boost::asynchronous::scheduler_diagnostics get_diagnostics(std::size_t =0)const =0;
     virtual void clear_diagnostics() =0;
     virtual boost::asynchronous::internal_scheduler_aspect<JOB> get_internal_scheduler_aspect() =0;
@@ -274,6 +279,11 @@ public:
     {
         return (*my_ptr).get_max_queue_size();
     }
+    void reset_max_queue_size()
+    {
+        (*my_ptr).reset_max_queue_size();
+    }
+
     boost::asynchronous::scheduler_diagnostics get_diagnostics(std::size_t prio=0)const
     {
         return (*my_ptr).get_diagnostics(prio);

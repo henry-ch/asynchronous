@@ -80,6 +80,11 @@ public:
         // not supported
         return std::vector<std::size_t>();
     }
+    void reset_max_queue_size()
+    {
+        // not supported
+    }
+
     void init(size_t number_of_workers,std::vector<boost::asynchronous::any_queue_ptr<job_type> > const& others,boost::weak_ptr<this_type> weak_self)
     {
         m_works.reserve(number_of_workers);

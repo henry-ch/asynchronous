@@ -91,6 +91,14 @@ public:
         }
         return res;
     }
+    void reset_max_queue_size()
+    {
+        for (typename queues_type::const_iterator it = m_queues.begin(); it != m_queues.end();++it)
+        {
+            (*(*it)).reset_max_queue_size();
+        }
+    }
+
 #ifndef BOOST_NO_RVALUE_REFERENCES
     void push(JOB&& j, std::size_t pos)
     {

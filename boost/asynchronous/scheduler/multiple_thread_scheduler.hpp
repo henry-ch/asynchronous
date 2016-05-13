@@ -231,6 +231,14 @@ public:
         return res_vec;
     }
 
+    void reset_max_queue_size()
+    {
+        for (auto const& q : (*m_queues))
+        {
+            q.m_queues->reset_max_queue_size();
+        }
+    }
+
     std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues()
     {
         // this scheduler doesn't give any queues for stealing

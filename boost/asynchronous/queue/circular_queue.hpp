@@ -53,6 +53,11 @@ public:
         // not implemented
         return std::vector<std::size_t>();
     }
+    void reset_max_queue_size()
+    {
+        // not implemented
+    }
+
     bool is_not_empty() const
     {
         return m_size > 0;

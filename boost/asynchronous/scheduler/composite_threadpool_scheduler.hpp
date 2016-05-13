@@ -101,6 +101,14 @@ public:
         }
         return res;
     }
+    void reset_max_queue_size()
+    {
+        for (auto it = m_subpools.begin(); it != m_subpools.end();++it)
+        {
+            (*it).reset_max_queue_size();
+        }
+    }
+
 #ifndef BOOST_NO_RVALUE_REFERENCES
     void post(job_type job) const
     {
@@ -408,6 +416,14 @@ private:
             }
             return res;
         }
+        void reset_max_queue_size()
+        {
+            for (auto it = m_schedulers.begin(); it != m_schedulers.end();++it)
+            {
+                (*it).reset_max_queue_size();
+            }
+        }
+
         boost::asynchronous::scheduler_diagnostics
         get_diagnostics(std::size_t pos=0)const
         {

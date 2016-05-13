@@ -67,6 +67,11 @@ public:
     {
         return m_from_queue->get_max_queue_size();
     }
+    virtual void reset_max_queue_size()
+    {
+        m_from_queue->reset_max_queue_size();
+    }
+
 private:
     boost::asynchronous::any_queue_ptr<From> m_from_queue;
 };
