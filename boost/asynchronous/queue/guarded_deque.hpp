@@ -43,7 +43,11 @@ public:
         res.push_back(m_jobs.size());
         return res;
     }
-
+    std::vector<std::size_t> get_max_queue_size() const
+    {
+        // not inplemented
+        return std::vector<std::size_t>();
+    }
     bool is_not_empty() const
     {
         return !m_jobs.empty();

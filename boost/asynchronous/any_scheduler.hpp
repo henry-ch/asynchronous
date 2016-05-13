@@ -94,6 +94,7 @@ struct any_shared_scheduler_concept
     
     virtual std::vector<boost::thread::id> thread_ids() const =0;
     virtual std::vector<std::size_t> get_queue_size()const=0;
+    virtual std::vector<std::size_t> get_max_queue_size()const=0;
     virtual boost::asynchronous::scheduler_diagnostics get_diagnostics(std::size_t =0)const =0;
     virtual void register_diagnostics_functor(std::function<void(boost::asynchronous::scheduler_diagnostics)>,
                                               boost::asynchronous::register_diagnostics_type =
@@ -160,6 +161,10 @@ public:
     std::vector<std::size_t> get_queue_size()const
     {
         return (*my_ptr).get_queue_size();
+    }
+    std::vector<std::size_t> get_max_queue_size()const
+    {
+        return (*my_ptr).get_max_queue_size();
     }
     boost::asynchronous::scheduler_diagnostics get_diagnostics(std::size_t prio=0)const
     {

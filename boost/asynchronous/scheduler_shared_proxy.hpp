@@ -50,6 +50,10 @@ public:
     {
         return m_scheduler->get_queue_size();
     }
+    std::vector<std::size_t> get_max_queue_size() const
+    {
+        return m_scheduler->get_max_queue_size();
+    }
 #ifndef BOOST_NO_RVALUE_REFERENCES
     void post(job_type job) const
     {
@@ -197,6 +201,10 @@ public:
     std::vector<std::size_t> get_queue_size() const
     {
         return m_impl->get_queue_size();
+    }
+    std::vector<std::size_t> get_max_queue_size() const
+    {
+        return m_impl->get_max_queue_size();
     }
 #ifndef BOOST_NO_RVALUE_REFERENCES
     void post(job_type job) const

@@ -218,6 +218,19 @@ public:
         res_vec.push_back(res);
         return res_vec;
     }
+    std::vector<std::size_t> get_max_queue_size() const
+    {
+        std::size_t res = 0;
+        for (auto const& q : (*m_queues))
+        {
+            auto vec = q.m_queues->get_max_queue_size();
+            res += std::accumulate(vec.begin(),vec.end(),0,[](std::size_t rhs,std::size_t lhs){return std::max(rhs,lhs);});
+        }
+        std::vector<std::size_t> res_vec;
+        res_vec.push_back(res);
+        return res_vec;
+    }
+
     std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues()
     {
         // this scheduler doesn't give any queues for stealing

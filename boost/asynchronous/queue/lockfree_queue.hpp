@@ -48,7 +48,12 @@ public:
         res.push_back(Size::size());
         return res;
     }
-
+    std::vector<std::size_t> get_max_queue_size() const
+    {
+        std::vector<std::size_t> res;
+        res.push_back(Size::max_size());
+        return res;
+    }
 #ifndef BOOST_NO_CXX11_VARIADIC_TEMPLATES
     template<typename... Args>
     lockfree_queue(Args... args):m_queue(std::move(args)...){}

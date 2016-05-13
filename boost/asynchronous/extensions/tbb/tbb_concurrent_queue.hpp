@@ -31,7 +31,11 @@ public:
         res.push_back(m_queue.unsafe_size());
         return res;
     }
-
+    std::vector<std::size_t> get_max_queue_size() const
+    {
+        // not implemented
+        return std::vector<std::size_t>();
+    }
     void push(JOB && j, std::size_t)
     {
         m_queue.push(std::forward<JOB>(j));

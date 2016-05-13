@@ -48,6 +48,11 @@ public:
         res.push_back(m_size);
         return res;
     }
+    std::vector<std::size_t> get_max_queue_size() const
+    {
+        // not implemented
+        return std::vector<std::size_t>();
+    }
     bool is_not_empty() const
     {
         return m_size > 0;

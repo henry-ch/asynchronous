@@ -47,8 +47,38 @@ struct DummyJob
     boost::shared_ptr<boost::promise<boost::thread::id> > m_done;
 };
 
+struct BlockingJob
+{
+    BlockingJob(boost::shared_future<void> fu):m_ready(fu){}
+    void operator()()
+    {
+        m_ready.get();
+    }
+    boost::shared_future<void> m_ready;
+};
 }
 
+BOOST_AUTO_TEST_CASE( test_lockfree_max_size )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                        boost::asynchronous::single_thread_scheduler<
+                            boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable,boost::asynchronous::lockfree_size_max_size>>>();
+
+    boost::promise<void> p;
+    scheduler.post(boost::asynchronous::any_callable(BlockingJob(p.get_future())));
+    for (auto i=0; i< 5 ; ++i)
+    {
+        scheduler.post([](){});
+    }
+    boost::shared_ptr<boost::promise<void>> pend = boost::make_shared<boost::promise<void>>();
+    auto fu = pend->get_future();
+    scheduler.post([pend](){pend->set_value();});
+    p.set_value();
+    fu.get();
+
+    auto max_size = scheduler.get_max_queue_size()[0];
+    BOOST_CHECK_MESSAGE((max_size == 6) || (max_size == 7),"wrong get_max_queue_size");
+}
 
 BOOST_AUTO_TEST_CASE( post_single_thread_scheduler )
 {        

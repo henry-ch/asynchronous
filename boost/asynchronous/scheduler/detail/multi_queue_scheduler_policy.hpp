@@ -50,6 +50,19 @@ public:
         return res_vec;
     }
 
+    std::vector<std::size_t> get_max_queue_size() const
+    {
+        std::size_t res = 0;
+        for (typename std::vector<boost::shared_ptr<queue_type> >::const_iterator it = m_queues.begin(); it != m_queues.end();++it)
+        {
+            auto vec = (*it)->get_max_queue_size();
+            res += std::accumulate(vec.begin(),vec.end(),0,[](std::size_t rhs,std::size_t lhs){return std::max(rhs,lhs);});
+        }
+        std::vector<std::size_t> res_vec;
+        res_vec.push_back(res);
+        return res_vec;
+    }
+
     std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues()
     {
         // this scheduler lends its queue for stealing

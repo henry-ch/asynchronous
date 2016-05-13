@@ -60,6 +60,11 @@ public:
         // not supported
         return std::vector<std::size_t>();
     }
+    std::vector<std::size_t> get_max_queue_size() const
+    {
+        // not supported
+        return std::vector<std::size_t>();
+    }
     void push(JOB && j, std::size_t)
     {
         std::unique_ptr<node> p (new node);

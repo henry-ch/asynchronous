@@ -61,9 +61,12 @@ public:
     }
     virtual std::vector<std::size_t> get_queue_size()const
     {
-        return m_from_queue->get_queue_size();
+        return m_from_queue->get_max_queue_size();
     }
-
+    virtual std::vector<std::size_t> get_max_queue_size()const
+    {
+        return m_from_queue->get_max_queue_size();
+    }
 private:
     boost::asynchronous::any_queue_ptr<From> m_from_queue;
 };

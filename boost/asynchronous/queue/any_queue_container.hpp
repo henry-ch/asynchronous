@@ -80,6 +80,17 @@ public:
         }
         return res;
     }
+    std::vector<std::size_t> get_max_queue_size() const
+    {
+        std::vector<std::size_t> res;
+        for (typename queues_type::const_iterator it = m_queues.begin(); it != m_queues.end();++it)
+        {
+            auto one_queue_vec = (*(*it)).get_max_queue_size();
+            res.push_back(std::accumulate(one_queue_vec.begin(),one_queue_vec.end(),0,
+                                          [](std::size_t rhs,std::size_t lhs){return std::max(rhs,lhs);}));
+        }
+        return res;
+    }
 #ifndef BOOST_NO_RVALUE_REFERENCES
     void push(JOB&& j, std::size_t pos)
     {

@@ -91,6 +91,10 @@ public:
     {
         return this->m_queue->get_queue_size();
     }
+    std::vector<std::size_t> get_max_queue_size() const
+    {
+        return this->m_queue->get_max_queue_size();
+    }
     void init(std::vector<boost::asynchronous::any_queue_ptr<job_type> > const& others)
     {
         m_diagnostics = boost::make_shared<diag_type>(1);
