@@ -185,7 +185,8 @@ public:
                      m_data->m_group->create_thread(boost::bind(&io_threadpool_scheduler::run_once,this->m_queue,
                                                                 m_private_queues[m_data->m_current_number_of_workers-1],
                                                                 m_diagnostics,fu,m_data->m_weak_self,d,c,
-                                                                m_data->m_current_number_of_workers-1));
+                                                                m_data->m_current_number_of_workers-1,
+                                                                m_name));
             m_data->m_thread_ids.insert(new_thread->get_id());
             new_thread_promise.set_value(new_thread);
         }
@@ -468,7 +469,8 @@ public:
                          boost::weak_ptr<this_type> this_,
                          boost::function<void(boost::thread*)> on_done,
                          boost::function<bool()> check_continue,
-                         size_t index)
+                         size_t index,
+                         std::string name)
     {
         boost::thread* t = self.get();
         boost::asynchronous::detail::single_queue_scheduler_policy<Q>::m_self_thread.reset(new thread_ptr_wrapper(t));
@@ -478,6 +480,9 @@ public:
 
         std::list<boost::asynchronous::any_continuation>& waiting =
                 boost::asynchronous::get_continuations(std::list<boost::asynchronous::any_continuation>(),true);
+        // set thread name
+        boost::asynchronous::detail::set_name_task<typename Q::diagnostic_type> ntask(name);
+        ntask();
         // we run once then end
         do
         {
