@@ -1,5 +1,5 @@
 // Boost.Asynchronous library
-//  Copyright (C) Tobias Holl, Franz Alt, Christophe Henry 2015
+//  Copyright (C) Christophe Henry 2015
 //
 //  Use, modification and distribution is subject to the Boost
 //  Software License, Version 1.0.  (See accompanying file

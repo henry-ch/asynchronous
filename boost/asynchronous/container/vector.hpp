@@ -16,7 +16,7 @@
 
 #include <boost/shared_ptr.hpp>
 #include <boost/asynchronous/algorithm/parallel_placement.hpp>
-#include <boost/asynchronous/algorithm/parallel_move.hpp>
+#include <boost/asynchronous/algorithm/parallel_move_if_noexcept.hpp>
 #include <boost/asynchronous/algorithm/parallel_copy.hpp>
 #include <boost/asynchronous/algorithm/parallel_equal.hpp>
 #include <boost/asynchronous/algorithm/parallel_lexicographical_compare.hpp>
@@ -891,7 +891,7 @@ public:
                 auto fu = boost::asynchronous::post_future(m_scheduler,
                 [first,last,cur_end,cutoff,task_name,prio]()mutable
                 {
-                    return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                    return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
                             ((iterator)last,(iterator)cur_end,(iterator)first,cutoff,task_name+"_vector_erase_move",prio);
                 },
                 task_name+"_vector_erase_move_top",prio);
@@ -900,7 +900,7 @@ public:
             }
             else
             {
-                std::move((iterator)last,(iterator)cur_end,(iterator)first);
+                boost::asynchronous::serial_move_if_noexcept((iterator)last,(iterator)cur_end,(iterator)first);
             }
             // set to new size
             resize(size()-(last - first));
@@ -940,7 +940,7 @@ public:
                 auto fu2 = boost::asynchronous::post_future(m_scheduler,
                 [cur_end,last,temp_begin,cutoff,task_name,prio]()mutable
                 {
-                    return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                    return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
                             ((iterator)last,(iterator)cur_end,temp_begin,cutoff,task_name+"_vector_erase_move",prio);
                 },
                 task_name+"_vector_erase_move_top",prio);
@@ -949,7 +949,7 @@ public:
             }
             else
             {
-                std::move((iterator)last,(iterator)cur_end,temp_begin);
+                boost::asynchronous::serial_move_if_noexcept((iterator)last,(iterator)cur_end,temp_begin);
             }
             // move back to vector
             auto temp_end = temp_begin + n;
@@ -958,7 +958,7 @@ public:
                 auto fu3 = boost::asynchronous::post_future(m_scheduler,
                 [temp_begin,temp_end,first,cutoff,task_name,prio]()mutable
                 {
-                    return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                    return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
                             (temp_begin,temp_end,(iterator)first,cutoff,task_name+"_vector_erase_move",prio);
                 },
                 task_name+"_vector_erase_move_top",prio);
@@ -967,7 +967,7 @@ public:
             }
             else
             {
-                std::move(temp_begin,temp_end,(iterator)first);
+                boost::asynchronous::serial_move_if_noexcept(temp_begin,temp_end,(iterator)first);
             }
             boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> temp_deleter =
                     boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
@@ -1049,7 +1049,7 @@ public:
             auto fu2 = boost::asynchronous::post_future(m_scheduler,
             [cur_end,cur_begin,temp_begin,cutoff,task_name,prio]()mutable
             {
-                return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
                         ((iterator)cur_begin,(iterator)cur_end,temp_begin,cutoff,task_name+"_vector_insert_move",prio);
             },
             task_name+"_vector_insert_move_top",prio);
@@ -1058,7 +1058,7 @@ public:
         }
         else
         {
-            std::move((iterator)cur_begin,(iterator)cur_end,temp_begin);
+            boost::asynchronous::serial_move_if_noexcept((iterator)cur_begin,(iterator)cur_end,temp_begin);
         }
         // we need to add the missing placement new's
         auto to_add = 1;
@@ -1077,7 +1077,7 @@ public:
             auto fu5 = boost::asynchronous::post_future(m_scheduler,
             [temp_begin,temp_end,beg_move_back,cutoff,task_name,prio]()mutable
             {
-                return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
                         (temp_begin,temp_end,(iterator)beg_move_back,cutoff,task_name+"_vector_insert_move_2",prio);
             },
             task_name+"_vector_insert_move_2_top",prio);
@@ -1086,7 +1086,7 @@ public:
         }
         else
         {
-            std::move(temp_begin,temp_end,(iterator)beg_move_back);
+            boost::asynchronous::serial_move_if_noexcept(temp_begin,temp_end,(iterator)beg_move_back);
         }
         // call dtors on temp
         boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> temp_deleter =
@@ -1170,7 +1170,7 @@ public:
             auto fu2 = boost::asynchronous::post_future(m_scheduler,
             [cur_end,cur_begin,temp_begin,cutoff,task_name,prio]()mutable
             {
-                return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
                         ((iterator)cur_begin,(iterator)cur_end,temp_begin,cutoff,task_name+"_vector_insert_move",prio);
             },
             task_name+"_vector_insert_move_top",prio);
@@ -1179,7 +1179,7 @@ public:
         }
         else
         {
-            std::move((iterator)cur_begin,(iterator)cur_end,temp_begin);
+            boost::asynchronous::serial_move_if_noexcept((iterator)cur_begin,(iterator)cur_end,temp_begin);
         }
         // we need to add the missing placement new's
         auto to_add = (last - first);
@@ -1227,7 +1227,7 @@ public:
             auto fu5 = boost::asynchronous::post_future(m_scheduler,
             [temp_begin,temp_end,beg_move_back,cutoff,task_name,prio]()mutable
             {
-                return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
                         (temp_begin,temp_end,(iterator)beg_move_back,cutoff,task_name+"_vector_insert_move_2",prio);
             },
             task_name+"_vector_insert_move_2_top",prio);
@@ -1236,7 +1236,7 @@ public:
         }
         else
         {
-            std::move(temp_begin,temp_end,(iterator)beg_move_back);
+            boost::asynchronous::serial_move_if_noexcept(temp_begin,temp_end,(iterator)beg_move_back);
         }
         // call dtors on temp
         boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> temp_deleter =
@@ -1314,7 +1314,7 @@ public:
             auto fu2 = boost::asynchronous::post_future(m_scheduler,
             [cur_end,cur_begin,temp_begin,cutoff,task_name,prio]()mutable
             {
-                return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
                         ((iterator)cur_begin,(iterator)cur_end,temp_begin,cutoff,task_name+"_vector_insert_move",prio);
             },
             task_name+"_vector_insert_move_top",prio);
@@ -1323,7 +1323,7 @@ public:
         }
         else
         {
-            std::move((iterator)cur_begin,(iterator)cur_end,temp_begin);
+            boost::asynchronous::serial_move_if_noexcept((iterator)cur_begin,(iterator)cur_end,temp_begin);
         }
         // we need to add the missing placement new's
         auto to_add = 1;
@@ -1340,7 +1340,7 @@ public:
             auto fu5 = boost::asynchronous::post_future(m_scheduler,
             [temp_begin,temp_end,beg_move_back,cutoff,task_name,prio]()mutable
             {
-                return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
                         (temp_begin,temp_end,(iterator)beg_move_back,cutoff,task_name+"_vector_insert_move_2",prio);
             },
             task_name+"_vector_insert_move_2_top",prio);
@@ -1349,7 +1349,7 @@ public:
         }
         else
         {
-            std::move(temp_begin,temp_end,(iterator)beg_move_back);
+            boost::asynchronous::serial_move_if_noexcept(temp_begin,temp_end,(iterator)beg_move_back);
         }
         // call dtors on temp
         boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> temp_deleter =
@@ -1426,7 +1426,7 @@ public:
             auto fu2 = boost::asynchronous::post_future(m_scheduler,
             [cur_end,cur_begin,temp_begin,cutoff,task_name,prio]()mutable
             {
-                return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
                         ((iterator)cur_begin,(iterator)cur_end,temp_begin,cutoff,task_name+"_vector_insert_move",prio);
             },
             task_name+"_vector_insert_move_top",prio);
@@ -1435,7 +1435,7 @@ public:
         }
         else
         {
-            std::move((iterator)cur_begin,(iterator)cur_end,temp_begin);
+            boost::asynchronous::serial_move_if_noexcept((iterator)cur_begin,(iterator)cur_end,temp_begin);
         }
         // we need to add the missing placement new's
         auto to_add = 1;
@@ -1485,7 +1485,7 @@ public:
             auto fu5 = boost::asynchronous::post_future(m_scheduler,
             [temp_begin,temp_end,beg_move_back,cutoff,task_name,prio]()mutable
             {
-                return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
                         (temp_begin,temp_end,(iterator)beg_move_back,cutoff,task_name+"_vector_insert_move_2",prio);
             },
             task_name+"_vector_insert_move_2_top",prio);
@@ -1494,7 +1494,7 @@ public:
         }
         else
         {
-            std::move(temp_begin,temp_end,(iterator)beg_move_back);
+            boost::asynchronous::serial_move_if_noexcept(temp_begin,temp_end,(iterator)beg_move_back);
         }
         // call dtors on temp
         boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> temp_deleter =
@@ -1572,7 +1572,7 @@ public:
             auto fu2 = boost::asynchronous::post_future(m_scheduler,
             [cur_end,cur_begin,temp_begin,cutoff,task_name,prio]()mutable
             {
-                return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
                         ((iterator)cur_begin,(iterator)cur_end,temp_begin,cutoff,task_name+"_vector_insert_move",prio);
             },
             task_name+"_vector_insert_move_top",prio);
@@ -1581,7 +1581,7 @@ public:
         }
         else
         {
-            std::move((iterator)cur_begin,(iterator)cur_end,temp_begin);
+            boost::asynchronous::serial_move_if_noexcept((iterator)cur_begin,(iterator)cur_end,temp_begin);
         }
         // we need to add the missing placement new's
         auto to_add = count;
@@ -1631,7 +1631,7 @@ public:
             auto fu5 = boost::asynchronous::post_future(m_scheduler,
             [temp_begin,temp_end,beg_move_back,cutoff,task_name,prio]()mutable
             {
-                return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
                         (temp_begin,temp_end,(iterator)beg_move_back,cutoff,task_name+"_vector_insert_move_2",prio);
             },
             task_name+"_vector_insert_move_2_top",prio);
@@ -1640,7 +1640,7 @@ public:
         }
         else
         {
-            std::move(temp_begin,temp_end,(iterator)beg_move_back);
+            boost::asynchronous::serial_move_if_noexcept(temp_begin,temp_end,(iterator)beg_move_back);
         }
         // call dtors on temp
         boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> temp_deleter =
@@ -1792,7 +1792,7 @@ private:
             auto fu2 = boost::asynchronous::post_future(m_scheduler,
             [new_data,beg_it,end_it,cutoff,task_name,prio]()mutable
             {
-                return boost::asynchronous::parallel_move<iterator,iterator,Job>(beg_it,end_it,(iterator)(new_data->data()),cutoff,task_name+"_vector_reallocate_move",prio);
+                return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>(beg_it,end_it,(iterator)(new_data->data()),cutoff,task_name+"_vector_reallocate_move",prio);
             },
             task_name+"_reallocate_move_top",prio);
             // if exception, will be forwarded
@@ -1800,7 +1800,7 @@ private:
         }
         else
         {
-            std::move(beg_it,end_it,(iterator)(new_data->data()));
+            boost::asynchronous::serial_move_if_noexcept(beg_it,end_it,(iterator)(new_data->data()));
         }
         // destroy our old data (wait until done)
         if (m_scheduler.is_valid() && !!m_data)
@@ -1866,7 +1866,7 @@ private:
                     }
                     auto new_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>>
                             (size,std::move(raw),cutoff,task_name,prio);
-                    auto cont_m = boost::asynchronous::parallel_move<iterator,iterator,Job>
+                    auto cont_m = boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
                                      (beg,end,(iterator)(new_data->data()),cutoff,task_name+"_vector_reallocate_move",prio);
                     cont_m.on_done([task_res,old_data,new_data,raw,beg,end,size,cutoff,task_name,prio]
                                    (std::tuple<boost::asynchronous::expected<void> >&& mres)mutable

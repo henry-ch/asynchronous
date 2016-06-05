@@ -16,6 +16,7 @@
 #include <boost/asynchronous/detail/continuation_impl.hpp>
 #include <boost/asynchronous/continuation_task.hpp>
 #include <boost/asynchronous/algorithm/detail/safe_advance.hpp>
+#include <boost/asynchronous/algorithm/detail/helpers.hpp>
 
 #include <boost/range/begin.hpp>
 #include <boost/range/end.hpp>
@@ -24,18 +25,6 @@
 namespace boost { namespace asynchronous {
 
 namespace detail {
-
-template <typename Iterator>
-struct iterator_value_type
-{
-    using type = typename std::remove_reference<typename std::remove_cv<decltype(*std::declval<Iterator>())>::type>::type;
-};
-
-template <typename Range>
-struct range_value_type
-{
-    using type = typename std::remove_reference<typename std::remove_cv<decltype(*boost::begin(std::declval<Range>()))>::type>::type;
-};
 
 template <typename Iterator, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 struct parallel_iota_inplace_helper : public boost::asynchronous::continuation_task<void>

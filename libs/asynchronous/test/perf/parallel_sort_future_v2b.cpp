@@ -47,11 +47,20 @@ struct LongOne
     {
         data[0]=i;
     }
-    LongOne& operator= (LongOne const& rhs)
+    LongOne& operator= (LongOne const& rhs)noexcept
     {
         data = rhs.data;
         return *this;
     }
+    LongOne& operator= (LongOne&& rhs)noexcept
+    {
+        data = std::move(rhs.data);
+        return *this;
+    }
+    LongOne(LongOne const& rhs)noexcept
+        : data(rhs.data)
+    {}
+    LongOne(LongOne&&)noexcept = default;
 
     std::vector<long> data;
 };

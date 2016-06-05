@@ -22,7 +22,7 @@ boost::asynchronous::any_shared_scheduler_proxy<> pool;
 
 struct LongOne
 {
-    LongOne(int n = 0)
+    LongOne(int n = 0) noexcept
         :data(long_size,n)
     {
 #ifdef COMPLICATED_CONSTRUCTION
@@ -32,11 +32,20 @@ struct LongOne
         }
 #endif
     }
-    LongOne& operator= (LongOne const& rhs)
+    LongOne& operator= (LongOne const& rhs)noexcept
     {
         data = rhs.data;
         return *this;
     }
+    LongOne& operator= (LongOne&& rhs)noexcept
+    {
+        data = std::move(rhs.data);
+        return *this;
+    }
+    LongOne(LongOne const& rhs)noexcept
+        : data(rhs.data)
+    {}
+    LongOne(LongOne&&)noexcept = default;
 
     std::vector<int> data;
 };
