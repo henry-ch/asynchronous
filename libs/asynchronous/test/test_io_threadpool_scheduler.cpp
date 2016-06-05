@@ -35,7 +35,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
         : boost::asynchronous::trackable_servant<>(scheduler,
                                                boost::asynchronous::make_shared_scheduler_proxy<
                                                    boost::asynchronous::io_threadpool_scheduler<
-                                                           boost::asynchronous::lockfree_queue<>>>(2,4))
+                                                           boost::asynchronous::lockfree_queue<
+                                                                BOOST_ASYNCHRONOUS_DEFAULT_JOB,
+                                                                boost::asynchronous::lockfree_size>>>(2,4))
         , m_dtor_done(new boost::promise<void>)
         , m_counter(0)
         , m_current(0)
@@ -112,7 +114,6 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     ++this->m_current;
                     if (this->m_current == cpt)
                     {
-                        //std::cout << "task done" << std::endl;
                         apromise->set_value();
                     }
                }

@@ -14,6 +14,7 @@
 #include <vector>
 #include <cstddef>
 #include <set>
+#include <numeric>
 
 #ifndef BOOST_THREAD_PROVIDES_FUTURE
 #define BOOST_THREAD_PROVIDES_FUTURE
@@ -64,7 +65,7 @@ public:
     template<typename... Args>
     io_threadpool_scheduler(size_t min_number_of_workers, size_t max_number_of_workers, Args... args)
         : boost::asynchronous::detail::single_queue_scheduler_policy<Q>(boost::make_shared<queue_type>(std::move(args)...))
-        , m_data (boost::make_shared<internal_data>(min_number_of_workers,max_number_of_workers))
+        , m_data (boost::make_shared<internal_data>(min_number_of_workers,max_number_of_workers, this->m_queue))
     {
         m_private_queues.reserve(max_number_of_workers);
         for (size_t i = 0; i< max_number_of_workers;++i)
@@ -76,7 +77,7 @@ public:
     template<typename... Args>
     io_threadpool_scheduler(size_t min_number_of_workers, size_t max_number_of_workers,std::string const& name, Args... args)
         : boost::asynchronous::detail::single_queue_scheduler_policy<Q>(boost::make_shared<queue_type>(std::move(args)...))
-        , m_data (boost::make_shared<internal_data>(min_number_of_workers,max_number_of_workers))
+        , m_data (boost::make_shared<internal_data>(min_number_of_workers,max_number_of_workers, this->m_queue))
         , m_name(name)
     {
         m_private_queues.reserve(max_number_of_workers);
@@ -95,12 +96,12 @@ public:
         {
             boost::promise<boost::thread*> new_thread_promise;
             boost::shared_future<boost::thread*> fu = new_thread_promise.get_future();
-            boost::function<void()> d = boost::bind(&io_threadpool_scheduler::internal_data::basic_thread_not_busy,m_data);
             boost::mutex::scoped_lock lock(m_data->m_current_number_of_workers_mutex);
+            ++m_data->m_current_number_of_workers;
             boost::thread* new_thread =
                     m_data->m_group->create_thread(
                         boost::bind(&io_threadpool_scheduler::run_always,this->m_queue,
-                                    m_private_queues[i],m_diagnostics,fu,weak_self,d,i));
+                                    m_private_queues[i],m_diagnostics,fu,weak_self,i));
             new_thread_promise.set_value(new_thread);
             m_data->m_thread_ids.insert(new_thread->get_id());
         }
@@ -172,10 +173,10 @@ public:
     {
         boost::mutex::scoped_lock lock(m_data->m_current_number_of_workers_mutex);
         if ((m_data->m_current_number_of_workers+1 <= m_data->m_max_number_of_workers) &&
-            (m_data->m_current_number_of_workers+1 > m_data->m_min_number_of_workers) && !m_data->m_joining)
+             this->m_data->calculate_queue_size() >0 &&
+             !m_data->m_joining)
         {
             ++m_data->m_current_number_of_workers;
-            //lock.unlock();
             boost::promise<boost::thread*> new_thread_promise;
             boost::shared_future<boost::thread*> fu = new_thread_promise.get_future();
             boost::function<void(boost::thread*)> d = boost::bind(&io_threadpool_scheduler::internal_data::thread_finished,m_data,_1);
@@ -185,13 +186,8 @@ public:
                                                                 m_private_queues[m_data->m_current_number_of_workers-1],
                                                                 m_diagnostics,fu,m_data->m_weak_self,d,c,
                                                                 m_data->m_current_number_of_workers-1));
-            //lock.lock();
             m_data->m_thread_ids.insert(new_thread->get_id());
             new_thread_promise.set_value(new_thread);
-        }
-        else if (!m_data->m_joining)
-        {
-            ++m_data->m_current_number_of_workers;
         }
     }
     // overwrite from base
@@ -426,7 +422,6 @@ public:
                            boost::shared_ptr<diag_type> diagnostics,
                            boost::shared_future<boost::thread*> self,
                            boost::weak_ptr<this_type> this_,
-                           boost::function<void()> on_done,
                            size_t index)
     {
         boost::thread* t = self.get();
@@ -449,24 +444,20 @@ public:
             {
                 // we are done, execute jobs posted short before to the end, then shutdown
                 while(execute_one_job(queue,&cpu_load,diagnostics,waiting,index));
-                on_done();
                 delete boost::asynchronous::detail::single_queue_scheduler_policy<Q>::m_self_thread.release();
                 return;
             }
             catch(boost::thread_interrupted&)
             {
                 // task interrupted, no problem, just continue
-                on_done();
             }
             catch(std::exception&)
             {
                 // TODO, user-defined error
-                on_done();
             }
             catch(...)
             {
                 // TODO, user-defined error
-                on_done();
             }
         }
     }
@@ -521,31 +512,40 @@ public:
 private:
     struct internal_data
     {
-        internal_data(size_t min_number_of_workers, size_t max_number_of_workers)
+        internal_data(size_t min_number_of_workers, size_t max_number_of_workers, boost::shared_ptr<queue_type> queue)
         : m_min_number_of_workers(min_number_of_workers <= max_number_of_workers ? min_number_of_workers:max_number_of_workers)
         , m_max_number_of_workers(min_number_of_workers <= max_number_of_workers ? max_number_of_workers:min_number_of_workers)
         , m_current_number_of_workers(0)
         , m_done_threads()
         , m_weak_self()
         , m_group(boost::make_shared<boost::thread_group>())
+        , m_queue(queue)
         {}
 
+        // check queue size. Used to find out when temporary threads have to shutdown
+        std::size_t calculate_queue_size()const
+        {
+             std::vector<std::size_t> vec_sizes = this->m_queue->get_queue_size();
+             return std::accumulate(vec_sizes.begin(),vec_sizes.end(),0,[](std::size_t a, std::size_t b){return a+b;});
+        }
         // checks if worker thread should continue
+        // if queue not empty, continue
         bool test_worker_loop()
         {
            boost::mutex::scoped_lock lock(m_current_number_of_workers_mutex);
-           bool res = (m_current_number_of_workers > m_min_number_of_workers);
-           if (res)
+           bool res = (this->calculate_queue_size() != 0);//(m_current_number_of_workers > m_min_number_of_workers);
+           /*if (res)
            {
                --m_current_number_of_workers;
-           }
+           }*/
            return res && !m_joining;
         }
         void basic_thread_not_busy()
         {
+            //TODO needed?
             // update number of workers
-            boost::mutex::scoped_lock lock(m_current_number_of_workers_mutex);
-            --m_current_number_of_workers;
+            //boost::mutex::scoped_lock lock(m_current_number_of_workers_mutex);
+            //--m_current_number_of_workers;
         }
 
         void thread_finished(boost::thread* finished_thread)
@@ -601,6 +601,7 @@ private:
         std::set<boost::thread*> m_done_threads;
         boost::weak_ptr<this_type> m_weak_self;
         boost::shared_ptr<boost::thread_group> m_group;
+        boost::shared_ptr<queue_type> m_queue;
         // remembers if the thread group has already been given for joining. If yes, no thread will be created
         bool m_joining=false;
         // protects m_done_threads
