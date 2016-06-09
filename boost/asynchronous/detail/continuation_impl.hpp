@@ -18,7 +18,6 @@
 #include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/chrono.hpp>
-#include <boost/thread/mutex.hpp>
 #include <boost/type_erasure/is_empty.hpp>
 #include <boost/type_traits/is_same.hpp>
 
@@ -887,6 +886,7 @@ struct callback_continuation
         if (!!m_state && m_state->is_interrupted())
         {
             // we are interrupted => we are ready
+            m_finished->set_interrupted();
             return true;
         }
         // if timeout, we are ready too
@@ -901,48 +901,24 @@ struct callback_continuation
     // called each time a subtask gives us a ready future. When all are here, we are done
     struct subtask_finished
     {
-        subtask_finished(Tuple t, bool interruptible, bool supports_timeout)
-            :m_futures(std::move(t)),m_ready_futures(0),m_done(),m_interruptible(interruptible)
-            ,m_interrupted(false),m_supports_timeout(supports_timeout)
+        subtask_finished(Tuple t, bool , bool )
+            :m_futures(std::move(t)),m_ready_futures(0),m_done()
         {
         }
         void done()
         {
             if (++m_ready_futures == (std::tuple_size<Tuple>::value + 1))
             {
-                if (!m_interrupted)
-                {
-                    return_result();
-                }
+                return_result();
             }
         }
         template <class Func>
         void on_done(Func f)
         {
-            if (m_interruptible || m_supports_timeout)
+            m_done = std::move(f);
+            if (++m_ready_futures == (std::tuple_size<Tuple>::value + 1))
             {
-                bool interrupted = false;
-                {
-                    boost::mutex::scoped_lock lock(m_mutex);
-                    ++m_ready_futures;
-                    m_done = std::move(f);
-                    interrupted = m_interrupted;
-                }
-                if (interrupted)
-                    return_result();
-                else if (m_ready_futures ==(std::tuple_size<Tuple>::value + 1))
-                    return_result();
-            }
-            else
-            {
-                m_done = std::move(f);
-                if (++m_ready_futures == (std::tuple_size<Tuple>::value + 1))
-                {
-                    if (!m_interrupted)
-                    {
-                        return_result();
-                    }
-                }
+                return_result();
             }
         }
         bool is_ready()
@@ -951,28 +927,16 @@ struct callback_continuation
         }
         void set_interrupted()
         {
-            bool done_fct_set=false;
-            {
-                boost::mutex::scoped_lock lock(m_mutex);
-                m_interrupted=true;
-                done_fct_set = !!m_done;
-            }
-            if (done_fct_set)
-                return_result();
+            // not supported
         }
         void return_result()
-        {
+        {            
             m_done(std::move(m_futures));
         }
 
         Tuple m_futures;
         std::atomic<std::size_t> m_ready_futures;
         std::function<void(Tuple)> m_done;
-        const bool m_interruptible;
-        bool m_interrupted;
-        const bool m_supports_timeout;
-        // only needed in case interrupt capability is needed
-        mutable boost::mutex m_mutex;
     };
 
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> m_state;
@@ -1320,48 +1284,24 @@ struct callback_continuation_as_seq
     // called each time a subtask gives us a ready future. When all are here, we are done
     struct subtask_finished
     {
-        subtask_finished(std::size_t number_of_tasks, bool interruptible, bool supports_timeout)
-            :m_futures(number_of_tasks),m_ready_futures(0),m_done(),m_interruptible(interruptible)
-            ,m_interrupted(false),m_supports_timeout(supports_timeout)
+        subtask_finished(std::size_t number_of_tasks, bool , bool )
+            :m_futures(number_of_tasks),m_ready_futures(0),m_done()
         {
         }
         void done()
         {
             if (++m_ready_futures == m_futures.size()+1)
             {
-                if (!m_interrupted)
-                {
-                    return_result();
-                }
+                return_result();
             }
         }
         template <class Func>
         void on_done(Func f)
         {
-            if (m_interruptible || m_supports_timeout)
+            m_done = std::move(f);
+            if (++m_ready_futures == m_futures.size()+1)
             {
-                bool interrupted = false;
-                {
-                    boost::mutex::scoped_lock lock(m_mutex);
-                    ++m_ready_futures;
-                    m_done = std::move(f);
-                    interrupted = m_interrupted;
-                }
-                if (interrupted)
-                    return_result();
-                else if (m_ready_futures == m_futures.size()+1)
-                    return_result();
-            }
-            else
-            {
-                m_done = std::move(f);
-                if (++m_ready_futures == m_futures.size()+1)
-                {
-                    if (!m_interrupted)
-                    {
-                        return_result();
-                    }
-                }
+                return_result();
             }
         }
         bool is_ready()
@@ -1370,14 +1310,7 @@ struct callback_continuation_as_seq
         }
         void set_interrupted()
         {
-            bool done_fct_set=false;
-            {
-                boost::mutex::scoped_lock lock(m_mutex);
-                m_interrupted=true;
-                done_fct_set = !!m_done;
-            }
-            if (done_fct_set)
-                return_result();
+            // not supported
         }
         void return_result()
         {
@@ -1387,11 +1320,6 @@ struct callback_continuation_as_seq
         std::vector<boost::asynchronous::expected<Return> > m_futures;
         std::atomic<std::size_t> m_ready_futures;
         std::function<void(std::vector<boost::asynchronous::expected<Return> >)> m_done;
-        const bool m_interruptible;
-        bool m_interrupted;
-        const bool m_supports_timeout;
-        // only needed in case interrupt capability is needed
-        mutable boost::mutex m_mutex;
     };
 
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> m_state;

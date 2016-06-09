@@ -122,11 +122,12 @@ struct Servant : boost::asynchronous::trackable_servant<>
         }
         return fu;
     }
-    boost::shared_future<int> test_no_interrupt_continuation(int runs, int disturbances)
+    boost::shared_future<int> test_no_interrupt_continuation(int runs, int disturbances, bool short_continuation)
     {
         this->set_worker(boost::asynchronous::make_shared_scheduler_proxy<
                          boost::asynchronous::threadpool_scheduler<
                           boost::asynchronous::lockfree_queue<>>>(10));
+        m_data = std::vector<int>(short_continuation?1:10000,1);
         boost::shared_future<int> fu = m_promise.get_future();
         for (int i = 0; i < disturbances ;++i)
         {
@@ -140,20 +141,22 @@ struct Servant : boost::asynchronous::trackable_servant<>
             interruptible_post_callback(
                    [this](){
                         ++m_posted;
-                        std::vector<int> data(10000,1);
-                        return boost::asynchronous::parallel_for(std::move(data),
+                        return boost::asynchronous::parallel_for(m_data.begin(),m_data.end(),
                                                         [](int& i)
                                                         {
                                                           i += 2;
                                                         },1500);
                    },
-                   [this,runs](boost::asynchronous::expected<std::vector<int>> )
+                   [this,runs](boost::asynchronous::expected<void> )
                    {
-                     //boost::this_thread::sleep(boost::posix_time::milliseconds(10));
                      ++m_cb;
                      if (m_cb == 2*runs)
                      {
                          m_promise.set_value(m_cb);
+                     }
+                     if(m_cb > 2*runs)
+                     {
+                         BOOST_FAIL( "too many callbacks" );
                      }
                    });
         }
@@ -167,30 +170,35 @@ struct Servant : boost::asynchronous::trackable_servant<>
                    [this]()
                    {
                       ++m_posted;
-                      std::vector<int> data(10000,1);
-                      return boost::asynchronous::parallel_for(std::move(data),
+                      return boost::asynchronous::parallel_for(m_data.begin(),m_data.end(),
                                                       [](int& i)
                                                       {
                                                         i += 2;
                                                       },1500);
                    },
-                   [this,runs](boost::asynchronous::expected<std::vector<int>> )
+                   [this,runs](boost::asynchronous::expected<void> )
                    {
                      ++m_cb;
                      if (m_cb == 2*runs)
                      {
                          m_promise.set_value(m_cb);
                      }
+                     if(m_cb > 2*runs)
+                     {
+                         BOOST_FAIL( "too many callbacks" );
+                     }
                    });
         }
         return fu;
     }
+
 private:
     boost::shared_ptr<boost::promise<void> > m_ready;
     boost::promise<int> m_promise;
     std::atomic<int> m_posted;
     int m_cb=0;
     std::vector<boost::asynchronous::any_interruptible> m_interruptibles;
+    std::vector<int> m_data;
 };
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>
 {
@@ -286,12 +294,13 @@ BOOST_AUTO_TEST_CASE( test_no_interrupt_continuation )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<int> > fuv = proxy.test_no_interrupt_continuation(1000,10);
+        boost::shared_future<boost::shared_future<int> > fuv = proxy.test_no_interrupt_continuation(10000,100,false);
         try
         {
             boost::shared_future<int> resfuv = fuv.get();
             int res = resfuv.get();
-            BOOST_CHECK_MESSAGE(res==2000,"not matching number of callbacks: " << res);
+            BOOST_CHECK_MESSAGE(res==2*10000,"not matching number of callbacks: " << res);
+            boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
         }
         catch(...)
         {
@@ -299,3 +308,27 @@ BOOST_AUTO_TEST_CASE( test_no_interrupt_continuation )
         }
     }
 }
+
+BOOST_AUTO_TEST_CASE( test_no_interrupt_continuation_short )
+{
+    {
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<>>>();
+
+        main_thread_id = boost::this_thread::get_id();
+        ServantProxy proxy(scheduler);
+        boost::shared_future<boost::shared_future<int> > fuv = proxy.test_no_interrupt_continuation(10000,100,true);
+        try
+        {
+            boost::shared_future<int> resfuv = fuv.get();
+            int res = resfuv.get();
+            BOOST_CHECK_MESSAGE(res==2*10000,"not matching number of callbacks: " << res);
+            boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
+        }
+        catch(...)
+        {
+            BOOST_FAIL( "unexpected exception" );
+        }
+    }
+}
+
