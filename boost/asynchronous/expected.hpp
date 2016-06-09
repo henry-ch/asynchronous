@@ -18,11 +18,11 @@ public:
         : m_value()
         , m_exception() {}
 
-    explicit expected(value_type value)
+    expected(value_type value)
         : m_value(std::move(value))
         , m_exception() {}
 
-    explicit expected(boost::exception_ptr ex)
+    expected(boost::exception_ptr ex)
     : m_value()
     , m_exception(std::move(ex)) {}
 
