@@ -173,7 +173,7 @@ public:
     {
         boost::mutex::scoped_lock lock(m_data->m_current_number_of_workers_mutex);
         if ((m_data->m_current_number_of_workers+1 <= m_data->m_max_number_of_workers) &&
-             this->m_data->calculate_queue_size() >0 &&
+             this->m_data->calculate_queue_size() >1 &&
              !m_data->m_joining)
         {
             ++m_data->m_current_number_of_workers;
