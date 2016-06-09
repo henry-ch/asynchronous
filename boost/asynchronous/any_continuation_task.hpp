@@ -15,6 +15,12 @@
 
 namespace boost { namespace asynchronous {
 
+// concept for a minimum form of continuation
+// a continuation must be callable, have a set_done and a name
+// inheriting from continuation_task will provide all this.
+// make_lambda_continuation_wrapper will also turn a simple lambda into a continuation task.
+// tested in test_callback_continuation_sequence.cpp
+
 template <class Result>
 struct any_continuation_task_concept:
  ::boost::mpl::vector<
