@@ -28,6 +28,11 @@ BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_load), serialize, 2);
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_save), serialize, 2);
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_get_task_name), get_task_name, 0);
 
+// concept for a job type being callable (the minimum requirement, default)
+// and also serializable (in sense of boost::archive
+// supports text and portable binary archives
+// BOOST_ASYNCHRONOUS_USE_PORTABLE_BINARY_ARCHIVE allows choosing the binary type
+
 namespace boost { namespace asynchronous
 {
 typedef boost::mpl::vector<

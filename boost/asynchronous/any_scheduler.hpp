@@ -39,6 +39,7 @@
 
 namespace boost { namespace asynchronous
 {
+// concept for all scheduler implementations, single_thread_scheduler oder all threadpools
 #ifdef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
 template <class JOB>
 struct any_shared_scheduler_concept :
@@ -83,6 +84,8 @@ struct any_shared_scheduler_ptr: boost::type_erasure::any<boost::asynchronous::a
 
 };
 #else
+
+// concept as virtual interface (compiles faster)
 template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 struct any_shared_scheduler_concept
 {
@@ -104,6 +107,8 @@ struct any_shared_scheduler_concept
     virtual std::string get_name()const =0;
     virtual void processor_bind(unsigned int p)=0;
 };
+
+// concept for shared pointer to a scheduler
 template <class T = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 struct any_shared_scheduler_ptr: boost::shared_ptr<boost::asynchronous::any_shared_scheduler_concept<T> >
 {
@@ -116,6 +121,13 @@ struct any_shared_scheduler_ptr: boost::shared_ptr<boost::asynchronous::any_shar
         boost::shared_ptr<boost::asynchronous::any_shared_scheduler_concept<T> > (u){}
 };
 #endif
+
+// asynchronous hides all schedulers behind this type.
+// type seen often in future continuations
+// for example:
+// boost::asynchronous::any_weak_scheduler<job> weak_scheduler = boost::asynchronous::get_thread_scheduler<job>();
+// boost::asynchronous::any_shared_scheduler<job> locked_scheduler = weak_scheduler.lock();
+// asynchronous registers a weak scheduler in every thread where it is running. This allows tasks to post tasks themselves
 
 template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 class any_shared_scheduler
@@ -198,6 +210,8 @@ private:
     any_shared_scheduler_ptr<JOB> my_ptr;
 };
 
+// a weak scheduler's only purpose is to deliver a shared scheduler when needed.
+// shared schedulers cannot be registered into their own thread as it would be a deadlock.
 template <class JOB>
 struct any_weak_scheduler_concept :
  ::boost::mpl::vector<

@@ -1,5 +1,5 @@
 // Boost.Asynchronous library
-//  Copyright (C) Christophe Henry 2013
+//  Copyright (C) Christophe Henry 2016
 //
 //  Use, modification and distribution is subject to the Boost
 //  Software License, Version 1.0.  (See accompanying file
@@ -20,6 +20,19 @@
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/scheduler/detail/interrupt_state.hpp>
 #include <boost/asynchronous/scheduler/tcp/detail/client_request.hpp>
+
+// provides the interface to creating continuations.
+// one finds future-based continuations (the slower type)
+// or callback continuations (faster)
+// future continuations support interruption and timeouts, callback continuations do not (yet)
+// future continuations also allow interfacing with asynchronous libraries providing only futures.
+// All continuations are called by providing first a functor called upon completion and a variadic sequence of tasks or a vector of
+// futures / any_continuation_tasks (test in test_callback_continuation_of_sequences.cpp).
+// a continuation called from another scheduler is always started using top_level_callback_continuation / top_level_continuation.
+// create_continuation and create_callback_continuation create a continuation called from a task of a threadpool.
+// create_continuation -> future continuation
+// create_callback_continuation -> callback continuation
+// add _job if the job is not any_callable
 
 namespace boost { namespace asynchronous {
 

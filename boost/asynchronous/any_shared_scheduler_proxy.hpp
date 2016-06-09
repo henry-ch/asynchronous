@@ -1,5 +1,5 @@
 // Boost.Asynchronous library
-//  Copyright (C) Christophe Henry 2013
+//  Copyright (C) Christophe Henry 2016
 //
 //  Use, modification and distribution is subject to the Boost
 //  Software License, Version 1.0.  (See accompanying file
@@ -33,6 +33,12 @@
 #include <boost/asynchronous/queue/any_queue.hpp>
 #include <boost/asynchronous/scheduler_diagnostics.hpp>
 
+// any_shared_scheduler_proxy_concept is provided as a concept or interface (default)
+// this type is what programmers will see: something representing the outer interface of a scheduler
+// and keeping it and its threads active.
+// The last any_shared_scheduler_proxy instance will destroy the scheduler and join its threads.
+// It can be distributed everywhere in the code EXCEPT in one of its own threads, either directly or indirectly.
+// This means a design with a cycle including a any_shared_scheduler_proxy might deadlock at shutdown.
 
 namespace boost { namespace asynchronous
 {

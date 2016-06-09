@@ -18,6 +18,11 @@
 #include <boost/asynchronous/exceptions.hpp>
 #include <boost/asynchronous/detail/metafunctions.hpp>
 
+// call_if_alive provides a protection for trackable_servant: check if the servant is still alive before calling it
+// (through a post_callback for example).
+// call_if_alive_exec provides an optimization: execute a task posted by a servant only if the servant is still alive.
+// This is done through use of a weak pointer to the servant.
+
 namespace boost { namespace asynchronous
 {
 // TODO move to details

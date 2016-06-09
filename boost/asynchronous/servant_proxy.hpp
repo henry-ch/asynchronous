@@ -1,11 +1,26 @@
 // Boost.Asynchronous library
-//  Copyright (C) Christophe Henry 2013
+//  Copyright (C) Christophe Henry 2016
 //
 //  Use, modification and distribution is subject to the Boost
 //  Software License, Version 1.0.  (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 // For more information, see http://www.boost.org
+
+// servant_proxy is the proxy to every servant, trackable or not.
+// its job is to protect a thread-unsafe object from other threads by serializing calls to it (see Active Object Pattern / Proxy).
+// It also takes responsibility of creating the servant. It is a shareable object, the last instance will destroy the servant safely.
+// This file also provides the following macros for use withing servant_proxy:
+// BOOST_ASYNC_FUTURE_MEMBER(member [,priority]): calls the desired member of the servant, returns a future<return type of member>
+// BOOST_ASYNC_FUTURE_MEMBER_LOG(member, taskname [,priority]): as above but will be logged with this name if the job type supports it.
+// BOOST_ASYNC_POST_MEMBER(member [,priority]): calls the desired member of the servant, returns nothing
+// BOOST_ASYNC_POST_MEMBER_LOG(member, taskname [,priority]): as above but will be logged with this name if the job type supports it.
+// more exotic:
+// BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK(member [,priority]): calls the desired member of the servant, takes as first argument a callback
+// Useful when a servant wants to call a member of another servant and being a trackable_servant, needs no future but a callback.
+// UNSAFE means the calling servant must provide safety itself, at best using make_safe_callback.
+// BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK_LOG(member, taskname [,priority]): as above but will be logged with this name if the job type supports it.
+// Tested in test_servant_proxy_unsafe_callback.cpp.
 
 #ifndef BOOST_ASYNC_SERVANT_PROXY_H
 #define BOOST_ASYNC_SERVANT_PROXY_H

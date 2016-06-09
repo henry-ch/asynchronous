@@ -1,11 +1,19 @@
 // Boost.Asynchronous library
-//  Copyright (C) Christophe Henry 2013
+//  Copyright (C) Christophe Henry 2016
 //
 //  Use, modification and distribution is subject to the Boost
 //  Software License, Version 1.0.  (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 // For more information, see http://www.boost.org
+
+// this file provides the posting workhorse functions in all their forms:
+// post_future: posts a task to a pool, returns a future (similar to std::async without the blocking destructor).
+// interruptible_post_future: same as above but returns a tuple of a future and an any_interruptible (for interrupting)
+// post_callback: posts a task, call a callback when done (careful: the callback is called from any thread of the pool and must be thread-safe)
+// or a trackable_servant's post_callback must be used. Returns nothing.
+// interruptible_post_callback: same as above but returns an any_interruptible.
+
 
 #ifndef BOOST_ASYNCHRON_POST_HPP
 #define BOOST_ASYNCHRON_POST_HPP

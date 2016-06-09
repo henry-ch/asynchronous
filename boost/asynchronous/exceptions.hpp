@@ -1,5 +1,5 @@
 // Boost.Asynchronous library
-//  Copyright (C) Christophe Henry 2013
+//  Copyright (C) Christophe Henry 2016
 //
 //  Use, modification and distribution is subject to the Boost
 //  Software License, Version 1.0.  (See accompanying file
@@ -12,6 +12,8 @@
 
 #include <exception>
 #include <boost/exception/all.hpp>
+
+// exception thrown by interruptible_post_callback.
 
 namespace boost { namespace asynchronous
 {

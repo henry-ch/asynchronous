@@ -22,6 +22,10 @@
 //TODO find better
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
+
+// the basic and minimum job type of every scheduler
+// The minimum a job has to do is to be callable: void task()
+
 namespace boost { namespace asynchronous
 {
 
@@ -29,8 +33,6 @@ typedef ::boost::mpl::vector<
     boost::type_erasure::callable<void()>,
     boost::type_erasure::relaxed,
     boost::type_erasure::copy_constructible<>,
-    //boost::type_erasure::constructible<boost::type_erasure::_self(boost::type_erasure::_self&&)>,
-    //boost::type_erasure::destructible<>,
     boost::type_erasure::typeid_<>
 > any_callable_concept;
 typedef boost::type_erasure::any<any_callable_concept> any_callable_helper;

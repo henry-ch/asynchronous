@@ -1,5 +1,5 @@
 // Boost.Asynchronous library
-//  Copyright (C) Christophe Henry 2013
+//  Copyright (C) Christophe Henry 2016
 //
 //  Use, modification and distribution is subject to the Boost
 //  Software License, Version 1.0.  (See accompanying file
@@ -19,6 +19,9 @@
 #include <boost/chrono/chrono.hpp>
 #include <boost/asynchronous/any_serializable.hpp>
 
+// Provide traits for the job types offered by Asynchronous. One needs to specialize job_traits for a new job type.
+// This means providing posted time, start/end time etc. for this job if it supports it.
+// By default, Asynchronous uses any_callable, which supports absolutely nothing ;-)
 
 namespace boost { namespace asynchronous
 {

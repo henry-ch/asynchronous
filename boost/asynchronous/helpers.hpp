@@ -1,5 +1,5 @@
 // Boost.Asynchronous library
-//  Copyright (C) Christophe Henry 2013
+//  Copyright (C) Christophe Henry 2016
 //
 //  Use, modification and distribution is subject to the Boost
 //  Software License, Version 1.0.  (See accompanying file
@@ -15,6 +15,16 @@
 #include <numeric>
 #include <boost/chrono/chrono.hpp>
 #include <boost/asynchronous/post.hpp>
+
+// provides a few helpers.
+// The most useful is find_best_cutoff (example in example_cutoff_sort.cpp)
+// Finding the best cutoff for an algorithm and a given type on a given machine is dark art.
+// find_best_cutoff will do for you a kind of deployment optimization.
+// Call find_best_cutoff providing a lambda calling the algorithm, a first and last cutoff value forming the range of cutoffs to try out,
+// steps between 2 cutoffs and the number of retries (the higher the better mean).
+// It will return a std::tuple<std::size_t,std::vector<std::size_t>>.
+// [0] : the best cutoff found
+// [1] : the average execution times of this cutoff, for statistics.
 
 namespace boost { namespace asynchronous
 {

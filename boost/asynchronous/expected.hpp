@@ -1,3 +1,12 @@
+// Boost.Asynchronous library
+//  Copyright (C) Christophe Henry 2016
+//
+//  Use, modification and distribution is subject to the Boost
+//  Software License, Version 1.0.  (See accompanying file
+//  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+// For more information, see http://www.boost.org
+
 #ifndef BOOST_ASYNCHRONOUS_EXPECTED_HPP
 #define BOOST_ASYNCHRONOUS_EXPECTED_HPP
 
@@ -5,6 +14,11 @@
 #include <boost/exception_ptr.hpp>
 #include <boost/utility/enable_if.hpp>
 #include <boost/type_traits/is_same.hpp>
+
+// expected is the "future" type of asynchronous, used in post_callback.
+// It will contain a value if a task completed successfully, an exception if one was thrown.
+// CAUTION: a contained type must be default-constructible.
+// unlike futures, calling get() will never block.
 
 namespace boost { namespace asynchronous {
 

@@ -1,11 +1,17 @@
 // Boost.Asynchronous library
-//  Copyright (C) Christophe Henry 2013
+//  Copyright (C) Christophe Henry 2016
 //
 //  Use, modification and distribution is subject to the Boost
 //  Software License, Version 1.0.  (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 // For more information, see http://www.boost.org
+
+// This file provides scheduler_shared_proxy, which one usually does not use directly. This is the implementation of
+// the any_shared_scheduler_proxy concept, the concept of a proxy to any scheduler.
+// One uses make_shared_scheduler_proxy<desired pool>(pool constructor arguments)
+// the scheduler proxy can be shared wherever desired EXCEPT in one of its own threads, directly or indirectly.
+// a scheduler proxy can be posted to, or its diagnostics can be read.
 
 #ifndef BOOST_ASYNC_SCHEDULER_SHARED_PROXY_HPP
 #define BOOST_ASYNC_SCHEDULER_SHARED_PROXY_HPP
