@@ -7191,6 +7191,400 @@ class asio_scheduler;</programlisting>
             </sect1>
         </chapter>
         <chapter>
+            <title>Performance tests</title>
+            <sect1>
+                <title>asynchronous::vector</title>
+                <para><emphasis role="underline">Test</emphasis>:
+                    libs/asynchonous/test/perf_vector.cpp. </para>
+                <para><emphasis role="underline">Test</emphasis> processor Core i7-5960X. </para>
+                <para><emphasis role="underline">Compiler</emphasis>: g++ 6.1, -O3, -std=c++14, link
+                    with libtbbmalloc_proxy.</para>
+                <para>The test uses a vector of 10000000 elements, each element containing a
+                    std::vector of 10 integers.</para>
+                <para>
+                    <table frame="all">
+                        <title>Performance of asynchronous::vector members using 4 threads</title>
+                        <tgroup cols="4">
+                            <colspec colname="c1" colnum="1" colwidth="1.42*"/>
+                            <colspec colname="c2" colnum="2" colwidth="1.0*"/>
+                            <colspec colname="newCol3" colnum="3" colwidth="1.15*"/>
+                            <colspec colname="newCol4" colnum="4" colwidth="1.15*"/>
+                            <thead>
+                                <row>
+                                    <entry>Member</entry>
+                                    <entry>std::vector</entry>
+                                    <entry>asynchronous::vector</entry>
+                                    <entry>speedup asynchronous / std</entry>
+                                </row>
+                            </thead>
+                            <tbody>
+                                <row>
+                                    <entry>Constructor</entry>
+                                    <entry>385ms</entry>
+                                    <entry>147ms</entry>
+                                    <entry>2.62</entry>
+                                </row>
+                                <row>
+                                    <entry>Copy</entry>
+                                    <entry>337ms</entry>
+                                    <entry>190ms</entry>
+                                    <entry>1.77</entry>
+                                </row>
+                                <row>
+                                    <entry>compare</entry>
+                                    <entry>81ms</entry>
+                                    <entry>43ms</entry>
+                                    <entry>1.88</entry>
+                                </row>
+                                <row>
+                                    <entry>clear</entry>
+                                    <entry>221ms</entry>
+                                    <entry>98ms</entry>
+                                    <entry>2.25</entry>
+                                </row>
+                                <row>
+                                    <entry>resize</entry>
+                                    <entry>394ms</entry>
+                                    <entry>276ms</entry>
+                                    <entry>1.43</entry>
+                                </row>
+                            </tbody>
+                        </tgroup>
+                    </table>
+                    <table frame="all">
+                        <title>Performance of asynchronous::vector members using 8 threads</title>
+                        <tgroup cols="4">
+                            <colspec colname="c1" colnum="1" colwidth="1.42*"/>
+                            <colspec colname="c2" colnum="2" colwidth="1.0*"/>
+                            <colspec colname="newCol3" colnum="3" colwidth="1.15*"/>
+                            <colspec colname="newCol4" colnum="4" colwidth="1.15*"/>
+                            <thead>
+                                <row>
+                                    <entry>Member</entry>
+                                    <entry>std::vector</entry>
+                                    <entry>asynchronous::vector</entry>
+                                    <entry>speedup asynchronous / std</entry>
+                                </row>
+                            </thead>
+                            <tbody>
+                                <row>
+                                    <entry>Constructor</entry>
+                                    <entry>380ms</entry>
+                                    <entry>90ms</entry>
+                                    <entry>4.22</entry>
+                                </row>
+                                <row>
+                                    <entry>Copy</entry>
+                                    <entry>306ms</entry>
+                                    <entry>120ms</entry>
+                                    <entry>2.55</entry>
+                                </row>
+                                <row>
+                                    <entry>compare</entry>
+                                    <entry>74ms</entry>
+                                    <entry>30ms</entry>
+                                    <entry>2.47</entry>
+                                </row>
+                                <row>
+                                    <entry>clear</entry>
+                                    <entry>176ms</entry>
+                                    <entry>54ms</entry>
+                                    <entry>3.26</entry>
+                                </row>
+                                <row>
+                                    <entry>resize</entry>
+                                    <entry>341ms</entry>
+                                    <entry>178ms</entry>
+                                    <entry>1.92</entry>
+                                </row>
+                            </tbody>
+                        </tgroup>
+                    </table>
+                </para>
+            </sect1>
+            <sect1>
+                <title>Sort</title>
+                <para>This test will compare asynchronous:parallel_sort with TBB 4.3 parallel_sort.
+                    16 threads used.</para>
+                <para><emphasis role="underline">Test</emphasis>:
+                    libs/asynchonous/test/perf/parallel_sort_future_v1.cpp. TBB test:
+                    libs/asynchronous/test/perf/tbb/tbb_parallel_sort.cpp</para>
+                <para><emphasis role="underline">Test</emphasis> processor Core i7-5960X. </para>
+                <para><emphasis role="underline">Compiler</emphasis>: g++ 6.1, -O3, -std=c++14, link
+                    with libtbbmalloc_proxy.</para>
+                <para>The same test will be done using TBB then asynchronous + std::sort, then
+                    asynchronous + boost::spreadsort. 
+                    <table frame="all">
+                        <title>Sorting 200000000 uint32_t</title>
+                        <tgroup cols="6">
+                            <colspec colname="c1" colnum="1" colwidth="3.1*"/>
+                            <colspec colname="c2" colnum="2" colwidth="1.22*"/>
+                            <colspec colname="newCol3" colnum="3" colwidth="1.0*"/>
+                            <colspec colname="newCol4" colnum="4" colwidth="1.43*"/>
+                            <colspec colname="newCol5" colnum="5" colwidth="1.37*"/>
+                            <colspec colname="newCol6" colnum="6" colwidth="2.48*"/>
+                            <thead>
+                                <row>
+                                    <entry>Test</entry>
+                                    <entry>TBB</entry>
+                                    <entry>asynchronous</entry>
+                                    <entry>asynchronous + boost::spreadsort</entry>
+                                    <entry>asynchronous::parallel_sort2</entry>
+                                    <entry>asynchronous::parallel_sort2 + boost::spreadsort</entry>
+                                </row>
+                            </thead>
+                            <tbody>
+                                <row>
+                                    <entry>test_random_elements_many_repeated</entry>
+                                    <entry>2416 ms</entry>
+                                    <entry>1133 ms</entry>
+                                    <entry>561 ms</entry>
+                                    <entry>1425 ms</entry>
+                                    <entry>928 ms</entry>
+                                </row>
+                                <row>
+                                    <entry>test_random_elements_few_repeated</entry>
+                                    <entry>2408 ms</entry>
+                                    <entry>1301 ms</entry>
+                                    <entry>1002 ms</entry>
+                                    <entry>1694 ms</entry>
+                                    <entry>1385 ms</entry>
+                                </row>
+                                <row>
+                                    <entry>test_random_elements_quite_repeated</entry>
+                                    <entry>2341 ms</entry>
+                                    <entry>1298 ms</entry>
+                                    <entry>1027 ms</entry>
+                                    <entry>1687 ms</entry>
+                                    <entry>1344 ms</entry>
+                                </row>
+                                <row>
+                                    <entry>test_sorted_elements</entry>
+                                    <entry>22.5 ms</entry>
+                                    <entry>16 ms</entry>
+                                    <entry>16 ms</entry>
+                                    <entry>16 ms</entry>
+                                    <entry>16 ms</entry>
+                                </row>
+                                <row>
+                                    <entry>test_reversed_sorted_elements</entry>
+                                    <entry>554 ms</entry>
+                                    <entry>47 ms</entry>
+                                    <entry>47 ms</entry>
+                                    <entry>48 ms</entry>
+                                    <entry>48 ms</entry>
+                                </row>
+                                <row>
+                                    <entry>test_equal_elements</entry>
+                                    <entry>26 ms</entry>
+                                    <entry>16 ms</entry>
+                                    <entry>16 ms</entry>
+                                    <entry>17 ms</entry>
+                                    <entry>17 ms</entry>
+                                </row>
+                            </tbody>
+                        </tgroup>
+                    </table></para>
+                <table frame="all">
+                    <title>Sorting 200000000 double</title>
+                    <tgroup cols="6">
+                        <colspec colname="c1" colnum="1" colwidth="3.06*"/>
+                        <colspec colname="c2" colnum="2" colwidth="1.26*"/>
+                        <colspec colname="newCol3" colnum="3" colwidth="1.0*"/>
+                        <colspec colname="newCol4" colnum="4" colwidth="1.41*"/>
+                        <colspec colname="newCol5" colnum="5" colwidth="1.2*"/>
+                        <colspec colname="newCol6" colnum="6" colwidth="2.66*"/>
+                        <thead>
+                            <row>
+                                <entry>Test</entry>
+                                <entry>TBB</entry>
+                                <entry>asynchronous</entry>
+                                <entry>asynchronous + boost::spreadsort</entry>
+                                <entry>asynchronous::parallel_sort2</entry>
+                                <entry>asynchronous::parallel_sort2 + boost::spreadsort</entry>
+                            </row>
+                        </thead>
+                        <tbody>
+                            <row>
+                                <entry>test_random_elements_many_repeated</entry>
+                                <entry>2504 ms</entry>
+                                <entry>1446 ms</entry>
+                                <entry>1133 ms</entry>
+                                <entry>2173 ms</entry>
+                                <entry>1919 ms</entry>
+                            </row>
+                            <row>
+                                <entry>test_random_elements_few_repeated</entry>
+                                <entry>2690 ms</entry>
+                                <entry>1714 ms</entry>
+                                <entry>1266 ms</entry>
+                                <entry>2406 ms</entry>
+                                <entry>2044 ms</entry>
+                            </row>
+                            <row>
+                                <entry>test_random_elements_quite_repeated</entry>
+                                <entry>2602 ms</entry>
+                                <entry>1715 ms</entry>
+                                <entry>1309 ms</entry>
+                                <entry>2448 ms</entry>
+                                <entry>2037 ms</entry>
+                            </row>
+                            <row>
+                                <entry>test_sorted_elements</entry>
+                                <entry>34 ms</entry>
+                                <entry>32 ms</entry>
+                                <entry>32 ms</entry>
+                                <entry>32 ms</entry>
+                                <entry>34 ms</entry>
+                            </row>
+                            <row>
+                                <entry>test_reversed_sorted_elements</entry>
+                                <entry>644 ms</entry>
+                                <entry>95 ms</entry>
+                                <entry>94 ms</entry>
+                                <entry>95 ms</entry>
+                                <entry>95 ms</entry>
+                            </row>
+                            <row>
+                                <entry>test_equal_elements</entry>
+                                <entry>34 ms</entry>
+                                <entry>33 ms</entry>
+                                <entry>32 ms</entry>
+                                <entry>33 ms</entry>
+                                <entry>32 ms</entry>
+                            </row>
+                        </tbody>
+                    </tgroup>
+                </table>
+                <table frame="all">
+                    <title>Sorting 200000000 std::string</title>
+                    <tgroup cols="6">
+                        <colspec colname="c1" colnum="1" colwidth="3.36*"/>
+                        <colspec colname="c2" colnum="2" colwidth="1.39*"/>
+                        <colspec colname="newCol3" colnum="3" colwidth="1.0*"/>
+                        <colspec colname="newCol4" colnum="4" colwidth="1.52*"/>
+                        <colspec colname="newCol5" colnum="5" colwidth="1.28*"/>
+                        <colspec colname="newCol6" colnum="6" colwidth="2.91*"/>
+                        <thead>
+                            <row>
+                                <entry>Test</entry>
+                                <entry>TBB</entry>
+                                <entry>asynchronous</entry>
+                                <entry>asynchronous + boost::spreadsort</entry>
+                                <entry>asynchronous::parallel_sort2</entry>
+                                <entry>asynchronous::parallel_sort2 + boost::spreadsort</entry>
+                            </row>
+                        </thead>
+                        <tbody>
+                            <row>
+                                <entry>test_random_elements_many_repeated</entry>
+                                <entry>891 ms</entry>
+                                <entry>924 ms</entry>
+                                <entry>791 ms</entry>
+                                <entry>889 ms</entry>
+                                <entry>777 ms</entry>
+                            </row>
+                            <row>
+                                <entry>test_random_elements_few_repeated</entry>
+                                <entry>1031 ms</entry>
+                                <entry>1069 ms</entry>
+                                <entry>906 ms</entry>
+                                <entry>1053 ms</entry>
+                                <entry>967 ms</entry>
+                            </row>
+                            <row>
+                                <entry>test_random_elements_quite_repeated</entry>
+                                <entry>929 ms</entry>
+                                <entry>1000 ms</entry>
+                                <entry>838 ms</entry>
+                                <entry>998 ms</entry>
+                                <entry>1003 ms</entry>
+                            </row>
+                            <row>
+                                <entry>test_sorted_elements</entry>
+                                <entry>11 ms</entry>
+                                <entry>16 ms</entry>
+                                <entry>16 ms</entry>
+                                <entry>16 ms</entry>
+                                <entry>32 ms</entry>
+                            </row>
+                            <row>
+                                <entry>test_reversed_sorted_elements</entry>
+                                <entry>265 ms</entry>
+                                <entry>28 ms</entry>
+                                <entry>28 ms</entry>
+                                <entry>29 ms</entry>
+                                <entry>38 ms</entry>
+                            </row>
+                            <row>
+                                <entry>test_equal_elements</entry>
+                                <entry>12 ms</entry>
+                                <entry>4 ms</entry>
+                                <entry>3 ms</entry>
+                                <entry>3 ms</entry>
+                                <entry>4 ms</entry>
+                            </row>
+                        </tbody>
+                    </tgroup>
+                </table>
+                <table frame="all">
+                    <title>Sorting 10000000 objects containing 10 longs</title>
+                    <tgroup cols="4">
+                        <colspec colname="c1" colnum="1" colwidth="2.39*"/>
+                        <colspec colname="c2" colnum="2" colwidth="1.0*"/>
+                        <colspec colname="newCol3" colnum="3" colwidth="1.24*"/>
+                        <colspec colname="newCol5" colnum="4" colwidth="1.7*"/>
+                        <thead>
+                            <row>
+                                <entry>Test</entry>
+                                <entry>TBB</entry>
+                                <entry>asynchronous</entry>
+                                <entry>asynchronous::parallel_sort2</entry>
+                            </row>
+                        </thead>
+                        <tbody>
+                            <row>
+                                <entry>test_random_elements_many_repeated</entry>
+                                <entry>586 ms</entry>
+                                <entry>801 ms</entry>
+                                <entry>174 ms</entry>
+                            </row>
+                            <row>
+                                <entry>test_random_elements_few_repeated</entry>
+                                <entry>561 ms</entry>
+                                <entry>803 ms</entry>
+                                <entry>183 ms</entry>
+                            </row>
+                            <row>
+                                <entry>test_random_elements_quite_repeated</entry>
+                                <entry>556 ms</entry>
+                                <entry>815 ms</entry>
+                                <entry>160 ms</entry>
+                            </row>
+                            <row>
+                                <entry>test_sorted_elements</entry>
+                                <entry>300 ms</entry>
+                                <entry>31 ms</entry>
+                                <entry>3 ms</entry>
+                            </row>
+                            <row>
+                                <entry>test_reversed_sorted_elements</entry>
+                                <entry>22 ms</entry>
+                                <entry>22 ms</entry>
+                                <entry>2 ms</entry>
+                            </row>
+                            <row>
+                                <entry>test_equal_elements</entry>
+                                <entry>22 ms</entry>
+                                <entry>21 ms</entry>
+                                <entry>2 ms</entry>
+                            </row>
+                        </tbody>
+                    </tgroup>
+                </table>
+            </sect1>
+        </chapter>
+        <chapter>
             <title>Compiler, linker, settings</title>
             <sect1>
                 <title>C++ 11</title>

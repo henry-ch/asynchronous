@@ -45,11 +45,20 @@ struct LongOne
     {
         data[0]=i;
     }
-    LongOne& operator= (LongOne const& rhs)
+    LongOne& operator= (LongOne const& rhs)noexcept
     {
         data = rhs.data;
         return *this;
     }
+    LongOne& operator= (LongOne&& rhs)noexcept
+    {
+        data = std::move(rhs.data);
+        return *this;
+    }
+    LongOne(LongOne const& rhs)noexcept
+        : data(rhs.data)
+    {}
+    LongOne(LongOne&&)noexcept = default;
 
     std::vector<long> data;
 };
@@ -135,7 +144,10 @@ void ParallelAsyncPostCb(std::vector<SORTED_TYPE> a, size_t n)
     }
     ,"",0);
     fu.wait();
-    servant_intern += (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - servant_time).count() / 1000000);           
+    servant_intern += (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - servant_time).count() / 1000000);
+    // check if sorted
+    //auto vec = std::move(fu.get());
+    //std::cout << "sorted? " << std::boolalpha << std::is_sorted(vec.begin(), vec.end());
 }
 void ParallelAsyncPostCbSpreadsort(std::vector<SORTED_TYPE> a, size_t n)
 {

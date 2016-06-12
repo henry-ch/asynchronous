@@ -40,11 +40,20 @@ struct LongOne
     {
         data[0]=i;
     }
-    LongOne& operator= (LongOne const& rhs)
+    LongOne& operator= (LongOne const& rhs)noexcept
     {
         data = rhs.data;
         return *this;
     }
+    LongOne& operator= (LongOne&& rhs)noexcept
+    {
+        data = std::move(rhs.data);
+        return *this;
+    }
+    LongOne(LongOne const& rhs)noexcept
+        : data(rhs.data)
+    {}
+    LongOne(LongOne&&)noexcept = default;
 
     std::vector<long> data;
 };
@@ -54,14 +63,14 @@ inline bool operator< (const LongOne& lhs, const LongOne& rhs){ return rhs.data[
 //#define SORTED_TYPE LongOne
 //#define NO_SPREADSORT
 
-#define NELEM 200000000
-#define SORTED_TYPE uint32_t
+//#define NELEM 200000000
+//#define SORTED_TYPE uint32_t
 
 //#define NELEM 10000000
 //#define SORTED_TYPE std::string
 
-//#define NELEM 200000000
-//#define SORTED_TYPE double
+#define NELEM 200000000
+#define SORTED_TYPE double
 
 typename boost::chrono::high_resolution_clock::time_point servant_time;
 double servant_intern=0.0;
