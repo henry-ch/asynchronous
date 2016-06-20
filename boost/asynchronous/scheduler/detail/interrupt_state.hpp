@@ -3,6 +3,7 @@
 
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/thread.hpp>
+#include <boost/thread/future.hpp>
 #include <boost/asynchronous/detail/any_interruptible.hpp>
 
 namespace boost { namespace asynchronous { namespace detail
