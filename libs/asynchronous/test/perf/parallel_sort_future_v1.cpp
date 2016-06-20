@@ -57,11 +57,14 @@ struct LongOne
 
     std::vector<long> data;
 };
-inline bool operator< (const LongOne& lhs, const LongOne& rhs){ return rhs.data[0] < lhs.data[0]; }
+inline bool operator< (const LongOne& lhs, const LongOne& rhs)
+{
+    return std::lexicographical_compare(lhs.data.begin(),lhs.data.end(),rhs.data.begin(),rhs.data.end());
+}
 #endif
-//#define NELEM 10000000
-//#define SORTED_TYPE LongOne
-//#define NO_SPREADSORT
+#define NELEM 10000000
+#define SORTED_TYPE LongOne
+#define NO_SPREADSORT
 
 //#define NELEM 200000000
 //#define SORTED_TYPE uint32_t
@@ -69,8 +72,8 @@ inline bool operator< (const LongOne& lhs, const LongOne& rhs){ return rhs.data[
 //#define NELEM 10000000
 //#define SORTED_TYPE std::string
 
-#define NELEM 200000000
-#define SORTED_TYPE double
+//#define NELEM 200000000
+//#define SORTED_TYPE double
 
 typename boost::chrono::high_resolution_clock::time_point servant_time;
 double servant_intern=0.0;

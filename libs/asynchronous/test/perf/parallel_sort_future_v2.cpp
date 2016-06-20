@@ -62,14 +62,17 @@ struct LongOne
 
     std::vector<long> data;
 };
-inline bool operator< (const LongOne& lhs, const LongOne& rhs){ return rhs.data[0] < lhs.data[0]; }
+inline bool operator< (const LongOne& lhs, const LongOne& rhs)
+{
+    return std::lexicographical_compare(lhs.data.begin(),lhs.data.end(),rhs.data.begin(),rhs.data.end());
+}
 #endif
-//#define NELEM 1000000
-//#define SORTED_TYPE LongOne
-//#define NO_SPREADSORT
+#define NELEM 1000000
+#define SORTED_TYPE LongOne
+#define NO_SPREADSORT
 
-#define NELEM 200000000
-#define SORTED_TYPE uint32_t
+//#define NELEM 200000000
+//#define SORTED_TYPE uint32_t
 
 //#define NELEM 10000000
 //#define SORTED_TYPE std::string
@@ -135,6 +138,8 @@ struct increasing_sort_subtask
 
 void ParallelAsyncPostCb(std::vector<SORTED_TYPE> a, size_t n)
 {
+    // check if sorted
+    //std::cout << "sorted before? " << std::boolalpha << std::is_sorted(a.begin(), a.end()) << std::endl;
     long tasksize = NELEM / tasks;
     servant_time = boost::chrono::high_resolution_clock::now();
     boost::future<std::vector<SORTED_TYPE>> fu = boost::asynchronous::post_future(pool,
@@ -147,7 +152,7 @@ void ParallelAsyncPostCb(std::vector<SORTED_TYPE> a, size_t n)
     servant_intern += (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - servant_time).count() / 1000000);
     // check if sorted
     //auto vec = std::move(fu.get());
-    //std::cout << "sorted? " << std::boolalpha << std::is_sorted(vec.begin(), vec.end());
+    //std::cout << "sorted? " << std::boolalpha << std::is_sorted(vec.begin(), vec.end()) << std::endl;
 }
 void ParallelAsyncPostCbSpreadsort(std::vector<SORTED_TYPE> a, size_t n)
 {

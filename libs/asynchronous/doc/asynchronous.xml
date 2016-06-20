@@ -7545,38 +7545,38 @@ class asio_scheduler;</programlisting>
                         <tbody>
                             <row>
                                 <entry>test_random_elements_many_repeated</entry>
-                                <entry>586 ms</entry>
-                                <entry>801 ms</entry>
-                                <entry>174 ms</entry>
+                                <entry>869 ms</entry>
+                                <entry>1007 ms</entry>
+                                <entry>204 ms</entry>
                             </row>
                             <row>
                                 <entry>test_random_elements_few_repeated</entry>
-                                <entry>561 ms</entry>
                                 <entry>803 ms</entry>
-                                <entry>183 ms</entry>
+                                <entry>887 ms</entry>
+                                <entry>226 ms</entry>
                             </row>
                             <row>
                                 <entry>test_random_elements_quite_repeated</entry>
-                                <entry>556 ms</entry>
-                                <entry>815 ms</entry>
-                                <entry>160 ms</entry>
+                                <entry>810 ms</entry>
+                                <entry>960 ms</entry>
+                                <entry>175 ms</entry>
                             </row>
                             <row>
                                 <entry>test_sorted_elements</entry>
-                                <entry>300 ms</entry>
-                                <entry>31 ms</entry>
-                                <entry>3 ms</entry>
-                            </row>
-                            <row>
-                                <entry>test_reversed_sorted_elements</entry>
                                 <entry>22 ms</entry>
-                                <entry>22 ms</entry>
+                                <entry>27 ms</entry>
                                 <entry>2 ms</entry>
                             </row>
                             <row>
+                                <entry>test_reversed_sorted_elements</entry>
+                                <entry>338 ms</entry>
+                                <entry>34 ms</entry>
+                                <entry>3 ms</entry>
+                            </row>
+                            <row>
                                 <entry>test_equal_elements</entry>
-                                <entry>22 ms</entry>
-                                <entry>21 ms</entry>
+                                <entry>25 ms</entry>
+                                <entry>23 ms</entry>
                                 <entry>2 ms</entry>
                             </row>
                         </tbody>
