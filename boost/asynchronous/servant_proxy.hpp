@@ -54,6 +54,7 @@ namespace boost { namespace asynchronous
 BOOST_MPL_HAS_XXX_TRAIT_DEF(simple_ctor)
 BOOST_MPL_HAS_XXX_TRAIT_DEF(simple_dtor)
 BOOST_MPL_HAS_XXX_TRAIT_DEF(requires_weak_scheduler)
+BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
 
 #ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
 #define BOOST_ASYNC_POST_MEMBER_1(funcname)                                                                                     \
@@ -468,8 +469,23 @@ class servant_proxy
 public:
     typedef Servant servant_type;
     typedef Callable callable_type;
+    typedef ServantProxy derived_proxy_type;
     typedef boost::asynchronous::any_shared_scheduler_proxy<callable_type> scheduler_proxy_type;
     typedef boost::asynchronous::any_weak_scheduler<callable_type> weak_scheduler_proxy_type;
+    //constexpr int max_create_wait = max_create_wait_ms;
+    typedef std::integral_constant<int,max_create_wait_ms > max_create_wait;
+
+    // private constructor for use with dynamic_servant_proxy_cast
+protected:
+    // AnotherProxy must be a derived class of a servant_proxy (used by dynamic_servant_proxy_cast)
+    template <class AnotherProxy>
+    servant_proxy(AnotherProxy p, typename boost::enable_if<boost::asynchronous::has_servant_type<AnotherProxy>>::type* = 0)BOOST_NOEXCEPT
+        : m_proxy(p.m_proxy)
+        , m_servant(boost::dynamic_pointer_cast<typename AnotherProxy::servant_type>(p.m_servant))
+        , m_offset_id(0)
+    {
+    }
+public:
 
     template <typename... Args>
     servant_proxy(scheduler_proxy_type p, Args... args)
@@ -783,6 +799,13 @@ private:
         boost::shared_ptr<boost::promise<void>> done_promise;
     };
 };
+
+template<class T, class U>
+T dynamic_servant_proxy_cast( U const & r ) BOOST_NOEXCEPT
+{
+    return T(r);
+}
+
 }} // boost::async
 
 #endif // BOOST_ASYNC_SERVANT_PROXY_H
