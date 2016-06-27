@@ -582,18 +582,6 @@ public:
         typename boost::asynchronous::job_traits<callable_type>::wrapper_type  a(std::move(n));
         a.set_name(ServantProxy::get_dtor_name());
         m_proxy.post(std::move(a),ServantProxy::get_dtor_prio());
-        try
-        {
-            // no interruption could go good here
-            boost::this_thread::disable_interruption di;
-            // block until done if necessary (TODO better later)
-            dtor_wait_helper<servant_type>(std::move(fu));
-        }
-        catch(...)
-        {
-            //no throw from destructor
-        }
-
         m_servant.reset();
         m_proxy.reset();
     }
@@ -626,21 +614,6 @@ public:
     std::size_t m_offset_id;
 
 private:
-    template <class S>
-    typename boost::enable_if<typename boost::asynchronous::has_simple_dtor<S>::type,void>::type
-    dtor_wait_helper(boost::future<void> )
-    {
-        // no waiting required
-    }
-    template <class S>
-    typename boost::disable_if<typename boost::asynchronous::has_simple_dtor<S>::type,void>::type
-    dtor_wait_helper(boost::future<void> fu)
-    {
-        fu.timed_wait(boost::posix_time::milliseconds(max_create_wait_ms));
-        // we are in dtor so we don't want to throw, ignore and hope for the best...
-        // if we have no complicated inter-servant proxy interactions as in test_interconnected_servants.cpp it will be true.
-    }
-
     // safe creation of servant in our thread ctor is trivial or told us so
     template <typename S,typename... Args>
     typename boost::enable_if<
