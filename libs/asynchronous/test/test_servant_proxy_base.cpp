@@ -39,7 +39,7 @@ struct Servant : public Base
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant dtor not posted.");
     }
-    void foo()
+    void foo()override
     {
         foo_called=true;
     }
