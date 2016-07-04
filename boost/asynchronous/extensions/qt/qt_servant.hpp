@@ -11,7 +11,7 @@
 #define BOOST_ASYNCHRONOUS_QT_SERVANT_HPP
 
 #include <QObject>
-#include <QApplication>
+#include <QCoreApplication>
 
 #include <cstddef>
 #include <map>
@@ -120,7 +120,7 @@ public:
     template <class Future>
     void operator()(Future f)   
     {
-        QApplication::postEvent(m_connect,new qt_async_custom_event<Future>(std::move(f)));
+        QCoreApplication::postEvent(m_connect,new qt_async_custom_event<Future>(std::move(f)));
     }
 
 private:
