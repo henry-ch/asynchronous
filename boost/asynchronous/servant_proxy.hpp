@@ -577,14 +577,23 @@ public:
 
     ~servant_proxy()
     {
-        servant_deleter n(std::move(m_servant));
-        boost::future<void> fu = n.done_promise->get_future();
-        typename boost::asynchronous::job_traits<callable_type>::wrapper_type  a(std::move(n));
-        a.set_name(ServantProxy::get_dtor_name());
-        m_proxy.post(std::move(a),ServantProxy::get_dtor_prio());
-        m_servant.reset();
+        if (!!m_servant)
+        {
+            servant_deleter n(std::move(m_servant));
+            boost::future<void> fu = n.done_promise->get_future();
+            typename boost::asynchronous::job_traits<callable_type>::wrapper_type  a(std::move(n));
+            a.set_name(ServantProxy::get_dtor_name());
+            m_proxy.post(std::move(a),ServantProxy::get_dtor_prio());
+            m_servant.reset();
+        }
         m_proxy.reset();
     }
+    // we provide destructor so we need to provide the other 4
+    servant_proxy(servant_proxy&&)                =default;
+    servant_proxy& operator=(servant_proxy&&)     =default;
+    servant_proxy(servant_proxy const&)           =default;
+    servant_proxy& operator=(servant_proxy const&)=default;
+
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
     void post(callable_type job, std::size_t prio) const
 #else
