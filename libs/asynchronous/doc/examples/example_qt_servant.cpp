@@ -26,13 +26,12 @@ void QtServant::signaled()
                     std::cout << "Long Work" << std::endl;
                     std::cout << "in thread: " << boost::this_thread::get_id() << std::endl;
                     boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
-                }// work
-            ,
+                },// work
            // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
            [](boost::asynchronous::expected<void>){
                       std::cout << "work done. Thread in callback: " << boost::this_thread::get_id() << std::endl;
            }// callback functor.
-    );
+           ,"",0,0);
 }
 void QtServant::signaled2()
 {
@@ -43,15 +42,14 @@ void QtServant::signaled2()
                     std::cout << "in thread: " << boost::this_thread::get_id() << std::endl;
                     boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
                     return 42;
-                }// work
-            ,
+                },// work
            // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
            [](boost::asynchronous::expected<int> fu) {
                       std::cout << "in callback: " << boost::this_thread::get_id() << std::endl;
                       std::cout << "task threw exception?: " << std::boolalpha << fu.has_exception() << std::endl;
                       std::cout << "result: " << fu.get() << std::endl;
            }// callback functor.
-    );
+           ,"",0,0);
 }
 void QtServant::signaled3()
 {
@@ -68,12 +66,20 @@ void QtServant::signaled3()
                     std::cout << "In threadpool" << std::endl;
                     std::cout << "in thread: " << boost::this_thread::get_id() << std::endl;
                     safe(42,std::string("hello"));
-                }// work
-            ,
+                },// work
            // ignore
            [](boost::asynchronous::expected<void> ) {
            }// callback functor.
-    );
+           ,"",0,0);
+}
+
+void QtServant::signaled4()
+{
+    // post to self should be same thread
+    post_self([]()
+              {
+                std::cout << "Thread: " << boost::this_thread::get_id() << ", post self" << std::endl;
+              },"",0);
 }
 
 void example_qt_servant(int argc, char *argv[])
@@ -120,3 +126,17 @@ void example_qt_servant3(int argc, char *argv[])
     std::cout << "end example_qt_servant3 \n" << std::endl;
 }
 
+void example_qt_servant4(int argc, char *argv[])
+{
+    std::cout << "example_qt_servant4" << std::endl;
+    {
+        QApplication a(argc, argv);
+        QPushButton w("Push Me");
+        QtServant s;
+        w.show();
+        QObject::connect(&w, SIGNAL(clicked()),&s, SLOT(signaled4()) );
+        std::cout << "main in thread: " << boost::this_thread::get_id() << std::endl;
+        a.exec();
+    }
+    std::cout << "end example_qt_servant4 \n" << std::endl;
+}

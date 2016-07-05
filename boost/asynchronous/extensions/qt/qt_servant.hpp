@@ -256,7 +256,11 @@ public:
         typedef typename T::return_type type;
     };    
     template <class F1, class F2>
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+    void post_callback(F1&& func,F2&& cb_func, std::string const& task_name, std::size_t post_prio, std::size_t cb_prio)
+#else
     void post_callback(F1&& func,F2&& cb_func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
+#endif
     {
         typedef typename ::boost::mpl::eval_if<
             typename boost::asynchronous::detail::has_is_continuation_task<decltype(func())>::type,
@@ -291,8 +295,13 @@ public:
                                         cb_prio);
     }
     template <class F1, class F2>
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+    boost::asynchronous::any_interruptible interruptible_post_callback(F1&& func,F2&& cb_func, std::string const& task_name,
+                                                                    std::size_t post_prio, std::size_t cb_prio)
+#else
     boost::asynchronous::any_interruptible interruptible_post_callback(F1&& func,F2&& cb_func, std::string const& task_name="",
                                                                     std::size_t post_prio=0, std::size_t cb_prio=0)
+#endif
     {
         typedef decltype(func()) f1_result_type;
         unsigned long connect_id = m_next_helper_id;
@@ -319,6 +328,47 @@ public:
                                         post_prio,
                                         cb_prio);
     }
+
+
+    template <class F1>
+    auto post_self(F1&& func,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                   std::string const& task_name, std::size_t post_prio)
+#else
+                   std::string const& task_name="", std::size_t post_prio=0)
+#endif
+     -> boost::future<typename boost::asynchronous::detail::get_return_type_if_possible_continuation<decltype(func())>::type>
+    {
+        typedef typename ::boost::mpl::eval_if<
+            typename boost::asynchronous::detail::has_is_continuation_task<decltype(func())>::type,
+            get_continuation_return<decltype(func())>,
+            ::boost::mpl::identity<decltype(func())>
+        >::type f1_result_type;
+
+        unsigned long connect_id = m_next_helper_id;
+
+        boost::shared_ptr<boost::asynchronous::detail::connect_functor_helper> c =
+                boost::make_shared<boost::asynchronous::detail::connect_functor_helper>
+                (m_next_helper_id,
+                 [this,connect_id](QEvent* e)
+                 {
+                    detail::qt_async_safe_callback_custom_event* ce =
+                            static_cast<detail::qt_async_safe_callback_custom_event* >(e);
+                    ce->m_cb();
+                    this->m_waiting_callbacks.erase(this->m_waiting_callbacks.find(connect_id));
+                 }
+               );
+
+        m_waiting_callbacks[m_next_helper_id] = c;
+        ++m_next_helper_id;
+        // we want to log if possible
+        return boost::asynchronous::post_future(
+                                        boost::asynchronous::detail::dummy_qt_scheduler(),
+                                        boost::asynchronous::detail::qt_safe_callback_helper(c.get(),std::forward<F1>(func)),
+                                        task_name,
+                                        post_prio);
+    }
+
     // make a callback, which posts if not the correct thread, and call directly otherwise
     // in any case, check if this object is still alive
     template<class T>

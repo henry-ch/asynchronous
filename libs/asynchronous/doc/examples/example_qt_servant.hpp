@@ -14,6 +14,7 @@ public slots:
     void signaled();
     void signaled2();
     void signaled3();
+    void signaled4();
 };
 
 #endif // EXAMPLE_QT_SERVANT_HPP
