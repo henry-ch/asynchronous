@@ -53,6 +53,28 @@ void QtServant::signaled2()
            }// callback functor.
     );
 }
+void QtServant::signaled3()
+{
+    // start long tasks in threadpool (first lambda) and callback in our thread
+    auto safe = this->make_safe_callback(
+                [](int i, std::string s)
+                {
+                    std::cout << "Thread: " << boost::this_thread::get_id() << ",safe callback with int:" << i
+                              << " and string: " << s << std::endl;
+                }
+                ,"",0);
+    post_callback(
+           [safe](){
+                    std::cout << "In threadpool" << std::endl;
+                    std::cout << "in thread: " << boost::this_thread::get_id() << std::endl;
+                    safe(42,std::string("hello"));
+                }// work
+            ,
+           // ignore
+           [](boost::asynchronous::expected<void> ) {
+           }// callback functor.
+    );
+}
 
 void example_qt_servant(int argc, char *argv[])
 {
@@ -83,4 +105,18 @@ void example_qt_servant2(int argc, char *argv[])
     std::cout << "end example_qt_servant2 \n" << std::endl;
 }
 
+void example_qt_servant3(int argc, char *argv[])
+{
+    std::cout << "example_qt_servant3" << std::endl;
+    {
+        QApplication a(argc, argv);
+        QPushButton w("Push Me");
+        QtServant s;
+        w.show();
+        QObject::connect(&w, SIGNAL(clicked()),&s, SLOT(signaled3()) );
+        std::cout << "main in thread: " << boost::this_thread::get_id() << std::endl;
+        a.exec();
+    }
+    std::cout << "end example_qt_servant3 \n" << std::endl;
+}
 
