@@ -195,11 +195,19 @@ public:
 #endif
         -> boost::future<typename boost::asynchronous::detail::get_return_type_if_possible_continuation<decltype(func())>::type>
     {
-        // we want to log if possible
-        return boost::asynchronous::post_future(m_scheduler.lock(),
-                                                boost::asynchronous::check_alive_before_exec(std::move(func),m_tracking),
-                                                task_name,
-                                                post_prio);
+        boost::asynchronous::any_shared_scheduler<JOB> sched = m_scheduler.lock();
+        if (sched.is_valid())
+        {
+            // we want to log if possible
+            return boost::asynchronous::post_future(sched,
+                                                    boost::asynchronous::check_alive_before_exec(std::move(func),m_tracking),
+                                                    task_name,
+                                                    post_prio);
+        }
+        // no valid scheduler, must be shutdown
+        boost::promise<typename boost::asynchronous::detail::get_return_type_if_possible_continuation<decltype(func())>::type> p;
+        p.set_exception(boost::asynchronous::task_aborted_exception());
+        return p.get_future();
     }
     template <class F1>
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -210,12 +218,20 @@ public:
     -> std::tuple<boost::future<typename boost::asynchronous::detail::get_return_type_if_possible_continuation<decltype(func())>::type>,
                   boost::asynchronous::any_interruptible >
     {
-        // we want to log if possible
-        return boost::asynchronous::interruptible_post_future(
-                                        m_scheduler.lock(),
-                                        boost::asynchronous::check_alive_before_exec(std::move(func),m_tracking),
-                                        task_name,
-                                        post_prio);
+        boost::asynchronous::any_shared_scheduler<JOB> sched = m_scheduler.lock();
+        if (sched.is_valid())
+        {
+            // we want to log if possible
+            return boost::asynchronous::interruptible_post_future(
+                                            sched,
+                                            boost::asynchronous::check_alive_before_exec(std::move(func),m_tracking),
+                                            task_name,
+                                            post_prio);
+        }
+        // no valid scheduler, must be shutdown
+        boost::promise<typename boost::asynchronous::detail::get_return_type_if_possible_continuation<decltype(func())>::type> p;
+        p.set_exception(boost::asynchronous::task_aborted_exception());
+        return std::make_tuple(p.get_future(),boost::asynchronous::any_interruptible());
     }
     template <class F1>
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
