@@ -324,6 +324,11 @@ namespace detail
                 m_promise.set_exception(boost::copy_exception(e));
                 this->set_failed();
             }
+            catch(...)
+            {
+                m_promise.set_exception(boost::current_exception());
+                this->set_failed();
+            }
         }
         boost::promise<R> m_promise;
         F m_func;
@@ -408,6 +413,11 @@ namespace detail
             catch(std::exception& e)
             {
                 m_promise.set_exception(boost::copy_exception(e));
+                this->set_failed();
+            }
+            catch(...)
+            {
+                m_promise.set_exception(boost::current_exception());
                 this->set_failed();
             }
         }
@@ -1149,8 +1159,33 @@ namespace detail
         {
             // TODO check not empty
             // call task
-            post_helper_continuation<typename Work::result_type,Sched,Func,Work,F1,F2,callback_fct,Callback>()(m_task_name,m_cb_prio,m_scheduler,m_work);
-
+            boost::asynchronous::expected<typename Work::result_type> ex;
+            try
+            {
+                post_helper_continuation<typename Work::result_type,Sched,Func,Work,F1,F2,callback_fct,Callback>()(m_task_name,m_cb_prio,m_scheduler,m_work);
+            }
+            catch(boost::asynchronous::task_aborted_exception& e)
+            {
+                ex.set_exception(boost::copy_exception(e));
+                callback_fct cb(std::move(m_work),std::move(ex));
+                auto shared_scheduler = m_scheduler.lock();
+                if (shared_scheduler.is_valid())
+                {
+                    Callback()(shared_scheduler,std::move(cb),m_task_name,m_cb_prio);
+                }
+                // if no valid scheduler, there is nobody to inform anyway
+            }
+            catch(...)
+            {
+                ex.set_exception(boost::current_exception());this->set_failed();
+                callback_fct cb(std::move(m_work),std::move(ex));
+                auto shared_scheduler = m_scheduler.lock();
+                if (shared_scheduler.is_valid())
+                {
+                    Callback()(shared_scheduler,std::move(cb),m_task_name,m_cb_prio);
+                }
+                // if no valid scheduler, there is nobody to inform anyway
+            }
         }
         Work m_work;
         Sched m_scheduler;
@@ -1258,7 +1293,33 @@ namespace detail
         {
             // TODO check not empty
             // call task
-            post_helper_continuation<typename Work::result_type,Sched,Func,Work,F1,F2,callback_fct,Callback>()(m_task_name,m_cb_prio,m_scheduler,m_work);
+            boost::asynchronous::expected<typename Work::result_type> ex;
+            try
+            {
+                post_helper_continuation<typename Work::result_type,Sched,Func,Work,F1,F2,callback_fct,Callback>()(m_task_name,m_cb_prio,m_scheduler,m_work);
+            }
+            catch(boost::asynchronous::task_aborted_exception& e)
+            {
+                ex.set_exception(boost::copy_exception(e));
+                callback_fct cb(std::move(m_work),std::move(ex));
+                auto shared_scheduler = m_scheduler.lock();
+                if (shared_scheduler.is_valid())
+                {
+                    Callback()(shared_scheduler,std::move(cb),m_task_name,m_cb_prio);
+                }
+                // if no valid scheduler, there is nobody to inform anyway
+            }
+            catch(...)
+            {
+                ex.set_exception(boost::current_exception());this->set_failed();
+                callback_fct cb(std::move(m_work),std::move(ex));
+                auto shared_scheduler = m_scheduler.lock();
+                if (shared_scheduler.is_valid())
+                {
+                    Callback()(shared_scheduler,std::move(cb),m_task_name,m_cb_prio);
+                }
+                // if no valid scheduler, there is nobody to inform anyway
+            }
         }
         Work m_work;
         Sched m_scheduler;
