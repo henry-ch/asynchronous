@@ -16,7 +16,7 @@ namespace boost { namespace asynchronous
 
 // parallel_inclusive/exclusive_scan is a simple, reduced version of parallel_scan
 template <class Iterator, class OutIterator, class T, class Func,class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-boost::asynchronous::detail::callback_continuation<OutIterator,Job>
+boost::asynchronous::detail::callback_continuation<T,Job>
 parallel_inclusive_scan(Iterator beg, Iterator end, OutIterator out, T init,Func f,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                     const std::string& task_name, std::size_t prio)

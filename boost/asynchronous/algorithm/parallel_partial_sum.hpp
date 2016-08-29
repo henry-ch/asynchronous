@@ -17,7 +17,7 @@ namespace boost { namespace asynchronous
 
 // version with iterators
 template <class Iterator, class OutIterator, class Func,class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-boost::asynchronous::detail::callback_continuation<OutIterator,Job>
+boost::asynchronous::detail::callback_continuation<typename std::iterator_traits<Iterator>::value_type,Job>
 parallel_partial_sum(Iterator beg, Iterator end, OutIterator out, Func f,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                     const std::string& task_name, std::size_t prio)

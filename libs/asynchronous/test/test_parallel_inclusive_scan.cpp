@@ -100,14 +100,13 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                                         std::plus<int>(),
                                                                         100);
                     },// work
-           [aPromise,ids,data_copy,data_copy2,this](boost::asynchronous::expected<Iterator> res) mutable{
+           [aPromise,ids,data_copy,data_copy2,this](boost::asynchronous::expected<int> res) mutable{
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
                         auto it = inclusive_scan(data_copy.begin(),data_copy.end(),data_copy2.begin(),0,std::plus<int>());
                         BOOST_CHECK_MESSAGE(m_data2 == data_copy2,"parallel_scan gave a wrong value.");
-                        BOOST_CHECK_MESSAGE(std::distance(data_copy2.begin(),it) == std::distance(m_data2.begin(),res.get()),"parallel_scan gave a wrong return value.");
                         aPromise->set_value();
            }// callback functor.
         );

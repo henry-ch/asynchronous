@@ -16,7 +16,7 @@ namespace boost { namespace asynchronous
 
 // same as parallel_exclusive_scan but apply a transform on input elements first
 template <class Iterator, class OutIterator, class T, class Func, class Transform,class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-boost::asynchronous::detail::callback_continuation<OutIterator,Job>
+boost::asynchronous::detail::callback_continuation<T,Job>
 parallel_transform_exclusive_scan(Iterator beg, Iterator end, OutIterator out, T init,Func f, Transform t,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                     const std::string& task_name, std::size_t prio)
