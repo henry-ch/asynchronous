@@ -267,6 +267,43 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
+    boost::future<long> do_it5()
+    {
+        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant do_it not posted.");
+        // for testing purpose
+        boost::future<long> fu = m_promise->get_future();
+        boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
+        tpids = tp.thread_ids();
+        // start long tasks in threadpool (first lambda) and callback in our thread
+        post_callback(
+                []()
+                {
+                    BOOST_CHECK_MESSAGE(contains_id(tpids.begin(),tpids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
+                    return boost::asynchronous::top_level_callback_continuation<int>(
+                                boost::asynchronous::make_top_level_lambda_continuation<int>(
+                                    [](boost::asynchronous::continuation_result<int>&& task_res)mutable
+                                    {
+                                        try
+                                        {
+                                            task_res.set_value(42);
+                                        }
+                                        catch (std::exception& e)
+                                        {
+                                            task_res.set_exception(boost::copy_exception(e));
+                                        }
+                                    }));
+                 }// work
+               ,
+               // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
+               [this](boost::asynchronous::expected<int> res){
+                            BOOST_CHECK_MESSAGE(!contains_id(tpids.begin(),tpids.end(),boost::this_thread::get_id()),"do_it callback executed in the wrong thread(pool)");
+                            BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
+                            BOOST_CHECK_MESSAGE(res.has_value(),"callback has a blocking future.");
+                            this->on_callback(res.get());
+               }// callback functor.
+        );
+        return fu;
+    }
 private:
 // for testing
 boost::shared_ptr<boost::promise<long> > m_promise;
@@ -284,12 +321,14 @@ public:
     BOOST_ASYNC_FUTURE_MEMBER_1(do_it2)
     BOOST_ASYNC_FUTURE_MEMBER_1(do_it3)
     BOOST_ASYNC_FUTURE_MEMBER_1(do_it4)
+    BOOST_ASYNC_FUTURE_MEMBER_1(do_it5)
 #else
     // caller will get a future
     BOOST_ASYNC_FUTURE_MEMBER_1(do_it)
     BOOST_ASYNC_FUTURE_MEMBER_1(do_it2)
     BOOST_ASYNC_FUTURE_MEMBER_1(do_it3)
     BOOST_ASYNC_FUTURE_MEMBER_1(do_it4)
+    BOOST_ASYNC_FUTURE_MEMBER_1(do_it5)
 #endif
 };
 }
@@ -363,3 +402,19 @@ BOOST_AUTO_TEST_CASE( test_callback_continuation_of_sequence_any_continuation_ta
     }
 }
 
+BOOST_AUTO_TEST_CASE( test_callback_continuation_of_sequence_any_continuation_task_lambda_top_level )
+{
+    main_thread_id = boost::this_thread::get_id();
+    {
+        // a single-threaded world, where Servant will live.
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<>>>();
+        {
+            ServantProxy proxy(scheduler);
+            boost::future<boost::future<long> > fu = proxy.do_it5();
+            boost::future<long> resfu = fu.get();
+            long res = resfu.get();
+            BOOST_CHECK_MESSAGE(res == 42,"test_callback_continuation_of_sequence_any_continuation_task_lambda_top_level has wrong value");
+        }
+    }
+}

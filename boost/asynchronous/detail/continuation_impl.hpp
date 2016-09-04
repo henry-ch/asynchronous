@@ -337,6 +337,9 @@ private:
     std::function<void(boost::asynchronous::expected<void>)> m_done_func;
 };
 
+namespace detail
+{
+
 template <class Func, class ReturnType>
 struct lambda_continuation_wrapper : public boost::asynchronous::continuation_task<ReturnType>
 {
@@ -382,7 +385,7 @@ struct lambda_continuation_wrapper<Func,void> : public boost::asynchronous::cont
 
     Func myFunc;
 };
-
+}
 template <class Func>
 auto make_lambda_continuation_wrapper(Func f,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -390,10 +393,43 @@ auto make_lambda_continuation_wrapper(Func f,
 #else
                                       std::string const& name="")
 #endif
--> lambda_continuation_wrapper<Func,decltype(f())>
+-> boost::asynchronous::detail::lambda_continuation_wrapper<Func,decltype(f())>
 {
-    return lambda_continuation_wrapper<Func,decltype(f())>(std::move(f),name);
+    return boost::asynchronous::detail::lambda_continuation_wrapper<Func,decltype(f())>(std::move(f),name);
 }
+
+// same as before but getting a task_result as argument to make it easier to build a top-level task
+// only to be used for simple case (no recursion possible)
+namespace detail
+{
+template <class Func, class ReturnType>
+struct lambda_top_level_continuation_wrapper : public boost::asynchronous::continuation_task<ReturnType>
+{
+    lambda_top_level_continuation_wrapper(Func f, std::string const& name)
+        : boost::asynchronous::continuation_task<ReturnType>(name)
+        , myFunc(std::move(f))
+    {}
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<ReturnType> task_res = this->this_task_result();
+        myFunc(std::move(task_res));
+    }
+
+    Func myFunc;
+};
+}
+template <class ReturnType,class Func>
+auto make_top_level_lambda_continuation(Func f,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                                      std::string const& name)
+#else
+                                      std::string const& name="")
+#endif
+-> boost::asynchronous::detail::lambda_top_level_continuation_wrapper<Func,ReturnType>
+{
+    return boost::asynchronous::detail::lambda_top_level_continuation_wrapper<Func,ReturnType>(std::move(f),name);
+}
+
 
 namespace detail {
 
