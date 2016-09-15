@@ -95,7 +95,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
-                        auto it = std::partial_sum(data_copy.begin(),data_copy.end(),data_copy2.begin(),std::plus<int>());
+                        std::partial_sum(data_copy.begin(),data_copy.end(),data_copy2.begin(),std::plus<int>());
                         BOOST_CHECK_MESSAGE(m_data2 == data_copy2,"parallel_partial_sum gave a wrong value.");
                         aPromise->set_value();
            }// callback functor.
