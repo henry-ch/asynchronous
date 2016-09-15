@@ -451,6 +451,8 @@ struct continuation
         return boost::future<Return>();
     }
 
+    continuation()=default;
+
     continuation(continuation&& rhs)noexcept
         : m_futures(std::move(rhs.m_futures))
         , m_ready_futures(std::move(rhs.m_ready_futures))
@@ -694,6 +696,8 @@ struct callback_continuation
         m_finished=rhs.m_finished;
         return *this;
     }
+
+    callback_continuation()=default;
 
     template <typename Func, typename... Args>
     callback_continuation(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state,Tuple t, Duration d, Func f,
@@ -1000,6 +1004,8 @@ struct continuation_as_seq
         return boost::future<Return>();
     }
 
+    continuation_as_seq()=default;
+
     continuation_as_seq(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state, Duration d,Seq seq)
     : m_futures(std::move(seq))
     , m_ready_futures(m_futures.size(),false)
@@ -1163,6 +1169,8 @@ struct callback_continuation_as_seq
     {
         return boost::asynchronous::expected<Return>();
     }
+
+    callback_continuation_as_seq()=default;
 
     callback_continuation_as_seq(callback_continuation_as_seq&& rhs)noexcept
         : m_state(std::move(rhs.m_state))
