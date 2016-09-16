@@ -123,7 +123,7 @@ parallel_scan_part1(Iterator beg, Iterator end, T /*init*/,
 
 template <class Func, class Arg0, class Arg1, class Arg2, class Arg3, class Arg4>
 void func_arity_helper(Func& f,
-                       Arg0&& arg0,Arg1&& arg1,Arg2&& arg2,Arg3&& arg3,Arg4&& arg4,
+                       Arg0&& arg0,Arg1&& arg1,Arg2&& arg2,Arg3&& arg3,Arg4&& ,
                        typename boost::enable_if_c<boost::asynchronous::function_traits<Func>::arity == 4>::type* =0)
 {
     f(std::forward<Arg0>(arg0),std::forward<Arg1>(arg1),std::forward<Arg2>(arg2),std::forward<Arg3>(arg3));

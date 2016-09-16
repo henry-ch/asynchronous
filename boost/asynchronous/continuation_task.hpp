@@ -344,13 +344,13 @@ boost::asynchronous::detail::callback_continuation<Return,BOOST_ASYNCHRONOUS_DEF
                 state,boost::asynchronous::detail::make_expected_tuple(t), boost::chrono::milliseconds(0),
                 true,std::forward<FirstTask>(t));
 }
-template <class Return, typename Job, class FirstTask>
-boost::asynchronous::detail::callback_continuation<Return,Job> top_level_callback_continuation_job(FirstTask&& t)
+template <class Return, typename Job, class ... Args>
+boost::asynchronous::detail::callback_continuation<Return,Job> top_level_callback_continuation_job(Args&&... args)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
     return boost::asynchronous::detail::callback_continuation<Return,Job>(
-                state,boost::asynchronous::detail::make_expected_tuple(t), boost::chrono::milliseconds(0),
-                true,std::forward<FirstTask>(t));
+                state,boost::asynchronous::detail::make_expected_tuple(args...), boost::chrono::milliseconds(0),
+                true,std::forward<Args>(args)...);
 }
 }}
 

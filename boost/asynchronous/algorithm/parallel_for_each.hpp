@@ -64,7 +64,7 @@ struct for_each_helper<2,Iterator,Func,void>
     Func operator()(Iterator beg, Iterator end, Func&& func)
     {
         func(beg,end);
-        return func;
+        return std::forward<Func>(func);
     }
 };
 
