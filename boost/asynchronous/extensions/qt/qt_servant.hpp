@@ -270,16 +270,20 @@ public:
 
         unsigned long connect_id = m_next_helper_id;
         boost::shared_ptr<F2> cbptr(boost::make_shared<F2>(std::forward<F2>(cb_func)));
+        boost::weak_ptr<boost::asynchronous::detail::qt_track> tracking (m_tracking);
 
         boost::shared_ptr<boost::asynchronous::detail::connect_functor_helper> c =
                 boost::make_shared<boost::asynchronous::detail::connect_functor_helper>
                 (m_next_helper_id,
-                 [this,connect_id,cbptr](QEvent* e)
+                 [this,connect_id,cbptr,tracking](QEvent* e)
                  {
                     detail::qt_async_custom_event<boost::asynchronous::expected<f1_result_type> >* ce =
                             static_cast<detail::qt_async_custom_event<boost::asynchronous::expected<f1_result_type> >* >(e);
                     (*cbptr)(std::move(ce->m_future));
-                    this->m_waiting_callbacks.erase(this->m_waiting_callbacks.find(connect_id));
+                    if (!tracking.expired())
+                    {
+                        this->m_waiting_callbacks.erase(this->m_waiting_callbacks.find(connect_id));
+                    }
                  }
                );
 
@@ -305,16 +309,21 @@ public:
     {
         typedef decltype(func()) f1_result_type;
         unsigned long connect_id = m_next_helper_id;
+        boost::weak_ptr<boost::asynchronous::detail::qt_track> tracking (m_tracking);
+
         boost::shared_ptr<F2> cbptr(boost::make_shared<F2>(std::forward<F2>(cb_func)));
         boost::shared_ptr<boost::asynchronous::detail::connect_functor_helper> c =
                 boost::make_shared<boost::asynchronous::detail::connect_functor_helper>
                 (m_next_helper_id,
-                 [this,connect_id,cbptr](QEvent* e)
+                 [this,connect_id,cbptr,tracking](QEvent* e)
                  {
                     detail::qt_async_custom_event<boost::asynchronous::expected<f1_result_type> >* ce =
                             static_cast<detail::qt_async_custom_event<boost::asynchronous::expected<f1_result_type> >* >(e);
                     (*cbptr)(std::move(ce->m_future));
-                    this->m_waiting_callbacks.erase(this->m_waiting_callbacks.find(connect_id));
+                    if (!tracking.expired())
+                    {
+                        this->m_waiting_callbacks.erase(this->m_waiting_callbacks.find(connect_id));
+                    }
                  }
                 );
         m_waiting_callbacks[m_next_helper_id] = c;
@@ -346,16 +355,20 @@ public:
         >::type f1_result_type;
 
         unsigned long connect_id = m_next_helper_id;
+        boost::weak_ptr<boost::asynchronous::detail::qt_track> tracking (m_tracking);
 
         boost::shared_ptr<boost::asynchronous::detail::connect_functor_helper> c =
                 boost::make_shared<boost::asynchronous::detail::connect_functor_helper>
                 (m_next_helper_id,
-                 [this,connect_id](QEvent* e)
+                 [this,connect_id,tracking](QEvent* e)
                  {
                     detail::qt_async_safe_callback_custom_event* ce =
                             static_cast<detail::qt_async_safe_callback_custom_event* >(e);
                     ce->m_cb();
-                    this->m_waiting_callbacks.erase(this->m_waiting_callbacks.find(connect_id));
+                    if (!tracking.expired())
+                    {
+                        this->m_waiting_callbacks.erase(this->m_waiting_callbacks.find(connect_id));
+                    }
                  }
                );
 
@@ -414,12 +427,15 @@ private:
         boost::shared_ptr<boost::asynchronous::detail::connect_functor_helper> c =
                 boost::make_shared<boost::asynchronous::detail::connect_functor_helper>
                 (m_next_helper_id,
-                 [this,connect_id](QEvent* e)mutable
+                 [this,connect_id,tracking](QEvent* e)mutable
                  {
                     detail::qt_async_safe_callback_custom_event* ce =
                             static_cast<detail::qt_async_safe_callback_custom_event* >(e);
                     ce->m_cb();
-                    this->m_waiting_callbacks.erase(this->m_waiting_callbacks.find(connect_id));
+                    if (!tracking.expired())
+                    {
+                        this->m_waiting_callbacks.erase(this->m_waiting_callbacks.find(connect_id));
+                    }
                  }
                 );
         m_waiting_callbacks[m_next_helper_id] = c;
@@ -432,7 +448,10 @@ private:
                 // our thread, call if servant alive
                boost::asynchronous::move_bind( boost::asynchronous::check_alive([func_ptr](Args... args){(*func_ptr)(std::move(args)...);},tracking),
                                                std::move(as)...)();
-               this->m_waiting_callbacks.erase(this->m_waiting_callbacks.find(connect_id));
+               if (!tracking.expired())
+               {
+                   this->m_waiting_callbacks.erase(this->m_waiting_callbacks.find(connect_id));
+               }
             }
             else
             {
