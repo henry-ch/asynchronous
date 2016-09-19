@@ -43,7 +43,7 @@ struct for_each_helper
 {
     Func operator()(Iterator beg, Iterator end, Func&& func)
     {
-        return std::for_each(beg,end,func);
+        return std::for_each(beg,end,std::forward<Func>(func));
     }
 };
 template <class Iterator, class Func>
@@ -55,7 +55,7 @@ struct for_each_helper<1,Iterator,Func,typename ::boost::enable_if<std::is_integ
         {   
             func(beg);
         }
-        return func;
+        return std::forward<Func>(func);
     }   
 };
 template <class Iterator, class Func>
@@ -102,7 +102,7 @@ struct parallel_for_each_helper: public boost::asynchronous::continuation_task<F
                                     // get to check that no exception
                                     Func f1 (std::move(std::get<0>(res).get()));
                                     Func f2 (std::move(std::get<1>(res).get()));
-                                    f1.merge(f2);
+                                    f1.merge(std::move(f2));
                                     task_res.set_value(std::move(f1));
                                 }
                                 catch(std::exception& e)
