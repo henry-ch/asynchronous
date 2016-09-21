@@ -387,3 +387,72 @@ BOOST_AUTO_TEST_CASE( test_vector_async_merge)
     // vector is destroyed, check we got one dtor for each ctor
     BOOST_CHECK_MESSAGE(ctor_count.load()==dtor_count.load(),"wrong number of ctors/dtors called.");
 }
+
+BOOST_AUTO_TEST_CASE( test_vector_async_merge_task )
+{
+    {
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<>>>(8);
+
+        // make shared_ptr to avoid requiring C++14 move-capture lambda
+        boost::shared_ptr<boost::asynchronous::vector<some_type>> pv1 =
+                boost::make_shared<boost::asynchronous::vector<some_type>>(scheduler, 100 /* cutoff */, 10000 /* number of elements */);
+        // we have to release scheduler as a scheduler cannot live into its own thread
+        // (inside the pool, it doesn't need any anyway)
+        pv1->release_scheduler();
+        boost::shared_ptr<boost::asynchronous::vector<some_type>> pv2 =
+                boost::make_shared<boost::asynchronous::vector<some_type>>(scheduler, 100 /* cutoff */, 20000 /* number of elements */);
+        // we have to release scheduler as a scheduler cannot live into its own thread
+        // (inside the pool, it doesn't need any anyway)
+        pv2->release_scheduler();
+
+        boost::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
+        [pv1,pv2]()mutable
+        {
+            return boost::asynchronous::async_merge_containers<boost::asynchronous::vector<some_type>>(std::move(*pv1),std::move(*pv2));
+        },
+        "test_vector_async_merge",0);
+        boost::asynchronous::vector<some_type> v (fu.get());
+        // reset scheduler to avoid leak
+        v.set_scheduler(scheduler);
+        BOOST_CHECK_MESSAGE(v.size() == 30000,"vector size should be 30000.");
+    }
+    // vector is destroyed, check we got one dtor for each ctor
+    BOOST_CHECK_MESSAGE(ctor_count.load()==dtor_count.load(),"wrong number of ctors/dtors called.");
+}
+
+BOOST_AUTO_TEST_CASE( test_vector_async_merge_task_vec )
+{
+    {
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<>>>(8);
+
+        // make shared_ptr to avoid requiring C++14 move-capture lambda
+        boost::asynchronous::vector<some_type> pv1 (scheduler, 100 /* cutoff */, 10000 /* number of elements */);
+        // we have to release scheduler as a scheduler cannot live into its own thread
+        // (inside the pool, it doesn't need any anyway)
+        pv1.release_scheduler();
+        boost::asynchronous::vector<some_type> pv2 (scheduler, 100 /* cutoff */, 20000 /* number of elements */);
+        // we have to release scheduler as a scheduler cannot live into its own thread
+        // (inside the pool, it doesn't need any anyway)
+        pv2.release_scheduler();
+        boost::shared_ptr<std::vector<boost::asynchronous::vector<some_type>>> vecs =
+                boost::make_shared<std::vector<boost::asynchronous::vector<some_type>>>();
+        vecs->push_back(std::move(pv1));
+        vecs->push_back(std::move(pv2));
+
+
+        boost::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
+        [vecs]()mutable
+        {
+            return boost::asynchronous::async_merge_containers<std::vector<boost::asynchronous::vector<some_type>>>(std::move(*vecs));
+        },
+        "test_vector_async_merge",0);
+        boost::asynchronous::vector<some_type> v (fu.get());
+        // reset scheduler to avoid leak
+        v.set_scheduler(scheduler);
+        BOOST_CHECK_MESSAGE(v.size() == 30000,"vector size should be 30000.");
+    }
+    // vector is destroyed, check we got one dtor for each ctor
+    BOOST_CHECK_MESSAGE(ctor_count.load()==dtor_count.load(),"wrong number of ctors/dtors called.");
+}

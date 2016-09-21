@@ -14,6 +14,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/asynchronous/continuation_task.hpp>
 #include <boost/asynchronous/algorithm/parallel_placement.hpp>
+#include <boost/asynchronous/algorithm/parallel_move_if_noexcept.hpp>
 
 
 
@@ -22,6 +23,9 @@ namespace boost { namespace asynchronous
 namespace detail
 {
 BOOST_MPL_HAS_XXX_TRAIT_DEF(asynchronous_container)
+}
+namespace detail
+{
 // push_back
 template <class Container, class T>
 struct push_back_task: public boost::asynchronous::continuation_task<Container>
@@ -536,7 +540,7 @@ struct make_asynchronous_range_task: public boost::asynchronous::continuation_ta
     std::string m_task_name;
     std::size_t m_prio;
 };
-//version asynchronous contaimners
+//version asynchronous containers
 template<typename Range, typename Job>
 void make_asynchronous_range_task<Range,Job>::operator()()
 {
@@ -605,7 +609,7 @@ struct make_standard_range_task: public boost::asynchronous::continuation_task<R
 
 }
 
-//version asynchronous contaimners
+//version asynchronous containers
 template <typename Range, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<Range,Job>
 make_asynchronous_range(std::size_t n,long cutoff,
@@ -622,7 +626,7 @@ make_asynchronous_range(std::size_t n,long cutoff,
              (n,cutoff,task_name,prio));
 }
 
-//version for plain old contaimners
+//version for plain old containers
 template <typename Range, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<Range,Job>
 make_asynchronous_range(std::size_t n,long ,
@@ -636,6 +640,180 @@ make_asynchronous_range(std::size_t n,long ,
 {
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
             (boost::asynchronous::detail::make_standard_range_task<Range>(n));
+}
+
+namespace detail
+{
+// merge 2 vectors
+template <class Container,typename Job>
+struct async_merge_task: public boost::asynchronous::continuation_task<Container>
+{
+    async_merge_task(Container c1,Container c2)
+        : boost::asynchronous::continuation_task<Container>("async_merge_task")
+        , m_container1(std::move(c1))
+        , m_container2(std::move(c2))
+    {}
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<Container> task_res = this->this_task_result();
+        try
+        {
+            if (m_container2.size() == 0)
+            {
+                // nothing to do
+                task_res.set_value(std::move(m_container1));
+                return;
+            }
+            else if (m_container1.size() == 0)
+            {
+                // nothing to do
+                task_res.set_value(std::move(m_container2));
+                return;
+            }
+            boost::shared_ptr<Container> c2 = boost::make_shared<Container>(std::move(m_container2));
+            auto s1 = m_container1.size();auto s2 = c2->size();
+            auto name = this->get_name();
+
+            auto cont = boost::asynchronous::async_resize(std::move(m_container1),s1+s2);
+            cont.on_done([task_res,name,c2]
+                           (std::tuple<boost::asynchronous::expected<Container> >&& res)mutable
+            {
+                try
+                {
+                    boost::shared_ptr<Container> c1 = boost::make_shared<Container>(std::move(std::get<0>(res).get()));
+                    using iterator = typename Container::iterator;
+                    auto cont_move = boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
+                                                (c2->begin(),c2->end(),c1->end(),c2->get_cutoff(),
+                                                 name+"_parallel_move_if_noexcept",c2->get_prio());
+                    cont_move.on_done([task_res,c1,c2]
+                                   (std::tuple<boost::asynchronous::expected<void> >&& res_move)mutable
+                    {
+                        try
+                        {
+                            std::get<0>(res_move).get();
+                            task_res.set_value(std::move(*c1));
+                        }
+                        catch(std::exception& e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
+                    });
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
+            });
+        }
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
+    }
+    Container m_container1;
+    Container m_container2;
+};
+}
+template <class Container, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation<Container,Job>
+async_merge_containers(Container c1,Container c2,typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Container>>::type* = 0)
+{
+    return boost::asynchronous::top_level_callback_continuation_job<Container,Job>
+        (boost::asynchronous::detail::async_merge_task<Container,Job>(std::move(c1),std::move(c2)));
+
+}
+
+namespace detail
+{
+// merge n async containers
+template <class Container,typename Job>
+struct async_merge_container_of_containers_task: public boost::asynchronous::continuation_task<typename Container::value_type>
+{
+    async_merge_container_of_containers_task(Container c)
+        : boost::asynchronous::continuation_task<typename Container::value_type>("async_merge_container_of_containers_task")
+        , m_container(std::move(c))
+    {}
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<typename Container::value_type> task_res = this->this_task_result();
+        try
+        {
+            if (m_container.size() == 0)
+            {
+                // nothing to do
+                task_res.set_value(typename Container::value_type());
+                return;
+            }
+            else if (m_container.size() == 1)
+            {
+                // nothing to do
+                task_res.set_value(std::move(m_container[0]));
+                return;
+            }
+            std::size_t s=0;
+            for (auto const& c : m_container)
+            {
+                s += c.size();
+            }
+            auto name = this->get_name();
+            auto cont = boost::asynchronous::async_resize(std::move(m_container[0]),s);
+            boost::shared_ptr<Container> c = boost::make_shared<Container>(std::move(m_container));
+
+            cont.on_done([task_res,name,c]
+                           (std::tuple<boost::asynchronous::expected<typename Container::value_type> >&& res)mutable
+            {
+                try
+                {
+                    boost::shared_ptr<typename Container::value_type> c1 =
+                            boost::make_shared<typename Container::value_type>(std::move(std::get<0>(res).get()));
+                    using iterator = typename Container::value_type::iterator;
+                    std::vector<boost::asynchronous::detail::callback_continuation<void>> subs;
+                    for (auto it = c->begin()+1; it != c->end();++it)
+                    {
+                        subs.push_back(boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
+                                       ((*it).begin(),(*it).end(),c1->end(),c1->get_cutoff(),
+                                        name+"_parallel_move_if_noexcept",c1->get_prio()));
+                    }
+                    boost::asynchronous::create_callback_continuation(
+                         [task_res,c,c1]
+                         (std::vector<boost::asynchronous::expected<void>>&& res_move)mutable
+                    {
+                        try
+                        {
+                            for (auto& e : res_move)
+                            {
+                                e.get();
+                            }
+                            task_res.set_value(std::move(*c1));
+                        }
+                        catch(std::exception& e)
+                        {
+                            task_res.set_exception(boost::copy_exception(e));
+                        }
+                    },
+                    std::move(subs));
+                }
+                catch(std::exception& e)
+                {
+                    task_res.set_exception(boost::copy_exception(e));
+                }
+            });
+        }
+        catch(std::exception& e)
+        {
+            task_res.set_exception(boost::copy_exception(e));
+        }
+    }
+    Container m_container;
+};
+}
+template <class Container, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation<typename Container::value_type,Job>
+async_merge_containers(Container c,typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Container>>::type* = 0)
+{
+    return boost::asynchronous::top_level_callback_continuation_job<typename Container::value_type,Job>
+        (boost::asynchronous::detail::async_merge_container_of_containers_task<Container,Job>(std::move(c)));
+
 }
 
 }}
