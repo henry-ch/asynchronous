@@ -101,7 +101,7 @@ public:
 
     ~threadpool_scheduler()
     {
-        for (size_t i = 0; i< m_thread_ids.size();++i)
+        for (size_t i = 0; i< m_number_of_workers;++i)
         {
             auto fct = m_diagnostics_fct;
             auto diag = m_diagnostics;
@@ -143,7 +143,7 @@ public:
     }
     void set_name(std::string const& name)
     {
-        for (size_t i = 0; i< m_thread_ids.size();++i)
+        for (size_t i = 0; i< m_number_of_workers;++i)
         {
             boost::asynchronous::detail::set_name_task<typename Q::diagnostic_type> ntask(name);
 #ifndef BOOST_NO_RVALUE_REFERENCES
@@ -160,7 +160,7 @@ public:
     }
     void processor_bind(unsigned int p)
     {
-        for (size_t i = 0; i< m_thread_ids.size();++i)
+        for (size_t i = 0; i< m_number_of_workers;++i)
         {
             boost::asynchronous::detail::processor_bind_task task(p+i);
             boost::asynchronous::any_callable job(std::move(task));
