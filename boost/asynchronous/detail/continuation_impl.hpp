@@ -33,6 +33,13 @@ namespace boost { namespace asynchronous {
 BOOST_MPL_HAS_XXX_TRAIT_DEF(state)
 BOOST_MPL_HAS_XXX_TRAIT_DEF(iterator)
 
+// policy telling us how continuations should post. Default is fastest for most tasks(post all but one, execute one directly in continuation)
+enum class continuation_post_policy
+{
+    post_all_but_one,
+    post_all
+};
+
 // what has to be set when a task is ready
 template <class Return>
 struct continuation_result
@@ -647,7 +654,11 @@ if (!boost::type_erasure::is_empty(weak_scheduler))                         \
     }                                                                       \
 }
 
-template <class Return, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB, typename Tuple=std::tuple<boost::asynchronous::expected<Return> > , typename Duration = boost::chrono::milliseconds >
+template <class Return,
+          typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB,
+          boost::asynchronous::continuation_post_policy PostPolicy = boost::asynchronous::continuation_post_policy::post_all_but_one,
+          typename Tuple=std::tuple<boost::asynchronous::expected<Return> > ,
+          typename Duration = boost::chrono::milliseconds >
 struct callback_continuation
 {
     typedef int is_continuation_task;
@@ -665,38 +676,10 @@ struct callback_continuation
         return boost::asynchronous::expected<Return>();
     }
 
-    callback_continuation(callback_continuation&& rhs)noexcept
-        : m_state(std::move(rhs.m_state))
-        , m_timeout(std::move(rhs.m_timeout))
-        , m_start(std::move(rhs.m_start))
-        , m_finished(rhs.m_finished)
-    {
-    }
-    callback_continuation(callback_continuation const& rhs)noexcept
-        : m_state(std::move((const_cast<callback_continuation&>(rhs)).m_state))
-        , m_timeout(std::move((const_cast<callback_continuation&>(rhs)).m_timeout))
-        , m_start(std::move((const_cast<callback_continuation&>(rhs)).m_start))
-        , m_finished(rhs.m_finished)
-    {
-    }
-
-    callback_continuation& operator= (callback_continuation&& rhs)noexcept
-    {
-        std::swap(m_state,rhs.m_state);
-        std::swap(m_timeout,rhs.m_timeout);
-        std::swap(m_start,rhs.m_start);
-        m_finished=rhs.m_finished;
-        return *this;
-    }
-    callback_continuation& operator= (callback_continuation const& rhs)noexcept
-    {
-        std::swap(m_state,(const_cast<callback_continuation&>(rhs)).m_state);
-        std::swap(m_timeout,(const_cast<callback_continuation&>(rhs)).m_timeout);
-        std::swap(m_start,(const_cast<callback_continuation&>(rhs)).m_start);
-        m_finished=rhs.m_finished;
-        return *this;
-    }
-
+    callback_continuation(callback_continuation&& rhs)=default;
+    callback_continuation(callback_continuation const& rhs)=default;
+    callback_continuation& operator= (callback_continuation&& rhs)=default;
+    callback_continuation& operator= (callback_continuation const& rhs)=default;
     callback_continuation()=default;
 
     template <typename Func, typename... Args>
@@ -794,7 +777,7 @@ struct callback_continuation
                             });
             if (!state)
             {
-                if (last_task)
+                if (last_task && PostPolicy != boost::asynchronous::continuation_post_policy::post_all)
                 {
                     // we execute one task ourselves to save one post
                     try
