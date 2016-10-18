@@ -656,7 +656,6 @@ if (!boost::type_erasure::is_empty(weak_scheduler))                         \
 
 template <class Return,
           typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB,
-          boost::asynchronous::continuation_post_policy PostPolicy = boost::asynchronous::continuation_post_policy::post_all_but_one,
           typename Tuple=std::tuple<boost::asynchronous::expected<Return> > ,
           typename Duration = boost::chrono::milliseconds >
 struct callback_continuation
@@ -684,10 +683,12 @@ struct callback_continuation
 
     template <typename Func, typename... Args>
     callback_continuation(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state,Tuple t, Duration d, Func f,
+                          boost::asynchronous::continuation_post_policy post_policy ,
                           Args&&... args)
     : m_state(state)
     , m_timeout(d)
     , m_finished(boost::make_shared<subtask_finished>(std::move(t),!!m_state,(m_timeout.count() != 0)))
+    , m_post_policy(post_policy)
     {
         // remember when we started
         m_start = boost::chrono::high_resolution_clock::now();
@@ -711,10 +712,12 @@ struct callback_continuation
     // version where done functor is set later
     template <typename... Args>
     callback_continuation(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state,Tuple t, Duration d, bool,
+                          boost::asynchronous::continuation_post_policy post_policy ,
                           Args&&... args)
     : m_state(state)
     , m_timeout(d)
     , m_finished(boost::make_shared<subtask_finished>(std::move(t),!!m_state,(m_timeout.count() != 0)))
+    , m_post_policy(post_policy)
     {
         // remember when we started
         m_start = boost::chrono::high_resolution_clock::now();
@@ -736,10 +739,12 @@ struct callback_continuation
     }
     template <typename Func,typename... Args>
     callback_continuation(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state,Tuple t, Duration d,Func f,
+                          boost::asynchronous::continuation_post_policy post_policy ,
                           std::tuple<Args...> args)
     : m_state(state)
     , m_timeout(d)
     , m_finished(boost::make_shared<subtask_finished>(std::move(t),!!m_state,(m_timeout.count() != 0)))
+    , m_post_policy(post_policy)
     {
         // remember when we started
         m_start = boost::chrono::high_resolution_clock::now();
@@ -766,7 +771,8 @@ struct callback_continuation
     {
         template <typename S,typename Interruptibles,typename F>
         static void construct(S& sched,Interruptibles& interruptibles,F& func,
-                              boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state,bool last_task, Task&& t)
+                              boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state,bool last_task,
+                              boost::asynchronous::continuation_post_policy post_policy,Task&& t)
         {
             std::string n(std::move(t.get_name()));
             auto finished = func;
@@ -777,7 +783,7 @@ struct callback_continuation
                             });
             if (!state)
             {
-                if (last_task && PostPolicy != boost::asynchronous::continuation_post_policy::post_all)
+                if (last_task && post_policy != boost::asynchronous::continuation_post_policy::post_all)
                 {
                     // we execute one task ourselves to save one post
                     try
@@ -811,7 +817,8 @@ struct callback_continuation
     struct task_type_selector<I,Task,typename ::boost::enable_if< boost::asynchronous::detail::has_is_callback_continuation_task<Task> >::type>
     {
         template <typename S,typename Interruptibles,typename F>
-        static void construct(S& ,Interruptibles&,F& func, boost::shared_ptr<boost::asynchronous::detail::interrupt_state>,bool, Task&& t)
+        static void construct(S& ,Interruptibles&,F& func, boost::shared_ptr<boost::asynchronous::detail::interrupt_state>,bool,
+                              boost::asynchronous::continuation_post_policy ,Task&& t)
         {
             auto finished = func;
             t.on_done([finished](std::tuple<boost::asynchronous::expected<typename Task::return_type>>&& r)
@@ -825,13 +832,13 @@ struct callback_continuation
     template <int I,typename T,typename Interruptibles,typename Last>
     void continuation_ctor_helper(T& sched, Interruptibles& interruptibles,Last&& l)
     {
-        task_type_selector<I,Last>::construct(sched,interruptibles,m_finished,m_state,true,std::forward<Last>(l));
+        task_type_selector<I,Last>::construct(sched,interruptibles,m_finished,m_state,true,m_post_policy,std::forward<Last>(l));
     }
 
     template <int I,typename T,typename Interruptibles,typename... Tail, typename Front>
     void continuation_ctor_helper(T& sched, Interruptibles& interruptibles,Front&& front,Tail&&... tail)
     {
-        task_type_selector<I,Front>::construct(sched,interruptibles,m_finished,m_state,false,std::forward<Front>(front));
+        task_type_selector<I,Front>::construct(sched,interruptibles,m_finished,m_state,false,m_post_policy,std::forward<Front>(front));
         continuation_ctor_helper<I+1>(sched,interruptibles,std::forward<Tail>(tail)...);
     }
 
@@ -966,6 +973,7 @@ struct callback_continuation
     Duration m_timeout;
     typename boost::chrono::high_resolution_clock::time_point m_start;
     boost::shared_ptr<subtask_finished> m_finished;
+    boost::asynchronous::continuation_post_policy m_post_policy;
 
 };
 
