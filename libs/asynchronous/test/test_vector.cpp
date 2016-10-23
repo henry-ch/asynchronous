@@ -852,6 +852,28 @@ BOOST_AUTO_TEST_CASE( test_vector_resize_std)
     BOOST_CHECK_MESSAGE(ctor_count.load()==dtor_count.load(),"wrong number of ctors/dtors called.");
 }
 
+BOOST_AUTO_TEST_CASE( test_vector_resize_std2)
+{
+    {
+        // test force move
+        boost::asynchronous::vector<some_type,BOOST_ASYNCHRONOUS_DEFAULT_JOB,true> v(10000 );
+        v.resize(10000);
+        BOOST_CHECK_MESSAGE(v.size() == 10000,"vector size should be 10000.");
+
+        v.resize(20000,some_type(42));
+        BOOST_CHECK_MESSAGE(v.size() == 20000,"vector size should be 20000.");
+        BOOST_CHECK_MESSAGE(v[15000].data == 42,"vector[15000] should have value 42.");
+        BOOST_CHECK_MESSAGE(v.capacity() == 20000,"vector capacity should be 20000.");
+
+        v.resize(5000);
+        BOOST_CHECK_MESSAGE(v.size() == 5000,"vector size should be 5000.");
+        BOOST_CHECK_MESSAGE(v.capacity() == 20000,"vector capacity should be 20000.");
+        BOOST_CHECK_MESSAGE(v[4999].data == 0,"vector[4999] should have value 0.");
+    }
+    // vector is destroyed, check we got one dtor for each ctor
+    BOOST_CHECK_MESSAGE(ctor_count.load()==dtor_count.load(),"wrong number of ctors/dtors called.");
+}
+
 BOOST_AUTO_TEST_CASE( test_vector_assignment_operator_to_smaller )
 {
     {

@@ -17,6 +17,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/asynchronous/algorithm/parallel_placement.hpp>
 #include <boost/asynchronous/algorithm/parallel_move_if_noexcept.hpp>
+#include <boost/asynchronous/algorithm/parallel_move.hpp>
 #include <boost/asynchronous/algorithm/parallel_copy.hpp>
 #include <boost/asynchronous/algorithm/parallel_equal.hpp>
 #include <boost/asynchronous/algorithm/parallel_lexicographical_compare.hpp>
@@ -26,8 +27,6 @@
 
 namespace boost { namespace asynchronous
 {
-template<typename T, typename Job, typename Alloc>
-class vector;
 namespace detail
 {
 // helper for destructors, avoids c++14 move lambda
@@ -68,7 +67,7 @@ private:
 };
 }
 
-template<typename T, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB, typename Alloc = std::allocator<T> >
+template<typename T, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB, bool force_move=false,typename Alloc = std::allocator<T> >
 class vector
 {
 public:
@@ -86,7 +85,7 @@ public:
     typedef std::reverse_iterator<iterator>		 reverse_iterator;
     typedef Alloc                       allocator_type;
 
-    typedef boost::asynchronous::vector<T,Job,Alloc> this_type;
+    typedef boost::asynchronous::vector<T,Job,force_move,Alloc> this_type;
     typedef boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>> internal_data_type;
 
     enum { default_capacity = 10 };
@@ -691,7 +690,7 @@ public:
         std::swap(m_size,other.m_size);
         std::swap(m_capacity,other.m_capacity);
     }
-    friend void swap(boost::asynchronous::vector<T, Job, Alloc>& x, boost::asynchronous::vector<T, Job, Alloc>& y)
+    friend void swap(this_type& x, this_type& y)
     {
       x.swap(y);
     }
@@ -891,8 +890,20 @@ public:
                 auto fu = boost::asynchronous::post_future(m_scheduler,
                 [first,last,cur_end,cutoff,task_name,prio]()mutable
                 {
-                    return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
-                            ((iterator)last,(iterator)cur_end,(iterator)first,cutoff,task_name+"_vector_erase_move",prio);
+#if __cpp_if_constexpr >= 201606
+                    if constexpr(force_move)
+#else
+                    if (force_move)
+#endif
+                    {
+                        return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                                ((iterator)last,(iterator)cur_end,(iterator)first,cutoff,task_name+"_vector_erase_move",prio);
+                    }
+                    else
+                    {
+                        return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
+                                ((iterator)last,(iterator)cur_end,(iterator)first,cutoff,task_name+"_vector_erase_move",prio);
+                    }
                 },
                 task_name+"_vector_erase_move_top",prio);
                 // if exception, will be forwarded
@@ -940,8 +951,20 @@ public:
                 auto fu2 = boost::asynchronous::post_future(m_scheduler,
                 [cur_end,last,temp_begin,cutoff,task_name,prio]()mutable
                 {
-                    return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
-                            ((iterator)last,(iterator)cur_end,temp_begin,cutoff,task_name+"_vector_erase_move",prio);
+#if __cpp_if_constexpr >= 201606
+                    if constexpr(force_move)
+#else
+                    if (force_move)
+#endif
+                    {
+                        return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                                ((iterator)last,(iterator)cur_end,temp_begin,cutoff,task_name+"_vector_erase_move",prio);
+                    }
+                    else
+                    {
+                        return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
+                                ((iterator)last,(iterator)cur_end,temp_begin,cutoff,task_name+"_vector_erase_move",prio);
+                    }
                 },
                 task_name+"_vector_erase_move_top",prio);
                 // if exception, will be forwarded
@@ -958,8 +981,20 @@ public:
                 auto fu3 = boost::asynchronous::post_future(m_scheduler,
                 [temp_begin,temp_end,first,cutoff,task_name,prio]()mutable
                 {
-                    return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
-                            (temp_begin,temp_end,(iterator)first,cutoff,task_name+"_vector_erase_move",prio);
+#if __cpp_if_constexpr >= 201606
+                    if constexpr(force_move)
+#else
+                    if (force_move)
+#endif
+                    {
+                        return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                                (temp_begin,temp_end,(iterator)first,cutoff,task_name+"_vector_erase_move",prio);
+                    }
+                    else
+                    {
+                        return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
+                                (temp_begin,temp_end,(iterator)first,cutoff,task_name+"_vector_erase_move",prio);
+                    }
                 },
                 task_name+"_vector_erase_move_top",prio);
                 // if exception, will be forwarded
@@ -1049,8 +1084,20 @@ public:
             auto fu2 = boost::asynchronous::post_future(m_scheduler,
             [cur_end,cur_begin,temp_begin,cutoff,task_name,prio]()mutable
             {
-                return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
+#if __cpp_if_constexpr >= 201606
+                if constexpr(force_move)
+#else
+                if (force_move)
+#endif
+                {
+                    return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                            ((iterator)cur_begin,(iterator)cur_end,temp_begin,cutoff,task_name+"_vector_insert_move",prio);
+                }
+                else
+                {
+                    return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
                         ((iterator)cur_begin,(iterator)cur_end,temp_begin,cutoff,task_name+"_vector_insert_move",prio);
+                }
             },
             task_name+"_vector_insert_move_top",prio);
             // if exception, will be forwarded
@@ -1077,8 +1124,20 @@ public:
             auto fu5 = boost::asynchronous::post_future(m_scheduler,
             [temp_begin,temp_end,beg_move_back,cutoff,task_name,prio]()mutable
             {
-                return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
+#if __cpp_if_constexpr >= 201606
+                if constexpr(force_move)
+#else
+                if (force_move)
+#endif
+                {
+                    return boost::asynchronous::parallel_move<iterator,iterator,Job>
                         (temp_begin,temp_end,(iterator)beg_move_back,cutoff,task_name+"_vector_insert_move_2",prio);
+                }
+                else
+                {
+                    return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
+                        (temp_begin,temp_end,(iterator)beg_move_back,cutoff,task_name+"_vector_insert_move_2",prio);
+                }
             },
             task_name+"_vector_insert_move_2_top",prio);
             // if exception, will be forwarded
@@ -1170,8 +1229,20 @@ public:
             auto fu2 = boost::asynchronous::post_future(m_scheduler,
             [cur_end,cur_begin,temp_begin,cutoff,task_name,prio]()mutable
             {
-                return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
+#if __cpp_if_constexpr >= 201606
+                if constexpr(force_move)
+#else
+                if (force_move)
+#endif
+                {
+                    return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                            ((iterator)cur_begin,(iterator)cur_end,temp_begin,cutoff,task_name+"_vector_insert_move",prio);
+                }
+                else
+                {
+                    return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
                         ((iterator)cur_begin,(iterator)cur_end,temp_begin,cutoff,task_name+"_vector_insert_move",prio);
+                }
             },
             task_name+"_vector_insert_move_top",prio);
             // if exception, will be forwarded
@@ -1227,8 +1298,20 @@ public:
             auto fu5 = boost::asynchronous::post_future(m_scheduler,
             [temp_begin,temp_end,beg_move_back,cutoff,task_name,prio]()mutable
             {
-                return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
-                        (temp_begin,temp_end,(iterator)beg_move_back,cutoff,task_name+"_vector_insert_move_2",prio);
+#if __cpp_if_constexpr >= 201606
+                if constexpr(force_move)
+#else
+                if (force_move)
+#endif
+                {
+                    return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                            (temp_begin,temp_end,(iterator)beg_move_back,cutoff,task_name+"_vector_insert_move_2",prio);
+                }
+                else
+                {
+                    return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
+                            (temp_begin,temp_end,(iterator)beg_move_back,cutoff,task_name+"_vector_insert_move_2",prio);
+                }
             },
             task_name+"_vector_insert_move_2_top",prio);
             // if exception, will be forwarded
@@ -1314,8 +1397,20 @@ public:
             auto fu2 = boost::asynchronous::post_future(m_scheduler,
             [cur_end,cur_begin,temp_begin,cutoff,task_name,prio]()mutable
             {
-                return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
-                        ((iterator)cur_begin,(iterator)cur_end,temp_begin,cutoff,task_name+"_vector_insert_move",prio);
+#if __cpp_if_constexpr >= 201606
+                if constexpr(force_move)
+#else
+                if (force_move)
+#endif
+                {
+                    return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                            ((iterator)cur_begin,(iterator)cur_end,temp_begin,cutoff,task_name+"_vector_insert_move",prio);
+                }
+                else
+                {
+                    return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
+                            ((iterator)cur_begin,(iterator)cur_end,temp_begin,cutoff,task_name+"_vector_insert_move",prio);
+                }
             },
             task_name+"_vector_insert_move_top",prio);
             // if exception, will be forwarded
@@ -1340,8 +1435,20 @@ public:
             auto fu5 = boost::asynchronous::post_future(m_scheduler,
             [temp_begin,temp_end,beg_move_back,cutoff,task_name,prio]()mutable
             {
-                return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
-                        (temp_begin,temp_end,(iterator)beg_move_back,cutoff,task_name+"_vector_insert_move_2",prio);
+#if __cpp_if_constexpr >= 201606
+                if constexpr(force_move)
+#else
+                if (force_move)
+#endif
+                {
+                    return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                            (temp_begin,temp_end,(iterator)beg_move_back,cutoff,task_name+"_vector_insert_move_2",prio);
+                }
+                else
+                {
+                    return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
+                            (temp_begin,temp_end,(iterator)beg_move_back,cutoff,task_name+"_vector_insert_move_2",prio);
+                }
             },
             task_name+"_vector_insert_move_2_top",prio);
             // if exception, will be forwarded
@@ -1426,8 +1533,20 @@ public:
             auto fu2 = boost::asynchronous::post_future(m_scheduler,
             [cur_end,cur_begin,temp_begin,cutoff,task_name,prio]()mutable
             {
+#if __cpp_if_constexpr >= 201606
+                if constexpr(force_move)
+#else
+                if (force_move)
+#endif
+                {
+                    return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                            ((iterator)cur_begin,(iterator)cur_end,temp_begin,cutoff,task_name+"_vector_insert_move",prio);
+                }
+                else
+                {
                 return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
                         ((iterator)cur_begin,(iterator)cur_end,temp_begin,cutoff,task_name+"_vector_insert_move",prio);
+                }
             },
             task_name+"_vector_insert_move_top",prio);
             // if exception, will be forwarded
@@ -1485,8 +1604,20 @@ public:
             auto fu5 = boost::asynchronous::post_future(m_scheduler,
             [temp_begin,temp_end,beg_move_back,cutoff,task_name,prio]()mutable
             {
-                return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
+#if __cpp_if_constexpr >= 201606
+                if constexpr(force_move)
+#else
+                if (force_move)
+#endif
+                {
+                    return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                            (temp_begin,temp_end,(iterator)beg_move_back,cutoff,task_name+"_vector_insert_move_2",prio);
+                }
+                else
+                {
+                    return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
                         (temp_begin,temp_end,(iterator)beg_move_back,cutoff,task_name+"_vector_insert_move_2",prio);
+                }
             },
             task_name+"_vector_insert_move_2_top",prio);
             // if exception, will be forwarded
@@ -1572,8 +1703,20 @@ public:
             auto fu2 = boost::asynchronous::post_future(m_scheduler,
             [cur_end,cur_begin,temp_begin,cutoff,task_name,prio]()mutable
             {
-                return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
-                        ((iterator)cur_begin,(iterator)cur_end,temp_begin,cutoff,task_name+"_vector_insert_move",prio);
+#if __cpp_if_constexpr >= 201606
+                if constexpr(force_move)
+#else
+                if (force_move)
+#endif
+                {
+                    return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                            ((iterator)cur_begin,(iterator)cur_end,temp_begin,cutoff,task_name+"_vector_insert_move",prio);
+                }
+                else
+                {
+                    return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
+                            ((iterator)cur_begin,(iterator)cur_end,temp_begin,cutoff,task_name+"_vector_insert_move",prio);
+                }
             },
             task_name+"_vector_insert_move_top",prio);
             // if exception, will be forwarded
@@ -1631,8 +1774,20 @@ public:
             auto fu5 = boost::asynchronous::post_future(m_scheduler,
             [temp_begin,temp_end,beg_move_back,cutoff,task_name,prio]()mutable
             {
-                return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
-                        (temp_begin,temp_end,(iterator)beg_move_back,cutoff,task_name+"_vector_insert_move_2",prio);
+#if __cpp_if_constexpr >= 201606
+                if constexpr(force_move)
+#else
+                if (force_move)
+#endif
+                {
+                    return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                            (temp_begin,temp_end,(iterator)beg_move_back,cutoff,task_name+"_vector_insert_move_2",prio);
+                }
+                else
+                {
+                    return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
+                            (temp_begin,temp_end,(iterator)beg_move_back,cutoff,task_name+"_vector_insert_move_2",prio);
+                }
             },
             task_name+"_vector_insert_move_2_top",prio);
             // if exception, will be forwarded
@@ -1792,7 +1947,20 @@ private:
             auto fu2 = boost::asynchronous::post_future(m_scheduler,
             [new_data,beg_it,end_it,cutoff,task_name,prio]()mutable
             {
-                return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>(beg_it,end_it,(iterator)(new_data->data()),cutoff,task_name+"_vector_reallocate_move",prio);
+#if __cpp_if_constexpr >= 201606
+                if constexpr(force_move)
+#else
+                if (force_move)
+#endif
+                {
+                    return boost::asynchronous::parallel_move<iterator,iterator,Job>
+                            (beg_it,end_it,(iterator)(new_data->data()),cutoff,task_name+"_vector_reallocate_move",prio);
+                }
+                else
+                {
+                    return boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
+                            (beg_it,end_it,(iterator)(new_data->data()),cutoff,task_name+"_vector_reallocate_move",prio);
+                }
             },
             task_name+"_reallocate_move_top",prio);
             // if exception, will be forwarded
@@ -1866,8 +2034,21 @@ private:
                     }
                     auto new_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>>
                             (size,std::move(raw),cutoff,task_name,prio);
-                    auto cont_m = boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
+                    boost::asynchronous::detail::callback_continuation<void, Job> cont_m;
+#if __cpp_if_constexpr >= 201606
+                    if constexpr(force_move)
+#else
+                    if (force_move)
+#endif
+                    {
+                        cont_m = boost::asynchronous::parallel_move<iterator,iterator,Job>
                                      (beg,end,(iterator)(new_data->data()),cutoff,task_name+"_vector_reallocate_move",prio);
+                    }
+                    else
+                    {
+                        cont_m = boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
+                                     (beg,end,(iterator)(new_data->data()),cutoff,task_name+"_vector_reallocate_move",prio);
+                    }
                     cont_m.on_done([task_res,old_data,new_data,raw,beg,end,size,cutoff,task_name,prio]
                                    (std::tuple<boost::asynchronous::expected<void> >&& mres)mutable
                     {
@@ -1918,13 +2099,87 @@ private:
     };
 
 private:
-    template< class _T, class _Job, class _Alloc >
-    friend bool operator==( const boost::asynchronous::vector<_T,_Job,_Alloc>&,
-                            const boost::asynchronous::vector<_T,_Job,_Alloc>& );
-    template< class _T, class _Job, class _Alloc >
-    friend bool operator<( const boost::asynchronous::vector<_T,_Job,_Alloc>&,
-                           const boost::asynchronous::vector<_T,_Job,_Alloc>& );
+    // comparion operators
+    friend bool operator==( const this_type& lhs,
+                            const this_type& rhs)
+    {
+        if (lhs.size() != rhs.size())
+        {
+            return false;
+        }
+        auto lhs_beg = lhs.begin();
+        auto lhs_end = lhs.end();
+        auto rhs_beg = rhs.begin();
+        auto cutoff = lhs.m_cutoff;
+        auto task_name = lhs.m_task_name;
+        auto prio = lhs.m_prio;
+        if (lhs.m_scheduler.is_valid())
+        {
+            auto fu = boost::asynchronous::post_future(lhs.m_scheduler,
+            [lhs_beg,lhs_end,rhs_beg,cutoff,task_name,prio]()mutable
+            {
+                return boost::asynchronous::parallel_equal<typename this_type::const_iterator,
+                                                           typename this_type::const_iterator,
+                                                           Job>(lhs_beg,lhs_end,rhs_beg,cutoff,task_name+"_vector_equal",prio);
+            },
+            task_name+"_vector_equal_top",prio);
+            return fu.get();
+        }
+        else
+        {
+            return std::equal(lhs_beg,lhs_end,rhs_beg);
+        }
+    }
+    friend bool operator<( const this_type& lhs,
+                           const this_type& rhs)
+    {
+        auto lhs_beg = lhs.begin();
+        auto lhs_end = lhs.end();
+        auto rhs_beg = rhs.begin();
+        auto rhs_end = rhs.end();
+        auto cutoff = lhs.m_cutoff;
+        auto task_name = lhs.m_task_name;
+        auto prio = lhs.m_prio;
 
+        if (lhs.m_scheduler.is_valid())
+        {
+            auto fu = boost::asynchronous::post_future(lhs.m_scheduler,
+            [lhs_beg,lhs_end,rhs_beg,rhs_end,cutoff,task_name,prio]()mutable
+            {
+                return boost::asynchronous::parallel_lexicographical_compare<
+                        typename this_type::const_iterator,
+                        typename this_type::const_iterator,
+                        Job>
+                        (lhs_beg,lhs_end,rhs_beg,rhs_end,cutoff,task_name+"_vector_operator_less",prio);
+            },
+            task_name+"_vector_operator_less_top",prio);
+            return fu.get();
+        }
+        else
+        {
+            return std::lexicographical_compare(lhs_beg,lhs_end,rhs_beg,rhs_end);
+        }
+    }
+    friend bool operator!=( const this_type& lhs,
+                     const this_type& rhs )
+    {
+        return !(lhs == rhs);
+    }
+    friend bool operator<=( const this_type& lhs,
+                     const this_type& rhs )
+    {
+        return (lhs < rhs) || (lhs == rhs);
+    }
+    friend bool operator>=( const this_type& lhs,
+                     const this_type& rhs )
+    {
+        return !(lhs < rhs);
+    }
+    friend bool operator>( const this_type& lhs,
+                    const this_type& rhs )
+    {
+        return (lhs != rhs) && !(lhs < rhs);
+    }
     // only used from "outside" (i.e. not algorithms)
     boost::asynchronous::any_shared_scheduler_proxy<Job> m_scheduler;
     internal_data_type m_data;
@@ -1936,93 +2191,6 @@ private:
     Alloc m_allocator;
 };
 
-// comparion operators
-template< class T, class Job, class Alloc >
-bool operator==( const boost::asynchronous::vector<T,Job,Alloc>& lhs,
-                 const boost::asynchronous::vector<T,Job,Alloc>& rhs )
-{
-    if (lhs.size() != rhs.size())
-    {
-        return false;
-    }
-    auto lhs_beg = lhs.begin();
-    auto lhs_end = lhs.end();
-    auto rhs_beg = rhs.begin();
-    auto cutoff = lhs.m_cutoff;
-    auto task_name = lhs.m_task_name;
-    auto prio = lhs.m_prio;
-    if (lhs.m_scheduler.is_valid())
-    {
-        auto fu = boost::asynchronous::post_future(lhs.m_scheduler,
-        [lhs_beg,lhs_end,rhs_beg,cutoff,task_name,prio]()mutable
-        {
-            return boost::asynchronous::parallel_equal<typename boost::asynchronous::vector<T,Job,Alloc>::const_iterator,
-                                                       typename boost::asynchronous::vector<T,Job,Alloc>::const_iterator,
-                                                       Job>(lhs_beg,lhs_end,rhs_beg,cutoff,task_name+"_vector_equal",prio);
-        },
-        task_name+"_vector_equal_top",prio);
-        return fu.get();
-    }
-    else
-    {
-        return std::equal(lhs_beg,lhs_end,rhs_beg);
-    }
-}
-template< class T, class Job, class Alloc >
-bool operator!=( const boost::asynchronous::vector<T,Job,Alloc>& lhs,
-                 const boost::asynchronous::vector<T,Job,Alloc>& rhs )
-{
-    return !(lhs == rhs);
-}
-template< class T, class Job, class Alloc >
-bool operator<( const boost::asynchronous::vector<T,Job,Alloc>& lhs,
-                const boost::asynchronous::vector<T,Job,Alloc>& rhs )
-{
-    auto lhs_beg = lhs.begin();
-    auto lhs_end = lhs.end();
-    auto rhs_beg = rhs.begin();
-    auto rhs_end = rhs.end();
-    auto cutoff = lhs.m_cutoff;
-    auto task_name = lhs.m_task_name;
-    auto prio = lhs.m_prio;
-
-    if (lhs.m_scheduler.is_valid())
-    {
-        auto fu = boost::asynchronous::post_future(lhs.m_scheduler,
-        [lhs_beg,lhs_end,rhs_beg,rhs_end,cutoff,task_name,prio]()mutable
-        {
-            return boost::asynchronous::parallel_lexicographical_compare<
-                    typename boost::asynchronous::vector<T,Job,Alloc>::const_iterator,
-                    typename boost::asynchronous::vector<T,Job,Alloc>::const_iterator,
-                    Job>
-                    (lhs_beg,lhs_end,rhs_beg,rhs_end,cutoff,task_name+"_vector_operator_less",prio);
-        },
-        task_name+"_vector_operator_less_top",prio);
-        return fu.get();
-    }
-    else
-    {
-        return std::lexicographical_compare(lhs_beg,lhs_end,rhs_beg,rhs_end);
-    }
-}
-template< class T, class Job, class Alloc >
-bool operator<=( const boost::asynchronous::vector<T,Job,Alloc>& lhs,
-                 const boost::asynchronous::vector<T,Job,Alloc>& rhs )
-{
-    return (lhs < rhs) || (lhs == rhs);
-}
-template< class T, class Job, class Alloc >
-bool operator>=( const boost::asynchronous::vector<T,Job,Alloc>& lhs,
-                 const boost::asynchronous::vector<T,Job,Alloc>& rhs )
-{
-    return !(lhs < rhs);
-}
-template< class T, class Job, class Alloc >
-bool operator>( const boost::asynchronous::vector<T,Job,Alloc>& lhs,
-                const boost::asynchronous::vector<T,Job,Alloc>& rhs )
-{
-    return (lhs != rhs) && !(lhs < rhs);
-}
 
 }} // boost::async
 
