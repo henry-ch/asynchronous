@@ -60,7 +60,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     typedef int simple_ctor;
     Servant(boost::asynchronous::any_weak_scheduler<> scheduler, int threads)
         : boost::asynchronous::trackable_servant<>(scheduler,
-                                               // threadpool and a simple threadsafe_list queue
+                                               // threadpool and a simple lockfree_queue
                                                boost::asynchronous::make_shared_scheduler_proxy<
                                                    boost::asynchronous::multiqueue_threadpool_scheduler<
                                                            boost::asynchronous::lockfree_queue<>,

@@ -9,7 +9,6 @@
 // For more information, see http://www.boost.org
 
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
-#include <boost/asynchronous/queue/threadsafe_list.hpp>
 #include <boost/asynchronous/scheduler/threadpool_scheduler.hpp>
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/diagnostics/any_loggable.hpp>

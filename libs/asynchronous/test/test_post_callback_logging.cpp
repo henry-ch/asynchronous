@@ -13,7 +13,6 @@
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
-#include <boost/asynchronous/queue/threadsafe_list.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/scheduler/threadpool_scheduler.hpp>
 #include <boost/asynchronous/trackable_servant.hpp>
@@ -202,7 +201,7 @@ BOOST_AUTO_TEST_CASE( test_void_post_callback_logging )
     servant_dtor=false;
     {
         auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
-                                                                        boost::asynchronous::threadsafe_list<servant_job>>>();
+                                                                        boost::asynchronous::lockfree_queue<servant_job>>>();
         {
             main_thread_id = boost::this_thread::get_id();
             ServantProxy proxy(scheduler);

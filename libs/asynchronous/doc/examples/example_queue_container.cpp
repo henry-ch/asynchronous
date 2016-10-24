@@ -1,7 +1,6 @@
 #include <iostream>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
-#include <boost/asynchronous/queue/threadsafe_list.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/queue/any_queue_container.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
@@ -73,7 +72,7 @@ void example_queue_container()
         auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
                                 boost::asynchronous::single_thread_scheduler<
                                         boost::asynchronous::any_queue_container<>>>
-                        (boost::asynchronous::any_queue_container_config<boost::asynchronous::threadsafe_list<> >(1),
+                        (boost::asynchronous::any_queue_container_config<boost::asynchronous::lockfree_queue<> >(1),
                          boost::asynchronous::any_queue_container_config<boost::asynchronous::lockfree_queue<> >(3)
                          );
         {
