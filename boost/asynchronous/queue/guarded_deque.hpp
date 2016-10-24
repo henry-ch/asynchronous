@@ -45,12 +45,16 @@ public:
     }
     std::vector<std::size_t> get_max_queue_size() const
     {
-        // not implemented
-        return std::vector<std::size_t>();
+        std::vector<std::size_t> res;
+        res.reserve(1);
+        lock_type lock(m_mutex);
+        res.push_back(m_max_size);
+        return res;
     }
     void reset_max_queue_size()
     {
-        // not implemented
+        lock_type lock(m_mutex);
+        m_max_size = 0;
     }
 
     bool is_not_empty() const
@@ -61,6 +65,7 @@ public:
     void push(JOB && j, std::size_t)
     {
         lock_type lock(m_mutex);
+        m_max_size = std::max(m_max_size,m_jobs.size());
         m_jobs.emplace_front(std::forward<JOB>(j));
         lock.unlock();
         m_not_empty.notify_one();
@@ -68,6 +73,7 @@ public:
     void push(JOB && j)
     {
         lock_type lock(m_mutex);
+        m_max_size = std::max(m_max_size,m_jobs.size());
         m_jobs.emplace_front(std::forward<JOB>(j));
         lock.unlock();
         m_not_empty.notify_one();
@@ -76,6 +82,7 @@ public:
     void push(JOB const& j, std::size_t=0)
     {
         lock_type lock(m_mutex);
+        m_max_size = std::max(m_max_size,m_jobs.size());
         m_jobs.push_front(j);
         lock.unlock();
         m_not_empty.notify_one();
@@ -117,6 +124,7 @@ public:
 
 private:
     std::deque<JOB> m_jobs;
+    std::size_t m_max_size=0;
     boost::condition m_not_empty;
     mutex_type m_mutex;
 };
