@@ -45,6 +45,7 @@ public:
     std::vector<std::size_t> get_queue_size() const
     {
         std::vector<std::size_t> res;
+        res.reserve(1);
         res.push_back(Size::size());
         return res;
     }
