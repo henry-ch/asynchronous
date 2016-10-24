@@ -47,7 +47,7 @@ public:
     {
         std::vector<std::size_t> res;
         res.reserve(1);
-        lock_type lock(m_mutex);
+        lock_type lock(const_cast<this_type&>(*this).m_mutex);
         res.push_back(m_max_size);
         return res;
     }
