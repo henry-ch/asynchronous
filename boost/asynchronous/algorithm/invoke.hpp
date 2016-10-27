@@ -121,7 +121,7 @@ private:
 template <class Continuation, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 auto invoke(Continuation c,Func func,
  #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-            const std::string& task_name, std::size_t prio
+            const std::string& task_name, std::size_t prio=0
 #else
             const std::string& task_name = "", std::size_t prio = 0
 #endif

@@ -140,7 +140,7 @@ struct parallel_reduce_helper: public boost::asynchronous::continuation_task<Ret
 template <class Iterator, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 auto parallel_reduce(Iterator beg, Iterator end,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                     const std::string& task_name, std::size_t prio)
+                     const std::string& task_name, std::size_t prio=0)
 #else
                      const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -156,7 +156,7 @@ auto parallel_reduce(Iterator beg, Iterator end,Func func,long cutoff,
 template <class Iterator, class Func, class Func2, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 auto parallel_reduce(Iterator beg, Iterator end,Func func,Func2 func2,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                     const std::string& task_name, std::size_t prio)
+                     const std::string& task_name, std::size_t prio=0)
 #else
                      const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -331,7 +331,7 @@ struct parallel_reduce_range_move_helper<Range,Func,Func2,ReturnType,Job,typenam
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 auto parallel_reduce(Range&& range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                     const std::string& task_name, std::size_t prio)
+                     const std::string& task_name, std::size_t prio=0)
 #else
                      const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -350,7 +350,7 @@ auto parallel_reduce(Range&& range,Func func,long cutoff,
 template <class Range, class Func, class Func2, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 auto parallel_reduce(Range&& range,Func func,Func2 func2,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                     const std::string& task_name, std::size_t prio)
+                     const std::string& task_name, std::size_t prio=0)
 #else
                      const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -430,7 +430,7 @@ struct parallel_reduce_range_helper: public boost::asynchronous::continuation_ta
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 auto parallel_reduce(Range const& range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                     const std::string& task_name, std::size_t prio)
+                     const std::string& task_name, std::size_t prio=0)
 #else
                      const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -445,7 +445,7 @@ auto parallel_reduce(Range const& range,Func func,long cutoff,
 template <class Range, class Func, class Func2, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 auto parallel_reduce(Range const& range,Func func,Func2 func2,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                     const std::string& task_name, std::size_t prio)
+                     const std::string& task_name, std::size_t prio=0)
 #else
                      const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -572,7 +572,7 @@ struct parallel_reduce_continuation_range_helper<Continuation,Func,Func2,ReturnT
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 auto parallel_reduce(Range range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                     const std::string& task_name, std::size_t prio)
+                     const std::string& task_name, std::size_t prio=0)
 #else
                      const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -587,7 +587,7 @@ auto parallel_reduce(Range range,Func func,long cutoff,
 template <class Range, class Func, class Func2, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 auto parallel_reduce(Range range,Func func,Func2 func2,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                    const std::string& task_name, std::size_t prio)
+                    const std::string& task_name, std::size_t prio=0)
 #else
                     const std::string& task_name="", std::size_t prio=0)
 #endif

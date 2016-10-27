@@ -614,7 +614,7 @@ template <typename Range, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<Range,Job>
 make_asynchronous_range(std::size_t n,long cutoff,
  #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-            const std::string& task_name, std::size_t prio,
+            const std::string& task_name, std::size_t prio=0,
             typename boost::enable_if<boost::asynchronous::detail::has_asynchronous_container<Range>>::type* = 0)
  #else
             const std::string& task_name="", std::size_t prio=0,
@@ -631,7 +631,7 @@ template <typename Range, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<Range,Job>
 make_asynchronous_range(std::size_t n,long ,
  #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-            const std::string& , std::size_t ,
+            const std::string& , std::size_t =0,
             typename boost::disable_if<boost::asynchronous::detail::has_asynchronous_container<Range>>::type* = 0)
  #else
             const std::string& ="", std::size_t =0,

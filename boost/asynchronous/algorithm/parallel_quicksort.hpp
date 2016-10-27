@@ -237,7 +237,7 @@ template <class Iterator,class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<void,Job>
 parallel_quicksort(Iterator beg, Iterator end,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-              const uint32_t thread_num,const std::string& task_name, std::size_t prio)
+              const uint32_t thread_num,const std::string& task_name, std::size_t prio=0)
 #else
               const uint32_t thread_num = boost::thread::hardware_concurrency(),const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -252,7 +252,7 @@ template <class Iterator, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<void,Job>
 parallel_quick_spreadsort(Iterator beg, Iterator end,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-              const uint32_t thread_num,const std::string& task_name, std::size_t prio)
+              const uint32_t thread_num,const std::string& task_name, std::size_t prio=0)
 #else
               const uint32_t thread_num = boost::thread::hardware_concurrency(),const std::string& task_name="", std::size_t prio=0)
 #endif

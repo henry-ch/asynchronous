@@ -114,7 +114,7 @@ template <class Iterator,class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<boost::asynchronous::detail::partition_copy_data,Job>
 parallel_partition_copy_part1(Iterator beg, Iterator end, Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                    const std::string& task_name, std::size_t prio)
+                    const std::string& task_name, std::size_t prio=0)
 #else
                     const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -223,7 +223,7 @@ parallel_partition_copy_part2(Iterator beg, Iterator end, OutputIt1 out_true, Ou
                          std::size_t offset_true, std::size_t offset_false, boost::asynchronous::detail::partition_copy_data data,
                          long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                    const std::string& task_name, std::size_t prio)
+                    const std::string& task_name, std::size_t prio=0)
 #else
                     const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -303,7 +303,7 @@ template <class Iterator, class OutputIt1, class OutputIt2,class Func, class Job
 boost::asynchronous::detail::callback_continuation<std::pair<OutputIt1, OutputIt2>,Job>
 parallel_partition_copy(Iterator beg, Iterator end, OutputIt1 out_true, OutputIt2 out_false, Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                    const std::string& task_name, std::size_t prio)
+                    const std::string& task_name, std::size_t prio=0)
 #else
                     const std::string& task_name="", std::size_t prio=0)
 #endif

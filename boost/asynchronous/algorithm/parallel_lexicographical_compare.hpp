@@ -173,7 +173,7 @@ template <class Iterator1,class Iterator2, class Func,
 boost::asynchronous::detail::callback_continuation<bool,Job>
 parallel_lexicographical_compare(Iterator1 beg1, Iterator1 end1,Iterator2 beg2,Iterator2 end2,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-             const std::string& task_name, std::size_t prio)
+             const std::string& task_name, std::size_t prio=0)
 #else
              const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -187,7 +187,7 @@ template <class Iterator1,class Iterator2,
 boost::asynchronous::detail::callback_continuation<bool,Job>
 parallel_lexicographical_compare(Iterator1 beg1, Iterator1 end1,Iterator2 beg2,Iterator2 end2,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-             const std::string& task_name, std::size_t prio)
+             const std::string& task_name, std::size_t prio=0)
 #else
              const std::string& task_name="", std::size_t prio=0)
 #endif

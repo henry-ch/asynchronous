@@ -178,7 +178,7 @@ template <class Iterator, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<bool,Job>
 parallel_is_partitioned(Iterator beg, Iterator end, Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                    const std::string& task_name, std::size_t prio)
+                    const std::string& task_name, std::size_t prio=0)
 #else
                     const std::string& task_name="", std::size_t prio=0)
 #endif

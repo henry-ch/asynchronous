@@ -175,7 +175,7 @@ template <class Iterator1,
           class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<T, Job> parallel_inner_product(Iterator1 beg1, Iterator1 end1, Iterator2 beg2, BinaryOperation op, Reduce red, const Value& value, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                       const std::string& task_name, std::size_t prio)
+                       const std::string& task_name, std::size_t prio=0)
 #else
                        const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -215,7 +215,7 @@ template <class Iterator1,
           class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<T, Job> parallel_inner_product(Iterator1 beg1, Iterator1 end1, Iterator2 beg2, BinaryOperation op, Reduce red, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                       const std::string& task_name, std::size_t prio)
+                       const std::string& task_name, std::size_t prio=0)
 #else
                        const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -478,7 +478,7 @@ typename boost::enable_if_c<boost::has_range_iterator<Range1>::value && boost::h
                             boost::asynchronous::detail::callback_continuation<T, Job>>::type
 parallel_inner_product(Range1 && range1, Range2 && range2, BinaryOperation op, Reduce red, const Value& value, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                       const std::string& task_name, std::size_t prio)
+                       const std::string& task_name, std::size_t prio=0)
 #else
                        const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -527,7 +527,7 @@ typename boost::enable_if_c<boost::has_range_iterator<Range1>::value && boost::h
                             boost::asynchronous::detail::callback_continuation<T, Job>>::type
 parallel_inner_product(Range1 && range1, Range2 && range2, BinaryOperation op, Reduce red, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                       const std::string& task_name, std::size_t prio)
+                       const std::string& task_name, std::size_t prio=0)
 #else
                        const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -724,7 +724,7 @@ typename boost::enable_if_c<boost::asynchronous::detail::has_is_continuation_tas
                             boost::asynchronous::detail::callback_continuation<T, Job>>::type
 parallel_inner_product(Continuation1 && cont1, Continuation2 && cont2, BinaryOperation op, Reduce red, const Value& value, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                       const std::string& task_name, std::size_t prio)
+                       const std::string& task_name, std::size_t prio=0)
 #else
                        const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -765,7 +765,7 @@ typename boost::enable_if_c<boost::asynchronous::detail::has_is_continuation_tas
                             boost::asynchronous::detail::callback_continuation<T, Job>>::type
 parallel_inner_product(Continuation1 && cont1, Continuation2 && cont2, BinaryOperation op, Reduce red, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                       const std::string& task_name, std::size_t prio)
+                       const std::string& task_name, std::size_t prio=0)
 #else
                        const std::string& task_name="", std::size_t prio=0)
 #endif

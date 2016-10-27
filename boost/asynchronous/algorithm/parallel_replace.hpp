@@ -20,7 +20,7 @@ template <class Iterator, class T, class Func, class Job=BOOST_ASYNCHRONOUS_DEFA
 boost::asynchronous::detail::callback_continuation<void,Job>
 parallel_replace_if(Iterator beg,Iterator end,Func func, T const& new_value,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-             const std::string& task_name, std::size_t prio)
+             const std::string& task_name, std::size_t prio=0)
 #else
              const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -39,7 +39,7 @@ template <class Iterator, class T, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<void,Job>
 parallel_replace(Iterator beg,Iterator end,T const& old_value, T const& new_value,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-             const std::string& task_name, std::size_t prio)
+             const std::string& task_name, std::size_t prio=0)
 #else
              const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -58,7 +58,7 @@ template <class Range, class T,class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_
 typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<Range,Job> >::type
 parallel_replace_if(Range&& range, Func func, T const& new_value, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-             const std::string& task_name, std::size_t prio)
+             const std::string& task_name, std::size_t prio=0)
 #else
              const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -76,7 +76,7 @@ template <class Range, class T, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<Range,Job> >::type
 parallel_replace(Range&& range, T const& old_value, T const& new_value, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-             const std::string& task_name, std::size_t prio)
+             const std::string& task_name, std::size_t prio=0)
 #else
              const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -96,7 +96,7 @@ typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<
                           boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_replace_if(Range range, Func func, T const& new_value, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-             const std::string& task_name, std::size_t prio)
+             const std::string& task_name, std::size_t prio=0)
 #else
              const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -115,7 +115,7 @@ typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<
                           boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_replace(Range range, T const& old_value, T const& new_value, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-             const std::string& task_name, std::size_t prio)
+             const std::string& task_name, std::size_t prio=0)
 #else
              const std::string& task_name="", std::size_t prio=0)
 #endif

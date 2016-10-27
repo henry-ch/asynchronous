@@ -106,7 +106,7 @@ template <class Iterator, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<void,Job>
 parallel_sort_inplace(Iterator beg, Iterator end,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-              const std::string& task_name, std::size_t prio)
+              const std::string& task_name, std::size_t prio=0)
 #else
               const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -119,7 +119,7 @@ template <class Iterator, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<void,Job>
 parallel_stable_sort_inplace(Iterator beg, Iterator end,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                     const std::string& task_name, std::size_t prio)
+                     const std::string& task_name, std::size_t prio=0)
 #else
                      const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -133,7 +133,7 @@ template <class Iterator, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<void,Job>
 parallel_spreadsort_inplace(Iterator beg, Iterator end,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-              const std::string& task_name, std::size_t prio)
+              const std::string& task_name, std::size_t prio=0)
 #else
               const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -148,7 +148,7 @@ template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<void,Job> >::type
 parallel_sort_inplace(Range& range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-              const std::string& task_name, std::size_t prio)
+              const std::string& task_name, std::size_t prio=0)
 #else
               const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -160,7 +160,7 @@ template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<void,Job> >::type
 parallel_stable_sort_inplace(Range& range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                     const std::string& task_name, std::size_t prio)
+                     const std::string& task_name, std::size_t prio=0)
 #else
                      const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -174,7 +174,7 @@ template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<void,Job> >::type
 parallel_spreadsort_inplace(Range& range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-              const std::string& task_name, std::size_t prio)
+              const std::string& task_name, std::size_t prio=0)
 #else
               const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -189,7 +189,7 @@ template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::disable_if<boost::asynchronous::detail::is_serializable<Func>,boost::asynchronous::detail::callback_continuation<Range,Job> >::type
 parallel_sort_move_inplace(Range&& range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                   const std::string& task_name, std::size_t prio)
+                   const std::string& task_name, std::size_t prio=0)
 #else
                    const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -206,7 +206,7 @@ template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::disable_if<boost::asynchronous::detail::is_serializable<Func>,boost::asynchronous::detail::callback_continuation<Range,Job> >::type
 parallel_stable_sort_move_inplace(Range&& range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                          const std::string& task_name, std::size_t prio)
+                          const std::string& task_name, std::size_t prio=0)
 #else
                           const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -224,7 +224,7 @@ template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::disable_if<boost::asynchronous::detail::is_serializable<Func>,boost::asynchronous::detail::callback_continuation<Range,Job> >::type
 parallel_spreadsort_move_inplace(Range&& range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                   const std::string& task_name, std::size_t prio)
+                   const std::string& task_name, std::size_t prio=0)
 #else
                    const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -537,7 +537,7 @@ template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_sort_inplace(Range range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-              const std::string& task_name, std::size_t prio)
+              const std::string& task_name, std::size_t prio=0)
 #else
               const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -549,7 +549,7 @@ template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_stable_sort_inplace(Range range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                     const std::string& task_name, std::size_t prio)
+                     const std::string& task_name, std::size_t prio=0)
 #else
                      const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -562,7 +562,7 @@ template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_spreadsort_inplace(Range range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                     const std::string& task_name, std::size_t prio)
+                     const std::string& task_name, std::size_t prio=0)
 #else
                      const std::string& task_name="", std::size_t prio=0)
 #endif

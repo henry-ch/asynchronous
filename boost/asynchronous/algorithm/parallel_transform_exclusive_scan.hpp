@@ -19,7 +19,7 @@ template <class Iterator, class OutIterator, class T, class Func, class Transfor
 boost::asynchronous::detail::callback_continuation<T,Job>
 parallel_transform_exclusive_scan(Iterator beg, Iterator end, OutIterator out, T init,Func f, Transform t,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                    const std::string& task_name, std::size_t prio)
+                    const std::string& task_name, std::size_t prio=0)
 #else
                     const std::string& task_name="", std::size_t prio=0)
 #endif

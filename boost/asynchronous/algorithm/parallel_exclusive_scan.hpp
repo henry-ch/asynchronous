@@ -18,7 +18,7 @@ template <class Iterator, class OutIterator, class T, class Func,class Job=BOOST
 boost::asynchronous::detail::callback_continuation<T,Job>
 parallel_exclusive_scan(Iterator beg, Iterator end, OutIterator out, T init,Func f,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                    const std::string& task_name, std::size_t prio)
+                    const std::string& task_name, std::size_t prio=0)
 #else
                     const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -52,7 +52,7 @@ typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task
                            boost::asynchronous::detail::callback_continuation<std::pair<Range,OutRange>,Job> >::type
 parallel_exclusive_scan(Range&& range,OutRange&& out_range,T init,Func f,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-              const std::string& task_name, std::size_t prio)
+              const std::string& task_name, std::size_t prio=0)
 #else
               const std::string& task_name="", std::size_t prio=0)
 #endif

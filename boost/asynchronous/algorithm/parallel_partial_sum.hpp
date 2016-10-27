@@ -20,7 +20,7 @@ template <class Iterator, class OutIterator, class Func,class Job=BOOST_ASYNCHRO
 boost::asynchronous::detail::callback_continuation<typename std::iterator_traits<Iterator>::value_type,Job>
 parallel_partial_sum(Iterator beg, Iterator end, OutIterator out, Func f,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                    const std::string& task_name, std::size_t prio)
+                    const std::string& task_name, std::size_t prio=0)
 #else
                     const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -35,7 +35,7 @@ typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task
                            boost::asynchronous::detail::callback_continuation<std::pair<Range,OutRange>,Job> >::type
 parallel_partial_sum(Range&& range,OutRange&& out_range,Func f,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-              const std::string& task_name, std::size_t prio)
+              const std::string& task_name, std::size_t prio=0)
 #else
               const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -51,7 +51,7 @@ typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task
                            boost::asynchronous::detail::callback_continuation<Range,Job> >::type
 parallel_partial_sum(Range&& range,Func f,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-              const std::string& task_name, std::size_t prio)
+              const std::string& task_name, std::size_t prio=0)
 #else
               const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -66,7 +66,7 @@ typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<
                           boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_partial_sum(Range range,Func f,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-              const std::string& task_name, std::size_t prio)
+              const std::string& task_name, std::size_t prio=0)
 #else
               const std::string& task_name="", std::size_t prio=0)
 #endif

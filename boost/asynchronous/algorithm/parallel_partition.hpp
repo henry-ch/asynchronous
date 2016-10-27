@@ -381,7 +381,7 @@ template <class Iterator,class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<Iterator,Job>
 parallel_partition(Iterator beg, Iterator end, Func func,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                   const uint32_t thread_num,const std::string& task_name, std::size_t /*prio*/)
+                   const uint32_t thread_num,const std::string& task_name, std::size_t /*prio*/=0)
 #else
                    const uint32_t thread_num = boost::thread::hardware_concurrency(),const std::string& task_name="", std::size_t /*prio*/=0)
 #endif
@@ -448,7 +448,7 @@ struct parallel_partition_range_move_helper:
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 auto parallel_partition(Range&& range,Func func,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                        const uint32_t thread_num,const std::string& task_name, std::size_t prio)
+                        const uint32_t thread_num,const std::string& task_name, std::size_t prio=0)
 #else
                         const uint32_t thread_num = boost::thread::hardware_concurrency(),const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -543,7 +543,7 @@ typename boost::enable_if<
 >::type
 parallel_partition(Range&& range,Func func,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                   const uint32_t thread_num,const std::string& task_name, std::size_t prio)
+                   const uint32_t thread_num,const std::string& task_name, std::size_t prio=0)
 #else
                    const uint32_t thread_num = boost::thread::hardware_concurrency(),const std::string& task_name="", std::size_t prio=0)
 #endif

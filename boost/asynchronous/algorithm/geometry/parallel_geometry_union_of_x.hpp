@@ -133,7 +133,7 @@ template <class Iterator, class Range, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<Range,Job>
 parallel_geometry_union_of_x(Iterator beg, Iterator end,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                    const std::string& task_name, std::size_t prio,
+                    const std::string& task_name, std::size_t prio=0,
 #else
                     const std::string& task_name="", std::size_t prio=0,
 #endif
@@ -236,7 +236,7 @@ typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task
 
 parallel_geometry_union_of_x(Range&& range,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                    const std::string& task_name, std::size_t prio,
+                    const std::string& task_name, std::size_t prio=0,
 #else
                     const std::string& task_name="", std::size_t prio=0,
 #endif
@@ -348,7 +348,7 @@ template <class Range, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_geometry_union_of_x(Range range,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                     const std::string& task_name, std::size_t prio,
+                     const std::string& task_name, std::size_t prio=0,
                      long cutoff=300, long overlay_cutoff=1500, long partition_cutoff=80000)
 #else
                      const std::string& task_name="", std::size_t prio=0,

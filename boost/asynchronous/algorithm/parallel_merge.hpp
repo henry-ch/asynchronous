@@ -121,7 +121,7 @@ template <class Iterator1, class Iterator2, class OutIterator, class Func, class
 boost::asynchronous::detail::callback_continuation<void,Job>
 parallel_merge(Iterator1 beg1, Iterator1 end1, Iterator2 beg2, Iterator2 end2, OutIterator out, Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                    const std::string& task_name, std::size_t prio)
+                    const std::string& task_name, std::size_t prio=0)
 #else
                     const std::string& task_name="", std::size_t prio=0)
 #endif

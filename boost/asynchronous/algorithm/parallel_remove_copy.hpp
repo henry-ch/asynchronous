@@ -19,7 +19,7 @@ template <class Iterator, class Iterator2,class Func, class Job=BOOST_ASYNCHRONO
 boost::asynchronous::detail::callback_continuation<Iterator2,Job>
 parallel_remove_copy_if(Iterator beg, Iterator end, Iterator2 out, Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                    const std::string& task_name, std::size_t prio)
+                    const std::string& task_name, std::size_t prio=0)
 #else
                     const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -38,7 +38,7 @@ template <class Iterator, class Iterator2,class T, class Job=BOOST_ASYNCHRONOUS_
 boost::asynchronous::detail::callback_continuation<Iterator2,Job>
 parallel_remove_copy(Iterator beg, Iterator end, Iterator2 out, T const& value,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                    const std::string& task_name, std::size_t prio)
+                    const std::string& task_name, std::size_t prio=0)
 #else
                     const std::string& task_name="", std::size_t prio=0)
 #endif

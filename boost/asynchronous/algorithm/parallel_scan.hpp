@@ -110,7 +110,7 @@ boost::asynchronous::detail::callback_continuation<boost::asynchronous::detail::
 parallel_scan_part1(Iterator beg, Iterator end, T /*init*/,
                     Reduce r, Combine c,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                    const std::string& task_name, std::size_t prio)
+                    const std::string& task_name, std::size_t prio=0)
 #else
                     const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -227,7 +227,7 @@ parallel_scan_part2(Iterator beg, Iterator end, OutIterator out, T init,
                     Scan s, Combine c, boost::shared_ptr<boost::asynchronous::detail::scan_data<T>> part1_accumulated,
                     boost::asynchronous::detail::scan_data<T>* d, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                    const std::string& task_name, std::size_t prio)
+                    const std::string& task_name, std::size_t prio=0)
 #else
                     const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -319,7 +319,7 @@ parallel_scan(Iterator beg, Iterator end, OutIterator out, T init,
               Reduce r, Combine c, Scan s,
               long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                    const std::string& task_name, std::size_t prio)
+                    const std::string& task_name, std::size_t prio=0)
 #else
                     const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -392,7 +392,7 @@ typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task
                            boost::asynchronous::detail::callback_continuation<std::pair<Range,OutRange>,Job> >::type
 parallel_scan(Range&& range,OutRange&& out_range,T init,Reduce r, Combine c, Scan s,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-              const std::string& task_name, std::size_t prio)
+              const std::string& task_name, std::size_t prio=0)
 #else
               const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -465,7 +465,7 @@ typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task
                            boost::asynchronous::detail::callback_continuation<Range,Job> >::type
 parallel_scan(Range&& range,T init,Reduce r, Combine c, Scan s,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-              const std::string& task_name, std::size_t prio)
+              const std::string& task_name, std::size_t prio=0)
 #else
               const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -558,7 +558,7 @@ typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<
                           boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_scan(Range range,T init,Reduce r, Combine c, Scan s,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-              const std::string& task_name, std::size_t prio)
+              const std::string& task_name, std::size_t prio=0)
 #else
               const std::string& task_name="", std::size_t prio=0)
 #endif

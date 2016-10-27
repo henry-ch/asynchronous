@@ -21,7 +21,7 @@ template <class Iterator, class Iterator2, class T, class Func, class Job=BOOST_
 boost::asynchronous::detail::callback_continuation<Iterator2,Job>
 parallel_replace_copy_if(Iterator beg,Iterator end,Iterator2 beg2, Func func, T const& new_value,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-             const std::string& task_name, std::size_t prio)
+             const std::string& task_name, std::size_t prio=0)
 #else
              const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -102,7 +102,7 @@ template <class Range, class Iterator2, class Func, class T, class Job=BOOST_ASY
 typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<Iterator2,Job> >::type
 parallel_replace_copy_if(Range range,Iterator2 beg2,Func func, T const& new_value, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-             const std::string& task_name, std::size_t prio)
+             const std::string& task_name, std::size_t prio=0)
 #else
              const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -117,7 +117,7 @@ template <class Iterator, class Iterator2, class T, class Job=BOOST_ASYNCHRONOUS
 boost::asynchronous::detail::callback_continuation<Iterator2,Job>
 parallel_replace_copy(Iterator beg,Iterator end,Iterator2 beg2, T const& old_value, T const& new_value,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-             const std::string& task_name, std::size_t prio)
+             const std::string& task_name, std::size_t prio=0)
 #else
              const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -199,7 +199,7 @@ template <class Range, class Iterator2, class T, class Job=BOOST_ASYNCHRONOUS_DE
 typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<Iterator2,Job> >::type
 parallel_replace_copy(Range range,Iterator2 beg2, T const& old_value, T const& new_value, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-             const std::string& task_name, std::size_t prio)
+             const std::string& task_name, std::size_t prio=0)
 #else
              const std::string& task_name="", std::size_t prio=0)
 #endif

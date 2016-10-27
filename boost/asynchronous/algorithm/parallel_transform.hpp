@@ -177,7 +177,7 @@ typename boost::enable_if<boost::asynchronous::detail::has_iterator_category<std
                           boost::asynchronous::detail::callback_continuation<ResultIterator, Job> >::type
 parallel_transform(Iterator begin, Iterator end, ResultIterator result, Func func, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                     const std::string& task_name, std::size_t prio)
+                     const std::string& task_name, std::size_t prio=0)
 #else
                      const std::string& task_name = "", std::size_t prio = 0)
 #endif
@@ -354,7 +354,7 @@ typename boost::disable_if<boost::asynchronous::detail::has_iterator_category<st
                            boost::asynchronous::detail::callback_continuation<ResultIterator, Job> >::type
 parallel_transform(Range & range, ResultIterator result, Func func, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                     const std::string& task_name, std::size_t prio)
+                     const std::string& task_name, std::size_t prio=0)
 #else
                      const std::string& task_name = "", std::size_t prio = 0)
 #endif
@@ -446,7 +446,7 @@ typename boost::disable_if<boost::asynchronous::detail::has_iterator_category<st
                            boost::asynchronous::detail::callback_continuation<ResultIterator, Job> >::type
 parallel_transform(Range1 & range1, Range2 & range2, ResultIterator result, Func func, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                     const std::string& task_name, std::size_t prio)
+                     const std::string& task_name, std::size_t prio=0)
 #else
                      const std::string& task_name = "", std::size_t prio = 0)
 #endif
@@ -546,7 +546,7 @@ template <class ResultIterator, class Func, class Job, class Iterator, class... 
 boost::asynchronous::detail::callback_continuation<ResultIterator, Job>
 parallel_transform(ResultIterator result, Func func, Iterator begin, Iterator end, Iterators... iterators, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                   const std::string& task_name, std::size_t prio)
+                   const std::string& task_name, std::size_t prio=0)
 #else
                    const std::string& task_name = "", std::size_t prio = 0)
 #endif
@@ -560,7 +560,7 @@ template <class ResultIterator, class Func, class Job, class Range, class... Ran
 typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>, boost::asynchronous::detail::callback_continuation<ResultIterator, Job>>::type
 parallel_transform(ResultIterator result, Func func, Range & range, Ranges & ... ranges, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                   const std::string& task_name, std::size_t prio)
+                   const std::string& task_name, std::size_t prio=0)
 #else
                    const std::string& task_name = "", std::size_t prio = 0)
 #endif

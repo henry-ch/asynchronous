@@ -106,7 +106,7 @@ template <class Iterator,class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<boost::asynchronous::detail::copy_if_data,Job>
 parallel_copy_if_part1(Iterator beg, Iterator end, Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                    const std::string& task_name, std::size_t prio)
+                    const std::string& task_name, std::size_t prio=0)
 #else
                     const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -191,7 +191,7 @@ boost::asynchronous::detail::callback_continuation<void,Job>
 parallel_copy_if_part2(Iterator beg, Iterator end, Iterator2 out, Func func, std::size_t offset, boost::asynchronous::detail::copy_if_data data,
                        long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                    const std::string& task_name, std::size_t prio)
+                    const std::string& task_name, std::size_t prio=0)
 #else
                     const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -274,7 +274,7 @@ template <class Iterator, class Iterator2,class Func, class Job=BOOST_ASYNCHRONO
 boost::asynchronous::detail::callback_continuation<Iterator2,Job>
 parallel_copy_if(Iterator beg, Iterator end, Iterator2 out, Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                    const std::string& task_name, std::size_t prio)
+                    const std::string& task_name, std::size_t prio=0)
 #else
                     const std::string& task_name="", std::size_t prio=0)
 #endif

@@ -106,7 +106,7 @@ template <class Iterator1,class Iterator2, class Func, class Job=BOOST_ASYNCHRON
 boost::asynchronous::detail::callback_continuation<Iterator1,Job>
 parallel_find_first_of(Iterator1 beg1, Iterator1 end1,Iterator2 beg2, Iterator2 end2,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-             const std::string& task_name, std::size_t prio)
+             const std::string& task_name, std::size_t prio=0)
 #else
              const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -120,7 +120,7 @@ template <class Iterator1,class Iterator2, class Job=BOOST_ASYNCHRONOUS_DEFAULT_
 boost::asynchronous::detail::callback_continuation<Iterator1,Job>
 parallel_find_first_of(Iterator1 beg1, Iterator1 end1,Iterator2 beg2, Iterator2 end2,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-             const std::string& task_name, std::size_t prio)
+             const std::string& task_name, std::size_t prio=0)
 #else
              const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -200,7 +200,7 @@ template <class Iterator1,class Range, class Func, class Job=BOOST_ASYNCHRONOUS_
 typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<Iterator1,Job> >::type
 parallel_find_first_of(Iterator1 beg1, Iterator1 end1,Range range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-             const std::string& task_name, std::size_t prio)
+             const std::string& task_name, std::size_t prio=0)
 #else
              const std::string& task_name="", std::size_t prio=0)
 #endif

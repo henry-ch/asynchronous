@@ -44,7 +44,7 @@ typename boost::enable_if<boost::mpl::and_<
                           boost::asynchronous::detail::callback_continuation<void, Job>>::type
 parallel_move_if_noexcept(Iterator begin, Iterator end, ResultIterator result, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                     const std::string& task_name, std::size_t prio)
+                     const std::string& task_name, std::size_t prio=0)
 #else
                      const std::string& task_name = "", std::size_t prio = 0)
 #endif
@@ -61,7 +61,7 @@ typename boost::enable_if<boost::mpl::and_<
                           boost::asynchronous::detail::callback_continuation<void, Job>>::type
 parallel_move_if_noexcept(Iterator begin, Iterator end, ResultIterator result, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                     const std::string& task_name, std::size_t prio)
+                     const std::string& task_name, std::size_t prio=0)
 #else
                      const std::string& task_name = "", std::size_t prio = 0)
 #endif

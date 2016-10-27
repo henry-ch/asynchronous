@@ -89,7 +89,7 @@ template <typename Iterator, typename T, typename Job=BOOST_ASYNCHRONOUS_DEFAULT
 boost::asynchronous::detail::callback_continuation<void, Job>
 parallel_iota(Iterator begin, Iterator end, T const& value, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-              const std::string& task_name, std::size_t prio)
+              const std::string& task_name, std::size_t prio=0)
 #else
               const std::string& task_name="", std::size_t prio=0)
 #endif
@@ -166,7 +166,7 @@ template <typename Range, typename T, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JO
 typename boost::enable_if<boost::has_range_iterator<Range>, boost::asynchronous::detail::callback_continuation<Range, Job>>::type
 parallel_iota(Range && range, T const& value, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-              const std::string& task_name, std::size_t prio)
+              const std::string& task_name, std::size_t prio=0)
 #else
               const std::string& task_name="", std::size_t prio=0)
 #endif
