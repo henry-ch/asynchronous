@@ -291,10 +291,10 @@ public:
         }
     }
     vector( vector&& other )
-        : m_scheduler(std::forward<boost::asynchronous::any_shared_scheduler_proxy<Job>>(other.m_scheduler))
-        , m_data(std::forward<internal_data_type>(other.m_data))
+        : m_scheduler(std::move(other.m_scheduler))
+        , m_data(std::move(other.m_data))
         , m_cutoff(other.m_cutoff)
-        , m_task_name(std::forward<std::string>(other.m_task_name))
+        , m_task_name(std::move(other.m_task_name))
         , m_prio(other.m_prio)
         , m_size(other.m_size)
         , m_capacity(other.m_capacity)
