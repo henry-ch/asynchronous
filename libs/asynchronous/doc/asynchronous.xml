@@ -7583,6 +7583,430 @@ class asio_scheduler;</programlisting>
                     </tgroup>
                 </table>
             </sect1>
+            <sect1>
+                <title>parallel_scan</title>
+                <para><emphasis role="underline">Test</emphasis>:
+                    libs/asynchonous/test/perf_scan.cpp. </para>
+                <para><emphasis role="underline">Test</emphasis> processor Core i7-5960X / Xeon Phi
+                    3120A. </para>
+                <para><emphasis role="underline">Compiler</emphasis>: g++ 6.1, -O3, -std=c++14, link
+                    with libtbbmalloc_proxy.</para>
+                <para>The test will exercise 10 times a parallel_scan on vector of 1000000
+                    elements.</para>
+                <para>
+                    <table frame="all">
+                        <title>Performance of parallel_scan vs serial scan on a i7 / Xeon Phi
+                            Knight's Corner</title>
+                        <tgroup cols="4">
+                            <colspec colname="c1" colnum="1" colwidth="1.42*"/>
+                            <colspec colname="c2" colnum="2" colwidth="1.0*"/>
+                            <colspec colname="newCol3" colnum="3" colwidth="1.15*"/>
+                            <colspec colname="newCol4" colnum="4" colwidth="1.15*"/>
+                            <thead>
+                                <row>
+                                    <entry>Member</entry>
+                                    <entry>parallel_scan</entry>
+                                    <entry>sequential scan</entry>
+                                    <entry>speedup parallel / serial</entry>
+                                </row>
+                            </thead>
+                            <tbody>
+                                <row>
+                                    <entry>i7-5960X (8 Cores / 16 Threads)</entry>
+                                    <entry>204 ms</entry>
+                                    <entry>812 ms</entry>
+                                    <entry>4</entry>
+                                </row>
+                                <row>
+                                    <entry>i7-5960X (8 Cores / 8 Threads)</entry>
+                                    <entry>305 ms</entry>
+                                    <entry>887 ms</entry>
+                                    <entry>2.9</entry>
+                                </row>
+                                <row>
+                                    <entry>Xeon Phi (57 Cores /228 Threads)</entry>
+                                    <entry>74 ms</entry>
+                                    <entry>423 ms</entry>
+                                    <entry>57</entry>
+                                </row>
+                                <row>
+                                    <entry>Xeon Phi (57 Cores /114 Threads)</entry>
+                                    <entry>143 ms</entry>
+                                    <entry>354 ms</entry>
+                                    <entry>25</entry>
+                                </row>
+                                <row>
+                                    <entry>Xeon Phi (57 Cores /10 Threads)</entry>
+                                    <entry>373 ms</entry>
+                                    <entry>350 ms</entry>
+                                    <entry>9.4</entry>
+                                </row>
+                            </tbody>
+                        </tgroup>
+                    </table>                    
+                </para>
+            </sect1>
+            <sect1>
+                <title>parallel_stable_partition</title>
+                <para><emphasis role="underline">Test</emphasis>:
+                    libs/asynchonous/test/perf_scan.cpp. </para>
+                <para><emphasis role="underline">Test</emphasis> processor Core i7-5960X / Xeon Phi
+                    3120A. </para>
+                <para><emphasis role="underline">Compiler</emphasis>: g++ 6.1, -O3, -std=c++11, link
+                    with libtbbmalloc_proxy.</para>
+                <para>The test will exercise a parallel_stable_partition on vector of 100000000
+                    floats. As comparison, std::partition will be used.</para>
+                <para>
+                    <table frame="all">
+                        <title>Partitioning 100000000 floats on Core i7-5960X 8 Cores / 8 Threads
+                            (16 Threads bring no added value)</title>
+                        <tgroup cols="4">
+                            <colspec colname="c1" colnum="1" colwidth="3.06*"/>
+                            <colspec colname="c2" colnum="2" colwidth="1.26*"/>
+                            <colspec colname="newCol3" colnum="3" colwidth="1.0*"/>
+                            <colspec colname="newCol6" colnum="4" colwidth="2.66*"/>
+                            <thead>
+                                <row>
+                                    <entry>Test</entry>
+                                    <entry>parallel</entry>
+                                    <entry>std::partition</entry>
+                                    <entry>speedup parallel / serial</entry>
+                                </row>
+                            </thead>
+                            <tbody>
+                                <row>
+                                    <entry>test_random_elements_many_repeated</entry>
+                                    <entry>187 ms</entry>
+                                    <entry>720 ms</entry>
+                                    <entry>3.87</entry>
+                                </row>
+                                <row>
+                                    <entry>test_random_elements_few_repeated</entry>
+                                    <entry>171 ms</entry>
+                                    <entry>1113 ms</entry>
+                                    <entry>6.5</entry>
+                                </row>
+                                <row>
+                                    <entry>test_random_elements_quite_repeated</entry>
+                                    <entry>172 ms</entry>
+                                    <entry>555 ms</entry>
+                                    <entry>3.22</entry>
+                                </row>
+                                <row>
+                                    <entry>test_sorted_elements</entry>
+                                    <entry>176 ms</entry>
+                                    <entry>1139 ms</entry>
+                                    <entry>6.5</entry>
+                                </row>
+                                <row>
+                                    <entry>test_reversed_sorted_elements</entry>
+                                    <entry>180 ms</entry>
+                                    <entry>1125 ms</entry>
+                                    <entry>6.25</entry>
+                                </row>
+                                <row>
+                                    <entry>test_equal_elements</entry>
+                                    <entry>168 ms</entry>
+                                    <entry>1121 ms</entry>
+                                    <entry>6.7</entry>
+                                </row>
+                            </tbody>
+                        </tgroup>
+                    </table>
+                    <table frame="all">
+                        <title>Partitioning 100000000 floats on Core i7-5960X 4 Cores / 4
+                            Threads</title>
+                        <tgroup cols="4">
+                            <colspec colname="c1" colnum="1" colwidth="3.06*"/>
+                            <colspec colname="c2" colnum="2" colwidth="1.26*"/>
+                            <colspec colname="newCol3" colnum="3" colwidth="1.0*"/>
+                            <colspec colname="newCol6" colnum="4" colwidth="2.66*"/>
+                            <thead>
+                                <row>
+                                    <entry>Test</entry>
+                                    <entry>parallel</entry>
+                                    <entry>std::partition</entry>
+                                    <entry>speedup parallel / serial</entry>
+                                </row>
+                            </thead>
+                            <tbody>
+                                <row>
+                                    <entry>test_random_elements_many_repeated</entry>
+                                    <entry>296 ms</entry>
+                                    <entry>720 ms</entry>
+                                    <entry>2.43</entry>
+                                </row>
+                                <row>
+                                    <entry>test_random_elements_few_repeated</entry>
+                                    <entry>301 ms</entry>
+                                    <entry>1113 ms</entry>
+                                    <entry>3.7</entry>
+                                </row>
+                                <row>
+                                    <entry>test_random_elements_quite_repeated</entry>
+                                    <entry>294 ms</entry>
+                                    <entry>555 ms</entry>
+                                    <entry>1.9</entry>
+                                </row>
+                                <row>
+                                    <entry>test_sorted_elements</entry>
+                                    <entry>287 ms</entry>
+                                    <entry>1139 ms</entry>
+                                    <entry>4</entry>
+                                </row>
+                                <row>
+                                    <entry>test_reversed_sorted_elements</entry>
+                                    <entry>288 ms</entry>
+                                    <entry>1125 ms</entry>
+                                    <entry>3.9</entry>
+                                </row>
+                                <row>
+                                    <entry>test_equal_elements</entry>
+                                    <entry>286 ms</entry>
+                                    <entry>1121 ms</entry>
+                                    <entry>3.9</entry>
+                                </row>
+                            </tbody>
+                        </tgroup>
+                    </table>
+                    <table frame="all">
+                        <title>Partitioning 100000000 floats on Xeon Phi 3120A 57 Cores / 228
+                            Threads</title>
+                        <tgroup cols="4">
+                            <colspec colname="c1" colnum="1" colwidth="3.06*"/>
+                            <colspec colname="c2" colnum="2" colwidth="1.26*"/>
+                            <colspec colname="newCol3" colnum="3" colwidth="1.0*"/>
+                            <colspec colname="newCol6" colnum="4" colwidth="2.66*"/>
+                            <thead>
+                                <row>
+                                    <entry>Test</entry>
+                                    <entry>parallel</entry>
+                                    <entry>std::partition</entry>
+                                    <entry>speedup parallel / serial</entry>
+                                </row>
+                            </thead>
+                            <tbody>
+                                <row>
+                                    <entry>test_random_elements_many_repeated</entry>
+                                    <entry>88 ms</entry>
+                                    <entry>15944 ms</entry>
+                                    <entry>181</entry>
+                                </row>
+                                <row>
+                                    <entry>test_random_elements_few_repeated</entry>
+                                    <entry>80 ms</entry>
+                                    <entry>27186 ms</entry>
+                                    <entry>339</entry>
+                                </row>
+                                <row>
+                                    <entry>test_random_elements_quite_repeated</entry>
+                                    <entry>89 ms</entry>
+                                    <entry>16067 ms</entry>
+                                    <entry>180</entry>
+                                </row>
+                                <row>
+                                    <entry>test_sorted_elements</entry>
+                                    <entry>77 ms</entry>
+                                    <entry>26830 ms</entry>
+                                    <entry>348</entry>
+                                </row>
+                                <row>
+                                    <entry>test_reversed_sorted_elements</entry>
+                                    <entry>73 ms</entry>
+                                    <entry>27367 ms</entry>
+                                    <entry>374</entry>
+                                </row>
+                                <row>
+                                    <entry>test_equal_elements</entry>
+                                    <entry>82 ms</entry>
+                                    <entry>27464 ms</entry>
+                                    <entry>334</entry>
+                                </row>
+                            </tbody>
+                        </tgroup>
+                    </table>   
+                    <table frame="all">
+                        <title>Partitioning 100000000 floats on Xeon Phi 3120A 57 Cores / 114
+                            Threads</title>
+                        <tgroup cols="4">
+                            <colspec colname="c1" colnum="1" colwidth="3.06*"/>
+                            <colspec colname="c2" colnum="2" colwidth="1.26*"/>
+                            <colspec colname="newCol3" colnum="3" colwidth="1.0*"/>
+                            <colspec colname="newCol6" colnum="4" colwidth="2.66*"/>
+                            <thead>
+                                <row>
+                                    <entry>Test</entry>
+                                    <entry>parallel</entry>
+                                    <entry>std::partition</entry>
+                                    <entry>speedup parallel / serial</entry>
+                                </row>
+                            </thead>
+                            <tbody>
+                                <row>
+                                    <entry>test_random_elements_many_repeated</entry>
+                                    <entry>152 ms</entry>
+                                    <entry>15944 ms</entry>
+                                    <entry>104</entry>
+                                </row>
+                                <row>
+                                    <entry>test_random_elements_few_repeated</entry>
+                                    <entry>129 ms</entry>
+                                    <entry>27186 ms</entry>
+                                    <entry>210</entry>
+                                </row>
+                                <row>
+                                    <entry>test_random_elements_quite_repeated</entry>
+                                    <entry>153 ms</entry>
+                                    <entry>16067 ms</entry>
+                                    <entry>105</entry>
+                                </row>
+                                <row>
+                                    <entry>test_sorted_elements</entry>
+                                    <entry>104 ms</entry>
+                                    <entry>26830 ms</entry>
+                                    <entry>258</entry>
+                                </row>
+                                <row>
+                                    <entry>test_reversed_sorted_elements</entry>
+                                    <entry>110 ms</entry>
+                                    <entry>27367 ms</entry>
+                                    <entry>249</entry>
+                                </row>
+                                <row>
+                                    <entry>test_equal_elements</entry>
+                                    <entry>114 ms</entry>
+                                    <entry>27464 ms</entry>
+                                    <entry>241</entry>
+                                </row>
+                            </tbody>
+                        </tgroup>
+                    </table>    
+                    <table frame="all">
+                        <title>Partitioning 100000000 floats on Xeon Phi 3120A 57 Cores / 10
+                            Threads</title>
+                        <tgroup cols="4">
+                            <colspec colname="c1" colnum="1" colwidth="3.06*"/>
+                            <colspec colname="c2" colnum="2" colwidth="1.26*"/>
+                            <colspec colname="newCol3" colnum="3" colwidth="1.0*"/>
+                            <colspec colname="newCol6" colnum="4" colwidth="2.66*"/>
+                            <thead>
+                                <row>
+                                    <entry>Test</entry>
+                                    <entry>parallel</entry>
+                                    <entry>std::partition</entry>
+                                    <entry>speedup parallel / serial</entry>
+                                </row>
+                            </thead>
+                            <tbody>
+                                <row>
+                                    <entry>test_random_elements_many_repeated</entry>
+                                    <entry>1131 ms</entry>
+                                    <entry>15944 ms</entry>
+                                    <entry>14</entry>
+                                </row>
+                                <row>
+                                    <entry>test_random_elements_few_repeated</entry>
+                                    <entry>816 ms</entry>
+                                    <entry>27186 ms</entry>
+                                    <entry>33</entry>
+                                </row>
+                                <row>
+                                    <entry>test_random_elements_quite_repeated</entry>
+                                    <entry>1212 ms</entry>
+                                    <entry>16067 ms</entry>
+                                    <entry>13</entry>
+                                </row>
+                                <row>
+                                    <entry>test_sorted_elements</entry>
+                                    <entry>755 ms</entry>
+                                    <entry>26830 ms</entry>
+                                    <entry>35</entry>
+                                </row>
+                                <row>
+                                    <entry>test_reversed_sorted_elements</entry>
+                                    <entry>739 ms</entry>
+                                    <entry>27367 ms</entry>
+                                    <entry>37</entry>
+                                </row>
+                                <row>
+                                    <entry>test_equal_elements</entry>
+                                    <entry>798 ms</entry>
+                                    <entry>27464 ms</entry>
+                                    <entry>34</entry>
+                                </row>
+                            </tbody>
+                        </tgroup>
+                    </table>                        
+                </para>
+                <para>The Xeon Phi speedups are quie surprising. The implementation of
+                    std::partition seems inefficient on this platform.</para>
+            </sect1>
+            <sect1>
+                <title>parallel_for</title>
+                <para><emphasis role="underline">Test</emphasis>:
+                    libs/asynchonous/test/parallel_for.cpp. </para>
+                <para><emphasis role="underline">Test</emphasis> processor Core i7-5960X / Xeon Phi
+                    3120A. </para>
+                <para><emphasis role="underline">Compiler</emphasis>: g++ 6.1, -O3, -std=c++14, link
+                    with libtbbmalloc_proxy.</para>
+                <para>The test will exercise 10 times a parallel_for with a dummy operation on a
+                    vector of 100000000 elements.</para>
+                <para>
+                    <table frame="all">
+                        <title>Performance of parallel_for on a i7 / Xeon Phi Knight's
+                            Corner</title>
+                        <tgroup cols="3">
+                            <colspec colname="c1" colnum="1" colwidth="4.18*"/>
+                            <colspec colname="c2" colnum="2" colwidth="1.0*"/>
+                            <colspec colname="newCol3" colnum="3" colwidth="2.56*"/>
+                            <thead>
+                                <row>
+                                    <entry>Member</entry>
+                                    <entry>parallel_for</entry>
+                                    <entry>speedup parallel / serial</entry>
+                                </row>
+                            </thead>
+                            <tbody>
+                                <row>
+                                    <entry>i7-5960X (8 Cores / 16 Threads)</entry>
+                                    <entry>83 ms</entry>
+                                    <entry>5.9</entry>
+                                </row>
+                                <row>
+                                    <entry>i7-5960X (8 Cores / 8 Threads)</entry>
+                                    <entry>76 ms</entry>
+                                    <entry>6.4</entry>
+                                </row>
+                                <row>
+                                    <entry>i7-5960X (8 Cores / 4 Threads)</entry>
+                                    <entry>136 ms</entry>
+                                    <entry>3.6</entry>
+                                </row>
+                                <row>
+                                    <entry>i7-5960X (8 Cores / 1 Threads)</entry>
+                                    <entry>491 ms</entry>
+                                    <entry> -</entry>
+                                </row>
+                                <row>
+                                    <entry>Xeon Phi (57 Cores /228 Threads)</entry>
+                                    <entry>51 ms</entry>
+                                    <entry>42</entry>
+                                </row>
+                                <row>
+                                    <entry>Xeon Phi (57 Cores /114 Threads)</entry>
+                                    <entry>84 ms</entry>
+                                    <entry>25</entry>
+                                </row>
+                                <row>
+                                    <entry>Xeon Phi (57 Cores /10 Threads)</entry>
+                                    <entry>2124 ms</entry>
+                                    <entry> -</entry>
+                                </row>
+                            </tbody>
+                        </tgroup>
+                    </table>                    
+                </para>
+            </sect1>
         </chapter>
         <chapter>
             <title>Compiler, linker, settings</title>
