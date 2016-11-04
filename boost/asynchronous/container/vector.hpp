@@ -300,6 +300,8 @@ public:
         , m_capacity(other.m_capacity)
         , m_allocator(other.m_allocator)
     {
+        other.m_data.reset();
+        other.m_size = 0;
     }
     vector( vector const& other )
         : m_scheduler(other.m_scheduler)
