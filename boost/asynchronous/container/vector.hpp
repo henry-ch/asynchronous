@@ -55,10 +55,17 @@ struct move_only :  public boost::asynchronous::continuation_task<void>
     void operator()()
     {
         boost::asynchronous::continuation_result<void> task_res = this->this_task_result();
-        m_data->clear([task_res]()mutable
-            {
-                task_res.set_value();
-            });
+        if (!!m_data)
+        {
+            m_data->clear([task_res]()mutable
+                {
+                    task_res.set_value();
+                });
+        }
+        else
+        {
+            task_res.set_value();
+        }
     }
 
 private:
