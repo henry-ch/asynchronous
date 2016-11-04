@@ -7196,7 +7196,8 @@ class asio_scheduler;</programlisting>
                 <title>asynchronous::vector</title>
                 <para><emphasis role="underline">Test</emphasis>:
                     libs/asynchonous/test/perf_vector.cpp. </para>
-                <para><emphasis role="underline">Test</emphasis> processor Core i7-5960X. </para>
+                <para><emphasis role="underline">Test</emphasis> processor Core i7-5960X / Xeon Phi
+                    3120A. </para>
                 <para><emphasis role="underline">Compiler</emphasis>: g++ 6.1, -O3, -std=c++14, link
                     with libtbbmalloc_proxy.</para>
                 <para>The test uses a vector of 10000000 elements, each element containing a
@@ -7296,6 +7297,56 @@ class asio_scheduler;</programlisting>
                                     <entry>341ms</entry>
                                     <entry>178ms</entry>
                                     <entry>1.92</entry>
+                                </row>
+                            </tbody>
+                        </tgroup>
+                    </table>
+                    <table frame="all">
+                        <title>Performance of asynchronous::vector members Xeon Phi 3120A 57 Cores /
+                            228 Threads</title>
+                        <tgroup cols="4">
+                            <colspec colname="c1" colnum="1" colwidth="1.42*"/>
+                            <colspec colname="c2" colnum="2" colwidth="1.0*"/>
+                            <colspec colname="newCol3" colnum="3" colwidth="1.15*"/>
+                            <colspec colname="newCol4" colnum="4" colwidth="1.15*"/>
+                            <thead>
+                                <row>
+                                    <entry>Member</entry>
+                                    <entry>std::vector</entry>
+                                    <entry>asynchronous::vector</entry>
+                                    <entry>speedup asynchronous / std</entry>
+                                </row>
+                            </thead>
+                            <tbody>
+                                <row>
+                                    <entry>Constructor</entry>
+                                    <entry>4175 ms</entry>
+                                    <entry>240 ms</entry>
+                                    <entry>17.4</entry>
+                                </row>
+                                <row>
+                                    <entry>Copy</entry>
+                                    <entry>5439 ms</entry>
+                                    <entry>389 ms</entry>
+                                    <entry>14</entry>
+                                </row>
+                                <row>
+                                    <entry>compare</entry>
+                                    <entry>4139 ms</entry>
+                                    <entry>43 ms</entry>
+                                    <entry>96</entry>
+                                </row>
+                                <row>
+                                    <entry>clear</entry>
+                                    <entry>2390 ms</entry>
+                                    <entry>39 ms</entry>
+                                    <entry>61.3</entry>
+                                </row>
+                                <row>
+                                    <entry>resize</entry>
+                                    <entry>5223 ms</entry>
+                                    <entry>222 ms</entry>
+                                    <entry>23.5</entry>
                                 </row>
                             </tbody>
                         </tgroup>
