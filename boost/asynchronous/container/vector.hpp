@@ -12,7 +12,7 @@
 
 #include <iterator>
 #include <limits>
-#include <vector>
+#include <type_traits>
 
 #include <boost/shared_ptr.hpp>
 #include <boost/asynchronous/algorithm/parallel_placement.hpp>
@@ -98,7 +98,7 @@ public:
     enum { default_capacity = 10 };
 
     // standard ctors (no scheduler)
-    explicit vector(const Alloc& alloc)
+    explicit vector(const Alloc& alloc)noexcept
     : m_data()
     , m_cutoff(1000)
     , m_task_name("")
@@ -113,13 +113,13 @@ public:
         m_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>>(0,raw,m_cutoff,m_task_name,m_prio);
     }
 
-    vector()
+    vector() noexcept(std::is_nothrow_default_constructible<Alloc>::value)
     : vector(Alloc())
     {
     }
 
 
-    vector( size_type n,const T& value = T(),const Alloc& alloc = Alloc() )
+    vector( size_type n,const T& value = T(),const Alloc& alloc = Alloc() )noexcept
         : m_size(n)
         , m_capacity(n)
         , m_allocator(alloc)
@@ -130,7 +130,7 @@ public:
     }
 
     template< class InputIt >
-    vector(InputIt first, InputIt last,const Alloc& alloc = Alloc())
+    vector(InputIt first, InputIt last,const Alloc& alloc = Alloc())noexcept
         : m_cutoff(1000)
         , m_task_name("")
         , m_prio(0)
@@ -144,7 +144,7 @@ public:
         boost::asynchronous::detail::serial_placement_it<T,std::size_t,InputIt>((std::size_t)0,n,(char*)raw.get(),first);
     }
 
-    vector( std::initializer_list<T> init,const Alloc& alloc= Alloc() )
+    vector( std::initializer_list<T> init,const Alloc& alloc= Alloc() )noexcept
      : m_cutoff(1000)
      , m_task_name("")
      , m_prio(0)
@@ -162,9 +162,9 @@ public:
     // only for use from within a threadpool using make_asynchronous_range
     explicit vector(long cutoff,size_type n,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-           const std::string& task_name, std::size_t prio)
+           const std::string& task_name, std::size_t prio)noexcept
 #else
-           const std::string& task_name="", std::size_t prio=0)
+           const std::string& task_name="", std::size_t prio=0)noexcept
 #endif
         : m_cutoff(cutoff)
         , m_task_name(task_name)
@@ -209,9 +209,9 @@ public:
     }
     explicit vector(boost::asynchronous::any_shared_scheduler_proxy<Job> scheduler,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-           const std::string& task_name, std::size_t prio,const Alloc& alloc = Alloc())
+           const std::string& task_name, std::size_t prio,const Alloc& alloc = Alloc())noexcept
 #else
-           const std::string& task_name="", std::size_t prio=0,const Alloc& alloc = Alloc())
+           const std::string& task_name="", std::size_t prio=0,const Alloc& alloc = Alloc())noexcept
 #endif
         : m_scheduler(scheduler)
         , m_cutoff(cutoff)
@@ -297,7 +297,7 @@ public:
              boost::asynchronous::detail::serial_placement_it<T,std::size_t,InputIt>((std::size_t)0,n,(char*)raw.get(),first);
         }
     }
-    vector( vector&& other )
+    vector( vector&& other )noexcept
         : m_scheduler(std::move(other.m_scheduler))
         , m_data(std::move(other.m_data))
         , m_cutoff(other.m_cutoff)
@@ -401,7 +401,7 @@ public:
         }
     }
 
-    ~vector()
+    ~vector()noexcept
     {
         // if in threadpool (algorithms) already, nothing to do, placement deleter will handle dtors and freeing of memory
         // else we need to handle destruction
@@ -436,7 +436,7 @@ public:
     {
         return m_allocator;
     }
-    vector& operator=( vector&& other )
+    vector& operator=( vector&& other )noexcept
     {
         std::swap(m_scheduler,other.m_scheduler);
         std::swap(m_data,other.m_data);
