@@ -65,7 +65,7 @@ namespace detail
     struct base_job : public Base
     {
         base_job(base_job&& rhs)noexcept
-            : Base(std::forward<base_job>(rhs)), m_callable(std::forward<Fct>(rhs.m_callable)){}
+            : Base(std::forward<base_job>(rhs)), m_callable(std::move(rhs.m_callable)){}
         base_job& operator= (base_job&& rhs)noexcept
         {
             std::swap(m_callable,rhs.m_callable);
@@ -116,7 +116,7 @@ namespace detail
         {
         }
         base_job(base_job&& rhs)noexcept
-            : Base(std::forward<base_job>(rhs)),m_callable(std::forward<Fct>(rhs.m_callable)){}
+            : Base(std::forward<base_job>(rhs)),m_callable(std::move(rhs.m_callable)){}
         base_job& operator= (base_job&& rhs)noexcept
         {
             std::swap(m_callable,rhs.m_callable);
@@ -145,7 +145,7 @@ namespace detail
     struct serializable_base_job : public Base
     {
         serializable_base_job(serializable_base_job&& rhs)noexcept
-            : Base(std::forward<serializable_base_job>(rhs)),m_callable(std::forward<Fct>(rhs.m_callable)){}
+            : Base(std::forward<serializable_base_job>(rhs)),m_callable(std::move(rhs.m_callable)){}
         serializable_base_job& operator= (serializable_base_job&& rhs)noexcept
         {
             std::swap(m_callable,rhs.m_callable);
@@ -192,7 +192,7 @@ namespace detail
     struct serializable_base_job<Base,Fct,typename ::boost::enable_if<typename boost::asynchronous::has_task_failed_handling<Fct>::type >::type> : public Base
     {
         serializable_base_job(serializable_base_job&& rhs)noexcept
-            : Base(std::forward<serializable_base_job>(rhs)),m_callable(std::forward<Fct>(rhs.m_callable)){}
+            : Base(std::forward<serializable_base_job>(rhs)),m_callable(std::move(rhs.m_callable)){}
         serializable_base_job& operator= (serializable_base_job&& rhs)noexcept
         {
             std::swap(m_callable,rhs.m_callable);

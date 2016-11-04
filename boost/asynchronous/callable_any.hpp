@@ -43,7 +43,7 @@ struct any_callable
     template <class T>
     any_callable(T t):m_inner(std::move(t)){}
     any_callable(any_callable&& rhs)noexcept
-        : m_inner(std::forward<boost::asynchronous::any_callable_helper>(rhs.m_inner))
+        : m_inner(std::move(rhs.m_inner))
     {}
     any_callable& operator=(any_callable&& rhs)
     {
