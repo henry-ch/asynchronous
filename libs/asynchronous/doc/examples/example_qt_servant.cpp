@@ -17,6 +17,11 @@ QtServant::QtServant()
             boost::asynchronous::threadpool_scheduler<
                     boost::asynchronous::lockfree_queue<>>>(3))
 {
+    m_safe_cb =
+            make_safe_callback([]()
+            {
+              std::cout << "Thread: " << boost::this_thread::get_id() << ", make_safe_callback" << std::endl;
+            },"",0);
 }
 void QtServant::signaled()
 {
@@ -81,7 +86,11 @@ void QtServant::signaled4()
                 std::cout << "Thread: " << boost::this_thread::get_id() << ", post self" << std::endl;
               },"",0);
 }
-
+void QtServant::signaled5()
+{
+    // make_safe_callback should be same thread
+    m_safe_cb();
+}
 void example_qt_servant(int argc, char *argv[])
 {
     std::cout << "example_qt_servant" << std::endl;
@@ -139,4 +148,41 @@ void example_qt_servant4(int argc, char *argv[])
         a.exec();
     }
     std::cout << "end example_qt_servant4 \n" << std::endl;
+}
+
+void example_qt_servant5(int argc, char *argv[])
+{
+    std::cout << "example_qt_servant5" << std::endl;
+    {
+        QApplication a(argc, argv);
+        QPushButton w("Push Me");
+        QtServant s;
+        w.show();
+        QObject::connect(&w, SIGNAL(clicked()),&s, SLOT(signaled5()) );
+        std::cout << "main in thread: " << boost::this_thread::get_id() << std::endl;
+        a.exec();
+    }
+    std::cout << "end example_qt_servant5 \n" << std::endl;
+}
+void example_qt_servant6(int argc, char *argv[])
+{
+    std::cout << "example_qt_servant6 (safe callback and thread)" << std::endl;
+    {
+        QApplication a(argc, argv);
+        QPushButton w("Push Me");
+        QtServant s;
+        w.show();
+        std::cout << "main in thread: " << boost::this_thread::get_id() << std::endl;
+        auto cb = s.m_safe_cb;
+        boost::thread t([cb]()
+        {
+            std::cout << "extra with id: " << boost::this_thread::get_id() << std::endl;
+            cb();
+            cb();
+            cb();
+        });
+        a.exec();
+        t.join();
+    }
+    std::cout << "end example_qt_servant6 \n" << std::endl;
 }

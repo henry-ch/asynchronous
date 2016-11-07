@@ -432,10 +432,7 @@ private:
                     detail::qt_async_safe_callback_custom_event* ce =
                             static_cast<detail::qt_async_safe_callback_custom_event* >(e);
                     ce->m_cb();
-                    if (!tracking.expired())
-                    {
-                        this->m_waiting_callbacks.erase(this->m_waiting_callbacks.find(connect_id));
-                    }
+                    // not possible to erase connect_id as safe callback can be called again and again
                  }
                 );
         m_waiting_callbacks[m_next_helper_id] = c;
@@ -446,12 +443,9 @@ private:
             if (thread_id == boost::this_thread::get_id())
             {
                 // our thread, call if servant alive
-               boost::asynchronous::move_bind( boost::asynchronous::check_alive([func_ptr](Args... args){(*func_ptr)(std::move(args)...);},tracking),
-                                               std::move(as)...)();
-               if (!tracking.expired())
-               {
-                   this->m_waiting_callbacks.erase(this->m_waiting_callbacks.find(connect_id));
-               }
+                boost::asynchronous::move_bind( boost::asynchronous::check_alive([func_ptr](Args... args){(*func_ptr)(std::move(args)...);},tracking),
+                                                std::move(as)...)();
+                // not possible to erase connect_id as safe callback can be called again and again
             }
             else
             {
