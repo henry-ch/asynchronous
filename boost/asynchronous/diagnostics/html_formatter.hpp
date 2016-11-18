@@ -64,15 +64,17 @@ struct parameters
 
     bool background_override = true;
     bool include_histograms = true;
+    bool javascript_instead_of_css3 = false;
+    bool show_menu = true;
+    bool check_totals_by_default = true;
+    bool filter = true;
+    bool add_subheadings = true;
+
     enum {
         CHECKBOXES_DISABLED,
         CHECKBOXES_LOCAL,
         CHECKBOXES_GLOBAL
     } checkboxes = CHECKBOXES_GLOBAL;
-    bool javascript_instead_of_css3 = false;
-    bool show_menu = true;
-    bool check_totals_by_default = true;
-    bool filter = true;
 
     std::size_t histogram_bin_count = 20;
     std::size_t font_size = 10;
@@ -1179,9 +1181,9 @@ void end_table(document & doc) {
 // Formatting overloads for default diagnostics types
 
 // Diagnostics for currently running job
-void format(document & doc, std::size_t /* index */, std::string const& section, parameters const& /* params */, scheduler_diagnostics::current_type data) {
+void format(document & doc, std::size_t /* index */, std::string const& section, parameters const& params, scheduler_diagnostics::current_type data) {
     // Add heading
-    doc.body << "      <h4>" << detail::escape_html(section) << "</h4>" << std::endl;
+    if (params.add_subheadings) doc.body << "      <h4>" << detail::escape_html(section) << "</h4>" << std::endl;
 
     // Add table header
     doc.body << "      <table class=\"sortable\">"                                                            << std::endl
@@ -1251,7 +1253,7 @@ void format(document & doc, std::size_t /* index */, std::string const& section,
 // All diagnostics
 void format(document & doc, std::size_t /* index */, std::string const& section, parameters const& params, scheduler_diagnostics data) {
     // Add heading
-    doc.body << "      <h4>" << section << "</h4>" << std::endl;
+    if (params.add_subheadings) doc.body << "      <h4>" << section << "</h4>" << std::endl;
 
     // Collect data
 
@@ -1272,7 +1274,7 @@ void format(document & doc, std::size_t /* index */, std::string const& section,
 // Summary diagnostics
 void format(document & doc, std::size_t /* index */, std::string const& section, parameters const& params, summary_diagnostics data) {
     // Add heading
-    doc.body << "      <h4>" << section << "</h4>" << std::endl;
+    if (params.add_subheadings) doc.body << "      <h4>" << section << "</h4>" << std::endl;
 
     // Add table
     detail::begin_table(doc, params, data.has_fails, data.has_interrupts);
@@ -1321,7 +1323,7 @@ public:
 
     // Add a menu entry and a section heading
     template <typename NameType = std::string>
-    void menu(document & doc, std::size_t index, NameType const& name_) {
+    void menu(document & doc, std::size_t index, NameType const& name_, std::string const& heading_type="h2") {
         // Handle empty names, escape HTML strings
         NameType name = name_;
         if (name == "") name = "Scheduler " + std::to_string(index) + " (unnamed)";
@@ -1333,7 +1335,7 @@ public:
         }
 
         // Add heading
-        doc.body << "      <h2 id=\"" << index << "\">" << name << "</h2>" << std::endl;
+        doc.body << "      <" << heading_type << " id=\"" << index << "\">" << name << "</" << heading_type << ">" << std::endl;
     }
 
     // Add the queue sizes to the document
@@ -1341,8 +1343,8 @@ public:
     void queues(document & doc, std::size_t /* index */, std::string const& title, QueueSizeType const& queue_sizes) {
         // Only add information if there are any queues
         if (queue_sizes.size() > 0) {
-            doc.body << "      <h4>" << title << "</h4>" << std::endl
-                     << "      <table class=\"queues\">" << std::endl;
+            if (m_params.add_subheadings) doc.body << "      <h4>" << title << "</h4>" << std::endl;
+            doc.body << "      <table class=\"queues\">" << std::endl;
 
             // Add queue sizes
             for (std::size_t size : queue_sizes) {
