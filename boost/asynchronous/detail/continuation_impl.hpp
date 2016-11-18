@@ -440,7 +440,8 @@ auto make_top_level_lambda_continuation(Func f,
 
 namespace detail {
 
-#define BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES0(Job)                         \
+#define BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES0(Job)                        \
+auto weak_scheduler = boost::asynchronous::get_thread_scheduler<Job>();     \
 if (!boost::type_erasure::is_empty(weak_scheduler))                         \
 {                                                                           \
     auto locked_scheduler = weak_scheduler.lock();                          \
@@ -521,7 +522,6 @@ struct continuation
         // remember when we started
         m_start = boost::chrono::high_resolution_clock::now();
         std::vector<boost::asynchronous::any_interruptible> interruptibles;
-        auto weak_scheduler = boost::asynchronous::get_thread_scheduler<Job>();
         BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES0(Job)
         else
         {
@@ -645,6 +645,7 @@ struct continuation
 };
 
 #define BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES(Job)                         \
+auto weak_scheduler = boost::asynchronous::get_thread_scheduler<Job>();     \
 if (!boost::type_erasure::is_empty(weak_scheduler))                         \
 {                                                                           \
     auto locked_scheduler = weak_scheduler.lock();                          \
@@ -655,6 +656,7 @@ if (!boost::type_erasure::is_empty(weak_scheduler))                         \
     }                                                                       \
 }
 #define BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES2(Job)                        \
+auto weak_scheduler = boost::asynchronous::get_thread_scheduler<Job>();     \
 if (!boost::type_erasure::is_empty(weak_scheduler))                         \
 {                                                                           \
     auto locked_scheduler = weak_scheduler.lock();                          \
@@ -666,6 +668,7 @@ if (!boost::type_erasure::is_empty(weak_scheduler))                         \
 }
 // for callback_continuation_as_seq
 #define BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES3(Job)                        \
+auto weak_scheduler = boost::asynchronous::get_thread_scheduler<Job>();     \
 if (!boost::type_erasure::is_empty(weak_scheduler))                         \
 {                                                                           \
     auto locked_scheduler = weak_scheduler.lock();                          \
@@ -717,7 +720,6 @@ struct callback_continuation
 
         on_done(std::move(f));
         std::vector<boost::asynchronous::any_interruptible> interruptibles;
-        auto weak_scheduler = boost::asynchronous::get_thread_scheduler<Job>();
         BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES(Job)
         else
         {
@@ -745,7 +747,6 @@ struct callback_continuation
         m_start = boost::chrono::high_resolution_clock::now();
 
         std::vector<boost::asynchronous::any_interruptible> interruptibles;
-        auto weak_scheduler = boost::asynchronous::get_thread_scheduler<Job>();
         BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES(Job)
         else
         {
@@ -773,7 +774,6 @@ struct callback_continuation
 
         on_done(std::move(f));
         std::vector<boost::asynchronous::any_interruptible> interruptibles;
-        auto weak_scheduler = boost::asynchronous::get_thread_scheduler<Job>();
         BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES2(Job)
         else
         {
@@ -1230,7 +1230,6 @@ struct callback_continuation_as_seq
         on_done(std::move(f));
 
         std::vector<boost::asynchronous::any_interruptible> interruptibles;
-        auto weak_scheduler = boost::asynchronous::get_thread_scheduler<Job>();
         BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES3(Job)
         else
         {
@@ -1257,7 +1256,6 @@ struct callback_continuation_as_seq
         on_done(std::move(f));
 
         std::vector<boost::asynchronous::any_interruptible> interruptibles;
-        auto weak_scheduler = boost::asynchronous::get_thread_scheduler<Job>();
         using wrapper_type = callback_continuation_wrapper<boost::asynchronous::detail::callback_continuation<Return,Job>>;
         std::vector<wrapper_type> args;
         args.reserve((args.size()));
