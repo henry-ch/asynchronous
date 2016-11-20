@@ -1,0 +1,738 @@
+
+
+************************************************************
+**                                                        **
+**     B O O S T :: S O R T :: P A R A L L E L            **
+**                                                        **
+**               B E N C H M A R K                        **
+**                                                        **
+************************************************************
+
+Architecture:          x86_64
+CPU op-mode(s):        32-bit, 64-bit
+Byte Order:            Little Endian
+CPU(s):                16
+On-line CPU(s) list:   0-15
+Thread(s) per core:    2
+Core(s) per socket:    8
+Socket(s):             1
+NUMA node(s):          1
+Vendor ID:             GenuineIntel
+CPU family:            6
+Model:                 63
+Model name:            Intel(R) Core(TM) i7-5960X CPU @ 3.00GHz
+Stepping:              2
+CPU MHz:               3900.000
+CPU max MHz:           3900.0000
+CPU min MHz:           1200.0000
+BogoMIPS:              6000.01
+Virtualization:        VT-x
+L1d cache:             32K
+L1i cache:             32K
+L2 cache:              256K
+L3 cache:              20480K
+NUMA node0 CPU(s):     0-15
+
+  100000000 uint64_t elements already sorted
+=================================================
+std::sort                            : 1.92161 secs
+Boost sort                           : 0.0650515 secs
+
+std::stable_sort                     : 4.7359 secs
+Boost stable sort                    : 0.0650598 secs
+
+OMP parallel sort                    : 0.390899 secs
+Boost parallel sort                  : 0.064965 secs
+
+OMP parallel stable sort             : 1.06128 secs
+Boost sample sort                    : 0.0695357 secs
+Boost parallel stable sort           : 0.0662401 secs
+
+Asynchronous parallel sort           : 0.0167134 secs
+
+Asynchronous parallel_quicksort      : 0.0165866 secs
+
+Asynchronous parallel stable sort    : 0.0169793 secs
+
+Asynchronous parallel_indirect_sort  : 0.0201051 secs
+
+Asynchronous parallel_intro_sort     : 0.0164039 secs
+
+Asynchronous boost::stable sort      : 0.0167729 secs
+
+Asynchronous boost::spin sort        : 0.0164001 secs
+
+Asynchronous parallel_quick_spin_sort: 0.0165341 secs
+
+Asynchronous quick_indirect_sort     : 0.0173204 secs
+
+Asynchronous quick_intro_sort        : 0.0165101 secs
+
+Boost spreadsort                     : 0.0635373 secs
+Asynchronous parallel spreadsort     : 0.0166921 secs
+
+Asynchronous parallel quickspreadsort: 0.0166473 secs
+
+
+  100000000 uint64_t elements reverse sorted
+=================================================
+std::sort                            : 1.33671 secs
+Boost sort                           : 1.09945 secs
+
+std::stable_sort                     : 4.88703 secs
+Boost stable sort                    : 3.49059 secs
+
+OMP parallel sort                    : 0.317039 secs
+Boost parallel sort                  : 0.581381 secs
+
+OMP parallel stable sort             : 1.06448 secs
+Boost sample sort                    : 0.524746 secs
+Boost parallel stable sort           : 0.73036 secs
+
+Asynchronous parallel sort           : 0.0478701 secs
+
+Asynchronous parallel_quicksort      : 0.053442 secs
+
+Asynchronous parallel stable sort    : 0.0478135 secs
+
+Asynchronous parallel_indirect_sort  : 0.0523499 secs
+
+Asynchronous parallel_intro_sort     : 0.0477169 secs
+
+Asynchronous boost::stable sort      : 0.0478403 secs
+
+Asynchronous boost::spin sort        : 0.0497555 secs
+
+Asynchronous parallel_quick_spin_sort: 0.0476364 secs
+
+Asynchronous quick_indirect_sort     : 0.047921 secs
+
+Asynchronous quick_intro_sort        : 0.0478629 secs
+
+Boost spreadsort                     : 1.68549 secs
+Asynchronous parallel spreadsort     : 0.0480403 secs
+
+Asynchronous parallel quickspreadsort: 0.0540778 secs
+
+
+  100000000 uint64_t elements randomly filled
+=================================================
+std::sort                            : 7.53253 secs
+Boost sort                           : 7.3804 secs
+
+std::stable_sort                     : 7.92917 secs
+Boost stable sort                    : 7.89636 secs
+
+OMP parallel sort                    : 1.03594 secs
+Boost parallel sort                  : 0.796447 secs
+
+OMP parallel stable sort             : 1.28601 secs
+Boost sample sort                    : 0.818954 secs
+Boost parallel stable sort           : 1.13604 secs
+
+Asynchronous parallel sort           : 0.76003 secs
+
+Asynchronous parallel_quicksort      : 0.737514 secs
+
+Asynchronous parallel stable sort    : 1.26141 secs
+
+Asynchronous parallel_indirect_sort  : 0.942349 secs
+
+Asynchronous parallel_intro_sort     : 0.759126 secs
+
+Asynchronous boost::stable sort      : 0.804814 secs
+
+Asynchronous boost::spin sort        : 0.797652 secs
+
+Asynchronous parallel_quick_spin_sort: 0.746001 secs
+
+Asynchronous quick_indirect_sort     : 2.09741 secs
+
+Asynchronous quick_intro_sort        : 0.728393 secs
+
+Boost spreadsort                     : 4.03295 secs
+Asynchronous parallel spreadsort     : 0.711273 secs
+
+Asynchronous parallel quickspreadsort: 0.587432 secs
+
+
+  10000000 strings randomly filled
+===============================================
+std::sort                            : 8.01974 secs
+Boost sort                           : 7.02243 secs
+
+std::stable_sort                     : 8.84039 secs
+Boost stable sort                    : 6.81767 secs
+
+OMP parallel sort                    : 1.05803 secs
+Boost parallel sort                  : 0.933055 secs
+
+OMP parallel stable sort             : 1.12269 secs
+Boost sample sort                    : 0.889216 secs
+Boost parallel stable sort           : 1.56564 secs
+
+Asynchronous parallel sort           : 2.00307 secs
+
+Asynchronous parallel_quicksort      : 0.932805 secs
+
+Asynchronous parallel stable sort    : 1.23495 secs
+
+Asynchronous parallel_indirect_sort  : 1.24367 secs
+
+Asynchronous parallel_intro_sort     : 1.21943 secs
+
+Asynchronous boost::stable sort      : 1.21817 secs
+
+Asynchronous boost::spin sort        : 1.22243 secs
+
+Asynchronous parallel_quick_spin_sort: 0.942688 secs
+
+Asynchronous quick_indirect_sort     : 0.947325 secs
+
+Asynchronous quick_intro_sort        : 0.893652 secs
+
+Boost spreadsort                     : 2.91172 secs
+Asynchronous parallel spreadsort     : 1.12244 secs
+
+Asynchronous parallel quickspreadsort: 0.788856 secs
+
+
+=============================================================
+=            OBJECT COMPARISON                              =
+=          ---------------------                            =
+=                                                           =
+= The objects are arrays of 64 bits numbers                 =
+= They are compared in two ways :                           =
+= (H) Heavy : The comparison is the sum of all the numbers  =
+=             of the array                                  =
+= (L) Light : The comparison is with the first element of   =
+=             the array, as a key                           =
+=                                                           =
+============================================================
+
+
+100000000 elements of size 8 randomly filled 
+=============================================
+
+  H E A V Y   C O M P A R I S O N
+====================================
+std::sort                            : 7.55681 secs
+Boost sort                           : 7.52426 secs
+
+std::stable_sort                     : 9.44491 secs
+Boost stable sort                    : 8.00627 secs
+
+OMP parallel sort                    : 0.980655 secs
+Boost parallel sort                  : 0.762741 secs
+
+OMP parallel stable sort             : 1.2532 secs
+Boost sample sort                    : 0.800779 secs
+Boost parallel stable sort           : 1.17884 secs
+
+Asynchronous parallel sort           : 0.761681 secs
+
+Asynchronous parallel_quicksort      : 0.745706 secs
+
+Asynchronous parallel stable sort    : 1.27414 secs
+
+Asynchronous parallel_indirect_sort  : 1.02493 secs
+
+Asynchronous parallel_intro_sort     : 0.775271 secs
+
+Asynchronous boost::stable sort      : 0.815237 secs
+
+Asynchronous boost::spin sort        : 0.806211 secs
+
+Asynchronous parallel_quick_spin_sort: 0.750117 secs
+
+Asynchronous quick_indirect_sort     : 2.09222 secs
+
+Asynchronous quick_intro_sort        : 0.731061 secs
+
+
+  L I G H T   C O M P A R I S O N 
+=======================================
+std::sort                            : 7.55272 secs
+Boost sort                           : 7.51044 secs
+
+std::stable_sort                     : 9.47935 secs
+Boost stable sort                    : 8.00952 secs
+
+OMP parallel sort                    : 0.977652 secs
+Boost parallel sort                  : 0.786125 secs
+
+OMP parallel stable sort             : 1.24471 secs
+Boost sample sort                    : 0.796376 secs
+Boost parallel stable sort           : 1.17649 secs
+
+Asynchronous parallel sort           : 0.777233 secs
+
+Asynchronous parallel_quicksort      : 0.720036 secs
+
+Asynchronous parallel stable sort    : 1.23884 secs
+
+Asynchronous parallel_indirect_sort  : 1.02598 secs
+
+Asynchronous parallel_intro_sort     : 0.779433 secs
+
+Asynchronous boost::stable sort      : 0.815959 secs
+
+Asynchronous boost::spin sort        : 0.808717 secs
+
+Asynchronous parallel_quick_spin_sort: 0.765592 secs
+
+Asynchronous quick_indirect_sort     : 2.10786 secs
+
+Asynchronous quick_intro_sort        : 0.733274 secs
+
+
+50000000 elements of size 16 randomly filled 
+=============================================
+
+  H E A V Y   C O M P A R I S O N
+====================================
+std::sort                            : 4.08088 secs
+Boost sort                           : 3.97464 secs
+
+std::stable_sort                     : 5.16816 secs
+Boost stable sort                    : 4.7871 secs
+
+OMP parallel sort                    : 0.601361 secs
+Boost parallel sort                  : 0.580356 secs
+
+OMP parallel stable sort             : 1.09592 secs
+Boost sample sort                    : 0.591614 secs
+Boost parallel stable sort           : 0.787821 secs
+
+Asynchronous parallel sort           : 0.62353 secs
+
+Asynchronous parallel_quicksort      : 0.504248 secs
+
+Asynchronous parallel stable sort    : 1.23252 secs
+
+Asynchronous parallel_indirect_sort  : 0.776196 secs
+
+Asynchronous parallel_intro_sort     : 0.593248 secs
+
+Asynchronous boost::stable sort      : 0.708408 secs
+
+Asynchronous boost::spin sort        : 0.703503 secs
+
+Asynchronous parallel_quick_spin_sort: 0.592521 secs
+
+Asynchronous quick_indirect_sort     : 1.35139 secs
+
+Asynchronous quick_intro_sort        : 0.472775 secs
+
+
+  L I G H T   C O M P A R I S O N 
+=======================================
+std::sort                            : 3.92266 secs
+Boost sort                           : 3.84132 secs
+
+std::stable_sort                     : 4.86615 secs
+Boost stable sort                    : 4.2248 secs
+
+OMP parallel sort                    : 0.559916 secs
+Boost parallel sort                  : 0.544188 secs
+
+OMP parallel stable sort             : 1.10186 secs
+Boost sample sort                    : 0.562968 secs
+Boost parallel stable sort           : 0.747187 secs
+
+Asynchronous parallel sort           : 0.588727 secs
+
+Asynchronous parallel_quicksort      : 0.482996 secs
+
+Asynchronous parallel stable sort    : 1.22237 secs
+
+Asynchronous parallel_indirect_sort  : 0.766304 secs
+
+Asynchronous parallel_intro_sort     : 0.570436 secs
+
+Asynchronous boost::stable sort      : 0.689996 secs
+
+Asynchronous boost::spin sort        : 0.684813 secs
+
+Asynchronous parallel_quick_spin_sort: 0.556628 secs
+
+Asynchronous quick_indirect_sort     : 1.27641 secs
+
+Asynchronous quick_intro_sort        : 0.459626 secs
+
+
+25000000 elements of size 32 randomly filled 
+=============================================
+
+  H E A V Y   C O M P A R I S O N
+====================================
+std::sort                            : 2.47443 secs
+Boost sort                           : 2.40317 secs
+
+std::stable_sort                     : 3.50724 secs
+Boost stable sort                    : 2.96587 secs
+
+OMP parallel sort                    : 0.424958 secs
+Boost parallel sort                  : 0.440499 secs
+
+OMP parallel stable sort             : 1.02101 secs
+Boost sample sort                    : 0.530931 secs
+Boost parallel stable sort           : 0.668575 secs
+
+Asynchronous parallel sort           : 0.638074 secs
+
+Asynchronous parallel_quicksort      : 0.383187 secs
+
+Asynchronous parallel stable sort    : 0.684369 secs
+
+Asynchronous parallel_indirect_sort  : 0.664633 secs
+
+Asynchronous parallel_intro_sort     : 0.646209 secs
+
+Asynchronous boost::stable sort      : 0.665154 secs
+
+Asynchronous boost::spin sort        : 0.66432 secs
+
+Asynchronous parallel_quick_spin_sort: 0.423328 secs
+
+Asynchronous quick_indirect_sort     : 0.426511 secs
+
+Asynchronous quick_intro_sort        : 0.40544 secs
+
+
+  L I G H T   C O M P A R I S O N 
+=======================================
+std::sort                            : 2.12389 secs
+Boost sort                           : 2.04906 secs
+
+std::stable_sort                     : 3.16923 secs
+Boost stable sort                    : 2.42293 secs
+
+OMP parallel sort                    : 0.370775 secs
+Boost parallel sort                  : 0.401422 secs
+
+OMP parallel stable sort             : 1.01759 secs
+Boost sample sort                    : 0.522292 secs
+Boost parallel stable sort           : 0.643855 secs
+
+Asynchronous parallel sort           : 0.625482 secs
+
+Asynchronous parallel_quicksort      : 0.384163 secs
+
+Asynchronous parallel stable sort    : 0.662857 secs
+
+Asynchronous parallel_indirect_sort  : 0.647705 secs
+
+Asynchronous parallel_intro_sort     : 0.641091 secs
+
+Asynchronous boost::stable sort      : 0.644315 secs
+
+Asynchronous boost::spin sort        : 0.64323 secs
+
+Asynchronous parallel_quick_spin_sort: 0.382443 secs
+
+Asynchronous quick_indirect_sort     : 0.403725 secs
+
+Asynchronous quick_intro_sort        : 0.378823 secs
+
+
+12500000 elements of size 64 randomly filled 
+=============================================
+
+  H E A V Y   C O M P A R I S O N
+====================================
+std::sort                            : 1.94373 secs
+Boost sort                           : 1.76051 secs
+
+std::stable_sort                     : 2.89181 secs
+Boost stable sort                    : 2.30119 secs
+
+OMP parallel sort                    : 0.359724 secs
+Boost parallel sort                  : 0.385327 secs
+
+OMP parallel stable sort             : 0.955239 secs
+Boost sample sort                    : 0.522282 secs
+Boost parallel stable sort           : 0.655326 secs
+
+Asynchronous parallel sort           : 0.603908 secs
+
+Asynchronous parallel_quicksort      : 0.329712 secs
+
+Asynchronous parallel stable sort    : 0.673261 secs
+
+Asynchronous parallel_indirect_sort  : 0.622976 secs
+
+Asynchronous parallel_intro_sort     : 0.61557 secs
+
+Asynchronous boost::stable sort      : 0.627536 secs
+
+Asynchronous boost::spin sort        : 0.630749 secs
+
+Asynchronous parallel_quick_spin_sort: 0.349687 secs
+
+Asynchronous quick_indirect_sort     : 0.329053 secs
+
+Asynchronous quick_intro_sort        : 0.312939 secs
+
+
+  L I G H T   C O M P A R I S O N 
+=======================================
+std::sort                            : 1.33066 secs
+Boost sort                           : 1.2825 secs
+
+std::stable_sort                     : 2.61153 secs
+Boost stable sort                    : 1.90815 secs
+
+OMP parallel sort                    : 0.317601 secs
+Boost parallel sort                  : 0.343744 secs
+
+OMP parallel stable sort             : 0.938828 secs
+Boost sample sort                    : 0.517479 secs
+Boost parallel stable sort           : 0.640102 secs
+
+Asynchronous parallel sort           : 0.603793 secs
+
+Asynchronous parallel_quicksort      : 0.30126 secs
+
+Asynchronous parallel stable sort    : 0.672281 secs
+
+Asynchronous parallel_indirect_sort  : 0.605931 secs
+
+Asynchronous parallel_intro_sort     : 0.606051 secs
+
+Asynchronous boost::stable sort      : 0.622091 secs
+
+Asynchronous boost::spin sort        : 0.619803 secs
+
+Asynchronous parallel_quick_spin_sort: 0.334173 secs
+
+Asynchronous quick_indirect_sort     : 0.313198 secs
+
+Asynchronous quick_intro_sort        : 0.295534 secs
+
+
+6250000 elements of size 128 randomly filled 
+=============================================
+
+  H E A V Y   C O M P A R I S O N
+====================================
+std::sort                            : 1.58984 secs
+Boost sort                           : 1.55441 secs
+
+std::stable_sort                     : 2.63012 secs
+Boost stable sort                    : 1.96798 secs
+
+OMP parallel sort                    : 0.334518 secs
+Boost parallel sort                  : 0.367988 secs
+
+OMP parallel stable sort             : 0.918847 secs
+Boost sample sort                    : 0.519176 secs
+Boost parallel stable sort           : 0.636556 secs
+
+Asynchronous parallel sort           : 0.552108 secs
+
+Asynchronous parallel_quicksort      : 0.303252 secs
+
+Asynchronous parallel stable sort    : 0.61101 secs
+
+Asynchronous parallel_indirect_sort  : 0.556235 secs
+
+Asynchronous parallel_intro_sort     : 0.542905 secs
+
+Asynchronous boost::stable sort      : 0.579002 secs
+
+Asynchronous boost::spin sort        : 0.583757 secs
+
+Asynchronous parallel_quick_spin_sort: 0.333552 secs
+
+Asynchronous quick_indirect_sort     : 0.303758 secs
+
+Asynchronous quick_intro_sort        : 0.296801 secs
+
+
+  L I G H T   C O M P A R I S O N 
+=======================================
+std::sort                            : 1.04835 secs
+Boost sort                           : 1.04604 secs
+
+std::stable_sort                     : 2.5171 secs
+Boost stable sort                    : 1.6675 secs
+
+OMP parallel sort                    : 0.301569 secs
+Boost parallel sort                  : 0.3405 secs
+
+OMP parallel stable sort             : 0.937058 secs
+Boost sample sort                    : 0.516225 secs
+Boost parallel stable sort           : 0.630143 secs
+
+Asynchronous parallel sort           : 0.545002 secs
+
+Asynchronous parallel_quicksort      : 0.281811 secs
+
+Asynchronous parallel stable sort    : 0.600796 secs
+
+Asynchronous parallel_indirect_sort  : 0.534359 secs
+
+Asynchronous parallel_intro_sort     : 0.534234 secs
+
+Asynchronous boost::stable sort      : 0.571856 secs
+
+Asynchronous boost::spin sort        : 0.572186 secs
+
+Asynchronous parallel_quick_spin_sort: 0.318067 secs
+
+Asynchronous quick_indirect_sort     : 0.274286 secs
+
+Asynchronous quick_intro_sort        : 0.274664 secs
+
+
+3125000 elements of size 256 randomly filled 
+=============================================
+
+  H E A V Y   C O M P A R I S O N
+====================================
+std::sort                            : 1.2997 secs
+Boost sort                           : 1.30091 secs
+
+std::stable_sort                     : 2.71913 secs
+Boost stable sort                    : 2.03433 secs
+
+OMP parallel sort                    : 0.318985 secs
+Boost parallel sort                  : 0.366854 secs
+
+OMP parallel stable sort             : 0.832677 secs
+Boost sample sort                    : 0.516284 secs
+Boost parallel stable sort           : 0.669027 secs
+
+Asynchronous parallel sort           : 0.554776 secs
+
+Asynchronous parallel_quicksort      : 0.292351 secs
+
+Asynchronous parallel stable sort    : 0.817539 secs
+
+Asynchronous parallel_indirect_sort  : 0.555998 secs
+
+Asynchronous parallel_intro_sort     : 0.535897 secs
+
+Asynchronous boost::stable sort      : 0.625745 secs
+
+Asynchronous boost::spin sort        : 0.625662 secs
+
+Asynchronous parallel_quick_spin_sort: 0.355992 secs
+
+Asynchronous quick_indirect_sort     : 0.294892 secs
+
+Asynchronous quick_intro_sort        : 0.277053 secs
+
+
+  L I G H T   C O M P A R I S O N 
+=======================================
+std::sort                            : 0.967674 secs
+Boost sort                           : 0.988738 secs
+
+std::stable_sort                     : 2.61785 secs
+Boost stable sort                    : 1.81208 secs
+
+OMP parallel sort                    : 0.290195 secs
+Boost parallel sort                  : 0.324641 secs
+
+OMP parallel stable sort             : 0.837037 secs
+Boost sample sort                    : 0.514192 secs
+Boost parallel stable sort           : 0.645787 secs
+
+Asynchronous parallel sort           : 0.551453 secs
+
+Asynchronous parallel_quicksort      : 0.263843 secs
+
+Asynchronous parallel stable sort    : 0.809866 secs
+
+Asynchronous parallel_indirect_sort  : 0.521228 secs
+
+Asynchronous parallel_intro_sort     : 0.562904 secs
+
+Asynchronous boost::stable sort      : 0.678829 secs
+
+Asynchronous boost::spin sort        : 0.626523 secs
+
+Asynchronous parallel_quick_spin_sort: 0.330958 secs
+
+Asynchronous quick_indirect_sort     : 0.247251 secs
+
+Asynchronous quick_intro_sort        : 0.251423 secs
+
+
+1562500 elements of size 512 randomly filled 
+=============================================
+
+  H E A V Y   C O M P A R I S O N
+====================================
+std::sort                            : 1.16778 secs
+Boost sort                           : 1.10475 secs
+
+std::stable_sort                     : 2.42887 secs
+Boost stable sort                    : 1.71882 secs
+
+OMP parallel sort                    : 0.308923 secs
+Boost parallel sort                  : 0.342992 secs
+
+OMP parallel stable sort             : 0.829593 secs
+Boost sample sort                    : 0.510209 secs
+Boost parallel stable sort           : 0.637146 secs
+
+Asynchronous parallel sort           : 0.486708 secs
+
+Asynchronous parallel_quicksort      : 0.28615 secs
+
+Asynchronous parallel stable sort    : 0.92521 secs
+
+Asynchronous parallel_indirect_sort  : 0.503097 secs
+
+Asynchronous parallel_intro_sort     : 0.465813 secs
+
+Asynchronous boost::stable sort      : 0.592421 secs
+
+Asynchronous boost::spin sort        : 0.595545 secs
+
+Asynchronous parallel_quick_spin_sort: 0.386242 secs
+
+Asynchronous quick_indirect_sort     : 0.301084 secs
+
+Asynchronous quick_intro_sort        : 0.269666 secs
+
+
+  L I G H T   C O M P A R I S O N 
+=======================================
+std::sort                            : 0.882396 secs
+Boost sort                           : 0.858247 secs
+
+std::stable_sort                     : 2.41836 secs
+Boost stable sort                    : 1.60674 secs
+
+OMP parallel sort                    : 0.272057 secs
+Boost parallel sort                  : 0.307625 secs
+
+OMP parallel stable sort             : 0.813653 secs
+Boost sample sort                    : 0.507456 secs
+Boost parallel stable sort           : 0.639837 secs
+
+Asynchronous parallel sort           : 0.481128 secs
+
+Asynchronous parallel_quicksort      : 0.246709 secs
+
+Asynchronous parallel stable sort    : 0.936301 secs
+
+Asynchronous parallel_indirect_sort  : 0.433564 secs
+
+Asynchronous parallel_intro_sort     : 0.456968 secs
+
+Asynchronous boost::stable sort      : 0.596888 secs
+
+Asynchronous boost::spin sort        : 0.600697 secs
+
+Asynchronous parallel_quick_spin_sort: 0.348256 secs
+
+Asynchronous quick_indirect_sort     : 0.208434 secs
+
+Asynchronous quick_intro_sort        : 0.226308 secs
+
+
