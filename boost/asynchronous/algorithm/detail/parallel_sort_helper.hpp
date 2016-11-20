@@ -13,7 +13,9 @@
 #ifdef BOOST_ASYNCHRONOUS_USE_BOOST_SPREADSORT
 #include <boost/sort/spreadsort/spreadsort.hpp>
 #endif
-
+#ifdef BOOST_ASYNCHRONOUS_USE_BOOST_SORT
+#include <boost/sort/parallel/sort.hpp>
+#endif
 namespace boost { namespace asynchronous
 {
 
@@ -24,6 +26,40 @@ struct boost_spreadsort
     void operator()(Iterator beg, Iterator end, Func&)
     {
         boost::sort::spreadsort::spreadsort(beg,end);
+    }
+};
+#endif
+#ifdef BOOST_ASYNCHRONOUS_USE_BOOST_SORT
+struct boost_intro_sort
+{
+    template <class Iterator, class Func>
+    void operator()(Iterator beg, Iterator end, Func& f)
+    {
+        boost::sort::parallel::detail::intro_sort(beg,end,f);
+    }
+};
+struct boost_indirect_sort
+{
+    template <class Iterator, class Func>
+    void operator()(Iterator beg, Iterator end, Func& f)
+    {
+        boost::sort::parallel::indirect_sort(beg,end,f);
+    }
+};
+struct boost_stable_sort
+{
+    template <class Iterator, class Func>
+    void operator()(Iterator beg, Iterator end, Func& f)
+    {
+        boost::sort::parallel::stable_sort(beg,end,f);
+    }
+};
+struct boost_spin_sort
+{
+    template <class Iterator, class Func>
+    void operator()(Iterator beg, Iterator end, Func& f)
+    {
+        boost::sort::parallel::detail::spin_sort<Iterator,Func>(beg,end,f);
     }
 };
 #endif

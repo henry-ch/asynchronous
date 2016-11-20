@@ -39,6 +39,10 @@
 #include <boost/range/end.hpp>
 #include <boost/range/iterator_range.hpp>
 
+#ifdef BOOST_ASYNCHRONOUS_USE_BOOST_SORT
+#include <boost/sort/parallel/sort.hpp>
+#endif
+
 namespace boost { namespace asynchronous
 {
 // fast version for iterators, will return nothing
@@ -263,6 +267,48 @@ parallel_quick_spreadsort(Iterator beg, Iterator end,Func func,long cutoff,
 }
 #endif
 
+// test boost sort
+#ifdef BOOST_ASYNCHRONOUS_USE_BOOST_SORT
+template <class Iterator, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation<void,Job>
+parallel_quick_spin_sort(Iterator beg, Iterator end,Func func,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+              const uint32_t thread_num,const std::string& task_name, std::size_t prio=0)
+#else
+              const uint32_t thread_num = boost::thread::hardware_concurrency(),const std::string& task_name="", std::size_t prio=0)
+#endif
+{
+    return boost::asynchronous::top_level_callback_continuation_job<void,Job>
+            (boost::asynchronous::detail::parallel_quicksort_helper<Iterator,Func,Job,boost::asynchronous::boost_spin_sort>
+              (beg,end,std::move(func),thread_num,0,std::distance(beg,end),cutoff,task_name,prio));
+}
+template <class Iterator, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation<void,Job>
+parallel_quick_indirect_sort(Iterator beg, Iterator end,Func func,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+              const uint32_t thread_num,const std::string& task_name, std::size_t prio=0)
+#else
+              const uint32_t thread_num = boost::thread::hardware_concurrency(),const std::string& task_name="", std::size_t prio=0)
+#endif
+{
+    return boost::asynchronous::top_level_callback_continuation_job<void,Job>
+            (boost::asynchronous::detail::parallel_quicksort_helper<Iterator,Func,Job,boost::asynchronous::boost_indirect_sort>
+              (beg,end,std::move(func),thread_num,0,std::distance(beg,end),cutoff,task_name,prio));
+}
+template <class Iterator, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation<void,Job>
+parallel_quick_intro_sort(Iterator beg, Iterator end,Func func,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+              const uint32_t thread_num,const std::string& task_name, std::size_t prio=0)
+#else
+              const uint32_t thread_num = boost::thread::hardware_concurrency(),const std::string& task_name="", std::size_t prio=0)
+#endif
+{
+    return boost::asynchronous::top_level_callback_continuation_job<void,Job>
+            (boost::asynchronous::detail::parallel_quicksort_helper<Iterator,Func,Job,boost::asynchronous::boost_intro_sort>
+              (beg,end,std::move(func),thread_num,0,std::distance(beg,end),cutoff,task_name,prio));
+}
+#endif
 }}
 #endif // BOOST_ASYNCHRONOUS_PARALLEL_QUICKSORT_HPP
 

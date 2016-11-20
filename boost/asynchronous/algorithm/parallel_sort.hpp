@@ -367,6 +367,23 @@ parallel_stable_sort(Iterator beg, Iterator end,Func func,long cutoff,
                (beg,end,0,boost::shared_ptr<boost::asynchronous::placement_deleter<typename std::iterator_traits<Iterator>::value_type,Job>>(),
                 nullptr,nullptr,std::move(func),cutoff,task_name,prio));
 }
+// test boost sort
+#ifdef BOOST_ASYNCHRONOUS_USE_BOOST_SORT
+template <class Iterator, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation<void,Job>
+parallel_boost_stable_sort(Iterator beg, Iterator end,Func func,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                     const std::string& task_name, std::size_t prio=0)
+#else
+                     const std::string& task_name="", std::size_t prio=0)
+#endif
+{
+    return boost::asynchronous::top_level_callback_continuation_job<void,Job>
+            (boost::asynchronous::detail::parallel_sort_fast_helper<Iterator,Func,Job,boost::asynchronous::boost_stable_sort>
+               (beg,end,0,boost::shared_ptr<boost::asynchronous::placement_deleter<typename std::iterator_traits<Iterator>::value_type,Job>>(),
+                nullptr,nullptr,std::move(func),cutoff,task_name,prio));
+}
+#endif
 
 #ifdef BOOST_ASYNCHRONOUS_USE_BOOST_SPREADSORT
 template <class Iterator, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
@@ -385,6 +402,51 @@ parallel_spreadsort(Iterator beg, Iterator end,Func func,long cutoff,
 }
 #endif
 
+// test boost sort
+#ifdef BOOST_ASYNCHRONOUS_USE_BOOST_SORT
+template <class Iterator, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation<void,Job>
+parallel_indirect_sort(Iterator beg, Iterator end,Func func,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+              const std::string& task_name, std::size_t prio=0)
+#else
+              const std::string& task_name="", std::size_t prio=0)
+#endif
+{
+    return boost::asynchronous::top_level_callback_continuation_job<void,Job>
+            (boost::asynchronous::detail::parallel_sort_fast_helper<Iterator,Func,Job,boost::asynchronous::boost_indirect_sort>
+               (beg,end,0,boost::shared_ptr<boost::asynchronous::placement_deleter<typename std::iterator_traits<Iterator>::value_type,Job>>(),
+                nullptr,nullptr,std::move(func),cutoff,task_name,prio));
+}
+template <class Iterator, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation<void,Job>
+parallel_intro_sort(Iterator beg, Iterator end,Func func,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+              const std::string& task_name, std::size_t prio=0)
+#else
+              const std::string& task_name="", std::size_t prio=0)
+#endif
+{
+    return boost::asynchronous::top_level_callback_continuation_job<void,Job>
+            (boost::asynchronous::detail::parallel_sort_fast_helper<Iterator,Func,Job,boost::asynchronous::boost_intro_sort>
+               (beg,end,0,boost::shared_ptr<boost::asynchronous::placement_deleter<typename std::iterator_traits<Iterator>::value_type,Job>>(),
+                nullptr,nullptr,std::move(func),cutoff,task_name,prio));
+}
+template <class Iterator, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation<void,Job>
+parallel_boost_spin_sort(Iterator beg, Iterator end,Func func,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+              const std::string& task_name, std::size_t prio=0)
+#else
+              const std::string& task_name="", std::size_t prio=0)
+#endif
+{
+    return boost::asynchronous::top_level_callback_continuation_job<void,Job>
+            (boost::asynchronous::detail::parallel_sort_fast_helper<Iterator,Func,Job,boost::asynchronous::boost_spin_sort>
+               (beg,end,0,boost::shared_ptr<boost::asynchronous::placement_deleter<typename std::iterator_traits<Iterator>::value_type,Job>>(),
+                nullptr,nullptr,std::move(func),cutoff,task_name,prio));
+}
+#endif
 
 // version for moved ranges => will return the range as continuation
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
