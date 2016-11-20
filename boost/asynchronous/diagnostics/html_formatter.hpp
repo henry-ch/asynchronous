@@ -64,14 +64,24 @@ struct parameters
 
     bool background_override = true;
     bool include_histograms = true;
-    bool enable_checkboxes = true;
-    bool javascript_checkboxes = false;
+    bool javascript_instead_of_css3 = false;
     bool show_menu = true;
     bool check_totals_by_default = true;
+    bool filter = true;
+    bool add_subheadings = true;
+
+    enum {
+        CHECKBOXES_DISABLED,
+        CHECKBOXES_LOCAL,
+        CHECKBOXES_GLOBAL
+    } checkboxes = CHECKBOXES_GLOBAL;
 
     std::size_t histogram_bin_count = 20;
+    std::size_t font_size = 10;
 
     parameters() {}
+
+    bool has_left_margin() const { return checkboxes == CHECKBOXES_GLOBAL || filter || show_menu; }
 };
 
 // HTML template and std::ostringstream container
@@ -98,6 +108,7 @@ private:
                << "        font-family: sans-serif;"                                              << std::endl
                << "        color: " << params.font.to_html() << ";"                               << std::endl
                << "        background-color: " << params.background.to_html() << ";"              << std::endl
+               << "        font-size: " << params.font_size << "pt;"                              << std::endl
                << "      }"                                                                       << std::endl
                <<                                                                                    std::endl
                << "      .index a {"                                                              << std::endl
@@ -137,8 +148,8 @@ private:
                << "        color: " << params.menu_font.to_html() << ";"                          << std::endl
                << "        background-color: " << params.menu_background.to_html() << ";"         << std::endl
                << "        text-transform: uppercase;"                                            << std::endl
-               << "        font-size: small;"                                                     << std::endl
                << "        width: 15%;"                                                           << std::endl
+               << "        max-width: 250px;"                                                     << std::endl
                << "        height: 100%;"                                                         << std::endl
                << "      }"                                                                       << std::endl
                <<                                                                                    std::endl
@@ -223,7 +234,19 @@ private:
                <<                                                                                    std::endl
                << "      td, th {"                                                                << std::endl
                << "        border: 1px " << params.table_border.to_html() << " solid;"            << std::endl
+               << "      }"                                                                       << std::endl
+               <<                                                                                    std::endl
+               << "      th {"                                                                    << std::endl
                << "        padding: 5px;"                                                         << std::endl
+               << "      }"                                                                       << std::endl
+               <<                                                                                    std::endl
+               << "      td {"                                                                    << std::endl
+               << "        padding: 0 5px;"                                                       << std::endl
+               << "      }"                                                                       << std::endl
+               <<                                                                                    std::endl
+               << "      tr {"                                                                    << std::endl
+               << "        height: " << (params.font_size + 10) << "pt;"                          << std::endl // Fallback
+               << "        height: calc(" << params.font_size << "pt + 10px);"                    << std::endl
                << "      }"                                                                       << std::endl
                <<                                                                                    std::endl
                << "      table.sortable th[data-column] {"                                        << std::endl
@@ -297,33 +320,89 @@ private:
                    << "      }"                                                                       << std::endl
                    << "      tr.interruption > td.total {"                                            << std::endl
                    << "        background-color: inherit;"                                            << std::endl
+                   << "      }"                                                                       << std::endl
+                   << "      tr.noborder {"                                                           << std::endl
+                   << "        background-color: " << params.background.to_html() << " !important;"   << std::endl
                    << "      }"                                                                       << std::endl;
         }
-        if (params.enable_checkboxes) {
+        if (params.checkboxes != parameters::CHECKBOXES_DISABLED) {
             header << "      .checkbox {"                                                             << std::endl
                    << "        margin-bottom: 10px;"                                                  << std::endl
+                   << "        height: " << params.font_size << ";"                                   << std::endl
+                   << "        width: " << params.font_size << ";"                                    << std::endl
                    << "      }"                                                                       << std::endl
                    << "      .checkbox_label {"                                                       << std::endl
                    << "        margin-right: 10px;"                                                   << std::endl
                    << "      }"                                                                       << std::endl;
+            if (!params.javascript_instead_of_css3)
+                header << "      .fail_cb:not(:checked) ~ div table td.failure_cell,"                     << std::endl
+                       << "      .fail_cb:not(:checked) ~ div table th.failure_cell,"                     << std::endl
+                       << "      .fail_cb:not(:checked) ~ table td.failure_cell,"                         << std::endl
+                       << "      .fail_cb:not(:checked) ~ table th.failure_cell {"                        << std::endl
+                       << "        display: none;"                                                        << std::endl
+                       << "      }"                                                                       << std::endl
+                       << "      .int_cb:not(:checked) ~ div table td.interrupted,"                       << std::endl
+                       << "      .int_cb:not(:checked) ~ div table th.interrupted,"                       << std::endl
+                       << "      .int_cb:not(:checked) ~ table td.interrupted,"                           << std::endl
+                       << "      .int_cb:not(:checked) ~ table th.interrupted {"                          << std::endl
+                       << "        display: none;"                                                        << std::endl
+                       << "      }"                                                                       << std::endl
+                       << "      .total_cb:not(:checked) ~ div table td.total,"                           << std::endl
+                       << "      .total_cb:not(:checked) ~ div table th.total,"                           << std::endl
+                       << "      .total_cb:not(:checked) ~ table td.total,"                               << std::endl
+                       << "      .total_cb:not(:checked) ~ table th.total {"                              << std::endl
+                       << "        display: none;"                                                        << std::endl
+                       << "      }"                                                                       << std::endl;
         }
-        if (params.enable_checkboxes && !params.javascript_checkboxes) {
-            header << "      .fail_cb:not(:checked) ~ table td.failure_cell,"                         << std::endl
-                   << "      .fail_cb:not(:checked) ~ table th.failure_cell {"                        << std::endl
-                   << "        display: none;"                                                        << std::endl
+        if (params.checkboxes == parameters::CHECKBOXES_GLOBAL)
+            header << "      .checkbox {"                                                             << std::endl
+                   << "        position: fixed;"                                                      << std::endl
+                   << "        left: 0;"                                                              << std::endl
+                   << "        margin-left: " << params.font_size << "pt;"                            << std::endl
+                   << "        margin-top: 0;"                                                        << std::endl
+                   << "        margin-bottom: 0;"                                                     << std::endl
+                   << "        z-index: 20;"                                                          << std::endl
                    << "      }"                                                                       << std::endl
-                   << "      .int_cb:not(:checked) ~ table td.interrupted,"                           << std::endl
-                   << "      .int_cb:not(:checked) ~ table th.interrupted {"                          << std::endl
-                   << "        display: none;"                                                        << std::endl
+                   << "      .checkbox_label {"                                                       << std::endl
+                   << "        position: fixed;"                                                      << std::endl
+                   << "        left: 0;"                                                              << std::endl
+                   << "        margin-left: " << (params.font_size * 3) << "pt;"                      << std::endl // Fallback
+                   << "        margin-left: calc(3 * " << params.font_size << "pt);"                  << std::endl
+                   << "        color: " << (params.show_menu ? params.menu_font.to_html() : params.font.to_html()) << ";" << std::endl
+                   << "        z-index: 20;"                                                          << std::endl
                    << "      }"                                                                       << std::endl
-                   << "      .total_cb:not(:checked) ~ table td.total,"                               << std::endl
-                   << "      .total_cb:not(:checked) ~ table th.total {"                              << std::endl
-                   << "        display: none;"                                                        << std::endl
+                   << "      .fail_cb, .fail_cb + span {"                                             << std::endl
+                   << "        bottom: " << (params.font_size * 6) << "pt);"                          << std::endl // Fallback
+                   << "        bottom: calc(6 * " << params.font_size << "pt);"                       << std::endl
+                   << "      }"                                                                       << std::endl
+                   << "      .int_cb, .int_cb + span {"                                               << std::endl
+                   << "        bottom: " << (params.font_size * 4) << "pt);"                          << std::endl // Fallback
+                   << "        bottom: calc(4 * " << params.font_size << "pt);"                       << std::endl
+                   << "      }"                                                                       << std::endl
+                   << "      .total_cb, .total_cb + span {"                                           << std::endl
+                   << "        bottom: " << (params.font_size * 2) << "pt);"                          << std::endl // Fallback
+                   << "        bottom: calc(2 * " << params.font_size << "pt);"                       << std::endl
+                   << "      }"                                                                       << std::endl;
+        if (params.filter) {
+            int factor = (params.checkboxes == parameters::CHECKBOXES_GLOBAL) ? 8 : 0;
+            header << "      #filter {"                                                               << std::endl
+                   << "        position: fixed;"                                                      << std::endl
+                   << "        width: 15%;"                                                           << std::endl
+                   << "        max-width: 250px;"                                                     << std::endl
+                   << "        left: 0;"                                                              << std::endl
+                   << "        bottom: " << (params.font_size * factor) << "pt;"                      << std::endl // Fallback
+                   << "        bottom: calc(" << factor << "*" << params.font_size << "pt);"          << std::endl
+                   << "        height: 25px;"                                                         << std::endl
+                   << "        margin: 0;"                                                            << std::endl
+                   << "        padding: 0 5px;"                                                       << std::endl
+                   << "        border: 1px solid black;"                                              << std::endl
+                   << "        box-sizing: border-box;"                                               << std::endl
+                   << "        z-index: 20;"                                                          << std::endl
                    << "      }"                                                                       << std::endl;
         }
         header <<                                                                                    std::endl
                << "      #content {"                                                              << std::endl
-               << "        margin-left: " << (params.show_menu ? "20" : "5") << "%;"              << std::endl
+               << "        margin-left: " << (params.has_left_margin() ? "20" : "5") << "%;"      << std::endl
                << "        margin-right: 5%;"                                                     << std::endl
                << "      }"                                                                       << std::endl
                <<                                                                                    std::endl
@@ -478,7 +557,7 @@ private:
                << "          }"                                                                   << std::endl
                << "        }"                                                                     << std::endl
                << "      }"                                                                       << std::endl;
-        if (params.enable_checkboxes && params.javascript_checkboxes) {
+        if (params.javascript_instead_of_css3 && params.checkboxes != parameters::CHECKBOXES_DISABLED) {
             header << "      function toggleDefaultHidden(node, visibleStyle) {"                      << std::endl
                    << "        if (node.style.display === visibleStyle) {"                            << std::endl
                    << "          node.style.display = 'none';"                                        << std::endl
@@ -492,26 +571,46 @@ private:
                    << "        } else {"                                                              << std::endl
                    << "          node.style.display = 'none';"                                        << std::endl
                    << "        }"                                                                     << std::endl
-                   << "      }"                                                                       << std::endl
-                   << "      function applyToCheckboxTargets(node, targetClass, fn) {"                << std::endl
-                   << "          var headerCells = node.parentNode.getElementsByTagName('th');"       << std::endl
-                   << "          var headerIndex = headerCells.length;"                               << std::endl
-                   << "          while (--headerIndex >= 0) {"                                        << std::endl
-                   << "            var cssClasses = ' ' + headerCells[headerIndex].className + ' ';"  << std::endl
-                   << "            if (cssClasses.indexOf(' ' + targetClass + ' ') > -1) {"           << std::endl
-                   << "              fn(headerCells[headerIndex]);"                                   << std::endl
-                   << "            }"                                                                 << std::endl
-                   << "          }"                                                                   << std::endl
-                   << "          var bodyCells = node.parentNode.getElementsByTagName('td');"         << std::endl
-                   << "          var bodyIndex = bodyCells.length;"                                   << std::endl
-                   << "          while (--bodyIndex >= 0) {"                                          << std::endl
-                   << "            var cssClasses = ' ' + bodyCells[bodyIndex].className + ' ';"      << std::endl
-                   << "            if (cssClasses.indexOf(' ' + targetClass + ' ') > -1) {"           << std::endl
-                   << "              fn(bodyCells[bodyIndex]);"                                       << std::endl
-                   << "            }"                                                                 << std::endl
-                   << "          }"                                                                   << std::endl
-                   << "      }"                                                                       << std::endl
-                   << "      function makeCheckboxActive(node, targetClass, defaultOn) {"             << std::endl
+                   << "      }"                                                                       << std::endl;
+            if (params.checkboxes == parameters::CHECKBOXES_LOCAL)
+                header << "      function applyToCheckboxTargets(node, targetClass, fn) {"                << std::endl
+                       << "          var headerCells = node.parentNode.getElementsByTagName('th');"       << std::endl
+                       << "          var headerIndex = headerCells.length;"                               << std::endl
+                       << "          while (--headerIndex >= 0) {"                                        << std::endl
+                       << "            var cssClasses = ' ' + headerCells[headerIndex].className + ' ';"  << std::endl
+                       << "            if (cssClasses.indexOf(' ' + targetClass + ' ') > -1) {"           << std::endl
+                       << "              fn(headerCells[headerIndex]);"                                   << std::endl
+                       << "            }"                                                                 << std::endl
+                       << "          }"                                                                   << std::endl
+                       << "          var bodyCells = node.parentNode.getElementsByTagName('td');"         << std::endl
+                       << "          var bodyIndex = bodyCells.length;"                                   << std::endl
+                       << "          while (--bodyIndex >= 0) {"                                          << std::endl
+                       << "            var cssClasses = ' ' + bodyCells[bodyIndex].className + ' ';"      << std::endl
+                       << "            if (cssClasses.indexOf(' ' + targetClass + ' ') > -1) {"           << std::endl
+                       << "              fn(bodyCells[bodyIndex]);"                                       << std::endl
+                       << "            }"                                                                 << std::endl
+                       << "          }"                                                                   << std::endl
+                       << "      }"                                                                       << std::endl;
+            else if (params.checkboxes == parameters::CHECKBOXES_GLOBAL)
+                header << "      function applyToCheckboxTargets(node, targetClass, fn) {"                << std::endl
+                       << "          var headerCells = document.body.getElementsByTagName('th');"         << std::endl
+                       << "          var headerIndex = headerCells.length;"                               << std::endl
+                       << "          while (--headerIndex >= 0) {"                                        << std::endl
+                       << "            var cssClasses = ' ' + headerCells[headerIndex].className + ' ';"  << std::endl
+                       << "            if (cssClasses.indexOf(' ' + targetClass + ' ') > -1) {"           << std::endl
+                       << "              fn(headerCells[headerIndex]);"                                   << std::endl
+                       << "            }"                                                                 << std::endl
+                       << "          }"                                                                   << std::endl
+                       << "          var bodyCells = document.body.getElementsByTagName('td');"           << std::endl
+                       << "          var bodyIndex = bodyCells.length;"                                   << std::endl
+                       << "          while (--bodyIndex >= 0) {"                                          << std::endl
+                       << "            var cssClasses = ' ' + bodyCells[bodyIndex].className + ' ';"      << std::endl
+                       << "            if (cssClasses.indexOf(' ' + targetClass + ' ') > -1) {"           << std::endl
+                       << "              fn(bodyCells[bodyIndex]);"                                       << std::endl
+                       << "            }"                                                                 << std::endl
+                       << "          }"                                                                   << std::endl
+                       << "      }"                                                                       << std::endl;
+            header << "      function makeCheckboxActive(node, targetClass, defaultOn) {"             << std::endl
                    << "        applyToCheckboxTargets(node, targetClass, function (cell) {"           << std::endl
                    << "          if (defaultOn) {"                                                    << std::endl
                    << "            cell.style.display = 'table-cell';"                                << std::endl
@@ -549,20 +648,48 @@ private:
                    << "        }"                                                                     << std::endl
                    << "      }"                                                                       << std::endl;
         }
+        if (params.filter)
+            header << "      function filter() {"                                                     << std::endl
+                   << "        var input = document.getElementById('filter');"                        << std::endl
+                   << "        var regex = new RegExp(input.value, 'ig');"                            << std::endl
+                   << "        var trs = document.getElementsByTagName('tr')"                         << std::endl
+                   << "        var index = trs.length;"                                               << std::endl
+                   << "        while (--index >= 0) {"                                                << std::endl
+                   << "          var cssClasses = ' ' + trs[index].className + ' ';"                  << std::endl
+                   << "          if (cssClasses.indexOf(' top_level ') > -1) {"                       << std::endl
+                   << "            var jobName = trs[index].children[0].innerHTML;"                   << std::endl
+                   << "            if (input.value.length == 0 || jobName.search(regex) > -1) {"      << std::endl
+                   << "              trs[index].style.display = 'table-row';"                         << std::endl
+                   << "            } else {"                                                          << std::endl
+                   << "              trs[index].style.display = 'none';"                              << std::endl
+                   << "            }"                                                                 << std::endl
+                   << "          }"                                                                   << std::endl
+                   << "        }"                                                                     << std::endl
+                   << "      }"                                                                       << std::endl;
         header << "    </script>"                                                                 << std::endl
                << "  </head>"                                                                     << std::endl
                << "  <body onload=\"makeTablesSortable(document);"                                << std::endl;
-        if (params.enable_checkboxes && params.javascript_checkboxes) {
+
+        if (params.javascript_instead_of_css3 && params.checkboxes != parameters::CHECKBOXES_DISABLED)
             header << "                makeCheckboxesActive(document);"                              << std::endl;
-        }
+
         header << "               \">"                                                            << std::endl
                << "    <div id=\"overlay_wrapper\" onclick=\"cancelOverlay();\">"                 << std::endl
                << "      <div id=\"overlay\" onclick=\"cancelEvent(arguments[0]);\"></div>"       << std::endl
                << "    </div>"                                                                    << std::endl;
-        if (params.show_menu) {
+
+        if (params.filter)
+            header << "    <input id=\"filter\" oninput=\"filter();\" placeholder=\"Filter\">"        << std::endl;
+        if (params.checkboxes == parameters::CHECKBOXES_GLOBAL)
+            header << "        <input type=\"checkbox\" class=\"checkbox fail_cb\" />"                << std::endl
+                   << "        <span class=\"checkbox_label\">Failure time</span>"                    << std::endl
+                   << "        <input type=\"checkbox\" class=\"checkbox int_cb\" />"                 << std::endl
+                   << "        <span class=\"checkbox_label\">Interruption time</span>"               << std::endl
+                   << "        <input type=\"checkbox\" class=\"checkbox total_cb\" />"               << std::endl
+                   << "        <span class=\"checkbox_label\">Total time</span>"                      << std::endl;
+        if (params.show_menu)
             header << "    <div class=\"index\">"                                                     << std::endl
                    << "      <ul>"                                                                    << std::endl;
-        }
     }
 
     void generate_body(parameters const& params)
@@ -902,7 +1029,7 @@ void begin_table(document & doc, parameters const& params, bool has_fails, bool 
 
     // Add checkboxes (if enabled) and table
     doc.body << "      <div>"                                                                                        << std::endl;
-    if (params.enable_checkboxes) {
+    if (params.checkboxes == parameters::CHECKBOXES_LOCAL) {
     doc.body << "        <input type=\"checkbox\" class=\"checkbox fail_cb\"" << check_failures << " />"             << std::endl
              << "        <span class=\"checkbox_label\">Failure time</span>"                                         << std::endl
              << "        <input type=\"checkbox\" class=\"checkbox int_cb\"" << check_interrupts << " />"            << std::endl
@@ -982,7 +1109,7 @@ void add_row(document & doc, summary_diagnostic_item const& item, summary_diagno
     bool is_max_max_total   = (data.total_maxima_set && item.total_max     == data.max_total_max);
     bool is_max_min_total   = (data.total_maxima_set && item.total_min     == data.max_total_min);
 
-    doc.body << "            <tr" << (item.failed > 0 ? " class=\"failure\"": "") << ">" << std::endl
+    doc.body << "            <tr class=\"top_level" << (item.failed > 0 ? " failure": "") << "\">" << std::endl
              << "              <td data-sort=\"" << id << "\">" << detail::escape_html(item.job_name) << "</td>" << std::endl
 
              << "              <td class=\"value scheduling" << (is_max_total_scheduling ? " maximum" : "") << "\" data-sort=\"" << item.scheduling_total.count()   << "\">" << detail::format_duration(item.scheduling_total)   << "</td>" << std::endl
@@ -1054,9 +1181,9 @@ void end_table(document & doc) {
 // Formatting overloads for default diagnostics types
 
 // Diagnostics for currently running job
-void format(document & doc, std::size_t /* index */, std::string const& section, parameters const& /* params */, scheduler_diagnostics::current_type data) {
+void format(document & doc, std::size_t /* index */, std::string const& section, parameters const& params, scheduler_diagnostics::current_type data) {
     // Add heading
-    doc.body << "      <h4>" << detail::escape_html(section) << "</h4>" << std::endl;
+    if (params.add_subheadings) doc.body << "      <h4>" << detail::escape_html(section) << "</h4>" << std::endl;
 
     // Add table header
     doc.body << "      <table class=\"sortable\">"                                                            << std::endl
@@ -1110,7 +1237,7 @@ void format(document & doc, std::size_t /* index */, std::string const& section,
         bool is_total_maximum = (item.total == max_total);
 
         // Add table row
-        doc.body << "          <tr>" << std::endl
+        doc.body << "          <tr class=\"top_level\">" << std::endl
                  << "            <td data-sort=\"" << id << "\">" << detail::escape_html(item.job_name) << "</td>" << std::endl
                  << "            <td class=\"value scheduling" << (is_scheduling_maximum ? " maximum" : "") << "\" data-sort=\"" << item.scheduling.count() << "\">" << detail::format_duration(item.scheduling) << "</td>" << std::endl
                  << "            <td class=\"value execution"  << (is_execution_maximum ? " maximum" : "")  << "\" data-sort=\"" << item.execution.count()  << "\">" << detail::format_duration(item.execution)  << "</td>" << std::endl
@@ -1126,7 +1253,7 @@ void format(document & doc, std::size_t /* index */, std::string const& section,
 // All diagnostics
 void format(document & doc, std::size_t /* index */, std::string const& section, parameters const& params, scheduler_diagnostics data) {
     // Add heading
-    doc.body << "      <h4>" << section << "</h4>" << std::endl;
+    if (params.add_subheadings) doc.body << "      <h4>" << section << "</h4>" << std::endl;
 
     // Collect data
 
@@ -1147,7 +1274,7 @@ void format(document & doc, std::size_t /* index */, std::string const& section,
 // Summary diagnostics
 void format(document & doc, std::size_t /* index */, std::string const& section, parameters const& params, summary_diagnostics data) {
     // Add heading
-    doc.body << "      <h4>" << section << "</h4>" << std::endl;
+    if (params.add_subheadings) doc.body << "      <h4>" << section << "</h4>" << std::endl;
 
     // Add table
     detail::begin_table(doc, params, data.has_fails, data.has_interrupts);
@@ -1196,7 +1323,7 @@ public:
 
     // Add a menu entry and a section heading
     template <typename NameType = std::string>
-    void menu(document & doc, std::size_t index, NameType const& name_) {
+    void menu(document & doc, std::size_t index, NameType const& name_, std::string const& heading_type="h2") {
         // Handle empty names, escape HTML strings
         NameType name = name_;
         if (name == "") name = "Scheduler " + std::to_string(index) + " (unnamed)";
@@ -1208,7 +1335,7 @@ public:
         }
 
         // Add heading
-        doc.body << "      <h2 id=\"" << index << "\">" << name << "</h2>" << std::endl;
+        doc.body << "      <" << heading_type << " id=\"" << index << "\">" << name << "</" << heading_type << ">" << std::endl;
     }
 
     // Add the queue sizes to the document
@@ -1216,8 +1343,8 @@ public:
     void queues(document & doc, std::size_t /* index */, std::string const& title, QueueSizeType const& queue_sizes) {
         // Only add information if there are any queues
         if (queue_sizes.size() > 0) {
-            doc.body << "      <h4>" << title << "</h4>" << std::endl
-                     << "      <table class=\"queues\">" << std::endl;
+            if (m_params.add_subheadings) doc.body << "      <h4>" << title << "</h4>" << std::endl;
+            doc.body << "      <table class=\"queues\">" << std::endl;
 
             // Add queue sizes
             for (std::size_t size : queue_sizes) {

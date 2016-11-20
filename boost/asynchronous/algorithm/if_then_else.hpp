@@ -42,7 +42,7 @@ struct if_then_else_continuation_helper :
             // TODO C++14 move capture if possible
             cont_.on_done(
             [task_res,if_clause,then_clause,else_clause]
-            (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)
+            (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res)mutable
             {
                 try
                 {
@@ -51,7 +51,7 @@ struct if_then_else_continuation_helper :
                     {
                         auto then_cont = then_clause(std::move(res));
                         then_cont.on_done(
-                            [task_res](std::tuple<boost::asynchronous::expected<Return> >&& then_res)
+                            [task_res](std::tuple<boost::asynchronous::expected<Return> >&& then_res)mutable
                             {
                                 task_res.set_value(std::move(std::get<0>(then_res).get()));
                             }
@@ -61,7 +61,7 @@ struct if_then_else_continuation_helper :
                     {
                         auto else_cont = else_clause(std::move(res));
                         else_cont.on_done(
-                            [task_res](std::tuple<boost::asynchronous::expected<Return> >&& then_res)
+                            [task_res](std::tuple<boost::asynchronous::expected<Return> >&& then_res)mutable
                             {
                                 task_res.set_value(std::move(std::get<0>(then_res).get()));
                             }
