@@ -22,7 +22,18 @@
         <para>
             <emphasis role="underline">Note</emphasis>: Asynchronous is not part of the Boost
             library. It is planed to be offered for Review at the beginning of 2016. </para>
-        <para>Herb Sutter wrote <link
+        <para>Asynchronous is first of all an architecture tool. It allows organizing a complete
+            application into Thread Worlds, each world having the possibility to use the same or
+            different threadpools for long-lasting tasks. The library provides an implementation of
+            the Active Object pattern, extended to allow many Active Objects to live in the same
+            World. It provides several Threadpools and many parallel algorithms making use of it.
+            And most important of all, it allows simple, blocking-free asynchronous programming
+            based on thread-safe callbacks.</para>
+        <para>This is particularly relevant for Designers who often have headaches bringing the
+            notion of threads into class diagrams. These usually do not mix well. Asynchronous
+            solves this problems: it allows representing a Thread World as a Component or Package,
+            objects of this Component or Package living into the corresponding thread.</para>
+        <para>Why do we care? Herb Sutter wrote <link
                 xlink:href="http://www.gotw.ca/publications/concurrency-ddj.htm">in an
                 article</link> "The Free Lunch Is Over", meaning that developpers will be forced to
             learn to develop multi-threaded applications. The reason is that we now get our extra
@@ -36,9 +47,10 @@
             operations, network communications, which all stall our programms and degrade our
             performance, which means long sessions with coverage or analysis tools.</para>
         <para>Trying to solve these problems with tools of the past (mutexes, programmer-managed
-            threads) is a dead-end. It's just too hard. This is where Boost Asynchronous is
-            helping.</para>
-        <para>There are already existing solutions for this. To name a few:</para>
+            threads) is a dead-end. It's just too hard. This is where Boost Asynchronous is helping.
+            Let us forget what mutexes, atomics and races are!</para>
+        <para>There are existing solutions for asynchronous or parallel programming. To name a
+            few:</para>
         <para>
             <itemizedlist>
                 <listitem>
@@ -54,11 +66,10 @@
         </para>
         <para>TBB is a wonderful parallel library. But it's not asynchronous as one needs to wait
             for the end of a parallel call.</para>
-        <para>std::async will return us a future. But what will we do with it? Wait for it? This
-            would be synchronous. Collect them and then wait for all? This would also be
-            synchronous. Collect them, do something else, then check if they are ready? This would
-            be wasted opportunity for more calculations. To make it worse, I/O usage will seriously
-            degrade performance.</para>
+        <para>std::async will return a future. But what to do with it? Wait for it? This would be
+            synchronous. Collect them and then wait for all? This would also be synchronous. Collect
+            them, do something else, then check whether they are ready? This would be wasted
+            opportunity for more calculations.</para>
         <para>To solve these problems, NB3428 is an attempt at continuations. Let's have a quick
             look at code using futures and .then (taken from N3428):</para>
         <para>
@@ -70,12 +81,12 @@ f2.get(); // just a "small get" at the end?</programlisting>
             real-time constraints, equivalent to saying at a lockfree conference something like
             "what is all the fuss about? Can't we just add a small lock at the end?". Just try
             it...</para>
-        <para>Worse yet, it clutters the code, makes it hard to debug and understand. When did we
-            give up writing design diagrams? How is this supposed to replace a dynamic behavior
-            using a state machine?</para>
+        <para>Worse yet, it clutters the code, makes it hard to debug and understand. The author,
+            also being the author of Boost Meta State Machine sees no way to use this paradigm with
+            state machines.</para>
         <para>Asynchronous supports this programming model too, though it is advised to use it only
-            for simple programs or quick prototyping, or as a step to the more powerful tools
-            offered by the library. std::async can be replaced by
+            for simple programs, quick prototyping unit tests, or as a step to the more powerful
+            tools offered by the library. std::async can be replaced by
             boost::asynchronous::post_future:</para>
         <programlisting>auto pool = boost::asynchronous::make_shared_scheduler_proxy&lt;
                   boost::asynchronous::multiqueue_threadpool_scheduler&lt;
@@ -105,8 +116,8 @@ f1.get();</programlisting>
             }, 1024);                                                  // reduce cutoff
     });
 int res = fu.get();</programlisting>
-        <para>But this is just the beginning. It is not even really asynchronous. More important,
-            Boost Asynchronous is a library which can play a great role in making a thread-correct
+        <para>But this is just the beginning. It is not really asynchronous. More important, Boost
+            Asynchronous is a library which can play a great role in making a thread-correct
             architecture. To achieve this, it offers tools for asynchronous designs: ActiveObject,
             safe callbacks, threadpools, servants, proxies, queues, algorithms, etc. </para>
         <para>Consider the following example showing us why we need an architecture tool:</para>
@@ -4469,7 +4480,7 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">void
                     <para>Copies copies the elements for which a predicate returns true. The order
                         of the elements that are not removed is preserved.</para>
                     <programlisting>template &lt;class Iterator,class ResultIterator, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">void</emphasis>,Job>
+boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">ResultIterator</emphasis>,Job>
 <emphasis role="bold">parallel_copy_if</emphasis>(Iterator begin, Iterator end,ResultIterator result,Func func, long cutoff,const std::string&amp; task_name="", std::size_t prio=0);</programlisting>
                     <para>The algorithm requires that the iterators stay valid until completion. It
                         is the programmer's job to ensure this.</para>
