@@ -16,29 +16,14 @@
 #include <boost/core/enable_if.hpp>
 
 #include <boost/asynchronous/scheduler_diagnostics.hpp>
+#include <boost/asynchronous/diagnostics/basic_formatter.hpp>
 #include <boost/asynchronous/diagnostics/scheduler_interface.hpp>
 
 namespace boost { namespace asynchronous {
 
 namespace html_formatter {
 
-// HTML RGB colors to configure html_formatter
-struct color
-{
-    std::uint8_t r;
-    std::uint8_t g;
-    std::uint8_t b;
-
-    std::string to_html() const
-    {
-        std::stringstream stream;
-        stream << "#" << std::hex << std::setfill('0')
-               << std::setw(2) << (int) r
-               << std::setw(2) << (int) g
-               << std::setw(2) << (int) b;
-        return stream.str();
-    }
-};
+using namespace boost::asynchronous::formatting;
 
 // Parameters (colors and others) for the html_formatter
 struct parameters
@@ -106,14 +91,14 @@ private:
                << "    <style type=\"text/css\">"                                                 << std::endl
                << "      body {"                                                                  << std::endl
                << "        font-family: sans-serif;"                                              << std::endl
-               << "        color: " << params.font.to_html() << ";"                               << std::endl
-               << "        background-color: " << params.background.to_html() << ";"              << std::endl
+               << "        color: " << params.font.to_hex() << ";"                                << std::endl
+               << "        background-color: " << params.background.to_hex() << ";"               << std::endl
                << "        font-size: " << params.font_size << "pt;"                              << std::endl
                << "      }"                                                                       << std::endl
                <<                                                                                    std::endl
                << "      .index a {"                                                              << std::endl
                << "        text-decoration: none;"                                                << std::endl
-               << "        color: " << params.menu_font.to_html() << ";"                          << std::endl
+               << "        color: " << params.menu_font.to_hex() << ";"                           << std::endl
                << "        font-weight: bold;"                                                    << std::endl
                << "        width: 100%;"                                                          << std::endl
                << "      }"                                                                       << std::endl
@@ -137,7 +122,7 @@ private:
                << "        text-overflow: ellipsis;"                                              << std::endl
                << "      }"                                                                       << std::endl
                << "      .index li:hover {"                                                       << std::endl
-               << "        background-color: " << params.menu_hover_background.to_html() << ";"   << std::endl
+               << "        background-color: " << params.menu_hover_background.to_hex() << ";"    << std::endl
                << "      }"                                                                       << std::endl
                <<                                                                                    std::endl
                << "      .index {"                                                                << std::endl
@@ -145,8 +130,8 @@ private:
                << "        top: 0;"                                                               << std::endl
                << "        left: 0;"                                                              << std::endl
                << "        z-index: 1;"                                                           << std::endl
-               << "        color: " << params.menu_font.to_html() << ";"                          << std::endl
-               << "        background-color: " << params.menu_background.to_html() << ";"         << std::endl
+               << "        color: " << params.menu_font.to_hex() << ";"                           << std::endl
+               << "        background-color: " << params.menu_background.to_hex() << ";"          << std::endl
                << "        text-transform: uppercase;"                                            << std::endl
                << "        width: 15%;"                                                           << std::endl
                << "        max-width: 250px;"                                                     << std::endl
@@ -206,7 +191,7 @@ private:
                << "        justify-content: space-between;"                                       << std::endl
                << "        align-items: center;"                                                  << std::endl
                << "        height: 90%;"                                                          << std::endl
-               << "        color: " << params.font.to_html() << ";"                               << std::endl
+               << "        color: " << params.font.to_hex() << ";"                                << std::endl
                << "      }"                                                                       << std::endl
                <<                                                                                    std::endl
                << "      .columns {"                                                              << std::endl
@@ -233,7 +218,7 @@ private:
                << "      }"                                                                       << std::endl
                <<                                                                                    std::endl
                << "      td, th {"                                                                << std::endl
-               << "        border: 1px " << params.table_border.to_html() << " solid;"            << std::endl
+               << "        border: 1px " << params.table_border.to_hex() << " solid;"             << std::endl
                << "      }"                                                                       << std::endl
                <<                                                                                    std::endl
                << "      th {"                                                                    << std::endl
@@ -266,29 +251,29 @@ private:
                << "        text-align: right;"                                                    << std::endl
                << "      }"                                                                       << std::endl
                << "      td.maximum {"                                                            << std::endl
-               << "        color: " << params.maximum_font.to_html() << ";"                       << std::endl
-               << "        border-color: " << params.table_border.to_html() << ";"                << std::endl
+               << "        color: " << params.maximum_font.to_hex() << ";"                        << std::endl
+               << "        border-color: " << params.table_border.to_hex() << ";"                 << std::endl
                << "      }"                                                                       << std::endl
                << "      td.scheduling, th.scheduling {"                                          << std::endl
-               << "        background-color: " << params.scheduling_background.to_html() << ";"   << std::endl
+               << "        background-color: " << params.scheduling_background.to_hex() << ";"    << std::endl
                << "      }"                                                                       << std::endl
                << "      td.execution, th.execution {"                                            << std::endl
-               << "        background-color: " << params.execution_background.to_html() << ";"    << std::endl
+               << "        background-color: " << params.execution_background.to_hex() << ";"     << std::endl
                << "      }"                                                                       << std::endl
                << "      td.failure_cell, th.failure_cell {"                                      << std::endl
-               << "        background-color: " << params.failure_cell_background.to_html() << ";" << std::endl
+               << "        background-color: " << params.failure_cell_background.to_hex() << ";"  << std::endl
                << "      }"                                                                       << std::endl
                << "      td.interrupted, th.interrupted {"                                        << std::endl
-               << "        background-color: " << params.interrupted_background.to_html() << ";"  << std::endl
+               << "        background-color: " << params.interrupted_background.to_hex() << ";"   << std::endl
                << "      }"                                                                       << std::endl
                << "      td.total, th.total {"                                                    << std::endl
-               << "        background-color: " << params.total_background.to_html() << ";"        << std::endl
+               << "        background-color: " << params.total_background.to_hex() << ";"         << std::endl
                << "      }"                                                                       << std::endl
                << "      tr.failure {"                                                            << std::endl
-               << "        background-color: " << params.failure_background.to_html() << ";"      << std::endl
+               << "        background-color: " << params.failure_background.to_hex() << ";"       << std::endl
                << "      }"                                                                       << std::endl
                << "      tr.interruption {"                                                       << std::endl
-               << "        background-color: " << params.interrupted_background.to_html() << ";"  << std::endl
+               << "        background-color: " << params.interrupted_background.to_hex() << ";"   << std::endl
                << "      }"                                                                       << std::endl;
         if (params.background_override) {
             header << "      tr.failure > td.scheduling {"                                            << std::endl
@@ -321,8 +306,8 @@ private:
                    << "      tr.interruption > td.total {"                                            << std::endl
                    << "        background-color: inherit;"                                            << std::endl
                    << "      }"                                                                       << std::endl
-                   << "      tr.noborder {"                                                           << std::endl
-                   << "        background-color: " << params.background.to_html() << " !important;"   << std::endl
+                   << "      td.noborder {"                                                           << std::endl
+                   << "        background-color: " << params.background.to_hex() << " !important;"    << std::endl
                    << "      }"                                                                       << std::endl;
         }
         if (params.checkboxes != parameters::CHECKBOXES_DISABLED) {
@@ -368,19 +353,19 @@ private:
                    << "        left: 0;"                                                              << std::endl
                    << "        margin-left: " << (params.font_size * 3) << "pt;"                      << std::endl // Fallback
                    << "        margin-left: calc(3 * " << params.font_size << "pt);"                  << std::endl
-                   << "        color: " << (params.show_menu ? params.menu_font.to_html() : params.font.to_html()) << ";" << std::endl
+                   << "        color: " << (params.show_menu ? params.menu_font.to_hex() : params.font.to_hex()) << ";" << std::endl
                    << "        z-index: 20;"                                                          << std::endl
                    << "      }"                                                                       << std::endl
                    << "      .fail_cb, .fail_cb + span {"                                             << std::endl
-                   << "        bottom: " << (params.font_size * 6) << "pt);"                          << std::endl // Fallback
+                   << "        bottom: " << (params.font_size * 6) << "pt;"                          << std::endl // Fallback
                    << "        bottom: calc(6 * " << params.font_size << "pt);"                       << std::endl
                    << "      }"                                                                       << std::endl
                    << "      .int_cb, .int_cb + span {"                                               << std::endl
-                   << "        bottom: " << (params.font_size * 4) << "pt);"                          << std::endl // Fallback
+                   << "        bottom: " << (params.font_size * 4) << "pt;"                          << std::endl // Fallback
                    << "        bottom: calc(4 * " << params.font_size << "pt);"                       << std::endl
                    << "      }"                                                                       << std::endl
                    << "      .total_cb, .total_cb + span {"                                           << std::endl
-                   << "        bottom: " << (params.font_size * 2) << "pt);"                          << std::endl // Fallback
+                   << "        bottom: " << (params.font_size * 2) << "pt;"                          << std::endl // Fallback
                    << "        bottom: calc(2 * " << params.font_size << "pt);"                       << std::endl
                    << "      }"                                                                       << std::endl;
         if (params.filter) {
@@ -423,7 +408,7 @@ private:
                << "        z-index: 900;"                                                         << std::endl
                << "      }"                                                                       << std::endl
                << "      #overlay {"                                                              << std::endl
-               << "        background-color: " << params.background.to_html() << ";"              << std::endl
+               << "        background-color: " << params.background.to_hex() << ";"               << std::endl
                << "        position: fixed;"                                                      << std::endl
                << "        top: 10%;"                                                             << std::endl
                << "        left: 10%;"                                                            << std::endl
@@ -447,7 +432,7 @@ private:
                << "        pointer-events: all;"                                                  << std::endl
                << "      }"                                                                       << std::endl
                << "      .histogram_bar:hover + g text {"                                         << std::endl
-               << "        fill: " << params.histogram_font.to_html() << ";"                      << std::endl
+               << "        fill: " << params.histogram_font.to_hex() << ";"                       << std::endl
                << "      }"                                                                       << std::endl
                << "    </style>"                                                                  << std::endl
                << "    <script type=\"text/javascript\">"                                         << std::endl
@@ -746,27 +731,6 @@ std::string escape_html(std::string const& str) {
     return buffer;
 }
 
-// Convert time (boost::chrono::nanoseconds) to string
-std::string format_duration(boost::chrono::nanoseconds const& d)
-{
-    // Get microsecond ticks
-    boost::chrono::microseconds casted = boost::chrono::duration_cast<boost::chrono::microseconds>(d);
-    boost::int_least64_t ticks = casted.count();
-
-    // Extract values
-    boost::int_least64_t seconds = ticks / 1000000;
-    boost::int_least16_t milliseconds = (ticks % 1000000) / 1000;
-    boost::int_least16_t microseconds = ticks % 1000;
-
-    // Convert to string and return
-    std::stringstream stream;
-    stream << std::setfill('0');
-    if (seconds > 0) stream << seconds << "." << std::setw(3);
-    if (seconds > 0 || milliseconds > 0) stream << milliseconds << "." << std::setw(3);
-    stream << microseconds;
-    return stream.str();
-}
-
 // Histogram data
 struct histogram
 {
@@ -836,12 +800,12 @@ struct histogram
         doc.body << "                      <svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" version=\"1.1\""     << std::endl
                  << "                           viewBox=\"0 0 " << (viewbox_width + label_width) << " " << viewbox_height << "\" class=\"histogram\">" << std::endl
                  // Draw background
-                 << "                        <rect width=\"100%\" height=\"100%\" style=\"fill: " << params.histogram_background.to_html() << ";\" />" << std::endl;
+                 << "                        <rect width=\"100%\" height=\"100%\" style=\"fill: " << params.histogram_background.to_hex() << ";\" />" << std::endl;
 
         // Draw label background
         doc.body << "                        <rect x=\"" << label_left << "\" y=\"" << label_top << "\""                                           << std::endl
                  << "                              width=\"" << (label_right - label_left) << "\" height=\"" << (label_bottom - label_top) << "\"" << std::endl
-                 << "                              style=\"fill: " << fill.to_html() << "; opacity: 0.5;\" />"                                     << std::endl;
+                 << "                              style=\"fill: " << fill.to_hex() << "; opacity: 0.5;\" />"                                     << std::endl;
 
         // Determine maximum value
         std::size_t maximum=0;
@@ -879,7 +843,7 @@ struct histogram
             doc.body << "                        <polygon points=\"" << x_start << ", " << top      << " "
                                                                    << x_end   << ", " << top      << " "
                                                                    << x_end   << ", " << y_bottom << " "
-                                                                   << x_start << ", " << y_bottom << "\" style=\"fill: " << fill.to_html() << ";\""              << std::endl
+                                                                   << x_start << ", " << y_bottom << "\" style=\"fill: " << fill.to_hex() << ";\""              << std::endl
                      << "                                 class=\"histogram_bar\"/>"                                                                             << std::endl
                      << "                        <g>"                                                                                                            << std::endl
                      << "                          <text x=\"" << label_text_left << "\" y=\"" << (label_text_top + 10) << "\">" << strings[bin_id] << "</text>" << std::endl
@@ -890,7 +854,7 @@ struct histogram
         }
 
         // Draw axes (over the polygons)
-        doc.body << "                        <g style=\"stroke-width: 1; stroke: " << params.histogram_lines.to_html() << ";\">"                              << std::endl
+        doc.body << "                        <g style=\"stroke-width: 1; stroke: " << params.histogram_lines.to_hex() << ";\">"                              << std::endl
                  << "                          <line x1=\"" << x_left << "\" y1=\"" << y_top << "\" x2=\"" << x_left << "\" y2=\"" << y_bottom << "\" />"     << std::endl
                  << "                          <line x1=\"" << x_left << "\" y1=\"" << y_bottom << "\" x2=\"" << x_right << "\" y2=\"" << y_bottom << "\" />" << std::endl
                  << "                        </g>"                                                                                                            << std::endl;
@@ -950,9 +914,9 @@ struct row_detail
 
             doc.body << "                    <tr" << row_class << ">" << std::endl
                      << "                      <td data-sort=\"" << individual_id << "\">" << boost::asynchronous::html_formatter::detail::escape_html(individual.job_name) << "</td>" << std::endl
-                     << "                      <td class=\"value scheduling" << (is_scheduling_maximum ? " maximum" : "") << "\" data-sort=\"" << individual.scheduling.count() << "\">" << boost::asynchronous::html_formatter::detail::format_duration(individual.scheduling) << "</td>" << std::endl
-                     << "                      <td class=\"value execution"  << (is_execution_maximum ? " maximum" : "")  << "\" data-sort=\"" << individual.execution.count() << "\">"  << boost::asynchronous::html_formatter::detail::format_duration(individual.execution)  << "</td>" << std::endl
-                     << "                      <td class=\"value total"      << (is_total_maximum ? " maximum" : "")      << "\" data-sort=\"" << individual.total.count() << "\">"      << boost::asynchronous::html_formatter::detail::format_duration(individual.total)      << "</td>" << std::endl
+                     << "                      <td class=\"value scheduling" << (is_scheduling_maximum ? " maximum" : "") << "\" data-sort=\"" << individual.scheduling.count() << "\">" << boost::asynchronous::html_formatter::format_duration(individual.scheduling) << "</td>" << std::endl
+                     << "                      <td class=\"value execution"  << (is_execution_maximum ? " maximum" : "")  << "\" data-sort=\"" << individual.execution.count() << "\">"  << boost::asynchronous::html_formatter::format_duration(individual.execution)  << "</td>" << std::endl
+                     << "                      <td class=\"value total"      << (is_total_maximum ? " maximum" : "")      << "\" data-sort=\"" << individual.total.count() << "\">"      << boost::asynchronous::html_formatter::format_duration(individual.total)      << "</td>" << std::endl
                      << "                    </tr>" << std::endl;
         }
 
@@ -1112,34 +1076,34 @@ void add_row(document & doc, summary_diagnostic_item const& item, summary_diagno
     doc.body << "            <tr class=\"top_level" << (item.failed > 0 ? " failure": "") << "\">" << std::endl
              << "              <td data-sort=\"" << id << "\">" << detail::escape_html(item.job_name) << "</td>" << std::endl
 
-             << "              <td class=\"value scheduling" << (is_max_total_scheduling ? " maximum" : "") << "\" data-sort=\"" << item.scheduling_total.count()   << "\">" << detail::format_duration(item.scheduling_total)   << "</td>" << std::endl
-             << "              <td class=\"value scheduling" << (is_max_avg_scheduling ? " maximum" : "")   << "\" data-sort=\"" << item.scheduling_average.count() << "\">" << detail::format_duration(item.scheduling_average) << "</td>" << std::endl
-             << "              <td class=\"value scheduling" << (is_max_max_scheduling ? " maximum" : "")   << "\" data-sort=\"" << item.scheduling_max.count()     << "\">" << detail::format_duration(item.scheduling_max)     << "</td>" << std::endl
-             << "              <td class=\"value scheduling" << (is_max_min_scheduling ? " maximum" : "")   << "\" data-sort=\"" << item.scheduling_min.count()     << "\">" << detail::format_duration(item.scheduling_min)     << "</td>" << std::endl
+             << "              <td class=\"value scheduling" << (is_max_total_scheduling ? " maximum" : "") << "\" data-sort=\"" << item.scheduling_total.count()   << "\">" << format_duration(item.scheduling_total)   << "</td>" << std::endl
+             << "              <td class=\"value scheduling" << (is_max_avg_scheduling ? " maximum" : "")   << "\" data-sort=\"" << item.scheduling_average.count() << "\">" << format_duration(item.scheduling_average) << "</td>" << std::endl
+             << "              <td class=\"value scheduling" << (is_max_max_scheduling ? " maximum" : "")   << "\" data-sort=\"" << item.scheduling_max.count()     << "\">" << format_duration(item.scheduling_max)     << "</td>" << std::endl
+             << "              <td class=\"value scheduling" << (is_max_min_scheduling ? " maximum" : "")   << "\" data-sort=\"" << item.scheduling_min.count()     << "\">" << format_duration(item.scheduling_min)     << "</td>" << std::endl
              << "              <td class=\"value scheduling\" data-sort=\"" << item.scheduled << "\">" << item.scheduled << "</td>" << std::endl
 
-             << "              <td class=\"value execution" << (is_max_total_execution ? " maximum" : "") << "\" data-sort=\"" << item.execution_total.count()   << "\">" << detail::format_duration(item.execution_total)   << "</td>" << std::endl
-             << "              <td class=\"value execution" << (is_max_avg_execution ? " maximum" : "")   << "\" data-sort=\"" << item.execution_average.count() << "\">" << detail::format_duration(item.execution_average) << "</td>" << std::endl
-             << "              <td class=\"value execution" << (is_max_max_execution ? " maximum" : "")   << "\" data-sort=\"" << item.execution_max.count()     << "\">" << detail::format_duration(item.execution_max)     << "</td>" << std::endl
-             << "              <td class=\"value execution" << (is_max_min_execution ? " maximum" : "")   << "\" data-sort=\"" << item.execution_max.count()     << "\">" << detail::format_duration(item.execution_min)     << "</td>" << std::endl
+             << "              <td class=\"value execution" << (is_max_total_execution ? " maximum" : "") << "\" data-sort=\"" << item.execution_total.count()   << "\">" << format_duration(item.execution_total)   << "</td>" << std::endl
+             << "              <td class=\"value execution" << (is_max_avg_execution ? " maximum" : "")   << "\" data-sort=\"" << item.execution_average.count() << "\">" << format_duration(item.execution_average) << "</td>" << std::endl
+             << "              <td class=\"value execution" << (is_max_max_execution ? " maximum" : "")   << "\" data-sort=\"" << item.execution_max.count()     << "\">" << format_duration(item.execution_max)     << "</td>" << std::endl
+             << "              <td class=\"value execution" << (is_max_min_execution ? " maximum" : "")   << "\" data-sort=\"" << item.execution_max.count()     << "\">" << format_duration(item.execution_min)     << "</td>" << std::endl
              << "              <td class=\"value execution\" data-sort=\"" << item.successful << "\">" << item.successful << "</td>" << std::endl
 
-             << "              <td class=\"value failure_cell" << (is_max_total_failure ? " maximum" : "") << "\" data-sort=\"" << item.failure_total.count()   << "\">" << detail::format_duration(item.failure_total)   << "</td>" << std::endl
-             << "              <td class=\"value failure_cell" << (is_max_avg_failure ? " maximum" : "")   << "\" data-sort=\"" << item.failure_average.count() << "\">" << detail::format_duration(item.failure_average) << "</td>" << std::endl
-             << "              <td class=\"value failure_cell" << (is_max_max_failure ? " maximum" : "")   << "\" data-sort=\"" << item.failure_max.count()     << "\">" << detail::format_duration(item.failure_max)     << "</td>" << std::endl
-             << "              <td class=\"value failure_cell" << (is_max_min_failure ? " maximum" : "")   << "\" data-sort=\"" << item.failure_max.count()     << "\">" << detail::format_duration(item.failure_min)     << "</td>" << std::endl
+             << "              <td class=\"value failure_cell" << (is_max_total_failure ? " maximum" : "") << "\" data-sort=\"" << item.failure_total.count()   << "\">" << format_duration(item.failure_total)   << "</td>" << std::endl
+             << "              <td class=\"value failure_cell" << (is_max_avg_failure ? " maximum" : "")   << "\" data-sort=\"" << item.failure_average.count() << "\">" << format_duration(item.failure_average) << "</td>" << std::endl
+             << "              <td class=\"value failure_cell" << (is_max_max_failure ? " maximum" : "")   << "\" data-sort=\"" << item.failure_max.count()     << "\">" << format_duration(item.failure_max)     << "</td>" << std::endl
+             << "              <td class=\"value failure_cell" << (is_max_min_failure ? " maximum" : "")   << "\" data-sort=\"" << item.failure_max.count()     << "\">" << format_duration(item.failure_min)     << "</td>" << std::endl
              << "              <td class=\"value failure_cell\" data-sort=\"" << item.failed << "\">" << item.failed << "</td>" << std::endl
 
-             << "              <td class=\"value interrupted" << (is_max_total_interrupted ? " maximum" : "") << "\" data-sort=\"" << item.interrupted_total.count()   << "\">" << detail::format_duration(item.interrupted_total)   << "</td>" << std::endl
-             << "              <td class=\"value interrupted" << (is_max_avg_interrupted ? " maximum" : "")   << "\" data-sort=\"" << item.interrupted_average.count() << "\">" << detail::format_duration(item.interrupted_average) << "</td>" << std::endl
-             << "              <td class=\"value interrupted" << (is_max_max_interrupted ? " maximum" : "")   << "\" data-sort=\"" << item.interrupted_max.count()     << "\">" << detail::format_duration(item.interrupted_max)     << "</td>" << std::endl
-             << "              <td class=\"value interrupted" << (is_max_min_interrupted ? " maximum" : "")   << "\" data-sort=\"" << item.interrupted_max.count()     << "\">" << detail::format_duration(item.interrupted_min)     << "</td>" << std::endl
+             << "              <td class=\"value interrupted" << (is_max_total_interrupted ? " maximum" : "") << "\" data-sort=\"" << item.interrupted_total.count()   << "\">" << format_duration(item.interrupted_total)   << "</td>" << std::endl
+             << "              <td class=\"value interrupted" << (is_max_avg_interrupted ? " maximum" : "")   << "\" data-sort=\"" << item.interrupted_average.count() << "\">" << format_duration(item.interrupted_average) << "</td>" << std::endl
+             << "              <td class=\"value interrupted" << (is_max_max_interrupted ? " maximum" : "")   << "\" data-sort=\"" << item.interrupted_max.count()     << "\">" << format_duration(item.interrupted_max)     << "</td>" << std::endl
+             << "              <td class=\"value interrupted" << (is_max_min_interrupted ? " maximum" : "")   << "\" data-sort=\"" << item.interrupted_max.count()     << "\">" << format_duration(item.interrupted_min)     << "</td>" << std::endl
              << "              <td class=\"value interrupted\" data-sort=\"" << item.interrupted << "\">" << item.interrupted << "</td>" << std::endl
 
-             << "              <td class=\"value total" << (is_max_total_total ? " maximum" : "") << "\" data-sort=\"" << item.total_total.count() << "\">"   << detail::format_duration(item.total_total)   << "</td>" << std::endl
-             << "              <td class=\"value total" << (is_max_avg_total ? " maximum" : "")   << "\" data-sort=\"" << item.total_average.count() << "\">" << detail::format_duration(item.total_average) << "</td>" << std::endl
-             << "              <td class=\"value total" << (is_max_max_total ? " maximum" : "")   << "\" data-sort=\"" << item.total_max.count() << "\">"     << detail::format_duration(item.total_max)     << "</td>" << std::endl
-             << "              <td class=\"value total" << (is_max_min_total ? " maximum" : "")   << "\" data-sort=\"" << item.total_max.count() << "\">"     << detail::format_duration(item.total_min)     << "</td>" << std::endl
+             << "              <td class=\"value total" << (is_max_total_total ? " maximum" : "") << "\" data-sort=\"" << item.total_total.count() << "\">"   << format_duration(item.total_total)   << "</td>" << std::endl
+             << "              <td class=\"value total" << (is_max_avg_total ? " maximum" : "")   << "\" data-sort=\"" << item.total_average.count() << "\">" << format_duration(item.total_average) << "</td>" << std::endl
+             << "              <td class=\"value total" << (is_max_max_total ? " maximum" : "")   << "\" data-sort=\"" << item.total_max.count() << "\">"     << format_duration(item.total_max)     << "</td>" << std::endl
+             << "              <td class=\"value total" << (is_max_min_total ? " maximum" : "")   << "\" data-sort=\"" << item.total_max.count() << "\">"     << format_duration(item.total_min)     << "</td>" << std::endl
              << "              <td class=\"value total\" data-sort=\"" << item.count << "\">" << item.count << "</td>" << std::endl
 
              << "              <td class=\"noborder\">" << std::endl
@@ -1239,9 +1203,9 @@ void format(document & doc, std::size_t /* index */, std::string const& section,
         // Add table row
         doc.body << "          <tr class=\"top_level\">" << std::endl
                  << "            <td data-sort=\"" << id << "\">" << detail::escape_html(item.job_name) << "</td>" << std::endl
-                 << "            <td class=\"value scheduling" << (is_scheduling_maximum ? " maximum" : "") << "\" data-sort=\"" << item.scheduling.count() << "\">" << detail::format_duration(item.scheduling) << "</td>" << std::endl
-                 << "            <td class=\"value execution"  << (is_execution_maximum ? " maximum" : "")  << "\" data-sort=\"" << item.execution.count()  << "\">" << detail::format_duration(item.execution)  << "</td>" << std::endl
-                 << "            <td class=\"value total"      << (is_total_maximum ? " maximum" : "")      << "\" data-sort=\"" << item.total.count()      << "\">" << detail::format_duration(item.total)      << "</td>" << std::endl
+                 << "            <td class=\"value scheduling" << (is_scheduling_maximum ? " maximum" : "") << "\" data-sort=\"" << item.scheduling.count() << "\">" << format_duration(item.scheduling) << "</td>" << std::endl
+                 << "            <td class=\"value execution"  << (is_execution_maximum ? " maximum" : "")  << "\" data-sort=\"" << item.execution.count()  << "\">" << format_duration(item.execution)  << "</td>" << std::endl
+                 << "            <td class=\"value total"      << (is_total_maximum ? " maximum" : "")      << "\" data-sort=\"" << item.total.count()      << "\">" << format_duration(item.total)      << "</td>" << std::endl
                  << "          </tr>" << std::endl;
     }
 
@@ -1295,27 +1259,26 @@ void format(document & /* doc */, std::size_t /* index */, std::string const& /*
 // Diagnostic types must offer 'merge(boost::asynchronous::scheduler_diagnostics)'
 template <typename Current = scheduler_diagnostics,
           typename All = summary_diagnostics>
-class formatter {
-private:
-    std::vector<Current> m_current_diagnostics;
-    std::vector<All> m_all_diagnostics;
-
-    std::vector<scheduler_interface> m_interfaces;
-
+class formatter : public virtual boost::asynchronous::basic_formatter<Current, All> {
+protected:
     parameters m_params;
 
 public:
     typedef parameters parameter_type;
 
+    // Enable use of basic_formatter's diagnostics retrieval
+    using boost::asynchronous::basic_formatter<Current, All>::format;
+
     // Constructors
 
     formatter(parameters params = parameters())
-        : m_params(std::move(params))
+        : boost::asynchronous::basic_formatter<Current, All>()
+        , m_params(std::move(params))
     {}
 
     formatter(std::vector<boost::asynchronous::scheduler_interface> interfaces,
               parameters params = parameters())
-        : m_interfaces(std::move(interfaces))
+        : boost::asynchronous::basic_formatter<Current, All>(std::move(interfaces))
         , m_params(std::move(params))
     {}
 
@@ -1371,12 +1334,12 @@ public:
 
     // Formatting
 
-    template <typename NamesType      = std::vector<std::string> &&,
-              typename QueueSizesType = std::vector<std::vector<std::size_t>> &&,
-              typename RunningType    = std::vector<scheduler_diagnostics::current_type> &&,
-              typename CurrentType    = std::vector<Current> &&,
-              typename AllType        = std::vector<All> &&>
-    std::string format(std::size_t count, NamesType names, QueueSizesType queue_sizes, RunningType running, CurrentType current, AllType all) {
+    virtual std::string format(std::size_t count,
+                               std::vector<std::string> && names,
+                               std::vector<std::vector<std::size_t>> && queue_sizes,
+                               std::vector<scheduler_diagnostics::current_type> && running,
+                               std::vector<Current> && current,
+                               std::vector<All> && all) override {
         document doc(m_params);
 
         for (std::size_t index = 0; index < count; ++index) {
@@ -1393,66 +1356,6 @@ public:
         }
 
         return doc.str();
-    }
-
-    std::string format() {
-        // Fetch new diagnostics from the current schedulers
-        std::vector<scheduler_diagnostics> diagnostics(m_interfaces.size());
-        std::vector<std::vector<std::size_t>> queue_sizes(m_interfaces.size());
-        std::vector<std::string> names(m_interfaces.size());
-
-        for (std::size_t index = 0; index < m_interfaces.size(); ++index) {
-            diagnostics[index] = m_interfaces[index].get_diagnostics();
-            queue_sizes[index] = m_interfaces[index].get_queue_sizes();
-            names[index] = m_interfaces[index].name;
-        }
-
-        // Clone the current diagnostics and merge them with the new data.
-        // Also, extract the information on running jobs
-        std::vector<Current> current(diagnostics.size());
-        std::vector<All> all(diagnostics.size());
-        std::vector<scheduler_diagnostics::current_type> running(diagnostics.size());
-
-        for (std::size_t index = 0; index < m_current_diagnostics.size(); ++index) {
-            current[index] = m_current_diagnostics[index];
-            all[index] = m_all_diagnostics[index];
-        }
-        for (std::size_t index = 0; index < current.size(); ++index) {
-            running[index] = diagnostics[index].current();
-            current[index].merge(diagnostics[index]);
-            all[index].merge(std::move(diagnostics[index]));
-        }
-
-        // Format 'running', 'current' and 'm_all_diagnostics'
-        return format(diagnostics.size(), std::move(names), std::move(queue_sizes), std::move(running), std::move(current), std::move(all));
-    }
-
-    // Clearing data
-
-    void clear_schedulers() {
-        std::vector<scheduler_diagnostics> diagnostics(m_interfaces.size());
-        // Separate loops to make sure the diagnostics are fetched as closely to one another as possible
-        // Of course, this does not prohibit the compiler from joining the loops, but it may serve as a hint...
-        for (std::size_t index = 0; index < m_interfaces.size(); ++index) {
-            diagnostics[index] = m_interfaces[index].clear();
-        }
-        // Resize storage as needed
-        if (m_current_diagnostics.size() < diagnostics.size()) m_current_diagnostics.resize(diagnostics.size());
-        if (m_all_diagnostics.size() < diagnostics.size()) m_all_diagnostics.resize(diagnostics.size());
-        // Merge data into the local storage
-        for (std::size_t index = 0; index < diagnostics.size(); ++index) {
-            m_current_diagnostics[index].merge(diagnostics[index]);
-            m_all_diagnostics[index].merge(std::move(diagnostics[index]));
-        }
-    }
-
-    void clear_current() {
-        m_current_diagnostics.clear();
-    }
-
-    void clear_all() {
-        m_current_diagnostics.clear();
-        m_all_diagnostics.clear();
     }
 
     parameters& params() {
