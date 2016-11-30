@@ -357,7 +357,7 @@ string s= f2.get();</programlisting>
         <chapter>
             <title>Features of Boost.Asynchronous</title>
             <sect1>
-                <title>Active Component</title>
+                <title>Thread world</title>
                 <subtitle>Extending Active Objects with more servants within a thread
                     context</subtitle>
                 <para>A commonly cited drawback of Active Objects is that they are awfully
@@ -373,7 +373,7 @@ string s= f2.get();</programlisting>
                 <para>As long-lasting tasks do happen, Boost.Asynchronous provides several
                     implementations of threadpools and the needed infrastructure to make it safe to
                     post work to threadpools and get aynchronously a safe callback. It also provides
-                    safe mechanisms to shutdown Active Components and threadpools.</para>
+                    safe mechanisms to shutdown Thread worlds and threadpools.</para>
             </sect1>
             <sect1>
                 <title>Better Architecture</title>
@@ -493,15 +493,15 @@ private:
                     required hardware to run your application is even harder.</para>
                 <para>Asynchronous design helps here too. By logging the required time and the
                     frequency of tasks, it is easy to find out how many cores are needed.
-                    Bottlenecks can be found by logging what the Active Component is doing and how
-                    long. Finally, designing the asynchronous Active Component as state machines and
-                    logging state changes will allow a better understanding of your system and make
-                    visible potential for concurrency. Even for non-parallel algorithms, finding
-                    out, using a state machine, the earliest point a task can be thrown to a
-                    threadpool will give some low-hanging-fruit concurrency. Throw enough tasks to
-                    the threadpool and manage this with a state machine and you might use your cores
-                    with little effort. Parallelization can then be used later on by logging which
-                    tasks are worth parallelized.</para>
+                    Bottlenecks can be found by logging what the Thread world is doing and how long.
+                    Finally, designing the asynchronous Thread world as state machines and logging
+                    state changes will allow a better understanding of your system and make visible
+                    potential for concurrency. Even for non-parallel algorithms, finding out, using
+                    a state machine, the earliest point a task can be thrown to a threadpool will
+                    give some low-hanging-fruit concurrency. Throw enough tasks to the threadpool
+                    and manage this with a state machine and you might use your cores with little
+                    effort. Parallelization can then be used later on by logging which tasks are
+                    worth parallelized.</para>
                 <para>Asynchronous offers tools generating nice HTML outputs for every schedulers,
                     including waiting and execution times of tasks, histograms, etc.</para>
                 <para>TODO link to html diags example</para>
@@ -638,13 +638,13 @@ private:
                     difference being the return type, a boost::future&lt;R>, with R being the return
                     type of the servant's member. All calls to a servant from the client side are
                     posted, which includes the servant constructor and destructor. When the last
-                    instance of a servant is destroyed, be it used inside the Active Component or
+                    instance of a servant is destroyed, be it used inside the Thread world or
                     outside, the servant destructor is posted.</para>
                 <para>any_shared_scheduler is the part of the Active Object scheduler living inside
-                    the Active Component. Servants do not hold it directly but hold an
+                    the Thread world. Servants do not hold it directly but hold an
                     any_weak_scheduler instead. The library will use it to create a posted callback
                     when a task executing in a worker threadpool is completed.</para>
-                <para>Shutting down an Active Component is done automatically by not needing it. It
+                <para>Shutting down a Thread world is done automatically by not needing it. It
                     happens in the following order:<itemizedlist>
                         <listitem>
                             <para>While a servant proxy is alive, no shutdown</para>
@@ -662,7 +662,7 @@ private:
                             <para>threadpool(s) is (are) shut down.</para>
                         </listitem>
                         <listitem>
-                            <para>The Active Component scheduler is stopped and its thread
+                            <para>The Thread world scheduler is stopped and its thread
                                 terminates.</para>
                         </listitem>
                         <listitem>
@@ -682,6 +682,54 @@ private:
         <title>User Guide</title>
         <chapter>
             <title>Using Asynchronous</title>
+            <sect1>
+                <title>Definitions</title>                
+                <sect2>
+                    <title>Scheduler</title>
+                    <para>Object having 0..n threads, executing jobs or callbacks. Stops owned
+                        threads when destroyed.</para>
+                </sect2>
+                <sect2>
+                    <title>Thread World (also known as Appartment)</title>
+                    <para>A "thread world" is a world defined by a (single threaded) scheduler and
+                        all the objects which have been created, are living and destroyed within
+                        this context. It is usually agreed on that objects and threads do not mix
+                        well. Class diagrams fail to display both as these are orthogonal concepts.
+                        Asynchronous solves this by organizing objects into worlds, each living
+                        within a thread. This way, life cycles issues and the question of thread
+                        access to objects are solved. It is similar to the Active Object pattern,
+                        but with n Objects living within a thread. </para>
+                </sect2>
+                <sect2>
+                    <title>Weak Scheduler</title>
+                    <para>A weak_ptr to a shared scheduler. Does not keep the Scheduler
+                        alive.</para>
+                </sect2>
+                <sect2>
+                    <title>Trackable Servant</title>
+                    <para>Object living in a (single-threaded) scheduler, starting tasks and
+                        handling callbacks.</para>
+                </sect2>
+                <sect2>
+                    <title>Queue</title>
+                    <para>Holds jobs for a scheduler to execute. Used as communication mean between
+                        Schedulers / Worlds</para>
+                </sect2>
+                <sect2>
+                    <title>Servant Proxy</title>
+                    <para>A thread-safe object looking like a Servant and serializing calls to
+                        it.</para>
+                </sect2>
+                <sect2>
+                    <title>Scheduler Shared Proxy</title>
+                    <para>Object holding a scheduler and interfacing with it. The last instance
+                        joins the threads of the scheduler.</para>
+                </sect2>
+                <sect2>
+                    <title>Posting</title>
+                    <para>Enqueueing a job into a Scheduler's queue.</para>
+                </sect2>
+            </sect1>
             <sect1>
                 <title>Hello, asynchronous world</title>
                 <para>The following code shows a very basic usage (a complete example <link
