@@ -48,7 +48,7 @@ public:
     {
     }
     expected(expected const& rhs) noexcept
-        : m_value(boost::make_shared<value_type>(rhs.m_value))
+        : m_value(boost::make_shared<value_type>(*rhs.m_value))
         , m_exception(rhs.m_exception)
     {
     }
