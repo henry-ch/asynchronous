@@ -6665,6 +6665,57 @@ explicit vector( boost::asynchronous::any_shared_scheduler_proxy&lt;Job> schedul
                     Asynchronous will only call it if the servant is still alive.</para>
             </sect1>
         </chapter>
+        <chapter>
+            <title>Design examples</title>
+            <para>This section shows some examples of strongly simplified designs using
+                Asynchronous.</para>
+            <sect1>
+                <title>A state machine managing parallel tasks</title>
+                <para>This example will show how the library allows a solution more powerful than
+                    the proposed future.then() extension.</para>
+                <para>Futures returned by an asynchronous function like std::async have to be
+                    get()-ed by the caller before a next task can be started. To overcome this
+                    limitation, a solution is to add a then(some_functor) member to futures. The
+                    idea is to chain several tasks without having to get() the first future. While
+                    this provides some improvement, some serious limitations stay:<itemizedlist>
+                        <listitem>
+                            <para>A future still has to be waited for</para>
+                        </listitem>
+                        <listitem>
+                            <para>The then-functor is executed in one of the worker threads</para>
+                        </listitem>
+                        <listitem>
+                            <para>The then-functor has to be complete at the first call. By complete
+                                we mean that it should not use any data from the caller thread to
+                                avoid races.</para>
+                        </listitem>
+                    </itemizedlist></para>
+                <para>All this makes from the then functor a fire-and-forget one and prevents
+                    reacting on changes happening between the first functor and the then
+                    functor.</para>
+                <para>A superior solution exists using Asynchronous schedulers. <link
+                    xlink:href="examples/example_callback.cpp">In this example</link>, we
+                    define a Manager object, which lives in his single thread scheduler. This
+                    Manager, a simplified state machine, starts a task when asked (calling start()
+                    on its proxy). Upon completing the first task, the Manager chooses to start or
+                    not the second part of the calculation (what would be done in future.then()). In
+                    our example, an event cancels the second part (calling cancel()) so that it
+                    never starts. </para>
+                <para>Notice in this example some important points:<itemizedlist>
+                        <listitem>
+                            <para>The time we choose to start or not the second part is done after
+                                the first part completes, not before, which is a noticeable
+                                improvement compared to future.then().</para>
+                        </listitem>
+                        <listitem>
+                            <para>We have no race although no mutex is used and at least three
+                                threads are implied (main / Manager's world / threadpool). All
+                                events (start / cancel /completion of first task / completion of
+                                second task) are done within the Manager thread world.</para>
+                        </listitem>
+                </itemizedlist></para>
+            </sect1>
+       </chapter>
     </part>
     <part>
         <title>Reference</title>
