@@ -1,5 +1,5 @@
 // Boost.Asynchronous library
-//  Copyright (C) Tobias Holl 2015
+//  Copyright (C) Tobias Holl 2016
 //
 //  Use, modification and distribution is subject to the Boost
 //  Software License, Version 1.0.  (See accompanying file
@@ -11,6 +11,7 @@
 #define BOOST_ASYNC_HTML_FORMATTER_HPP
 
 #include <sstream>
+#include <type_traits>
 #include <vector>
 
 #include <boost/core/enable_if.hpp>
@@ -54,12 +55,28 @@ struct parameters
     bool check_totals_by_default = true;
     bool filter = true;
     bool add_subheadings = true;
+    bool include_most_recent = true;
 
-    enum {
+    enum _checkboxes {
         CHECKBOXES_DISABLED,
         CHECKBOXES_LOCAL,
         CHECKBOXES_GLOBAL
     } checkboxes = CHECKBOXES_GLOBAL;
+
+    enum _sections {
+        SHOW_RUNNING = 1,
+        SHOW_QUEUE_SIZES = 2,
+        SHOW_CURRENT = 4,
+        SHOW_OVERALL = 8
+    };
+    typename std::underlying_type<_sections>::type sections = SHOW_RUNNING | SHOW_QUEUE_SIZES | SHOW_CURRENT | SHOW_OVERALL;
+
+    enum _timestamps {
+        TS_MAX = 1,
+        TS_MIN = 2,
+        TS_RECENT = 4
+    };
+    typename std::underlying_type<_timestamps>::type timestamps = TS_MAX | TS_MIN | TS_RECENT;
 
     std::size_t histogram_bin_count = 20;
     std::size_t font_size = 10;
@@ -337,6 +354,14 @@ private:
                        << "      .total_cb:not(:checked) ~ table td.total,"                               << std::endl
                        << "      .total_cb:not(:checked) ~ table th.total {"                              << std::endl
                        << "        display: none;"                                                        << std::endl
+                       << "      }"                                                                       << std::endl
+                       // We cannot hide the timestamp columns directly (because the table headers use colspan).
+                       // Therefore, there will always be some JavaScript involved here
+                       << "      .ts_cb:not(:checked) ~ div table td.ts,"                                 << std::endl
+                       << "      .ts_cb:not(:checked) ~ div table th.ts,"                                 << std::endl
+                       << "      .ts_cb:not(:checked) ~ table td.ts,"                                     << std::endl
+                       << "      .ts_cb:not(:checked) ~ table th.ts {"                                    << std::endl
+                       << "        display: none;"                                                        << std::endl
                        << "      }"                                                                       << std::endl;
         }
         if (params.checkboxes == parameters::CHECKBOXES_GLOBAL)
@@ -356,20 +381,25 @@ private:
                    << "        color: " << (params.show_menu ? params.menu_font.to_hex() : params.font.to_hex()) << ";" << std::endl
                    << "        z-index: 20;"                                                          << std::endl
                    << "      }"                                                                       << std::endl
+                   << "      .ts_cb, .ts_cb + span {"                                                 << std::endl
+                   << "        bottom: " << (params.font_size * 8) << "pt;"                           << std::endl // Fallback
+                   << "        bottom: calc(8 * " << params.font_size << "pt);"                       << std::endl
+                   << "      }"                                                                       << std::endl
                    << "      .fail_cb, .fail_cb + span {"                                             << std::endl
-                   << "        bottom: " << (params.font_size * 6) << "pt;"                          << std::endl // Fallback
+                   << "        bottom: " << (params.font_size * 6) << "pt;"                           << std::endl // Fallback
                    << "        bottom: calc(6 * " << params.font_size << "pt);"                       << std::endl
                    << "      }"                                                                       << std::endl
                    << "      .int_cb, .int_cb + span {"                                               << std::endl
-                   << "        bottom: " << (params.font_size * 4) << "pt;"                          << std::endl // Fallback
+                   << "        bottom: " << (params.font_size * 4) << "pt;"                           << std::endl // Fallback
                    << "        bottom: calc(4 * " << params.font_size << "pt);"                       << std::endl
                    << "      }"                                                                       << std::endl
                    << "      .total_cb, .total_cb + span {"                                           << std::endl
-                   << "        bottom: " << (params.font_size * 2) << "pt;"                          << std::endl // Fallback
+                   << "        bottom: " << (params.font_size * 2) << "pt;"                           << std::endl // Fallback
                    << "        bottom: calc(2 * " << params.font_size << "pt);"                       << std::endl
                    << "      }"                                                                       << std::endl;
         if (params.filter) {
-            int factor = (params.checkboxes == parameters::CHECKBOXES_GLOBAL) ? 8 : 0;
+            int factor = ((params.checkboxes == parameters::CHECKBOXES_GLOBAL) ? 8 : 0) +
+                         ((params.checkboxes == parameters::CHECKBOXES_GLOBAL && params.timestamps) ? 2 : 0);
             header << "      #filter {"                                                               << std::endl
                    << "        position: fixed;"                                                      << std::endl
                    << "        width: 15%;"                                                           << std::endl
@@ -542,7 +572,7 @@ private:
                << "          }"                                                                   << std::endl
                << "        }"                                                                     << std::endl
                << "      }"                                                                       << std::endl;
-        if (params.javascript_instead_of_css3 && params.checkboxes != parameters::CHECKBOXES_DISABLED) {
+        if ((params.javascript_instead_of_css3 || params.timestamps) && params.checkboxes != parameters::CHECKBOXES_DISABLED) {
             header << "      function toggleDefaultHidden(node, visibleStyle) {"                      << std::endl
                    << "        if (node.style.display === visibleStyle) {"                            << std::endl
                    << "          node.style.display = 'none';"                                        << std::endl
@@ -651,12 +681,47 @@ private:
                    << "          }"                                                                   << std::endl
                    << "        }"                                                                     << std::endl
                    << "      }"                                                                       << std::endl;
+        if (params.timestamps && params.checkboxes != parameters::CHECKBOXES_DISABLED) {
+            int modifier = params.include_most_recent ? 3 : 2; // max, min, optionally last
+            std::string targetNode = (params.checkboxes == parameters::CHECKBOXES_GLOBAL) ? "document" : "node.parentNode";
+            header << "      function fixColspans(node, increase) {"                                  << std::endl
+                   << "        var candidates = " << targetNode << ".getElementsByTagName('th');"     << std::endl
+                   << "        var actual = Array.filter(candidates, function (v) {"                  << std::endl
+                   << "          return (' ' + v.className + ' ').indexOf(' spanned ') > -1;"         << std::endl
+                   << "        });"                                                                   << std::endl
+                   << "        Array.map(actual, function (v) {"                                      << std::endl
+                   << "          var value = parseInt(v.getAttribute('colspan'));"                    << std::endl
+                   << "          var modifier = " << modifier << ";"                                  << std::endl
+                   << "          if (increase) { value += modifier; } else { value -= modifier; }"    << std::endl
+                   << "          v.setAttribute('colspan', value);"                                   << std::endl
+                   << "        });"                                                                   << std::endl
+                   << "      }"                                                                       << std::endl
+                   << "      function makeTSCheckboxesActive() {"                                     << std::endl
+                   << "        var candidates = document.getElementsByTagName('input');"              << std::endl
+                   << "        var actual = Array.filter(candidates, function (v) {"                  << std::endl
+                   << "          return (' ' + v.className + ' ').indexOf(' ts_cb ') > -1;"           << std::endl
+                   << "        });"                                                                   << std::endl
+                   << "        Array.map(actual, function (v) {"                                      << std::endl
+                   << "          var defaultOn = v.hasAttribute('checked');"                          << std::endl
+                   << "          v.addEventListener('click', function() {"                            << std::endl;
+            if (params.javascript_instead_of_css3)
+                header << "            applyToCheckboxTargets(v, 'ts', function (cell) {"                 << std::endl
+                       << "              if (defaultOn) toggleDefaultVisible(cell, 'table-cell');"        << std::endl
+                       << "              else toggleDefaultHidden(cell, 'table-cell');"                   << std::endl
+                       << "            });"                                                               << std::endl;
+            header << "            fixColspans(v, v.checked);"                                        << std::endl
+                   << "          });"                                                                 << std::endl
+                   << "        });"                                                                   << std::endl
+                   << "      }"                                                                       << std::endl;
+        }
         header << "    </script>"                                                                 << std::endl
                << "  </head>"                                                                     << std::endl
                << "  <body onload=\"makeTablesSortable(document);"                                << std::endl;
 
         if (params.javascript_instead_of_css3 && params.checkboxes != parameters::CHECKBOXES_DISABLED)
             header << "                makeCheckboxesActive(document);"                              << std::endl;
+        if (params.timestamps && params.checkboxes != parameters::CHECKBOXES_DISABLED)
+            header << "                makeTSCheckboxesActive(document);"                            << std::endl;
 
         header << "               \">"                                                            << std::endl
                << "    <div id=\"overlay_wrapper\" onclick=\"cancelOverlay();\">"                 << std::endl
@@ -665,6 +730,9 @@ private:
 
         if (params.filter)
             header << "    <input id=\"filter\" oninput=\"filter();\" placeholder=\"Filter\">"        << std::endl;
+        if (params.checkboxes == parameters::CHECKBOXES_GLOBAL && params.timestamps)
+            header << "        <input type=\"checkbox\" class=\"checkbox ts_cb\" checked />"          << std::endl
+                   << "        <span class=\"checkbox_label\">Timestamps</span>"                      << std::endl;
         if (params.checkboxes == parameters::CHECKBOXES_GLOBAL)
             header << "        <input type=\"checkbox\" class=\"checkbox fail_cb\" />"                << std::endl
                    << "        <span class=\"checkbox_label\">Failure time</span>"                    << std::endl
@@ -700,7 +768,10 @@ public:
     std::ostringstream body;
     std::ostringstream footer;
 
+    boost::chrono::high_resolution_clock::time_point reference_time;
+
     document(boost::asynchronous::html_formatter::parameters const& params)
+        : reference_time(boost::chrono::high_resolution_clock::now())
     {
         generate_header(params);
         generate_body(params);
@@ -904,9 +975,9 @@ struct row_detail
         {
             boost::asynchronous::simple_diagnostic_item const& individual = items[individual_id];
 
-            bool is_scheduling_maximum = (!individual.failed && !individual.interrupted && individual.scheduling == summary_item.scheduling_max);
-            bool is_execution_maximum  = (!individual.failed && !individual.interrupted && individual.execution  == summary_item.execution_max);
-            bool is_total_maximum      = (!individual.failed && !individual.interrupted && individual.total      == summary_item.total_max);
+            bool is_scheduling_maximum = (!individual.failed && !individual.interrupted && individual.scheduling == summary_item.durations.scheduling.max);
+            bool is_execution_maximum  = (!individual.failed && !individual.interrupted && individual.execution  == summary_item.durations.success.max);
+            bool is_total_maximum      = (!individual.failed && !individual.interrupted && individual.total      == summary_item.durations.total.max);
 
             std::string row_class;
             if (individual.failed) row_class = " class=\"failure\"";
@@ -927,9 +998,9 @@ struct row_detail
     void generate_histograms(document & doc) const
     {
         if (!has_histograms) return;
-        histogram scheduling_hist { summary_item.scheduling_min, summary_item.scheduling_max, params.histogram_bin_count };
-        histogram execution_hist  { summary_item.execution_min,  summary_item.execution_max,  params.histogram_bin_count };
-        histogram total_hist      { summary_item.total_min,      summary_item.total_max,      params.histogram_bin_count };
+        histogram scheduling_hist { summary_item.durations.scheduling.min, summary_item.durations.scheduling.max, params.histogram_bin_count };
+        histogram execution_hist  { summary_item.durations.success.min,    summary_item.durations.success.max,    params.histogram_bin_count };
+        histogram total_hist      { summary_item.durations.total.min,      summary_item.durations.total.max,      params.histogram_bin_count };
 
         for (simple_diagnostic_item const& item : items) {
             scheduling_hist.add(item.scheduling);
@@ -989,122 +1060,187 @@ void begin_table(document & doc, parameters const& params, bool has_fails, bool 
     std::string check_failures = has_fails ? check : "";
     std::string check_interrupts = has_interrupts ? check : "";
     std::string check_total = params.check_totals_by_default ? check : "";
-    // The checkbox for total time will always be checked
+
+    bool include_last = params.include_most_recent;
+    bool include_max_ts = params.timestamps & parameters::TS_MAX;
+    bool include_min_ts = params.timestamps & parameters::TS_MIN;
+    bool include_last_ts = include_last && (params.timestamps & parameters::TS_RECENT);
+
+    int column_id = 1; // A counter to ensure accurate column IDs
+    int span = 5 + (include_max_ts  ? 1 : 0)  // max timestamp
+                 + (include_min_ts  ? 1 : 0)  // min timestamp
+                 + (include_last    ? 1 : 0)  // last
+                 + (include_last_ts ? 1 : 0); // last timestamp
 
     // Add checkboxes (if enabled) and table
-    doc.body << "      <div>"                                                                                        << std::endl;
+    doc.body << "      <div>"                                                                                                             << std::endl;
     if (params.checkboxes == parameters::CHECKBOXES_LOCAL) {
-    doc.body << "        <input type=\"checkbox\" class=\"checkbox fail_cb\"" << check_failures << " />"             << std::endl
-             << "        <span class=\"checkbox_label\">Failure time</span>"                                         << std::endl
-             << "        <input type=\"checkbox\" class=\"checkbox int_cb\"" << check_interrupts << " />"            << std::endl
-             << "        <span class=\"checkbox_label\">Interruption time</span>"                                    << std::endl
-             << "        <input type=\"checkbox\" class=\"checkbox total_cb\"" << check_total << " />"               << std::endl
-             << "        <span class=\"checkbox_label\">Total time</span>"                                           << std::endl;
+        doc.body << "        <input type=\"checkbox\" class=\"checkbox fail_cb\"" << check_failures << " />"                                  << std::endl
+                 << "        <span class=\"checkbox_label\">Failure time</span>"                                                              << std::endl
+                 << "        <input type=\"checkbox\" class=\"checkbox int_cb\"" << check_interrupts << " />"                                 << std::endl
+                 << "        <span class=\"checkbox_label\">Interruption time</span>"                                                         << std::endl
+                 << "        <input type=\"checkbox\" class=\"checkbox total_cb\"" << check_total << " />"                                    << std::endl
+                 << "        <span class=\"checkbox_label\">Total time</span>"                                                                << std::endl;
+        if (params.timestamps)
+            doc.body << "        <input type=\"checkbox\" class=\"checkbox ts_cb\"" << check_total << " />"                                       << std::endl
+                     << "        <span class=\"checkbox_label\">Timestamps</span>"                                                                << std::endl;
     }
-    doc.body << "        <table class=\"sortable\">"                                                                 << std::endl
-             << "          <thead>"                                                                                  << std::endl
-             << "            <tr>"                                                                                   << std::endl
-             << "              <th rowspan=\"2\" data-column=\"0\">Job name</th>"                                    << std::endl
-             << "              <th colspan=\"5\" class=\"scheduling\">Scheduling time (s.ms.&micro;s)</th>"          << std::endl
-             << "              <th colspan=\"5\" class=\"execution\">Successful execution time (s.ms.&micro;s)</th>" << std::endl
-             << "              <th colspan=\"5\" class=\"failure_cell\">Failure time (s.ms.&micro;s)</th>"           << std::endl
-             << "              <th colspan=\"5\" class=\"interrupted\">Interruption time (s.ms.&micro;s)</th>"       << std::endl
-             << "              <th colspan=\"5\" class=\"total\">Total time (s.ms.&micro;s)</th>"                    << std::endl
-             << "              <th rowspan=\"2\" class=\"noborder\"></th>"                                           << std::endl
-             << "              <th rowspan=\"2\" class=\"noborder\"></th>"                                           << std::endl
-             << "            </tr>"                                                                                  << std::endl
-             << "            <tr>"                                                                                   << std::endl
-             << "              <th class=\"scheduling\" data-column=\"1\">total</th>"                                << std::endl
-             << "              <th class=\"scheduling\" data-column=\"2\">average</th>"                              << std::endl
-             << "              <th class=\"scheduling\" data-column=\"3\">max.</th>"                                 << std::endl
-             << "              <th class=\"scheduling\" data-column=\"4\">min.</th>"                                 << std::endl
-             << "              <th class=\"scheduling\" data-column=\"5\">count</th>"                                << std::endl
-             << "              <th class=\"execution\" data-column=\"6\">total</th>"                                 << std::endl
-             << "              <th class=\"execution\" data-column=\"7\">average</th>"                               << std::endl
-             << "              <th class=\"execution\" data-column=\"8\">max.</th>"                                  << std::endl
-             << "              <th class=\"execution\" data-column=\"9\">min.</th>"                                  << std::endl
-             << "              <th class=\"execution\" data-column=\"10\">count</th>"                                << std::endl
-             << "              <th class=\"failure_cell\" data-column=\"11\">total</th>"                             << std::endl
-             << "              <th class=\"failure_cell\" data-column=\"12\">average</th>"                           << std::endl
-             << "              <th class=\"failure_cell\" data-column=\"13\">max.</th>"                              << std::endl
-             << "              <th class=\"failure_cell\" data-column=\"14\">min.</th>"                              << std::endl
-             << "              <th class=\"failure_cell\" data-column=\"15\">count</th>"                             << std::endl
-             << "              <th class=\"interrupted\" data-column=\"16\">total</th>"                              << std::endl
-             << "              <th class=\"interrupted\" data-column=\"17\">average</th>"                            << std::endl
-             << "              <th class=\"interrupted\" data-column=\"18\">max.</th>"                               << std::endl
-             << "              <th class=\"interrupted\" data-column=\"19\">min.</th>"                               << std::endl
-             << "              <th class=\"interrupted\" data-column=\"20\">count</th>"                              << std::endl
-             << "              <th class=\"total\" data-column=\"21\">total</th>"                                    << std::endl
-             << "              <th class=\"total\" data-column=\"22\">average</th>"                                  << std::endl
-             << "              <th class=\"total\" data-column=\"23\">max.</th>"                                     << std::endl
-             << "              <th class=\"total\" data-column=\"24\">min.</th>"                                     << std::endl
-             << "              <th class=\"total\" data-column=\"25\">count</th>"                                    << std::endl
-             << "            </tr>"                                                                                  << std::endl
-             << "          </thead>"                                                                                 << std::endl
-             << "          <tbody>"                                                                                  << std::endl;
+    doc.body << "        <table class=\"sortable\">"                                                                                      << std::endl
+             << "          <thead>"                                                                                                       << std::endl
+             << "            <tr>"                                                                                                        << std::endl
+             << "              <th rowspan=\"2\" data-column=\"0\">Job name</th>"                                                         << std::endl
+             << "              <th colspan=\"" << span << "\" class=\"spanned scheduling\">Scheduling time (s.ms.&micro;s)</th>"          << std::endl
+             << "              <th colspan=\"" << span << "\" class=\"spanned execution\">Successful execution time (s.ms.&micro;s)</th>" << std::endl
+             << "              <th colspan=\"" << span << "\" class=\"spanned failure_cell\">Failure time (s.ms.&micro;s)</th>"           << std::endl
+             << "              <th colspan=\"" << span << "\" class=\"spanned interrupted\">Interruption time (s.ms.&micro;s)</th>"       << std::endl
+             << "              <th colspan=\"" << span << "\" class=\"spanned total\">Total time (s.ms.&micro;s)</th>"                    << std::endl
+             << "              <th rowspan=\"2\" class=\"noborder\"></th>"                                                                << std::endl
+             << "              <th rowspan=\"2\" class=\"noborder\"></th>"                                                                << std::endl
+             << "            </tr>"                                                                                                       << std::endl
+             << "            <tr>"                                                                                                        << std::endl
+             << "              <th class=\"scheduling\" data-column=\"" << column_id++ << "\">total</th>"                                 << std::endl
+             << "              <th class=\"scheduling\" data-column=\"" << column_id++ << "\">average</th>"                               << std::endl
+             << "              <th class=\"scheduling\" data-column=\"" << column_id++ << "\">max.</th>"                                  << std::endl;
+    if (include_max_ts)   doc.body << "              <th class=\"scheduling ts\" data-column=\"" << column_id++ << "\">ago (max.)</th>"        << std::endl;
+    doc.body << "              <th class=\"scheduling\" data-column=\"" << column_id++ << "\">min.</th>"                                  << std::endl;
+    if (include_min_ts)   doc.body << "              <th class=\"scheduling ts\" data-column=\"" << column_id++ << "\">ago (min.)</th>"        << std::endl;
+    if (include_last)     doc.body << "              <th class=\"scheduling recent\" data-column=\"" << column_id++ << "\">last</th>"          << std::endl;
+    if (include_last_ts)  doc.body << "              <th class=\"scheduling ts recent\" data-column=\"" << column_id++ << "\">ago (last)</th>" << std::endl;
+    doc.body << "              <th class=\"scheduling\" data-column=\"" << column_id++ << "\">count</th>"                                 << std::endl
+             << "              <th class=\"execution\" data-column=\"" << column_id++ << "\">total</th>"                                  << std::endl
+             << "              <th class=\"execution\" data-column=\"" << column_id++ << "\">average</th>"                                << std::endl
+             << "              <th class=\"execution\" data-column=\"" << column_id++ << "\">max.</th>"                                   << std::endl;
+    if (include_max_ts)   doc.body << "              <th class=\"execution ts\" data-column=\"" << column_id++ << "\">ago (max.)</th>"        << std::endl;
+    doc.body << "              <th class=\"execution\" data-column=\"" << column_id++ << "\">min.</th>"                                   << std::endl;
+    if (include_min_ts)   doc.body << "              <th class=\"execution ts\" data-column=\"" << column_id++ << "\">ago (min.)</th>"        << std::endl;
+    if (include_last)     doc.body << "              <th class=\"execution recent\" data-column=\"" << column_id++ << "\">last</th>"          << std::endl;
+    if (include_last_ts)  doc.body << "              <th class=\"execution ts recent\" data-column=\"" << column_id++ << "\">ago (last)</th>" << std::endl;
+    doc.body << "              <th class=\"execution\" data-column=\"" << column_id++ << "\">count</th>"                                  << std::endl
+             << "              <th class=\"failure_cell\" data-column=\"" << column_id++ << "\">total</th>"                               << std::endl
+             << "              <th class=\"failure_cell\" data-column=\"" << column_id++ << "\">average</th>"                             << std::endl
+             << "              <th class=\"failure_cell\" data-column=\"" << column_id++ << "\">max.</th>"                                << std::endl;
+    if (include_max_ts)   doc.body << "              <th class=\"failure_cell ts\" data-column=\"" << column_id++ << "\">ago (max.)</th>"        << std::endl;
+    doc.body << "              <th class=\"failure_cell\" data-column=\"" << column_id++ << "\">min.</th>"                                << std::endl;
+    if (include_min_ts)   doc.body << "              <th class=\"failure_cell ts\" data-column=\"" << column_id++ << "\">ago (min.)</th>"        << std::endl;
+    if (include_last)     doc.body << "              <th class=\"failure_cell recent\" data-column=\"" << column_id++ << "\">last</th>"          << std::endl;
+    if (include_last_ts)  doc.body << "              <th class=\"failure_cell ts recent\" data-column=\"" << column_id++ << "\">ago (last)</th>" << std::endl;
+    doc.body << "              <th class=\"failure_cell\" data-column=\"" << column_id++ << "\">count</th>"                               << std::endl
+             << "              <th class=\"interrupted\" data-column=\"" << column_id++ << "\">total</th>"                                << std::endl
+             << "              <th class=\"interrupted\" data-column=\"" << column_id++ << "\">average</th>"                              << std::endl
+             << "              <th class=\"interrupted\" data-column=\"" << column_id++ << "\">max.</th>"                                 << std::endl;
+    if (include_max_ts)   doc.body << "              <th class=\"interrupted ts\" data-column=\"" << column_id++ << "\">ago (max.)</th>"        << std::endl;
+    doc.body << "              <th class=\"interrupted\" data-column=\"" << column_id++ << "\">min.</th>"                                 << std::endl;
+    if (include_min_ts)   doc.body << "              <th class=\"interrupted ts\" data-column=\"" << column_id++ << "\">ago (min.)</th>"        << std::endl;
+    if (include_last)     doc.body << "              <th class=\"interrupted recent\" data-column=\"" << column_id++ << "\">last</th>"          << std::endl;
+    if (include_last_ts)  doc.body << "              <th class=\"interrupted ts recent\" data-column=\"" << column_id++ << "\">ago (last)</th>" << std::endl;
+    doc.body << "              <th class=\"interrupted\" data-column=\"" << column_id++ << "\">count</th>"                                << std::endl
+             << "              <th class=\"total\" data-column=\"" << column_id++ << "\">total</th>"                                      << std::endl
+             << "              <th class=\"total\" data-column=\"" << column_id++ << "\">average</th>"                                    << std::endl
+             << "              <th class=\"total\" data-column=\"" << column_id++ << "\">max.</th>"                                       << std::endl;
+    if (include_max_ts)   doc.body << "              <th class=\"total ts\" data-column=\"" << column_id++ << "\">ago (max.)</th>"        << std::endl;
+    doc.body << "              <th class=\"total\" data-column=\"" << column_id++ << "\">min.</th>"                                       << std::endl;
+    if (include_min_ts)   doc.body << "              <th class=\"total ts\" data-column=\"" << column_id++ << "\">ago (min.)</th>"        << std::endl;
+    if (include_last)     doc.body << "              <th class=\"total recent\" data-column=\"" << column_id++ << "\">last</th>"          << std::endl;
+    if (include_last_ts)  doc.body << "              <th class=\"total ts recent\" data-column=\"" << column_id++ << "\">ago (last)</th>" << std::endl;
+    doc.body << "              <th class=\"total\" data-column=\"" << column_id++ << "\">count</th>"                                      << std::endl
+             << "            </tr>"                                                                                                       << std::endl
+             << "          </thead>"                                                                                                      << std::endl
+             << "          <tbody>"                                                                                                       << std::endl;
 }
 
 // Add a row to the full table.
-void add_row(document & doc, summary_diagnostic_item const& item, summary_diagnostics const& data, row_detail detail, std::size_t id) {
+void add_row(document & doc, parameters const& params, summary_diagnostic_item const& item, summary_diagnostics const& data, row_detail detail, std::size_t id) {
 
     // Determine maxima
-    bool is_max_total_scheduling = (data.scheduling_maxima_set && item.scheduling_total   == data.max_scheduling_total);
-    bool is_max_avg_scheduling   = (data.scheduling_maxima_set && item.scheduling_average == data.max_scheduling_average);
-    bool is_max_max_scheduling   = (data.scheduling_maxima_set && item.scheduling_max     == data.max_scheduling_max);
-    bool is_max_min_scheduling   = (data.scheduling_maxima_set && item.scheduling_min     == data.max_scheduling_min);
+    bool is_max_total_scheduling = (data.maxima_present.scheduling && item.durations.scheduling.total   == data.maxima.scheduling.total);
+    bool is_max_avg_scheduling   = (data.maxima_present.scheduling && item.durations.scheduling.average == data.maxima.scheduling.average);
+    bool is_max_max_scheduling   = (data.maxima_present.scheduling && item.durations.scheduling.max     == data.maxima.scheduling.max);
+    bool is_max_min_scheduling   = (data.maxima_present.scheduling && item.durations.scheduling.min     == data.maxima.scheduling.min);
 
-    bool is_max_total_execution = (data.execution_maxima_set && item.execution_total   == data.max_execution_total);
-    bool is_max_avg_execution   = (data.execution_maxima_set && item.execution_average == data.max_execution_average);
-    bool is_max_max_execution   = (data.execution_maxima_set && item.execution_max     == data.max_execution_max);
-    bool is_max_min_execution   = (data.execution_maxima_set && item.execution_min     == data.max_execution_min);
+    bool is_max_total_execution = (data.maxima_present.success && item.durations.success.total   == data.maxima.success.total);
+    bool is_max_avg_execution   = (data.maxima_present.success && item.durations.success.average == data.maxima.success.average);
+    bool is_max_max_execution   = (data.maxima_present.success && item.durations.success.max     == data.maxima.success.max);
+    bool is_max_min_execution   = (data.maxima_present.success && item.durations.success.min     == data.maxima.success.min);
 
-    bool is_max_total_failure = (data.failure_maxima_set && item.failure_total   == data.max_failure_total);
-    bool is_max_avg_failure   = (data.failure_maxima_set && item.failure_average == data.max_failure_average);
-    bool is_max_max_failure   = (data.failure_maxima_set && item.failure_max     == data.max_failure_max);
-    bool is_max_min_failure   = (data.failure_maxima_set && item.failure_min     == data.max_failure_min);
+    bool is_max_total_failure = (data.maxima_present.failure && item.durations.failure.total   == data.maxima.failure.total);
+    bool is_max_avg_failure   = (data.maxima_present.failure && item.durations.failure.average == data.maxima.failure.average);
+    bool is_max_max_failure   = (data.maxima_present.failure && item.durations.failure.max     == data.maxima.failure.max);
+    bool is_max_min_failure   = (data.maxima_present.failure && item.durations.failure.min     == data.maxima.failure.min);
 
-    bool is_max_total_interrupted = (data.interrupted_maxima_set && item.interrupted_total   == data.max_interrupted_total);
-    bool is_max_avg_interrupted   = (data.interrupted_maxima_set && item.interrupted_average == data.max_interrupted_average);
-    bool is_max_max_interrupted   = (data.interrupted_maxima_set && item.interrupted_max     == data.max_interrupted_max);
-    bool is_max_min_interrupted   = (data.interrupted_maxima_set && item.interrupted_min     == data.max_interrupted_min);
+    bool is_max_total_interrupted = (data.maxima_present.interruption && item.durations.interruption.total   == data.maxima.interruption.total);
+    bool is_max_avg_interrupted   = (data.maxima_present.interruption && item.durations.interruption.average == data.maxima.interruption.average);
+    bool is_max_max_interrupted   = (data.maxima_present.interruption && item.durations.interruption.max     == data.maxima.interruption.max);
+    bool is_max_min_interrupted   = (data.maxima_present.interruption && item.durations.interruption.min     == data.maxima.interruption.min);
 
-    bool is_max_total_total = (data.total_maxima_set && item.total_total   == data.max_total_total);
-    bool is_max_avg_total   = (data.total_maxima_set && item.total_average == data.max_total_average);
-    bool is_max_max_total   = (data.total_maxima_set && item.total_max     == data.max_total_max);
-    bool is_max_min_total   = (data.total_maxima_set && item.total_min     == data.max_total_min);
+    bool is_max_total_total = (data.maxima_present.total && item.durations.total.total   == data.maxima.total.total);
+    bool is_max_avg_total   = (data.maxima_present.total && item.durations.total.average == data.maxima.total.average);
+    bool is_max_max_total   = (data.maxima_present.total && item.durations.total.max     == data.maxima.total.max);
+    bool is_max_min_total   = (data.maxima_present.total && item.durations.total.min     == data.maxima.total.min);
 
-    doc.body << "            <tr class=\"top_level" << (item.failed > 0 ? " failure": "") << "\">" << std::endl
+#define TICKS(block, key) item.durations.block.key.count()
+#define DURATION(block, key) (item.count.block > 0 ? format_duration(item.durations.block.key) : "-")
+#define TS_TICKS(block, key) (doc.reference_time - item.last_times.block.key).count()
+#define TIMESTAMP(block, key) (item.count.block > 0 ? format_duration(doc.reference_time - item.last_times.block.key) : "-")
+// Conditional output
+#define CONDITIONAL(condition, expr) (condition ? ((std::stringstream&) (std::stringstream{} << expr)).str() : std::string{})
+
+    bool include_last = params.include_most_recent;
+    bool include_max_ts = params.timestamps & parameters::TS_MAX;
+    bool include_min_ts = params.timestamps & parameters::TS_MIN;
+    bool include_last_ts = include_last && (params.timestamps & parameters::TS_RECENT);
+
+    doc.body << "            <tr class=\"top_level" << (item.count.failure > 0 ? " failure": "") << "\">" << std::endl
              << "              <td data-sort=\"" << id << "\">" << detail::escape_html(item.job_name) << "</td>" << std::endl
 
-             << "              <td class=\"value scheduling" << (is_max_total_scheduling ? " maximum" : "") << "\" data-sort=\"" << item.scheduling_total.count()   << "\">" << format_duration(item.scheduling_total)   << "</td>" << std::endl
-             << "              <td class=\"value scheduling" << (is_max_avg_scheduling ? " maximum" : "")   << "\" data-sort=\"" << item.scheduling_average.count() << "\">" << format_duration(item.scheduling_average) << "</td>" << std::endl
-             << "              <td class=\"value scheduling" << (is_max_max_scheduling ? " maximum" : "")   << "\" data-sort=\"" << item.scheduling_max.count()     << "\">" << format_duration(item.scheduling_max)     << "</td>" << std::endl
-             << "              <td class=\"value scheduling" << (is_max_min_scheduling ? " maximum" : "")   << "\" data-sort=\"" << item.scheduling_min.count()     << "\">" << format_duration(item.scheduling_min)     << "</td>" << std::endl
-             << "              <td class=\"value scheduling\" data-sort=\"" << item.scheduled << "\">" << item.scheduled << "</td>" << std::endl
+             << "              <td class=\"value scheduling" << (is_max_total_scheduling ? " maximum" : "") << "\" data-sort=\"" << TICKS(scheduling, total)     << "\">" << DURATION(scheduling, total)   << "</td>" << std::endl
+             << "              <td class=\"value scheduling" << (is_max_avg_scheduling ? " maximum" : "")   << "\" data-sort=\"" << TICKS(scheduling, average)   << "\">" << DURATION(scheduling, average) << "</td>" << std::endl
+             << "              <td class=\"value scheduling" << (is_max_max_scheduling ? " maximum" : "")   << "\" data-sort=\"" << TICKS(scheduling, max)       << "\">" << DURATION(scheduling, max)     << "</td>" << std::endl
+             << CONDITIONAL(include_max_ts,         "              <td class=\"value scheduling ts\" data-sort=\""               << TS_TICKS(scheduling, max)    << "\">" << TIMESTAMP(scheduling, max)    << "</td>" << std::endl)
+             << "              <td class=\"value scheduling" << (is_max_min_scheduling ? " maximum" : "")   << "\" data-sort=\"" << TICKS(scheduling, min)       << "\">" << DURATION(scheduling, min)     << "</td>" << std::endl
+             << CONDITIONAL(include_min_ts,         "              <td class=\"value scheduling ts\" data-sort=\""               << TS_TICKS(scheduling, min)    << "\">" << TIMESTAMP(scheduling, min)    << "</td>" << std::endl)
+             << CONDITIONAL(include_last,           "              <td class=\"value scheduling recent\" data-sort=\""           << TICKS(scheduling, recent)    << "\">" << DURATION(scheduling, recent)  << "</td>" << std::endl)
+             << CONDITIONAL(include_last_ts,        "              <td class=\"value scheduling recent ts\" data-sort=\""        << TS_TICKS(scheduling, recent) << "\">" << TIMESTAMP(scheduling, recent) << "</td>" << std::endl)
+             << "              <td class=\"value scheduling\" data-sort=\"" << item.count.scheduling << "\">" << item.count.scheduling << "</td>" << std::endl
 
-             << "              <td class=\"value execution" << (is_max_total_execution ? " maximum" : "") << "\" data-sort=\"" << item.execution_total.count()   << "\">" << format_duration(item.execution_total)   << "</td>" << std::endl
-             << "              <td class=\"value execution" << (is_max_avg_execution ? " maximum" : "")   << "\" data-sort=\"" << item.execution_average.count() << "\">" << format_duration(item.execution_average) << "</td>" << std::endl
-             << "              <td class=\"value execution" << (is_max_max_execution ? " maximum" : "")   << "\" data-sort=\"" << item.execution_max.count()     << "\">" << format_duration(item.execution_max)     << "</td>" << std::endl
-             << "              <td class=\"value execution" << (is_max_min_execution ? " maximum" : "")   << "\" data-sort=\"" << item.execution_max.count()     << "\">" << format_duration(item.execution_min)     << "</td>" << std::endl
-             << "              <td class=\"value execution\" data-sort=\"" << item.successful << "\">" << item.successful << "</td>" << std::endl
+             << "              <td class=\"value execution" << (is_max_total_execution ? " maximum" : "") << "\" data-sort=\"" << TICKS(success, total)     << "\">" << DURATION(success, total)   << "</td>" << std::endl
+             << "              <td class=\"value execution" << (is_max_avg_execution ? " maximum" : "")   << "\" data-sort=\"" << TICKS(success, average)   << "\">" << DURATION(success, average) << "</td>" << std::endl
+             << "              <td class=\"value execution" << (is_max_max_execution ? " maximum" : "")   << "\" data-sort=\"" << TICKS(success, max)       << "\">" << DURATION(success, max)     << "</td>" << std::endl
+             << CONDITIONAL(include_max_ts,         "              <td class=\"value execution ts\" data-sort=\""                   << TS_TICKS(success, max)    << "\">" << TIMESTAMP(success, max)    << "</td>" << std::endl)
+             << "              <td class=\"value execution" << (is_max_min_execution ? " maximum" : "")   << "\" data-sort=\"" << TICKS(success, min)       << "\">" << DURATION(success, min)     << "</td>" << std::endl
+             << CONDITIONAL(include_min_ts,         "              <td class=\"value execution ts\" data-sort=\""              << TS_TICKS(success, min)    << "\">" << TIMESTAMP(success, min)    << "</td>" << std::endl)
+             << CONDITIONAL(include_last,           "              <td class=\"value execution recent\" data-sort=\""          << TICKS(success, recent)    << "\">" << DURATION(success, recent)  << "</td>" << std::endl)
+             << CONDITIONAL(include_last_ts,        "              <td class=\"value execution recent ts\" data-sort=\""       << TS_TICKS(success, recent) << "\">" << TIMESTAMP(success, recent) << "</td>" << std::endl)
+             << "              <td class=\"value execution\" data-sort=\"" << item.count.success << "\">" << item.count.success << "</td>" << std::endl
 
-             << "              <td class=\"value failure_cell" << (is_max_total_failure ? " maximum" : "") << "\" data-sort=\"" << item.failure_total.count()   << "\">" << format_duration(item.failure_total)   << "</td>" << std::endl
-             << "              <td class=\"value failure_cell" << (is_max_avg_failure ? " maximum" : "")   << "\" data-sort=\"" << item.failure_average.count() << "\">" << format_duration(item.failure_average) << "</td>" << std::endl
-             << "              <td class=\"value failure_cell" << (is_max_max_failure ? " maximum" : "")   << "\" data-sort=\"" << item.failure_max.count()     << "\">" << format_duration(item.failure_max)     << "</td>" << std::endl
-             << "              <td class=\"value failure_cell" << (is_max_min_failure ? " maximum" : "")   << "\" data-sort=\"" << item.failure_max.count()     << "\">" << format_duration(item.failure_min)     << "</td>" << std::endl
-             << "              <td class=\"value failure_cell\" data-sort=\"" << item.failed << "\">" << item.failed << "</td>" << std::endl
+             << "              <td class=\"value failure_cell" << (is_max_total_failure ? " maximum" : "") << "\" data-sort=\"" << TICKS(failure, total)     << "\">" << DURATION(failure, total)   << "</td>" << std::endl
+             << "              <td class=\"value failure_cell" << (is_max_avg_failure ? " maximum" : "")   << "\" data-sort=\"" << TICKS(failure, average)   << "\">" << DURATION(failure, average) << "</td>" << std::endl
+             << "              <td class=\"value failure_cell" << (is_max_max_failure ? " maximum" : "")   << "\" data-sort=\"" << TICKS(failure, max)       << "\">" << DURATION(failure, max)     << "</td>" << std::endl
+             << CONDITIONAL(include_max_ts,         "              <td class=\"value failure_cell ts\" data-sort=\""            << TS_TICKS(failure, max)    << "\">" << TIMESTAMP(failure, max)    << "</td>" << std::endl)
+             << "              <td class=\"value failure_cell" << (is_max_min_failure ? " maximum" : "")   << "\" data-sort=\"" << TICKS(failure, min)       << "\">" << DURATION(failure, min)     << "</td>" << std::endl
+             << CONDITIONAL(include_min_ts,         "              <td class=\"value failure_cell ts\" data-sort=\""            << TS_TICKS(failure, min)    << "\">" << TIMESTAMP(failure, min)    << "</td>" << std::endl)
+             << CONDITIONAL(include_last,           "              <td class=\"value failure_cell recent\" data-sort=\""        << TICKS(failure, recent)    << "\">" << DURATION(failure, recent)  << "</td>" << std::endl)
+             << CONDITIONAL(include_last_ts,        "              <td class=\"value failure_cell recent ts\" data-sort=\""     << TS_TICKS(failure, recent) << "\">" << TIMESTAMP(failure, recent) << "</td>" << std::endl)
+             << "              <td class=\"value failure_cell\" data-sort=\"" << item.count.failure << "\">" << item.count.failure << "</td>" << std::endl
 
-             << "              <td class=\"value interrupted" << (is_max_total_interrupted ? " maximum" : "") << "\" data-sort=\"" << item.interrupted_total.count()   << "\">" << format_duration(item.interrupted_total)   << "</td>" << std::endl
-             << "              <td class=\"value interrupted" << (is_max_avg_interrupted ? " maximum" : "")   << "\" data-sort=\"" << item.interrupted_average.count() << "\">" << format_duration(item.interrupted_average) << "</td>" << std::endl
-             << "              <td class=\"value interrupted" << (is_max_max_interrupted ? " maximum" : "")   << "\" data-sort=\"" << item.interrupted_max.count()     << "\">" << format_duration(item.interrupted_max)     << "</td>" << std::endl
-             << "              <td class=\"value interrupted" << (is_max_min_interrupted ? " maximum" : "")   << "\" data-sort=\"" << item.interrupted_max.count()     << "\">" << format_duration(item.interrupted_min)     << "</td>" << std::endl
-             << "              <td class=\"value interrupted\" data-sort=\"" << item.interrupted << "\">" << item.interrupted << "</td>" << std::endl
+             << "              <td class=\"value interrupted" << (is_max_total_interrupted ? " maximum" : "") << "\" data-sort=\"" << TICKS(interruption, total)     << "\">" << DURATION(interruption, total)   << "</td>" << std::endl
+             << "              <td class=\"value interrupted" << (is_max_avg_interrupted ? " maximum" : "")   << "\" data-sort=\"" << TICKS(interruption, average)   << "\">" << DURATION(interruption, average) << "</td>" << std::endl
+             << "              <td class=\"value interrupted" << (is_max_max_interrupted ? " maximum" : "")   << "\" data-sort=\"" << TICKS(interruption, max)       << "\">" << DURATION(interruption, max)     << "</td>" << std::endl
+             << CONDITIONAL(include_max_ts,         "              <td class=\"value interrupted ts\" data-sort=\""                << TS_TICKS(interruption, max)    << "\">" << TIMESTAMP(interruption, max)    << "</td>" << std::endl)
+             << "              <td class=\"value interrupted" << (is_max_min_interrupted ? " maximum" : "")   << "\" data-sort=\"" << TICKS(interruption, min)       << "\">" << DURATION(interruption, min)     << "</td>" << std::endl
+             << CONDITIONAL(include_min_ts,         "              <td class=\"value interrupted ts\" data-sort=\""                << TS_TICKS(interruption, min)    << "\">" << TIMESTAMP(interruption, min)    << "</td>" << std::endl)
+             << CONDITIONAL(include_last,           "              <td class=\"value interrupted recent\" data-sort=\""            << TICKS(interruption, recent)    << "\">" << DURATION(interruption, recent)  << "</td>" << std::endl)
+             << CONDITIONAL(include_last_ts,        "              <td class=\"value interrupted recent ts\" data-sort=\""         << TS_TICKS(interruption, recent) << "\">" << TIMESTAMP(interruption, recent) << "</td>" << std::endl)
+             << "              <td class=\"value interrupted\" data-sort=\"" << item.count.interruption << "\">" << item.count.interruption << "</td>" << std::endl
 
-             << "              <td class=\"value total" << (is_max_total_total ? " maximum" : "") << "\" data-sort=\"" << item.total_total.count() << "\">"   << format_duration(item.total_total)   << "</td>" << std::endl
-             << "              <td class=\"value total" << (is_max_avg_total ? " maximum" : "")   << "\" data-sort=\"" << item.total_average.count() << "\">" << format_duration(item.total_average) << "</td>" << std::endl
-             << "              <td class=\"value total" << (is_max_max_total ? " maximum" : "")   << "\" data-sort=\"" << item.total_max.count() << "\">"     << format_duration(item.total_max)     << "</td>" << std::endl
-             << "              <td class=\"value total" << (is_max_min_total ? " maximum" : "")   << "\" data-sort=\"" << item.total_max.count() << "\">"     << format_duration(item.total_min)     << "</td>" << std::endl
-             << "              <td class=\"value total\" data-sort=\"" << item.count << "\">" << item.count << "</td>" << std::endl
+             << "              <td class=\"value total" << (is_max_total_total ? " maximum" : "") << "\" data-sort=\"" << TICKS(total, total)     << "\">" << DURATION(total, total)   << "</td>" << std::endl
+             << "              <td class=\"value total" << (is_max_avg_total ? " maximum" : "")   << "\" data-sort=\"" << TICKS(total, average)   << "\">" << DURATION(total, average) << "</td>" << std::endl
+             << "              <td class=\"value total" << (is_max_max_total ? " maximum" : "")   << "\" data-sort=\"" << TICKS(total, max)       << "\">" << DURATION(total, max)     << "</td>" << std::endl
+             << CONDITIONAL(include_max_ts,         "              <td class=\"value total ts\" data-sort=\""          << TS_TICKS(total, max)    << "\">" << TIMESTAMP(total, max)    << "</td>" << std::endl)
+             << "              <td class=\"value total" << (is_max_min_total ? " maximum" : "")   << "\" data-sort=\"" << TICKS(total, min)       << "\">" << DURATION(total, min)     << "</td>" << std::endl
+             << CONDITIONAL(include_min_ts,         "              <td class=\"value total ts\" data-sort=\""          << TS_TICKS(total, min)    << "\">" << TIMESTAMP(total, min)    << "</td>" << std::endl)
+             << CONDITIONAL(include_last,           "              <td class=\"value total recent\" data-sort=\""      << TICKS(total, recent)    << "\">" << DURATION(total, recent)  << "</td>" << std::endl)
+             << CONDITIONAL(include_last_ts,        "              <td class=\"value total recent ts\" data-sort=\""   << TS_TICKS(total, recent) << "\">" << TIMESTAMP(total, recent) << "</td>" << std::endl)
+             << "              <td class=\"value total\" data-sort=\"" << item.count.total << "\">" << item.count.total << "</td>" << std::endl
 
              << "              <td class=\"noborder\">" << std::endl
     // Here, we only hide the button so that the row height remains equal.
@@ -1128,6 +1264,10 @@ void add_row(document & doc, summary_diagnostic_item const& item, summary_diagno
     }
     doc.body << "              </td>" << std::endl
              << "            </tr>" << std::endl;
+
+#undef TICKS
+#undef DURATION
+#undef TIMESTAMP
 }
 
 // Ends a full table
@@ -1229,7 +1369,7 @@ void format(document & doc, std::size_t /* index */, std::string const& section,
 
     std::size_t id = 0;
     for (auto it = summary.items.begin(); it != summary.items.end(); ++it, ++id) {
-        detail::add_row(doc, it->second, summary, std::move(detail::row_detail(params, it->second, simple_items[it->first])), id);
+        detail::add_row(doc, params, it->second, summary, std::move(detail::row_detail(params, it->second, simple_items[it->first])), id);
     }
 
     detail::end_table(doc);
@@ -1245,7 +1385,7 @@ void format(document & doc, std::size_t /* index */, std::string const& section,
 
     std::size_t id = 0;
     for (auto it = data.items.begin(); it != data.items.end(); ++it, ++id) {
-        detail::add_row(doc, it->second, data, std::move(detail::row_detail(params, it->second)), id);
+        detail::add_row(doc, params, it->second, data, std::move(detail::row_detail(params, it->second)), id);
     }
 
     detail::end_table(doc);
@@ -1346,13 +1486,17 @@ public:
             // Add menu entry
             menu  (doc, index,            names[index]);
             // Format running jobs
-            format(doc, index, "Running", running[index]);
+            if (m_params.sections & parameters::SHOW_RUNNING)
+                format(doc, index, "Running", running[index]);
             // Format queue sizes
-            queues(doc, index,            queue_sizes[index]);
+            if (m_params.sections & parameters::SHOW_QUEUE_SIZES)
+                queues(doc, index,            queue_sizes[index]);
             // Format current jobs
-            format(doc, index, "Current", current[index]);
+            if (m_params.sections & parameters::SHOW_CURRENT)
+                format(doc, index, "Current", current[index]);
             // Format all jobs
-            format(doc, index, "All",     all[index]);
+            if (m_params.sections & parameters::SHOW_OVERALL)
+                format(doc, index, "All",     all[index]);
         }
 
         return doc.str();
