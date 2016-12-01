@@ -20,6 +20,16 @@ namespace
 // main thread id
 boost::thread::id main_thread_id;
 
+struct non_default_constructible
+{
+    non_default_constructible()=delete;
+    non_default_constructible(int i)
+    {
+        m_data=i;
+    }
+    int m_data=0;
+};
+
 struct Servant : boost::asynchronous::trackable_servant<>
 {
     typedef int simple_ctor;
@@ -34,12 +44,12 @@ struct Servant : boost::asynchronous::trackable_servant<>
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant dtor not posted.");
     }
-    int foo()const
+    non_default_constructible foo()const
     {
         boost::asynchronous::any_shared_scheduler<> s = get_scheduler().lock();
         std::vector<boost::thread::id> ids = s.thread_ids();
         BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"foo running in wrong thread.");
-        return 5;
+        return non_default_constructible(5);
     }
     void foobar(int i, char c)const
     {
@@ -87,10 +97,10 @@ struct Servant2 : boost::asynchronous::trackable_servant<>
         call_callback(m_worker.get_proxy(),
                       m_worker.foo(),
                       // callback functor.
-                      [this_thread_id](boost::asynchronous::expected<int> res)
+                      [this_thread_id](boost::asynchronous::expected<non_default_constructible> res)
                       {
                           BOOST_REQUIRE_MESSAGE(this_thread_id==boost::this_thread::get_id(),"servant callback in wrong thread.");
-                          BOOST_REQUIRE_MESSAGE(res.get()==5,"foo delivered wrong response.");
+                          BOOST_REQUIRE_MESSAGE(res.get().m_data==5,"foo delivered wrong response.");
                       }
         );
         call_callback(m_worker.get_proxy(),
