@@ -6670,7 +6670,7 @@ explicit vector( boost::asynchronous::any_shared_scheduler_proxy&lt;Job> schedul
             <para>This section shows some examples of strongly simplified designs using
                 Asynchronous.</para>
             <sect1>
-                <title>A state machine managing parallel tasks</title>
+                <title>A state machine managing a succession of tasks</title>
                 <para>This example will show how the library allows a solution more powerful than
                     the proposed future.then() extension.</para>
                 <para>Futures returned by an asynchronous function like std::async have to be
