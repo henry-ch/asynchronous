@@ -6715,6 +6715,78 @@ explicit vector( boost::asynchronous::any_shared_scheduler_proxy&lt;Job> schedul
                         </listitem>
                 </itemizedlist></para>
             </sect1>
+             <sect1>
+                <title>A layered application</title>
+                 <para>A common design pattern for an application is organizing it into layers. We
+                    suppose we are having three layers:<itemizedlist>
+                        <listitem>
+                            <para>TopLevel: what the user of the application is seeing</para>
+                        </listitem>
+                        <listitem>
+                            <para>MiddleLevel: some internal business logic</para>
+                        </listitem>
+                        <listitem>
+                            <para>LowLevel: communication layer</para>
+                        </listitem>
+                    </itemizedlist></para>
+                 <para>This is a common design in lots of books. A top level layer receives user
+                    commands , checks for their syntax, then delegates to a middle layer, composed
+                    of business logic, checking whether the application is in a state to execute the
+                    order. If it is, the low-level communication task is delegated to a low level
+                    layer. </para>
+                <para>Of course this example is strongly simplified. A layer can be made of hundreds
+                    of objects and thousands of lines of code.</para>
+                <para>What the books often ignore, however, are threads and lifecycle issues.
+                    Non-trivial applications are likely to be running many threads. This is where
+                    the problems start:<itemizedlist>
+                        <listitem>
+                            <para>Which layer is running into which thread?</para>
+                        </listitem>
+                        <listitem>
+                            <para>How do to avoid races if each layer is running his own thread(s).
+                                Usually, mutexes are used.</para>
+                        </listitem>
+                        <listitem>
+                            <para>How to handle callbacks from lower layers, as these are likely to
+                                be executed in the lower layer thread(s)</para>
+                        </listitem>
+                        <listitem>
+                            <para>Lifecycles. Usually, each layer has responsibility of keeping his
+                                lower layers alive. But how to handle destruction of higher-levels?
+                                Callbacks might already be under way and they will soon meet a
+                                destroyed mutex?</para>
+                        </listitem>
+                    </itemizedlist></para>
+                 <para><inlinemediaobject>
+                     <imageobject>
+                         <imagedata fileref="pics/layers.jpg"/>
+                     </imageobject>
+                 </inlinemediaobject></para>
+                 <para>Asychronous provides a solution to these problems:<itemizedlist>
+                        <listitem>
+                            <para>Each layer is living in its own thread world (or sharing
+                                one).</para>
+                        </listitem>
+                        <listitem>
+                            <para>Asynchronous guarantees that each layer will be destroyed in turn:
+                                LowLevel - MiddleLevel - TopLevel.</para>
+                        </listitem>
+                        <listitem>
+                            <para>Asynchronous provides proxies to serialize outside calls into a
+                                servant thread world.</para>
+                        </listitem>
+                        <listitem>
+                            <para>Asynchronous provides safe callbacks: each servant can use
+                                make_safe_calback, which guarantees execution in the servant thread
+                                if and only if the servant is still alive.</para>
+                        </listitem>
+                 </itemizedlist></para>
+                 <para><link xlink:href="examples/example_layers.cpp">In this simplified
+                        example</link>, each layer has its own thread world. Using the proxies
+                    provided by the library, each servant is protected from races through calls from
+                    their upper layer or the outside world (main). Servants are also protected from
+                    callbacks from their lower layer by make_safe_callback.</para>
+             </sect1>
        </chapter>
     </part>
     <part>
