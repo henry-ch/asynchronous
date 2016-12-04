@@ -502,9 +502,9 @@ private:
                     and manage this with a state machine and you might use your cores with little
                     effort. Parallelization can then be used later on by logging which tasks are
                     worth parallelized.</para>
-                <para>Asynchronous offers tools generating nice HTML outputs for every schedulers,
+                <para>Asynchronous offers <command
+                    xlink:href="#html_diags">tools generating nice HTML outputs</command> for every schedulers,
                     including waiting and execution times of tasks, histograms, etc.</para>
-                <para>TODO link to html diags example</para>
             </sect1>
             <sect1>
                 <title>Continuations</title>
@@ -1126,7 +1126,7 @@ for (auto mit = single_thread_sched_diag.begin(); mit != single_thread_sched_dia
                     shows all this, plus an interrupted job.</para>                
             </sect1>
             <sect1>
-                <title>Generating HTML diagnostics</title>
+                <title><command xml:id="html_diags"/>Generating HTML diagnostics</title>
                 <para>We just saw how to programmatically get diagnostics from schedulers. This is
                     very useful, but nobody likes to do it manually, so the authors went the extra
                     mile and provide an HTML formatter for convenience. The <link
