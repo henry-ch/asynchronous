@@ -6709,9 +6709,31 @@ explicit vector( boost::asynchronous::any_shared_scheduler_proxy&lt;Job> schedul
                         </listitem>
                         <listitem>
                             <para>We have no race although no mutex is used and at least three
-                                threads are implied (main / Manager's world / threadpool). All
-                                events (start / cancel /completion of first task / completion of
-                                second task) are done within the Manager thread world.</para>
+                                threads are implied (main / 2 std::thread / Manager's world /
+                                threadpool). All events (start / cancel /completion of first task /
+                                completion of second task) are done within the Manager thread
+                                world.</para>
+                        </listitem>
+                        <listitem>
+                            <para>A proxy object can be copied and the copies used safely in any
+                                number of threads. The proxy is copied, the thread world no. We use
+                                in our example 2 std::threads which both share the proxy (and share
+                                control of the thread world's lifecycle) with the main thread and
+                                access members of the servant, all safely. The last thread going
+                                will cause the thread world to shutdown. </para>
+                        </listitem>
+                        <listitem>
+                            <para>Thinking in general design, this is very powerful. Software is
+                                usually designed in components, which one tries to make reusable.
+                                This is usually difficult because of thread issues. This problem is
+                                now gone. The component delimited by one (or several) proxy is safe,
+                                completely reusable and its thread limits are well defined.</para>
+                        </listitem>
+                        <listitem>
+                            <para>We have in this example only one servant and its proxy. It would
+                                be easily possible to define any number of pair of those. In this
+                                case, the last proxy destroyed would shut down the thread
+                                world.</para>
                         </listitem>
                 </itemizedlist></para>
             </sect1>

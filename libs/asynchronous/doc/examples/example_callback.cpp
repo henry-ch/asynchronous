@@ -7,7 +7,7 @@
 //
 // For more information, see http://www.boost.org
 #include <iostream>
-
+#include <thread>
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/scheduler/multiqueue_threadpool_scheduler.hpp>
@@ -50,10 +50,11 @@ struct Manager : boost::asynchronous::trackable_servant<>
                 }
         );
     }
-    void cancel()
+    void count()
     {
-        cout << "second part cancelled" << endl;
-        needs_second_task = false;
+        // to show our race-free code, we use a counter, set by external threads.
+        // an even number in the counter will cause second task to not be executed
+        ++needs_second_task;
     }
 
     // call to this is posted and executes in our (safe) single-thread scheduler
@@ -75,7 +76,7 @@ struct Manager : boost::asynchronous::trackable_servant<>
                 {
                     // ignore expected as no exception will be thrown
                     // check now, only after first call if we want to continue, based on whatever happened since we started a task
-                    if (needs_second_task)
+                    if (needs_second_task % 2)
                     {
                         second_task();
                     }
@@ -91,7 +92,7 @@ struct Manager : boost::asynchronous::trackable_servant<>
 private:
 // to signal that we shutdown
 boost::promise<void> m_promise;
-bool needs_second_task=true;
+int needs_second_task=0;
 };
 class ManagerProxy : public boost::asynchronous::servant_proxy<ManagerProxy,Manager>
 {
@@ -102,7 +103,7 @@ public:
     {}
     // caller will get a future
     BOOST_ASYNC_FUTURE_MEMBER(start)
-    BOOST_ASYNC_FUTURE_MEMBER(cancel)
+    BOOST_ASYNC_FUTURE_MEMBER(count)
 };
 
 }
@@ -115,14 +116,18 @@ void example_callback()
         auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
                                 boost::asynchronous::single_thread_scheduler<
                                      boost::asynchronous::lockfree_queue<>>>();
-        {
-            ManagerProxy proxy(scheduler,boost::thread::hardware_concurrency());
-            boost::future<boost::future<void> > fu = proxy.start();
-            // we changed our mind, inform Manager by posting him a call to cancel()
-            proxy.cancel();
-            // wait for shutdown
-            fu.get().get();
-        }
+        ManagerProxy proxy(scheduler,boost::thread::hardware_concurrency());
+        boost::future<boost::future<void> > fu = proxy.start();
+        // show that we have in our ManagerProxy a completely safe thread world which can be accessed by several threads
+        // add more threads for fun if needed. An odd number of them will cause second task to be called.
+        std::thread t1([proxy](){proxy.count();});
+        std::thread t2([proxy](){proxy.count();});
+        // our proxy is now shared by 3 external threads, has no lifecycle or race issue
+        t1.join();
+        t2.join();
+
+        // wait for shutdown
+        fu.get().get();
     }
     std::cout << "end example_callback \n" << std::endl;
 }
