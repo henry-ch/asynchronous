@@ -86,6 +86,14 @@ public:
         }
         return *m_value;
     }
+    value_type const& get() const
+    {
+        if (m_exception)
+        {
+            boost::rethrow_exception(m_exception);
+        }
+        return *m_value;
+    }
     bool has_exception() const
     {
         return !!m_exception;
@@ -161,6 +169,14 @@ public:
         }
         return m_value;
     }
+    value_type const& get() const
+    {
+        if (m_exception)
+        {
+            boost::rethrow_exception(m_exception);
+        }
+        return m_value;
+    }
     bool has_exception() const
     {
         return !!m_exception;
@@ -220,6 +236,13 @@ public:
     {
     }
     void get()
+    {
+        if (m_exception)
+        {
+            boost::rethrow_exception(m_exception);
+        }
+    }
+    void get() const
     {
         if (m_exception)
         {
