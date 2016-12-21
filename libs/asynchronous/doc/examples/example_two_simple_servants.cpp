@@ -40,11 +40,9 @@ public:
     BOOST_ASYNC_UNSAFE_MEMBER(foobar)
 };
 
-struct Servant2 : boost::asynchronous::trackable_servant<>
+struct Servant2 : public boost::asynchronous::trackable_servant<>
 {
-    // optional, ctor is simple enough not to be posted
-    typedef int simple_ctor;
-    
+
     Servant2(boost::asynchronous::any_weak_scheduler<> scheduler,ServantProxy worker)
         :boost::asynchronous::trackable_servant<>(scheduler)
         ,m_worker(worker)
