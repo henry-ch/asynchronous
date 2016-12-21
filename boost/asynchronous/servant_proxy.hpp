@@ -755,7 +755,7 @@ private:
         servant_deleter& operator= (servant_deleter const& r)noexcept
         {
             std::swap(data,r.data);
-            std::swap(done_promise,r.done_promise);
+            std::swap(done_promise,const_cast<servant_deleter&>(r).done_promise);
             return *this;
         }
 #ifndef BOOST_NO_RVALUE_REFERENCES
