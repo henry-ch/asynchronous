@@ -342,6 +342,25 @@ public:
     {
         signal.connect(typename Signal::slot_type(make_safe_callback(std::move(slot),task_name,prio)).track(m_tracking));
     }
+
+
+    boost::asynchronous::any_shared_scheduler_proxy<WJOB> const& get_worker()const
+    {
+        return m_worker;
+    }
+    void set_worker(boost::asynchronous::any_shared_scheduler_proxy<WJOB> w)
+    {
+        m_worker=w;
+    }
+    void set_scheduler(boost::asynchronous::any_weak_scheduler<JOB> s)
+    {
+        m_scheduler=s;
+    }
+    boost::asynchronous::any_weak_scheduler<JOB> const& get_scheduler()const
+    {
+        return m_scheduler;
+    }
+
 private:
     template<typename... Args>
     std::function<void(Args... )> make_safe_callback_helper(std::function<void(Args... )> func,
@@ -382,18 +401,6 @@ private:
     }
 
 protected:
-    boost::asynchronous::any_shared_scheduler_proxy<WJOB> const& get_worker()const
-    {
-        return m_worker;
-    }
-    void set_worker(boost::asynchronous::any_shared_scheduler_proxy<WJOB> w)
-    {
-        m_worker=w;
-    }
-    boost::asynchronous::any_weak_scheduler<JOB> const& get_scheduler()const
-    {
-        return m_scheduler;
-    }
     // tracking object for callbacks / tasks
     boost::shared_ptr<track> m_tracking;
 private:
