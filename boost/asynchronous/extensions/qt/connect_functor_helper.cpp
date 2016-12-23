@@ -7,21 +7,21 @@
 //
 // For more information, see http://www.boost.org
 
-#include <boost/asynchronous/extensions/qt/qt_post_helper.hpp>
+#include <boost/asynchronous/extensions/qt/connect_functor_helper.hpp>
 
 namespace boost { namespace asynchronous
 {
 namespace detail {
 #ifdef BOOST_ASYNCHRONOUS_QT_WORKAROUND
-qt_post_helper::qt_post_helper(connect_functor_helper* c)
+connect_functor_helper::connect_functor_helper(unsigned long id, const std::function<void(QEvent*)> &f)
     : QObject(0)
-    , m_connect(c)
-{}
-qt_post_helper::qt_post_helper(qt_post_helper const& rhs)
-    : QObject(0)
-    , m_connect(rhs.m_connect)
-{}
-qt_post_helper::~qt_post_helper()
+    , m_id(id)
+    , m_function(f)
+    {}
+connect_functor_helper::connect_functor_helper(connect_functor_helper const& rhs)
+    :QObject(0), m_id(rhs.m_id),m_function(rhs.m_function)
+    {}
+connect_functor_helper::~connect_functor_helper()
 {}
 #endif
 }}}
