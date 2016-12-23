@@ -12,6 +12,7 @@
 namespace boost { namespace asynchronous
 {
 namespace detail {
+#ifdef BOOST_ASYNCHRONOUS_QT_WORKAROUND
 qt_post_helper::qt_post_helper(connect_functor_helper* c)
     : QObject(0)
     , m_connect(c)
@@ -22,5 +23,5 @@ qt_post_helper::qt_post_helper(qt_post_helper const& rhs)
 {}
 qt_post_helper::~qt_post_helper()
 {}
-
+#endif
 }}}

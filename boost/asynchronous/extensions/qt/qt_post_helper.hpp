@@ -140,15 +140,23 @@ class qt_post_helper : public QObject
 {
     Q_OBJECT
 public:
-    virtual ~qt_post_helper()
-    ;
-
     typedef boost::asynchronous::any_callable job_type;
-    qt_post_helper(connect_functor_helper* c)
-    ;
 
+#ifdef BOOST_ASYNCHRONOUS_QT_WORKAROUND
+    virtual ~qt_post_helper();
+    qt_post_helper(connect_functor_helper* c);
+    qt_post_helper(qt_post_helper const& rhs);
+#else
+    virtual ~qt_post_helper(){}
+    qt_post_helper(connect_functor_helper* c)
+        : QObject(0)
+        , m_connect(c)
+    {}
     qt_post_helper(qt_post_helper const& rhs)
-;
+        : QObject(0)
+        , m_connect(rhs.m_connect)
+    {}
+#endif
 
     template <class Future>
     void operator()(Future f)
