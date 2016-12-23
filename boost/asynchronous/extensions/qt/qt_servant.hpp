@@ -28,6 +28,7 @@
 #include <boost/asynchronous/detail/function_traits.hpp>
 #include <boost/asynchronous/detail/move_bind.hpp>
 #include <boost/asynchronous/extensions/qt/qt_post_helper.hpp>
+#include <boost/asynchronous/extensions/qt/qt_safe_callback_helper.hpp>
 
 #include <boost/system/error_code.hpp>
 #include <boost/shared_ptr.hpp>
