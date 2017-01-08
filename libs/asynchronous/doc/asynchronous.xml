@@ -6809,6 +6809,112 @@ explicit vector( boost::asynchronous::any_shared_scheduler_proxy&lt;Job> schedul
                     their upper layer or the outside world (main). Servants are also protected from
                     callbacks from their lower layer by make_safe_callback.</para>
              </sect1>
+            <sect1>
+                <title>Boost.Meta State Machine and Asynchronous behind a Qt User Interface </title>
+                 <para>We will now study a more complicated example, which will implement a more
+                    complicated application, closer to a real-life case. The Boost.MSM documentation
+                    introduces a CD player implementation. This CD player reacts to events coming
+                    from a hardware: opening of the player, adding a disc, playing a song,
+                    increasing volume, etc. This logic is implemented in the logic layer, which
+                    mostly delegates it to a state machine based on Boost.MSM. The file
+                    playerlogic.cpp implements this state machine, which is an extension of the ones
+                    found in the Boost.MSM documentation.</para>
+                <para>This logic is to be thought of as a reusable component, which must be
+                    thread-safe, living in a clearly defined thread context. Asychronous handles
+                    this: the PlayerLogic class is a servant, protected by a proxy,
+                    PlayerLogicProxy, which in its constructor creates the necessary single-threaded
+                    scheduler. At this point, we have a self-sufficient component.</para>
+                <para>Supposing that, like often in real-life, that the hardware is not ready while
+                    our software would be ready for testing, we decide to build a Qt application,
+                    acting as a hardware simulator. This also allows fast prototyping, early
+                    testing, writing of training material and concept-checking by the different
+                    stakeholders.</para>
+                <para>To achieve this, we write a QWidget-derived class named PlayerGui, a simple
+                    interface simulating the controls which will be offered by the real CD player.
+                    It implements IDisplay, the interface which the real CD player will provide. </para>
+                <para>The real hardware will also implement IHardware, an interface allowing control
+                    of the buttons and motors of the player. Our simple PlayerGui will also
+                    implement it for simplicity.</para>
+                <para>A Qt application is by definition asynchronous. Boost.Asynchronous provides
+                    qt_servant, allowing a Qt object to make us of the library features (safe
+                    callbacks, threadpools, etc.).</para>
+                <para>The application is straightforward: PlayerGui creates the logic of the
+                    application, which means constructing a PlayerLogicProxy object. After the
+                    construction, we have a usable, movable, perfectly asynchronous component, which
+                    means being based on an almost 0 time run-to-completion implemented by the state
+                    machine. The PlayerGui itself is also fully asynchronous: all actions it
+                    triggers are posted into the logic component, and therefore non-blocking. After
+                    the logic updates its internal states, it calls a provided safe callback, which
+                    will update the status of all buttons. So we now have an asynchronous, non
+                    blocking user interface delegating handling the hardware to an asynchronous, non
+                    blocking logic layer:</para>
+                <para>
+                    <itemizedlist>
+                        <listitem>
+                            <para>PlayerGui: a QWidget providing a simple user interface with
+                                buttons like the real hardware would. It inherits qt_servant to get
+                                access to safe callbacks. It provides SafeDisplay, an implementation
+                                of IDisplay, interface which the real CD player will also implement,
+                                and SafeHardware, an implementation of IHardware, an interface which
+                                the real hardware will implement. The "Safe" part is that the
+                                callbacks being passed are resulting from make_safe_callback: they
+                                will be executed within the Qt thread, only if the QWidget is still
+                                alive.</para>
+                        </listitem>
+                        <listitem>
+                            <para>PlayerLogic: the entry point to our logic layer: a
+                                trackable_servant, hiden behind a servant_proxy. In our example, it
+                                will delegate all logic work to the state machine.</para>
+                        </listitem>
+                        <listitem>
+                            <para>StateMachine: a Boost.MSM state machine, implementing the whole CD
+                                player logic.</para>
+                        </listitem>
+                        <listitem>
+                            <para>IDisplay: the interface provided by the real player.</para>
+                        </listitem>
+                        <listitem>
+                            <para>IDisplay: the interface provided by the real hardware (buttons,
+                                motors, sensor, etc).</para>
+                        </listitem>
+                    </itemizedlist>
+                </para>
+                <para>This example shows very important concepts of the Boost.MSM and Asynchronous
+                    libraries in actions:</para>
+                <para>
+                    <itemizedlist>
+                        <listitem>
+                            <para>A state machine is based on run-to-completion: it is unstable
+                                while processing an event and should move as fast as possible back
+                                to a stable state.</para>
+                        </listitem>
+                        <listitem>
+                            <para>To achieve this, the actions should be short. Whatever takes long
+                                is posted to a thread pool. Our actions are costing only the cost of
+                                a transition and posting.</para>
+                        </listitem>
+                        <listitem>
+                            <para>Asynchronous provides the infrastructure needed by the state
+                                machine: pools, safe callbacks, protection from external
+                                threads.</para>
+                        </listitem>
+                        <listitem>
+                            <para>A logic component is behaving like a simple, safe, moveable
+                                object. All the application sees is a proxy object.</para>
+                        </listitem>
+                        <listitem>
+                            <para>A Qt Object can also make use of thread pools, safe
+                                callbacks.</para>
+                        </listitem>
+                        <listitem>
+                            <para>Our application is completely asynchronous: it never ever blocks.
+                                This is no small feat when we consider that we are controlling a
+                                "real" hardware with huge response times compared to the speed of a
+                                CPU.</para>
+                        </listitem>
+                    </itemizedlist>
+                </para>
+            </sect1>
        </chapter>
     </part>
     <part>
