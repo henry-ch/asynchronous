@@ -7,21 +7,23 @@
 //
 // For more information, see http://www.boost.org
 
-#include <boost/asynchronous/extensions/qt/qt_post_helper.hpp>
+#include <boost/asynchronous/extensions/qt/qt_safe_callback_helper.hpp>
 
 namespace boost { namespace asynchronous
 {
 namespace detail {
 #ifdef BOOST_ASYNCHRONOUS_QT_WORKAROUND
-qt_post_helper::qt_post_helper(connect_functor_helper* c)
+qt_safe_callback_helper::qt_safe_callback_helper(connect_functor_helper* c, std::function<void()>&& cb)
     : QObject(0)
     , m_connect(c)
-{}
-qt_post_helper::qt_post_helper(qt_post_helper const& rhs)
+    , m_cb(std::forward<std::function<void()>>(cb))
+    {}
+qt_safe_callback_helper::qt_safe_callback_helper(qt_safe_callback_helper const& rhs)
     : QObject(0)
     , m_connect(rhs.m_connect)
-{}
-qt_post_helper::~qt_post_helper()
+    , m_cb(rhs.m_cb)
+    {}
+qt_safe_callback_helper::~qt_safe_callback_helper()
 {}
 #endif
 }}}

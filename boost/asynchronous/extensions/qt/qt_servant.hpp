@@ -28,6 +28,7 @@
 #include <boost/asynchronous/detail/function_traits.hpp>
 #include <boost/asynchronous/detail/move_bind.hpp>
 #include <boost/asynchronous/extensions/qt/qt_post_helper.hpp>
+#include <boost/asynchronous/extensions/qt/qt_safe_callback_helper.hpp>
 
 #include <boost/system/error_code.hpp>
 #include <boost/shared_ptr.hpp>
@@ -194,12 +195,6 @@ public:
 #endif
      -> boost::future<typename boost::asynchronous::detail::get_return_type_if_possible_continuation<decltype(func())>::type>
     {
-        typedef typename ::boost::mpl::eval_if<
-            typename boost::asynchronous::detail::has_is_continuation_task<decltype(func())>::type,
-            get_continuation_return<decltype(func())>,
-            ::boost::mpl::identity<decltype(func())>
-        >::type f1_result_type;
-
         unsigned long connect_id = m_next_helper_id;
         boost::weak_ptr<boost::asynchronous::detail::qt_track> tracking (m_tracking);
 

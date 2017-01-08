@@ -194,6 +194,12 @@ public:
 
 // scheduler proxy for use outside the active object world
 // implements any_shared_scheduler_proxy
+/*!
+ * \class scheduler_shared_proxy
+ * This class acts as a proxy to a scheduler for use outside the scheduler world.
+ * Implements any_shared_scheduler_proxy_concept.
+ * Objects of this class are shareable. Sharing different instances of proxies to the same scheduler is thread-safe.
+ */
 template<class S>
 class scheduler_shared_proxy
 #ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
@@ -205,82 +211,113 @@ public:
     typedef scheduler_shared_proxy<S> this_type;
     typedef typename S::job_type job_type;
 
+
+    /*!
+     * \brief returns whether the scheduler proxy is a proxy to a valid scheduler
+     * \return bool
+     */
     bool is_valid() const
     {
         return m_impl->is_valid();
     }
+
+    /*!
+     * \brief returns the number of waiting jobs in every queue
+     * \return a std::vector containing the queue sizes
+     */
     std::vector<std::size_t> get_queue_size() const
     {
         return m_impl->get_queue_size();
     }
+
+    /*!
+     * \brief returns the max number of waiting jobs in every queue
+     * \return a std::vector containing the max queue sizes
+     */
     std::vector<std::size_t> get_max_queue_size() const
     {
         return m_impl->get_max_queue_size();
     }
+
+    /*!
+     * \brief reset the max queue sizes
+     */
     void reset_max_queue_size()
     {
         m_impl->reset_max_queue_size();
     }
 
-#ifndef BOOST_NO_RVALUE_REFERENCES
+    /*!
+     * \brief posts a job into the scheduler queue
+     * \param job passed by value
+     */
     void post(job_type job) const
     {
         move_post(std::move(job));
     }
+
+    /*!
+     * \brief posts a job into the scheduler queue with the given priority
+     * \param job passed by value
+     * \param priority. Depending on the scheduler, it can be queue or sub-pool composite_threadpool_scheduler for example). 0 means dont'care
+     */
     void post(job_type job,std::size_t priority) const
     {
         move_post(std::move(job),priority);
     }
-    void move_post(job_type job,std::size_t priority=0) const
-    {
-        m_impl->post(std::move(job),priority);
-    }
+
+    /*!
+     * \brief posts an interruptible job into the scheduler queue
+     * \param job passed by value
+     * \return any_interruptible. Can be used to interrupt the job
+     */
     boost::asynchronous::any_interruptible interruptible_post(job_type job) const
     {
         return move_interruptible_post(std::move(job));
     }
+
+    /*!
+     * \brief posts an interruptible job into the scheduler queue with the given priority
+     * \param job passed by value
+     * \param priority. Depending on the scheduler, it can be queue or sub-pool composite_threadpool_scheduler for example). 0 means dont'care
+     * \return any_interruptible. Can be used to interrupt the job
+     */
     boost::asynchronous::any_interruptible interruptible_post(job_type job,std::size_t priority) const
     {
         return move_interruptible_post(std::move(job),priority);
     }
-    boost::asynchronous::any_interruptible move_interruptible_post(job_type job,
-                                                                std::size_t priority=0) const
-    {
-       return m_impl->interruptible_post(std::move(job),priority);
-    }
-#else
-    void post(job_type job) const
-    {
-        m_impl->post(job);
-    }
-    void post(job_type job,std::size_t priority) const
-    {
-        m_impl->post(job,priority);
-    }
-    boost::asynchronous::any_interruptible interruptible_post(job_type job) const
-    {
-        return m_impl->interruptible_post(job);
-    }
-    boost::asynchronous::any_interruptible interruptible_post(job_type job,std::size_t priority) const
-    {
-        return m_impl->interruptible_post(job,priority);
-    }
-#endif
 
+    /*!
+     * \brief returns the ids of the threads run by this scheduler
+     * \return std::vector of thread ids
+     */
     std::vector<boost::thread::id> thread_ids()const
     {
         return m_impl->thread_ids();
     }
     
+    /*!
+     * \brief returns the diagnostics for this scheduler
+     * \return a scheduler_diagnostics containing totals or current diagnostics
+     */
     boost::asynchronous::scheduler_diagnostics
     get_diagnostics(std::size_t pos=0)const
     {
         return m_impl->get_diagnostics(pos);
     }
+
+    /*!
+     * \brief reset the diagnostics
+     */
     void clear_diagnostics()
     {
         m_impl->clear_diagnostics();
     }
+
+    /*!
+     * \brief returns a weak scheduler. A weak scheduler is to a shared scheduler what weak_ptr is to a shared_ptr
+     * \return any_weak_scheduler
+     */
     boost::asynchronous::any_weak_scheduler<job_type> get_weak_scheduler() const
     {
         boost::asynchronous::detail::lockable_weak_scheduler<scheduler_type> w(m_impl->m_scheduler);
@@ -295,6 +332,10 @@ public:
     {
         m_impl->set_steal_from_queues(queues);
     }
+
+    /*!
+     * \brief returns a reduced scheduler interface for internal needs
+     */
     boost::asynchronous::internal_scheduler_aspect<job_type> get_internal_scheduler_aspect()
     {
 #ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
@@ -306,14 +347,30 @@ public:
         return a;
 #endif
     }
+
+    /*!
+     * \brief sets a name to this scheduler. On posix, this will set the name with prctl for every thread of this scheduler
+     * \param name as string
+     */
     void set_name(std::string const& name)
     {
         m_impl->set_name(name);
     }
+
+    /*!
+     * \brief returns the name of this scheduler
+     * \return name as string
+     */
     std::string get_name()const
     {
         return m_impl->get_name();
     }
+
+    /*!
+     * \brief binds threads of this scheduler to processors, starting with the given id from.
+     * \brief thread 0 will be bound to from, thread 1 to from + 1, etc.
+     * \param start id
+     */
     void processor_bind(unsigned int p)
     {
         m_impl->processor_bind(p);
@@ -322,25 +379,50 @@ public:
     {
     }
 
+    /*!
+     * \brief copy constructor noexcept
+     */
     scheduler_shared_proxy(scheduler_shared_proxy const& rhs)
         : m_impl(rhs.m_impl)
     {
     }
+
+    /*!
+     * \brief move constructor noexcept
+     */
     scheduler_shared_proxy(scheduler_shared_proxy&& rhs) noexcept
         : m_impl(std::move(rhs.m_impl))
     {
     }
-    scheduler_shared_proxy& operator= (scheduler_shared_proxy const& rhs)
+
+    /*!
+     * \brief copy assignment operator noexcept
+     */
+    scheduler_shared_proxy& operator= (scheduler_shared_proxy const& rhs) noexcept
     {
         m_impl = rhs.m_impl;
         return *this;
     }
+
+    /*!
+     * \brief move assignment operator noexcept
+     */
     scheduler_shared_proxy& operator= (scheduler_shared_proxy&& rhs) noexcept
     {
         std::swap(m_impl,rhs.m_impl);
         return *this;
     }
 private:
+    void move_post(job_type job,std::size_t priority=0) const
+    {
+        m_impl->post(std::move(job),priority);
+    }
+    boost::asynchronous::any_interruptible move_interruptible_post(job_type job,
+                                                                std::size_t priority=0) const
+    {
+       return m_impl->interruptible_post(std::move(job),priority);
+    }
+
 #ifndef BOOST_NO_RVALUE_REFERENCES
     explicit scheduler_shared_proxy(boost::shared_ptr<scheduler_type>&& scheduler)
         : m_impl(boost::make_shared<boost::asynchronous::detail::scheduler_shared_proxy_impl<S> >(
@@ -416,6 +498,15 @@ boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type> create_sha
 }
 #endif
 
+/*!
+ * \brief creates a proxy to a given scheduler, forward passed arguments to it.
+ * \brief example: make_shared_scheduler_proxy<
+ * \brief            threadpool_scheduler<boost::asynchronous::lockfree_queue<>>>(3)
+ * \brief will create a threadpool scheduler using a lockfree queue and 3 threads and pass it to a proxy,
+ * \brief represented by a any_shared_scheduler_proxy
+ * \tparam args the arguments passed to the scheduler upon creation
+ * \return any_shared_scheduler_proxy<job>, job type being given by the queue, default BOOST_ASYNCHRONOUS_DEFAULT_JOB (any_callable by default)
+ */
 template< class S, class... Args >
 typename boost::disable_if<boost::asynchronous::has_self_proxy_creation<S>,
                            boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type> >::type
