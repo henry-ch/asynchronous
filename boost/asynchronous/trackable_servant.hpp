@@ -31,6 +31,14 @@ struct track{};
 // simple class for post and callback management
 // hides threadpool and weak scheduler, adds automatic trackability for callbacks and tasks
 // inherit from it to get functionality
+/*!
+ * \class trackable_servant
+ * This is the basic class for all objects acting as servants and needing more than basic serialization of calls.
+ * Offers safe passing of tasks to threadpools and running callbacks in the servant thread.
+ * It also provides a very useful make_safe_callback, which wraps any functor, ensuring this functor will always be called
+ * in the servant thread, and checking for life issues (no call if servant is no more alive).
+ * This safe functor can be called at any time, from any thread.
+ */
 template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB,class WJOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 class trackable_servant
 {
