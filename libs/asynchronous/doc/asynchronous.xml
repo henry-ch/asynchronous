@@ -6811,14 +6811,15 @@ explicit vector( boost::asynchronous::any_shared_scheduler_proxy&lt;Job> schedul
              </sect1>
             <sect1>
                 <title>Boost.Meta State Machine and Asynchronous behind a Qt User Interface </title>
-                 <para>We will now study a more complicated example, which will implement a more
-                    complicated application, closer to a real-life case. The Boost.MSM documentation
-                    introduces a CD player implementation. This CD player reacts to events coming
-                    from a hardware: opening of the player, adding a disc, playing a song,
-                    increasing volume, etc. This logic is implemented in the logic layer, which
-                    mostly delegates it to a state machine based on Boost.MSM. The file
-                    playerlogic.cpp implements this state machine, which is an extension of the ones
-                    found in the Boost.MSM documentation.</para>
+                 <para>We will now implement an application closer to a real-life case. The code is
+                    to be found under asynchronous/libs/asynchronous/doc/examples/msmplayer/
+                    .</para>
+                <para>The Boost.MSM documentation introduces a CD player implementation. This CD
+                    player reacts to events coming from a hardware: opening of the player, adding a
+                    disc, playing a song, increasing volume, etc. This logic is implemented in the
+                    logic layer, which mostly delegates it to a state machine based on Boost.MSM.
+                    The file playerlogic.cpp implements this state machine, which is an extension of
+                    the ones found in the Boost.MSM documentation.</para>
                 <para>This logic is to be thought of as a reusable component, which must be
                     thread-safe, living in a clearly defined thread context. Asychronous handles
                     this: the PlayerLogic class is a servant, protected by a proxy,
@@ -6912,8 +6913,28 @@ explicit vector( boost::asynchronous::any_shared_scheduler_proxy&lt;Job> schedul
                                 "real" hardware with huge response times compared to the speed of a
                                 CPU.</para>
                         </listitem>
-                    </itemizedlist>
+                    </itemizedlist>                   
                 </para>
+                <para>Please have a closer look at the following implementation details:<itemizedlist>
+                        <listitem>
+                            <para>PlayerLogicProxy has a future-free interface. Its members take a
+                                callback. This is a sign there will be no blocking.</para>
+                        </listitem>
+                        <listitem>
+                            <para>The state machine in PlayerLogic's state machine uses
+                                post_callback for long tasks. In the callback, the next event
+                                processing will start.</para>
+                        </listitem>
+                        <listitem>
+                            <para>The UI (PlayerGui) is also non-blocking. We make use of callbacks
+                                (look at the make_safe_callback calls). We therefore have a very
+                                responsive UI.</para>
+                        </listitem>
+                        <listitem>
+                            <para>PlayerGui::actionsHandler will set the new state of all buttons
+                                each time the state machine updates its status.</para>
+                        </listitem>
+                    </itemizedlist></para>
             </sect1>
        </chapter>
     </part>
