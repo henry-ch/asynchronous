@@ -6852,7 +6852,7 @@ explicit vector( boost::asynchronous::any_shared_scheduler_proxy&lt;Job> schedul
                 <para>
                     <itemizedlist>
                         <listitem>
-                            <para>PlayerGui: a QWidget providing a simple user interface with
+                            <para>PlayerGui(<link xlink:href="examples/msmplayer/playergui.h">.h</link><link xlink:href="examples/msmplayer/playergui.cpp">.cpp</link>): a QWidget providing a simple user interface with
                                 buttons like the real hardware would. It inherits qt_servant to get
                                 access to safe callbacks. It provides SafeDisplay, an implementation
                                 of IDisplay, interface which the real CD player will also implement,
@@ -6863,19 +6863,19 @@ explicit vector( boost::asynchronous::any_shared_scheduler_proxy&lt;Job> schedul
                                 alive.</para>
                         </listitem>
                         <listitem>
-                            <para>PlayerLogic: the entry point to our logic layer: a
+                            <para>PlayerLogic(<link xlink:href="examples/msmplayer/playerlogic.h">.h</link><link xlink:href="examples/msmplayer/playerlogic.cpp">.cpp</link>): the entry point to our logic layer: a
                                 trackable_servant, hiden behind a servant_proxy. In our example, it
                                 will delegate all logic work to the state machine.</para>
                         </listitem>
                         <listitem>
-                            <para>StateMachine: a Boost.MSM state machine, implementing the whole CD
+                            <para><link xlink:href="examples/msmplayer/playerlogic.cpp">StateMachine</link>: a Boost.MSM state machine, implementing the whole CD
                                 player logic.</para>
                         </listitem>
                         <listitem>
-                            <para>IDisplay: the interface provided by the real player.</para>
+                            <para><link xlink:href="examples/msmplayer/idisplay.h">IDisplay</link>: the user interface provided by the real player.</para>
                         </listitem>
                         <listitem>
-                            <para>IDisplay: the interface provided by the real hardware (buttons,
+                            <para><link xlink:href="examples/msmplayer/ihardware.h">IHardware</link>: the interface provided by the real hardware (buttons,
                                 motors, sensor, etc).</para>
                         </listitem>
                     </itemizedlist>
@@ -6917,7 +6917,7 @@ explicit vector( boost::asynchronous::any_shared_scheduler_proxy&lt;Job> schedul
                 </para>
                 <para>Please have a closer look at the following implementation details:<itemizedlist>
                         <listitem>
-                            <para>PlayerLogicProxy has a future-free interface. Its members take a
+                            <para><link xlink:href="examples/msmplayer/playerlogic.h">PlayerLogicProxy</link> has a future-free interface. Its members take a
                                 callback. This is a sign there will be no blocking.</para>
                         </listitem>
                         <listitem>
