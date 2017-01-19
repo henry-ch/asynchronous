@@ -262,7 +262,7 @@ namespace
         // initial states (2 regions => 2 initial states)
         typedef boost::mpl::vector2<Running,NoVolumeChange> initial_state;
         // Playing has a transition table
-        struct transition_table : mpl::vector<
+        struct transition_table : mpl::vector11<
             //    Start           Event            Target           Action                    Guard
             //  +----------------+----------------+----------------+-------------------------+-------------------+
             Row < Running        , next_song      , PseudoExit     , none                    , last_song         >,
@@ -393,7 +393,7 @@ namespace
         typedef Init initial_state;
 
         // Transition table for player
-        struct transition_table : mpl::vector<
+        struct transition_table : mpl::vector20<
           //    Start             Event         Target     Action                     Guard
           //  +------------------+-------------+----------+--------------------------+-------------------+
           // an anonymous transition (without event trigger)
@@ -408,7 +408,7 @@ namespace
           // it is possible to process events from a transition
           // note that we have an internal transition
           Row < Open             , play        , none     , ActionSequence_<
-                                                            mpl::vector<
+                                                            mpl::vector2<
                                                               processing<open_close>,
                                                               processing<play> > >   , none             >,
           // ignore timer events
@@ -419,7 +419,7 @@ namespace
           Row < Empty            , open_close  , Opening  , open_drawer              , none             >,
           Row < Empty            , disc_in     , CheckingDisc  , check_disc                , none             >,
           Row < CheckingDisc     , cd_detected , Stopped  , ActionSequence_<
-                                                            mpl::vector<
+                                                            mpl::vector2<
                                                               store_cd_info,
                                                               stop_playback> >       , good_disk        >,
           Row < CheckingDisc     , cd_detected , none     , wrong_disk               , Not_<good_disk>  >,
@@ -429,7 +429,7 @@ namespace
           Row < Playing          , stop        , Stopped   , stop_playback           , none             >,
           Row < Playing          , pausing     , Paused    , pause_playback          , none             >,
           Row < Playing          , open_close  , Opening   , ActionSequence_<
-                                                             mpl::vector<
+                                                             mpl::vector2<
                                                                stop_playback,
                                                                open_drawer> >        , none             >,
           Row < Playing::exit_pt<
@@ -438,7 +438,7 @@ namespace
           Row < Paused           , play        , Playing   , none                    , none             >,
           Row < Paused           , stop        , Stopped   , stop_playback           , none             >,
           Row < Paused           , open_close  , Opening   , ActionSequence_<
-                                                             mpl::vector<
+                                                             mpl::vector2<
                                                                stop_playback,
                                                                open_drawer> >        , none             >
           //  +------------------+-------------+----------+--------------------------+-------------------+
