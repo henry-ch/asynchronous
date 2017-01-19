@@ -6736,6 +6736,8 @@ explicit vector( boost::asynchronous::any_shared_scheduler_proxy&lt;Job> schedul
                                 world.</para>
                         </listitem>
                 </itemizedlist></para>
+                <para><link
+                    xlink:href="examples/example_callback_msm.cpp">We can also write the same example using a real Boost.MSM state machine</link></para>
             </sect1>
              <sect1>
                 <title>A layered application</title>
