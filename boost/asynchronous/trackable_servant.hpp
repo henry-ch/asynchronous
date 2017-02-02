@@ -98,9 +98,9 @@ public:
     // helpers to make it easier using a timer service
     template <class Timer, class F>
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-    void async_wait(Timer& t, F func, std::string const& task_name,std::size_t post_prio, std::size_t cb_prio)
+    void async_wait(Timer& t, F func, std::string const& task_name,std::size_t post_prio, std::size_t cb_prio)const
 #else
-    void async_wait(Timer& t, F func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
+    void async_wait(Timer& t, F func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)const
 #endif
     {
         std::function<void(const ::boost::system::error_code&)> f = std::move(func);
@@ -113,9 +113,9 @@ public:
     }
     template <class Timer, class Duration, class F>
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-    void async_wait_duration(Timer& t, Duration timer_duration, F func, std::string const& task_name,std::size_t post_prio, std::size_t cb_prio)
+    void async_wait_duration(Timer& t, Duration timer_duration, F func, std::string const& task_name,std::size_t post_prio, std::size_t cb_prio)const
 #else
-    void async_wait_duration(Timer& t, Duration timer_duration, F func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
+    void async_wait_duration(Timer& t, Duration timer_duration, F func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)const
 #endif
     {
         std::function<void(const ::boost::system::error_code&)> f = std::move(func);
@@ -146,10 +146,10 @@ public:
     template <class F1, class F2>
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
     boost::asynchronous::any_interruptible interruptible_post_callback(F1 func,F2 cb_func, std::string const& task_name,
-                                                                    std::size_t post_prio, std::size_t cb_prio)
+                                                                    std::size_t post_prio, std::size_t cb_prio)const
 #else
     boost::asynchronous::any_interruptible interruptible_post_callback(F1 func,F2 cb_func, std::string const& task_name="",
-                                                                    std::size_t post_prio=0, std::size_t cb_prio=0)    
+                                                                    std::size_t post_prio=0, std::size_t cb_prio=0) const
 #endif
     {
         return boost::asynchronous::interruptible_post_callback(
@@ -180,10 +180,10 @@ public:
     template <class Worker,class F1, class F2>
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
     boost::asynchronous::any_interruptible interruptible_post_callback(Worker& wscheduler,F1 func,F2 cb_func, std::string const& task_name,
-                                                                    std::size_t post_prio, std::size_t cb_prio)
+                                                                    std::size_t post_prio, std::size_t cb_prio)const
 #else
     boost::asynchronous::any_interruptible interruptible_post_callback(Worker& wscheduler,F1 func,F2 cb_func, std::string const& task_name="",
-                                                                    std::size_t post_prio=0, std::size_t cb_prio=0)
+                                                                    std::size_t post_prio=0, std::size_t cb_prio=0)const
 #endif
     {
         return boost::asynchronous::interruptible_post_callback(
@@ -197,9 +197,9 @@ public:
     }
     template <class F1>
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-    auto post_self(F1 func, std::string const& task_name, std::size_t post_prio)
+    auto post_self(F1 func, std::string const& task_name, std::size_t post_prio)const
 #else
-    auto post_self(F1 func, std::string const& task_name="", std::size_t post_prio=0)
+    auto post_self(F1 func, std::string const& task_name="", std::size_t post_prio=0)const
 #endif
         -> boost::future<typename boost::asynchronous::detail::get_return_type_if_possible_continuation<decltype(func())>::type>
     {
@@ -219,9 +219,9 @@ public:
     }
     template <class F1>
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-    auto interruptible_post_self(F1 func, std::string const& task_name,std::size_t post_prio)
+    auto interruptible_post_self(F1 func, std::string const& task_name,std::size_t post_prio)const
 #else
-    auto interruptible_post_self(F1 func, std::string const& task_name="",std::size_t post_prio=0)
+    auto interruptible_post_self(F1 func, std::string const& task_name="",std::size_t post_prio=0)const
 #endif
     -> std::tuple<boost::future<typename boost::asynchronous::detail::get_return_type_if_possible_continuation<decltype(func())>::type>,
                   boost::asynchronous::any_interruptible >
@@ -243,9 +243,9 @@ public:
     }
     template <class F1>
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-    auto post_future(F1 func, std::string const& task_name, std::size_t post_prio)
+    auto post_future(F1 func, std::string const& task_name, std::size_t post_prio)const
 #else
-    auto post_future(F1 func, std::string const& task_name="", std::size_t post_prio=0)
+    auto post_future(F1 func, std::string const& task_name="", std::size_t post_prio=0)const
 #endif
         -> boost::future<typename boost::asynchronous::detail::get_return_type_if_possible_continuation<decltype(func())>::type>
     {
@@ -258,10 +258,10 @@ public:
     }
     template <class F1>
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-    auto interruptible_post_future(F1 func, std::string const& task_name,std::size_t post_prio)
+    auto interruptible_post_future(F1 func, std::string const& task_name,std::size_t post_prio)const
 
 #else
-    auto interruptible_post_future(F1 func, std::string const& task_name="",std::size_t post_prio=0)
+    auto interruptible_post_future(F1 func, std::string const& task_name="",std::size_t post_prio=0)const
 #endif
      -> std::tuple<boost::future<typename boost::asynchronous::detail::get_return_type_if_possible_continuation<decltype(func())>::type>,
                    boost::asynchronous::any_interruptible >
@@ -275,9 +275,9 @@ public:
     }
     template <class Worker,class F1>
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-    auto post_future(Worker& wscheduler,F1 func, std::string const& task_name, std::size_t post_prio)
+    auto post_future(Worker& wscheduler,F1 func, std::string const& task_name, std::size_t post_prio)const
 #else
-    auto post_future(Worker& wscheduler,F1 func, std::string const& task_name="", std::size_t post_prio=0)
+    auto post_future(Worker& wscheduler,F1 func, std::string const& task_name="", std::size_t post_prio=0)const
 #endif
         -> boost::future<typename boost::asynchronous::detail::get_return_type_if_possible_continuation<decltype(func())>::type>
     {
@@ -290,9 +290,9 @@ public:
     }
     template <class Worker,class F1>
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-    auto interruptible_post_future(Worker& wscheduler,F1 func, std::string const& task_name,std::size_t post_prio)
+    auto interruptible_post_future(Worker& wscheduler,F1 func, std::string const& task_name,std::size_t post_prio)const
 #else
-    auto interruptible_post_future(Worker& wscheduler,F1 func, std::string const& task_name="",std::size_t post_prio=0)
+    auto interruptible_post_future(Worker& wscheduler,F1 func, std::string const& task_name="",std::size_t post_prio=0)const
 #endif
      -> std::tuple<boost::future<typename boost::asynchronous::detail::get_return_type_if_possible_continuation<decltype(func())>::type>,
                    boost::asynchronous::any_interruptible >
@@ -306,9 +306,9 @@ public:
     }
     template <class CallerSched,class F1, class F2>
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-    void call_callback(CallerSched s, F1 func,F2 cb_func, std::string const& task_name, std::size_t post_prio, std::size_t cb_prio)
+    void call_callback(CallerSched s, F1 func,F2 cb_func, std::string const& task_name, std::size_t post_prio, std::size_t cb_prio)const
 #else
-    void call_callback(CallerSched s, F1 func,F2 cb_func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
+    void call_callback(CallerSched s, F1 func,F2 cb_func, std::string const& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)const
 #endif
     {
         // we want to log if possible
@@ -323,10 +323,10 @@ public:
     template <class CallerSched,class F1, class F2>
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
     boost::asynchronous::any_interruptible interruptible_call_callback(CallerSched s, F1 func,F2 cb_func, std::string const& task_name,
-                                                                    std::size_t post_prio, std::size_t cb_prio)
+                                                                    std::size_t post_prio, std::size_t cb_prio)const
 #else
     boost::asynchronous::any_interruptible interruptible_call_callback(CallerSched s, F1 func,F2 cb_func, std::string const& task_name="",
-                                                                    std::size_t post_prio=0, std::size_t cb_prio=0)
+                                                                    std::size_t post_prio=0, std::size_t cb_prio=0)const
 #endif
     {
         return boost::asynchronous::interruptible_post_callback(
