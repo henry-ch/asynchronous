@@ -68,6 +68,9 @@ Iterator find_cutoff(Iterator it, Distance n, Iterator end, typename boost::disa
 template <class Iterator, class Distance>
 Iterator find_cutoff(Iterator it, Distance n, Iterator end, typename boost::enable_if<std::is_integral<Iterator>>::type* = 0)
 {
+    // handle cutoff 1
+    if (n == 1)
+        return end;
     if (it + n < end)
     {
         return it + (end-it)/2;
