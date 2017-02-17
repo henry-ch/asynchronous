@@ -70,7 +70,7 @@ Iterator find_cutoff(Iterator it, Distance n, Iterator end, typename boost::enab
 {
     // handle cutoff 1
     if (n == 1)
-        return end;
+        n=2;
     if (it + n < end)
     {
         return it + (end-it)/2;
