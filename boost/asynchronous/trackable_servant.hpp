@@ -1,5 +1,5 @@
 // Boost.Asynchronous library
-//  Copyright (C) Christophe Henry 2013
+//  Copyright (C) Christophe Henry 2017
 //
 //  Use, modification and distribution is subject to the Boost
 //  Software License, Version 1.0.  (See accompanying file
@@ -44,35 +44,72 @@ class trackable_servant
 {
 public:
     typedef int requires_weak_scheduler;
+    /*!
+     * \brief Constructor
+     * \brief Constructs a trackable_servant from a weak scheduler(any_weak_scheduler), passed by a servant_proxy and a
+     * \brief threadpool (any_shared_scheduler_proxy). The type of each is that of the trackable_servant template parameters
+     * \brief (JOB for the weak scheduler, WJOB for the threadpool).
+     * \brief The weak scheduler is the scheduler of the thread where the servant lives.
+     * \brief If no threadpool is passed, no post_callback or post_future is possible and will fail.
+     */
     trackable_servant(boost::asynchronous::any_weak_scheduler<JOB> const& s,
                       boost::asynchronous::any_shared_scheduler_proxy<WJOB> w=boost::asynchronous::any_shared_scheduler_proxy<WJOB>())
         : m_tracking(boost::make_shared<boost::asynchronous::track>())
         , m_scheduler(s)
         , m_worker(w)
     {}
+    /*!
+     * \brief Constructor
+     * \brief Constructs a trackable_servant from a weak scheduler(any_weak_scheduler), already known, and a
+     * \brief threadpool (any_shared_scheduler_proxy). The type of each is that of the trackable_servant template parameters
+     * \brief (JOB for the weak scheduler, WJOB for the threadpool).
+     * \brief The weak scheduler is the scheduler of the thread where the servant lives.
+     * \brief If no threadpool is passed, no post_callback or post_future is possible and will fail.
+     * \brief This constructor is for cases where a servant is created by another servant within the same thread. In this case, the scheduler
+     * \brief where this servant lives is already known.
+     */
     trackable_servant(boost::asynchronous::any_shared_scheduler_proxy<WJOB> w=boost::asynchronous::any_shared_scheduler_proxy<WJOB>())
         : m_tracking(boost::make_shared<boost::asynchronous::track>())
         , m_scheduler(boost::asynchronous::get_thread_scheduler<JOB>())
         , m_worker(w)
     {}
     // copy-ctor and operator= are needed for correct tracking
-    trackable_servant(trackable_servant const& rhs)
+    trackable_servant(trackable_servant const& rhs) noexcept
         : m_tracking(boost::make_shared<boost::asynchronous::track>())
         , m_scheduler(rhs.m_scheduler)
         , m_worker(rhs.m_worker)
+    {
+    }
+    trackable_servant(trackable_servant&& rhs) noexcept
+        : m_tracking(boost::make_shared<boost::asynchronous::track>())
+        , m_scheduler(std::move(rhs.m_scheduler))
+        , m_worker(std::move(rhs.m_worker))
     {
     }
     ~trackable_servant()
     {
     }
 
-    trackable_servant& operator= (trackable_servant const& rhs)
+    trackable_servant& operator= (trackable_servant const& rhs) noexcept
     {
-        m_tracking = boost::make_shared<boost::asynchronous::track>();
-        m_scheduler(rhs.m_scheduler);
-        m_worker(rhs.m_worker);
+        if (this != &rhs)
+        {
+            m_tracking = boost::make_shared<boost::asynchronous::track>();
+            m_scheduler = rhs.m_scheduler;
+            m_worker = rhs.m_worker;
+        }
+        return *this;
     }
-    //TODO move?
+    trackable_servant& operator= (trackable_servant&& rhs) noexcept
+    {
+        if (this != &rhs)
+        {
+            m_tracking = std::move(rhs.m_tracking);
+            m_scheduler = std::move(rhs.m_scheduler);
+            m_worker = std::move(rhs.m_worker);
+        }
+        return *this;
+    }
 
     // make a callback, which posts if not the correct thread, and call directly otherwise
     // in any case, check if this object is still alive
