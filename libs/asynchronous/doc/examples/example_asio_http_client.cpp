@@ -157,7 +157,7 @@ void example_asio_http_client()
                                 boost::asynchronous::single_thread_scheduler<
                                      boost::asynchronous::lockfree_queue<>>>();
         {
-            ServantProxy proxy(scheduler,"gwhaus.rt.schenk","/mitarbeiter/uebersicht.html");
+            ServantProxy proxy(scheduler,"bost.org","/development/index.html");
             // call member, as if it was from Servant
             boost::shared_future<boost::shared_future<void> > called_fu = proxy.get_data();
             boost::shared_future<void> fu_done = called_fu.get();
