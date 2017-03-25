@@ -49,12 +49,17 @@ struct partition_data
         data_ = std::move(rhs.data_);
         return *this;
     }
+    // how many elelements yield true in this part of the tree (to know where the sibling node will start)
     std::size_t partition_true_;
+    // how many elelements yield false in this part of the tree
     std::size_t partition_false_;
+    // true/fase response of the elements to be partitioned, i9n this subnode
     std::vector<bool> values_;
+    // subnodes (binary tree)
     std::vector<partition_data> data_;
 };
 
+// first pass, build a partition_data by calculating response of an element and offsets for each subnode
 template <class Iterator, class Func, class Job>
 struct parallel_stable_partition_part1_helper: public boost::asynchronous::continuation_task<boost::asynchronous::detail::partition_data>
 {
@@ -70,6 +75,7 @@ struct parallel_stable_partition_part1_helper: public boost::asynchronous::conti
         {
             // advance up to cutoff
             Iterator it = boost::asynchronous::detail::find_cutoff(beg_,cutoff_,end_);
+            // elements < cutoff, sequential part
             if (it == end_)
             {
                 std::size_t count_true=0;
@@ -78,6 +84,7 @@ struct parallel_stable_partition_part1_helper: public boost::asynchronous::conti
                 std::size_t i=0;
                 for (auto it = beg_; it != end_; ++it,++i)
                 {
+                    // calculate response, update offset
                     if (func_(*it))
                     {
                         ++count_true;
@@ -93,11 +100,14 @@ struct parallel_stable_partition_part1_helper: public boost::asynchronous::conti
             }
             else
             {
+                // parallel part, create a left and right part, post one, execute one
                 boost::asynchronous::create_callback_continuation_job<Job>(
                             // called when subtasks are done, set our result
                             [task_res](std::tuple<boost::asynchronous::expected<boost::asynchronous::detail::partition_data>,
                                                   boost::asynchronous::expected<boost::asynchronous::detail::partition_data> > res)mutable
                             {
+                                // continuation callback, both tasks are done, merge results
+                                // add left and right into a new node, add offsets from left and right
                                 try
                                 {
                                     boost::asynchronous::detail::partition_data res_left = std::move(std::get<0>(res).get());
@@ -134,6 +144,7 @@ struct parallel_stable_partition_part1_helper: public boost::asynchronous::conti
     std::size_t prio_;
 };
 
+// first pass, build a partition_data, returned as continuation
 template <class Iterator,class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<boost::asynchronous::detail::partition_data,Job>
 parallel_stable_partition_part1(Iterator beg, Iterator end, Func func,long cutoff,
@@ -149,6 +160,9 @@ parallel_stable_partition_part1(Iterator beg, Iterator end, Func func,long cutof
 
 }
 
+// second pass, partition based on offsets from first pass
+// we use the fact that the sequential part will work on the same elemenets that in first pass
+// as cutoff stays unchanged
 template <class Iterator, class Iterator2, class Func, class Job>
 struct parallel_stable_partition_part2_helper: public boost::asynchronous::continuation_task<void>
 {
@@ -168,19 +182,21 @@ struct parallel_stable_partition_part2_helper: public boost::asynchronous::conti
         {
             // advance up to cutoff
             Iterator it = boost::asynchronous::detail::find_cutoff(beg_,cutoff_,end_);
+            // elements < cutoff, sequential part
             if (it == end_)
             {
-                // write true part
                 auto out = out_;
                 std::advance(out,offset_true_);
                 auto out2 = out_+offset_false_+ start_false_;
                 std::size_t values_counter=0;
                 for (auto it = beg_ ; it != end_ ; ++it, ++values_counter)
                 {
+                    // write true elements
                     if (data_.values_[values_counter])
                     {
                         *out++ = *it;
                     }
+                    // write false elements
                     else
                     {
                         *out2++ = *it;
@@ -190,6 +206,7 @@ struct parallel_stable_partition_part2_helper: public boost::asynchronous::conti
                 // done
                 task_res.set_value();
             }
+            // parallel, post a task, execute one
             else
             {
                 boost::asynchronous::create_callback_continuation_job<Job>(
@@ -238,6 +255,8 @@ struct parallel_stable_partition_part2_helper: public boost::asynchronous::conti
     long cutoff_;
     std::size_t prio_;
 };
+
+// second pass, partition based on offsets from first pass
 template <class Iterator,class Iterator2, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<void,Job>
 parallel_stable_partition_part2(Iterator beg, Iterator end, Iterator2 out, Func func, std::size_t start_false,
@@ -255,6 +274,7 @@ parallel_stable_partition_part2(Iterator beg, Iterator end, Iterator2 out, Func 
 
 }
 
+// calls first pass, waits for continuation (on_done), then start second pass
 template <class Iterator, class Iterator2, class Func, class Job>
 struct parallel_stable_partition_helper: public boost::asynchronous::continuation_task<Iterator2>
 {
@@ -271,6 +291,7 @@ struct parallel_stable_partition_helper: public boost::asynchronous::continuatio
 #ifdef BOOST_ASYNCHRONOUS_TIMING
             auto p1_start = boost::chrono::high_resolution_clock::now();
 #endif
+            // call first pass
             auto cont = boost::asynchronous::detail::parallel_stable_partition_part1<Iterator,Func,Job>(beg_,end_,func_,cutoff_,this->get_name(),prio_);
             auto beg = beg_;
             auto end = end_;
@@ -279,6 +300,7 @@ struct parallel_stable_partition_helper: public boost::asynchronous::continuatio
             auto task_name = this->get_name();
             auto prio = prio_;
             auto func = func_;
+            // this lambda will be called when first pass is done
             cont.on_done([task_res,beg,end,out,func,cutoff,task_name,prio
 #ifdef BOOST_ASYNCHRONOUS_TIMING
                         ,p1_start
@@ -298,11 +320,13 @@ struct parallel_stable_partition_helper: public boost::asynchronous::continuatio
 #ifdef BOOST_ASYNCHRONOUS_TIMING
                     auto p2_start = boost::chrono::high_resolution_clock::now();
 #endif
+                    // call second pass, get a continuation
                     auto cont =
                             boost::asynchronous::detail::parallel_stable_partition_part2<Iterator,Iterator2,Func,Job>
                             (beg,end,out,std::move(func),start_false,0,0,std::move(data),cutoff,task_name,prio);
                     Iterator2 ret = out;
                     std::advance(ret,start_false);
+                    // this lambda will be called when second pass is done
                     cont.on_done([task_res,ret
 #ifdef BOOST_ASYNCHRONOUS_TIMING
                                 ,p2_start
@@ -318,7 +342,7 @@ struct parallel_stable_partition_helper: public boost::asynchronous::continuatio
                         {
                             // get to check that no exception
                             std::get<0>(res).get();
-
+                            // both passes are done, we now inform library that it can call callback / set future
                             task_res.set_value(ret);
                         }
                         catch(std::exception& e)
@@ -327,6 +351,7 @@ struct parallel_stable_partition_helper: public boost::asynchronous::continuatio
                         }
                     });
                 }
+                //exceptions are propagated
                 catch(std::exception& e)
                 {
                     task_res.set_exception(boost::copy_exception(e));
@@ -347,6 +372,7 @@ struct parallel_stable_partition_helper: public boost::asynchronous::continuatio
 };
 }
 
+// version with iterators
 template <class Iterator, class Iterator2,class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<Iterator2,Job>
 parallel_stable_partition(Iterator beg, Iterator end, Iterator2 out, Func func,long cutoff,
@@ -414,7 +440,7 @@ struct parallel_stable_partition_range_move_helper:
     std::size_t prio_;
 };
 
-
+// version for moved ranges => will return the range as continuation
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 auto parallel_stable_partition(Range&& range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -504,6 +530,7 @@ struct parallel_stable_partition_continuation_helper:
 };
 }
 
+// version where the range is itself a continuation
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename boost::enable_if<
         boost::asynchronous::detail::has_is_continuation_task<Range>,
