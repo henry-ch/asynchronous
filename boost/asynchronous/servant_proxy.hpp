@@ -487,6 +487,13 @@ protected:
     }
 public:
 
+    /*!
+     * \brief Constructor
+     * \brief Constructs a servant_proxy and a servant. The any_shared_scheduler_proxy<Callable> will be saved and
+     * \brief passed as an any_weak_scheduler<Callable> to the servant. Variadic parameters will be forwarded to the servant.
+     * \param p any_shared_scheduler_proxy<Callable> where the servant will execute.
+     * \param args variadic number of parameters, number and type defined by the servant, which will be forwarded to the servant.
+     */
     template <typename... Args>
     servant_proxy(scheduler_proxy_type p, Args... args)
         : m_proxy(p)
@@ -508,6 +515,14 @@ public:
             init_servant_proxy<servant_type>(std::move(args)...);
         }
     }
+
+    /*!
+     * \brief Constructor
+     * \brief Constructs a servant_proxy from an already existing servant. The any_shared_scheduler_proxy<Callable> will be saved and
+     * \brief used to serialize calls to the servant.
+     * \param p any_shared_scheduler_proxy where the servant was created and calls executed.
+     * \param s servant created in the thread context of the provided scheduler proxy.
+     */
     servant_proxy(scheduler_proxy_type p, boost::future<boost::shared_ptr<servant_type> > s)
         : m_proxy(p)
         , m_servant()
@@ -529,6 +544,13 @@ public:
         }
     }
     // templatize to avoid gcc complaining in case servant is pure virtual
+    /*!
+     * \brief Constructor
+     * \brief Constructs a servant_proxy from an already existing servant. The any_shared_scheduler_proxy<Callable> will be saved and
+     * \brief used to serialize calls to the servant.
+     * \param p any_shared_scheduler_proxy where the servant was created and calls executed.
+     * \param s servant created in the thread context of the provided scheduler proxy.
+     */
     template <class CServant>
     servant_proxy(scheduler_proxy_type p, boost::future<CServant> s)
         : m_proxy(p)
@@ -575,6 +597,11 @@ public:
         }
     }
 
+    /*!
+     * \brief Destructor
+     * \brief Decrements servant count usage.
+     * \brief Joins threads of scheduler if holding last instance of it.
+     */
     ~servant_proxy()
     {
         if (!!m_servant)
@@ -589,9 +616,24 @@ public:
         m_proxy.reset();
     }
     // we provide destructor so we need to provide the other 4
+    /*!
+     * \brief Move constructor.
+     */
     servant_proxy(servant_proxy&&)                =default;
+
+    /*!
+     * \brief Move assignment.
+     */
     servant_proxy& operator=(servant_proxy&&)     =default;
+
+    /*!
+     * \brief Copy constructor.
+     */
     servant_proxy(servant_proxy const&)           =default;
+
+    /*!
+     * \brief Copy assignment.
+     */
     servant_proxy& operator=(servant_proxy const&)=default;
 
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -602,17 +644,42 @@ public:
     {
         m_proxy.post(std::move(job),prio + 100000 * m_offset_id);
     }
+
+    /*!
+     * \brief Returns the underlying any_shared_scheduler_proxy
+     */
     scheduler_proxy_type get_proxy()const
     {
         return m_proxy;
     }
     // for derived to overwrite if needed
+    /*!
+     * \brief Returns priority of the servant constructor. It is advised to set the priority using BOOST_ASYNC_SERVANT_POST_CTOR or
+     * \brief BOOST_ASYNC_SERVANT_POST_CTOR_LOG
+     */
     static std::size_t get_ctor_prio() {return 0;}
+
+
+    /*!
+     * \brief Returns priority of the servant destructor. It is advised to set the priority using BOOST_ASYNC_SERVANT_POST_DTOR or
+     * \brief BOOST_ASYNC_SERVANT_POST_DTOR_LOG
+     */
     static std::size_t get_dtor_prio() {return 0;}
+
+    /*!
+     * \brief Returns name of the servant constructor task. It can be overriden by derived class
+     */
     static const char* get_ctor_name() {return "ctor";}
+
+
+    /*!
+     * \brief Returns name of the servant destructor task. It can be overriden by derived class
+     */
     static const char* get_dtor_name() {return "dtor";}
 
-    // return a shared_ptr to our servant (careful! Use at own risk)
+    /*!
+     * \brief return a shared_ptr to our servant (careful! Use at own risk)
+     */
     boost::shared_ptr<servant_type> get_servant() const
     {
         return m_servant;
@@ -782,6 +849,15 @@ private:
     };
 };
 
+/*!
+ * \brief Casts a servant_proxy to the servant type into a servant_proxy to a servant's base type.
+ * \brief considering struct Servant : public Base and class BaseServantProxy : public boost::asynchronous::servant_proxy<BaseServantProxy,Base>
+ * \brief and class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>
+ * \brief then ServantProxy proxy can be casted:
+ * \brief BaseServantProxy base_proxy = boost::asynchronous::dynamic_servant_proxy_cast<BaseServantProxy>(proxy);
+ * \param p any_shared_scheduler_proxy where the servant was created and calls executed.
+ * \param s servant created in the thread context of the provided scheduler proxy.
+ */
 template<class T, class U>
 T dynamic_servant_proxy_cast( U const & r ) BOOST_NOEXCEPT
 {
