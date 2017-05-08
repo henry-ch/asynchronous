@@ -53,7 +53,7 @@ struct partition_data
     std::size_t partition_true_;
     // how many elelements yield false in this part of the tree
     std::size_t partition_false_;
-    // true/fase response of the elements to be partitioned, i9n this subnode
+    // true/fase response of the elements to be partitioned, in this subnode
     std::vector<bool> values_;
     // subnodes (binary tree)
     std::vector<partition_data> data_;
@@ -189,17 +189,17 @@ struct parallel_stable_partition_part2_helper: public boost::asynchronous::conti
                 std::advance(out,offset_true_);
                 auto out2 = out_+offset_false_+ start_false_;
                 std::size_t values_counter=0;
-                for (auto it = beg_ ; it != end_ ; ++it, ++values_counter)
+                for (auto it2 = beg_ ; it2 != end_ ; ++it2, ++values_counter)
                 {
                     // write true elements
                     if (data_.values_[values_counter])
                     {
-                        *out++ = *it;
+                        *out++ = *it2;
                     }
                     // write false elements
                     else
                     {
-                        *out2++ = *it;
+                        *out2++ = *it2;
                     }
                 }
 
