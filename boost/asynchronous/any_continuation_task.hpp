@@ -10,8 +10,10 @@
 #ifndef BOOST_ASYNCHRONOUS_ANY_CONTINUATION_TASK_HPP
 #define BOOST_ASYNCHRONOUS_ANY_CONTINUATION_TASK_HPP
 
+#include <boost/asynchronous/expected.hpp>
 #include <boost/asynchronous/detail/concept_members.hpp>
 #include <boost/mpl/vector.hpp>
+#include <boost/type_erasure/callable.hpp>
 
 namespace boost { namespace asynchronous {
 
