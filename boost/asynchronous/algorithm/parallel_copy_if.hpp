@@ -27,11 +27,18 @@ namespace detail
 // tree structure containing accumulated results from part 1
 struct copy_if_data
 {
-    copy_if_data(std::size_t true_size=0)
+    copy_if_data(std::size_t true_size=0, std::vector<bool> values = std::vector<bool>())
         : true_size_(true_size)
+        , values_(std::move(values))
         , data_()
     {}
+    copy_if_data(copy_if_data&& rhs) =default;
+    copy_if_data& operator=(copy_if_data&& rhs)=default;
+
     std::size_t true_size_;
+    // true/fase response of the elements to be copied, in this subnode
+    std::vector<bool> values_;
+    // subnodes (binary tree)
     std::vector<copy_if_data> data_;
 };
 
@@ -53,12 +60,20 @@ struct parallel_copy_if_part1_helper: public boost::asynchronous::continuation_t
             if (it == end_)
             {
                 std::size_t count=0;
-                for (auto it = beg_; it != end_; ++it)
+                std::vector<bool> values(std::distance(beg_,end_),true);
+                std::size_t i=0;
+                for (auto it = beg_; it != end_; ++it,++i)
                 {
                     if (func_(*it))
+                    {
                         ++ count;
+                    }
+                    else
+                    {
+                        values[i]=false;
+                    }
                 }
-                copy_if_data data(count);
+                copy_if_data data(count,std::move(values));
                 task_res.set_value(std::move(data));
             }
             else
@@ -117,16 +132,16 @@ parallel_copy_if_part1(Iterator beg, Iterator end, Func func,long cutoff,
 
 }
 
-template <class Iterator,class OutIterator,class Func, class Job>
+template <class Iterator,class OutIterator, class Job>
 struct parallel_copy_if_part2_helper: public boost::asynchronous::continuation_task<void>
 {
-    parallel_copy_if_part2_helper(Iterator beg, Iterator end, OutIterator outit, Func func,
+    parallel_copy_if_part2_helper(Iterator beg, Iterator end, OutIterator outit,
                                   std::size_t offset, boost::asynchronous::detail::copy_if_data data,
                                   long cutoff,const std::string& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<void>(task_name),
-          beg_(beg),end_(end),out_(outit),func_(std::move(func)),offset_(offset),data_(std::move(data)),cutoff_(cutoff),prio_(prio)
+          beg_(beg),end_(end),out_(outit),offset_(offset),data_(std::move(data)),cutoff_(cutoff),prio_(prio)
     {}
-    void operator()()const
+    void operator()()
     {
         boost::asynchronous::continuation_result<void> task_res = this_task_result();
         try
@@ -137,7 +152,14 @@ struct parallel_copy_if_part2_helper: public boost::asynchronous::continuation_t
             {
                 auto out = out_;
                 std::advance(out,offset_);
-                std::copy_if(beg_,end_,out,func_);
+                std::size_t values_counter=0;
+                for (auto it2 = beg_ ; it2 != end_ ; ++it2, ++values_counter)
+                {
+                    if (data_.values_[values_counter])
+                    {
+                        *out++ = *it2;
+                    }
+                }
                 task_res.set_value();
             }
             else
@@ -158,15 +180,15 @@ struct parallel_copy_if_part2_helper: public boost::asynchronous::continuation_t
                                 }
                             },
                             // recursive tasks
-                            parallel_copy_if_part2_helper<Iterator,OutIterator,Func,Job>
-                                (beg_,it,out_,func_,
+                            parallel_copy_if_part2_helper<Iterator,OutIterator,Job>
+                                (beg_,it,out_,
                                  offset_,
-                                 data_.data_[0],
+                                 std::move(data_.data_[0]),
                                  cutoff_,this->get_name(),prio_),
-                            parallel_copy_if_part2_helper<Iterator,OutIterator,Func,Job>
-                                (it,end_,out_,func_,
+                            parallel_copy_if_part2_helper<Iterator,OutIterator,Job>
+                                (it,end_,out_,
                                  offset_ + data_.data_[0].true_size_,
-                                 data_.data_[1],
+                                 std::move(data_.data_[1]),
                                  cutoff_,this->get_name(),prio_)
                 );
             }
@@ -179,16 +201,15 @@ struct parallel_copy_if_part2_helper: public boost::asynchronous::continuation_t
     Iterator beg_;
     Iterator end_;
     OutIterator out_;
-    Func func_;
     std::size_t offset_;
     boost::asynchronous::detail::copy_if_data data_;
 
     long cutoff_;
     std::size_t prio_;
 };
-template <class Iterator,class Iterator2, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+template <class Iterator,class Iterator2, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<void,Job>
-parallel_copy_if_part2(Iterator beg, Iterator end, Iterator2 out, Func func, std::size_t offset, boost::asynchronous::detail::copy_if_data data,
+parallel_copy_if_part2(Iterator beg, Iterator end, Iterator2 out, std::size_t offset, boost::asynchronous::detail::copy_if_data data,
                        long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                     const std::string& task_name, std::size_t prio=0)
@@ -197,8 +218,8 @@ parallel_copy_if_part2(Iterator beg, Iterator end, Iterator2 out, Func func, std
 #endif
 {
     return boost::asynchronous::top_level_callback_continuation_job<void,Job>
-            (boost::asynchronous::detail::parallel_copy_if_part2_helper<Iterator,Iterator2,Func,Job>
-             (beg,end,out,std::move(func),offset,std::move(data),cutoff,task_name,prio));
+            (boost::asynchronous::detail::parallel_copy_if_part2_helper<Iterator,Iterator2,Job>
+             (beg,end,out,offset,std::move(data),cutoff,task_name,prio));
 
 }
 
@@ -231,8 +252,8 @@ struct parallel_copy_if_helper: public boost::asynchronous::continuation_task<It
                     boost::asynchronous::detail::copy_if_data data = std::move(std::get<0>(res).get());
                     std::size_t offset = data.true_size_;
                     auto cont =
-                            boost::asynchronous::detail::parallel_copy_if_part2<Iterator,Iterator2,Func,Job>
-                            (beg,end,out,func,0,std::move(data),cutoff,task_name,prio);
+                            boost::asynchronous::detail::parallel_copy_if_part2<Iterator,Iterator2,Job>
+                            (beg,end,out,0,std::move(data),cutoff,task_name,prio);
                     Iterator2 ret = out;
                     std::advance(ret,offset);
                     cont.on_done([task_res,ret](std::tuple<boost::asynchronous::expected<void> >&& res)
