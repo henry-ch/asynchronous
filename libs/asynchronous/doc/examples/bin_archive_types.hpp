@@ -91,6 +91,9 @@ struct job_traits< boost::asynchronous::any_bin_serializable >
     static void reset_current_diagnostic(size_t ,Diag* )
     {
     }
+    static void set_executing_thread_id(boost::asynchronous::any_bin_serializable& job, boost::thread::id const& )
+    {
+    }
 };
 namespace tcp
 {

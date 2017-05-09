@@ -18,6 +18,7 @@
 #include <boost/asynchronous/diagnostics/diagnostics_table.hpp>
 #include <boost/chrono/chrono.hpp>
 #include <boost/asynchronous/any_serializable.hpp>
+#include <boost/thread/thread.hpp>
 
 // Provide traits for the job types offered by Asynchronous. One needs to specialize job_traits for a new job type.
 // This means providing posted time, start/end time etc. for this job if it supports it.
@@ -51,6 +52,9 @@ struct no_diagnostics
     {
     }
     void set_interrupted(bool)
+    {
+    }
+    void set_executing_thread_id(boost::thread::id const&)
     {
     }
     boost::asynchronous::diagnostic_item get_diagnostic_item()const
@@ -279,6 +283,9 @@ struct job_traits
     static void set_interrupted(T&, bool)
     {
     }
+    static void set_executing_thread_id(T&, boost::thread::id const&)
+    {
+    }
     template <class Diag>
     static void add_diagnostic(T&,Diag*)
     {
@@ -318,6 +325,9 @@ struct job_traits< boost::asynchronous::any_callable >
     {
     }
     static void set_finished_time(boost::asynchronous::any_callable& )
+    {
+    }
+    static void set_executing_thread_id(boost::asynchronous::any_callable&, boost::thread::id const&)
     {
     }
     static void set_name(boost::asynchronous::any_callable& , std::string const& )
@@ -379,6 +389,10 @@ struct job_traits< boost::asynchronous::any_loggable>
     {
         job.set_finished_time();
     }
+    static void set_executing_thread_id(boost::asynchronous::any_loggable& job, boost::thread::id const& id)
+    {
+        job.set_executing_thread_id(id);
+    }
     static void set_name(boost::asynchronous::any_loggable& job, std::string const& name)
     {
         job.set_name(name);
@@ -437,6 +451,9 @@ struct job_traits< boost::asynchronous::any_serializable >
     {
     }
     static void set_finished_time(boost::asynchronous::any_serializable& )
+    {
+    }
+    static void set_executing_thread_id(boost::asynchronous::any_serializable&, boost::thread::id const& )
     {
     }
     static void set_name(boost::asynchronous::any_serializable& , std::string const& )

@@ -150,6 +150,7 @@ void example_log()
                     std::cout << "job waited in us: " << boost::chrono::nanoseconds((*jit).get_started_time() - (*jit).get_posted_time()).count() / 1000 << std::endl;
                     std::cout << "job lasted in us: " << boost::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() / 1000 << std::endl;
                     std::cout << "job interrupted? "  << std::boolalpha << (*jit).is_interrupted() << std::endl;
+                    std::cout << "job executed by thread: "  << (*jit).get_executing_thread_id() << std::endl;
                 }
             }
 
@@ -167,6 +168,7 @@ void example_log()
                     std::cout << "job waited in us: " << boost::chrono::nanoseconds((*jit).get_started_time() - (*jit).get_posted_time()).count() / 1000 << std::endl;
                     std::cout << "job lasted in us: " << boost::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() / 1000 << std::endl;
                     std::cout << "job interrupted? "  << std::boolalpha << (*jit).is_interrupted() << std::endl;
+                    std::cout << "job executed by thread: "  << (*jit).get_executing_thread_id() << std::endl;
                 }
             }
         }

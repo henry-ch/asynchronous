@@ -18,6 +18,8 @@
 #include <boost/type_erasure/any.hpp>
 #include <boost/type_erasure/member.hpp>
 #include <boost/chrono/chrono.hpp>
+#include <boost/thread/thread.hpp>
+
 //TODO find better
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
@@ -28,6 +30,7 @@ BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_set_finished_time), set_fini
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_set_failed), set_failed, 0);
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_get_failed), get_failed, 0);
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_set_interrupted), set_interrupted, 1);
+BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_set_executing_thread_id), set_executing_thread_id, 1);
 
 namespace boost { namespace asynchronous
 {
@@ -39,6 +42,7 @@ struct any_loggable_concept :
     boost::asynchronous::has_set_posted_time<void()>,
     boost::asynchronous::has_set_started_time<void()>,
     boost::asynchronous::has_set_finished_time<void()>,
+    boost::asynchronous::has_set_executing_thread_id<void(boost::thread::id const&)>,
     boost::asynchronous::has_set_failed<void()>,
     boost::asynchronous::has_get_failed<bool(), const boost::type_erasure::_self>,
     boost::asynchronous::has_set_interrupted<void(bool)>,

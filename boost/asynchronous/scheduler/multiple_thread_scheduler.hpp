@@ -346,6 +346,8 @@ public:
                 cpu_load.popped_job();
                 // log time
                 boost::asynchronous::job_traits<typename Q::job_type>::set_started_time(job);
+                // log thread
+                boost::asynchronous::job_traits<typename Q::job_type>::set_executing_thread_id(job,boost::this_thread::get_id());
                 // log current
                 boost::asynchronous::job_traits<typename Q::job_type>::add_current_diagnostic(index,job,diagnostics.get());
                 // execute job

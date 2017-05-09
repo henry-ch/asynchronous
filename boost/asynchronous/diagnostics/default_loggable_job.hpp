@@ -13,6 +13,7 @@
 #include <string>
 #include <boost/chrono/chrono.hpp>
 #include <boost/asynchronous/diagnostics/diagnostic_item.hpp>
+#include <boost/thread/thread.hpp>
 
 namespace boost { namespace asynchronous
 {
@@ -33,6 +34,7 @@ public:
         , m_finished(Clock::time_point())
         , m_interrupted(false)
         , m_failed(false)
+        , m_executing_thread_id()
     {}
     void set_name(std::string const& name)
     {
@@ -72,18 +74,23 @@ public:
     {
         m_interrupted = is_interrupted;
     }
+    void set_executing_thread_id(boost::thread::id const& id)
+    {
+        m_executing_thread_id = id;
+    }
 
     boost::asynchronous::diagnostic_item get_diagnostic_item()const
     {
-        return boost::asynchronous::diagnostic_item(m_posted,m_started,m_finished,m_interrupted,m_failed);
+        return boost::asynchronous::diagnostic_item(m_posted,m_started,m_finished,m_interrupted,m_failed,m_executing_thread_id);
     }
 private:
-    std::string m_name;
+    std::string       m_name;
     Clock::time_point m_posted;
     Clock::time_point m_started;
     Clock::time_point m_finished;
-    bool                       m_interrupted;
-    bool                       m_failed;
+    bool              m_interrupted;
+    bool              m_failed;
+    boost::thread::id m_executing_thread_id;
 };
 
 //same as default_loggable_job but with a vtable for get_failed support
@@ -103,6 +110,7 @@ public:
         , m_finished(Clock::time_point())
         , m_interrupted(false)
         , m_failed(false)
+        , m_executing_thread_id()
     {}
     void set_name(std::string const& name)
     {
@@ -144,18 +152,22 @@ public:
     {
         m_interrupted = is_interrupted;
     }
-
+    void set_executing_thread_id(boost::thread::id const& id)
+    {
+        m_executing_thread_id = id;
+    }
     boost::asynchronous::diagnostic_item get_diagnostic_item()const
     {
-        return boost::asynchronous::diagnostic_item(m_posted,m_started,m_finished,m_interrupted,get_failed());
+        return boost::asynchronous::diagnostic_item(m_posted,m_started,m_finished,m_interrupted,get_failed(),m_executing_thread_id);
     }
 private:
     std::string m_name;
     Clock::time_point m_posted;
     Clock::time_point m_started;
     Clock::time_point m_finished;
-    bool                       m_interrupted;
-    bool                       m_failed;
+    bool              m_interrupted;
+    bool              m_failed;
+    boost::thread::id m_executing_thread_id;
 };
 
 }} // boost::asynchron

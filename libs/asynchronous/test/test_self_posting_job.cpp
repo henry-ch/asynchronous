@@ -71,7 +71,9 @@ struct DummyJob
     {
     }
     bool get_failed()const{return false;}
-
+    void set_executing_thread_id(boost::thread::id const& )
+    {
+    }
     boost::asynchronous::diagnostic_item get_diagnostic_item() const
     {
         return boost::asynchronous::diagnostic_item();
@@ -116,6 +118,9 @@ struct PostJob
     {
     }
     void set_interrupted(bool)
+    {
+    }
+    void set_executing_thread_id(boost::thread::id const& )
     {
     }
     bool get_failed()const{return false;}

@@ -21,7 +21,7 @@
 #include <boost/asynchronous/detail/move_bind.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/signals2/signal.hpp>
-
+#include <boost/thread/thread.hpp>
 
 namespace boost { namespace asynchronous
 {

@@ -66,6 +66,10 @@ struct job_traits< boost::asynchronous::any_loggable_serializable >
     {
         job.set_finished_time();
     }
+    static void set_executing_thread_id(boost::asynchronous::any_loggable_serializable& job, boost::thread::id const& id)
+    {
+        job.set_executing_thread_id(id);
+    }
     static void set_name(boost::asynchronous::any_loggable_serializable& job, std::string const& name)
     {
         job.set_name(name);

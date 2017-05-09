@@ -12,6 +12,7 @@
 
 #include <string>
 #include <boost/chrono/chrono.hpp>
+#include <boost/thread/thread.hpp>
 
 namespace boost { namespace asynchronous
 {
@@ -26,12 +27,14 @@ public:
                     Clock::time_point const& started,
                     Clock::time_point const& finished,
                     bool interrupted,
-                    bool failed)
+                    bool failed,
+                    boost::thread::id executing_thread_id)
         : m_posted(posted)
         , m_started(started)
         , m_finished(finished)
         , m_interrupted(interrupted)
         , m_failed(failed)
+        , m_executing_thread_id(executing_thread_id)
     {}
     Clock::time_point get_posted_time() const
     {
@@ -53,12 +56,17 @@ public:
     {
         return m_failed;
     }
+    boost::thread::id get_executing_thread_id() const
+    {
+        return m_executing_thread_id;
+    }
 private:
     Clock::time_point m_posted;
     Clock::time_point m_started;
     Clock::time_point m_finished;
-    bool                       m_interrupted;
-    bool                       m_failed;
+    bool              m_interrupted;
+    bool              m_failed;
+    boost::thread::id m_executing_thread_id;
 };
 
 }} // boost::async
