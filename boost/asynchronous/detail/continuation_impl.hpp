@@ -15,7 +15,7 @@
 #include <utility>
 #include <atomic>
 
-#include <boost/function.hpp>
+#include <functional>
 #include <boost/shared_ptr.hpp>
 #include <boost/chrono.hpp>
 #include <boost/type_erasure/is_empty.hpp>
