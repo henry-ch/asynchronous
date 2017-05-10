@@ -16,6 +16,7 @@
 #include <boost/asynchronous/servant_proxy.hpp>
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/trackable_servant.hpp>
+#include <functional>
 
 #include <boost/test/unit_test.hpp>
 
@@ -40,7 +41,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     {
         servant1_thread_id = boost::this_thread::get_id();
     }
-    void connect(boost::function<void(int)> fct)
+    void connect(std::function<void(int)> fct)
     {
         m_int_signal.connect(std::move(fct));
     }
@@ -75,7 +76,7 @@ struct Servant2 : boost::asynchronous::trackable_servant<>
     {
         servant2_thread_id = boost::this_thread::get_id();
     }
-    boost::function<void(int)> get_slot()
+    std::function<void(int)> get_slot()
     {
         return this->make_safe_callback([this](int i){int_slot(i);});
     }

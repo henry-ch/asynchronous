@@ -3,7 +3,7 @@
 
 #include <cstddef>
 #include <boost/asio.hpp>
-#include <boost/function.hpp>
+#include <functional>
 #include <boost/shared_ptr.hpp>
 
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
@@ -29,12 +29,12 @@ public:
         , m_timer(new boost::asio::deadline_timer(*boost::asynchronous::get_io_service<>()))
     {
     }
-    void unsafe_async_wait(boost::function<void(const::boost::system::error_code&)> fct)
+    void unsafe_async_wait(std::function<void(const::boost::system::error_code&)> fct)
     {
         m_timer->async_wait(fct);
     }
     template <class Duration>
-    void unsafe_async_wait(boost::function<void(const::boost::system::error_code&)> fct, Duration timer_duration)
+    void unsafe_async_wait(std::function<void(const::boost::system::error_code&)> fct, Duration timer_duration)
     {
         reset(timer_duration);
         m_timer->async_wait(fct);

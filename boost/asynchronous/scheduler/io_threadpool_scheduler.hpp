@@ -15,6 +15,7 @@
 #include <cstddef>
 #include <set>
 #include <numeric>
+#include <functional>
 
 #ifndef BOOST_THREAD_PROVIDES_FUTURE
 #define BOOST_THREAD_PROVIDES_FUTURE
@@ -24,7 +25,6 @@
 #include <boost/weak_ptr.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/bind.hpp>
-#include <boost/function.hpp>
 #include <boost/thread/future.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/assert.hpp>
@@ -179,8 +179,8 @@ public:
             ++m_data->m_current_number_of_workers;
             boost::promise<boost::thread*> new_thread_promise;
             boost::shared_future<boost::thread*> fu = new_thread_promise.get_future();
-            boost::function<void(boost::thread*)> d = boost::bind(&io_threadpool_scheduler::internal_data::thread_finished,m_data,_1);
-            boost::function<bool()> c = boost::bind(&io_threadpool_scheduler::internal_data::test_worker_loop,m_data);
+            std::function<void(boost::thread*)> d = boost::bind(&io_threadpool_scheduler::internal_data::thread_finished,m_data,_1);
+            std::function<bool()> c = boost::bind(&io_threadpool_scheduler::internal_data::test_worker_loop,m_data);
             boost::thread* new_thread =
                      m_data->m_group->create_thread(boost::bind(&io_threadpool_scheduler::run_once,this->m_queue,
                                                                 m_private_queues[m_data->m_current_number_of_workers-1],
@@ -469,8 +469,8 @@ public:
                          boost::shared_ptr<diag_type> diagnostics,
                          boost::shared_future<boost::thread*> self,
                          boost::weak_ptr<this_type> this_,
-                         boost::function<void(boost::thread*)> on_done,
-                         boost::function<bool()> check_continue,
+                         std::function<void(boost::thread*)> on_done,
+                         std::function<bool()> check_continue,
                          size_t index,
                          std::string name)
     {
