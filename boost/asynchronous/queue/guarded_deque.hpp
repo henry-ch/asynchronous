@@ -14,7 +14,7 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/locks.hpp>
 #include <boost/thread/condition.hpp>
-#include <boost/bind.hpp>
+#include <functional>
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/queue/queue_base.hpp>
 #include <deque>
@@ -92,7 +92,7 @@ public:
     JOB pop()
     {
         lock_type lock(m_mutex);
-        m_not_empty.wait(lock, boost::bind(&this_type::is_not_empty, this));
+        m_not_empty.wait(lock, std::bind(&this_type::is_not_empty, this));
         JOB res = m_jobs.back();
         m_jobs.pop_back();
         lock.unlock();

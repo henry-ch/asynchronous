@@ -21,7 +21,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
 #include <boost/thread/thread.hpp>
-#include <boost/bind.hpp>
+#include <functional>
 #include <boost/thread/future.hpp>
 #include <boost/thread/tss.hpp>
 #include <boost/enable_shared_from_this.hpp>
@@ -102,7 +102,7 @@ public:
             boost::promise<boost::thread*> new_thread_promise;
             boost::shared_future<boost::thread*> fu = new_thread_promise.get_future();
             boost::thread* new_thread =
-                    m_group->create_thread(boost::bind(&multiqueue_threadpool_scheduler::run,this->m_queues,
+                    m_group->create_thread(std::bind(&multiqueue_threadpool_scheduler::run,this->m_queues,
                                                        m_private_queues[i],i,m_diagnostics,fu,weak_self));
             new_thread_promise.set_value(new_thread);
             m_thread_ids.push_back(new_thread->get_id());
