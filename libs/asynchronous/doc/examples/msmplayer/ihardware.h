@@ -6,8 +6,7 @@
 
 #ifndef IHARDWARE_H
 #define IHARDWARE_H
-
-#include <boost/function.hpp>
+#include <functional>
 
 // interface for interaction with real hardware of a CD player (opening/closing of drawer, playing, etc.)
 // it is implemented by PlayerGui's SafeHardware helper class for the purpose of this example

@@ -19,7 +19,7 @@
 #include <boost/weak_ptr.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/thread/tss.hpp>
-#include <boost/bind.hpp>
+#include <functional>
 
 #include <boost/asynchronous/scheduler/detail/scheduler_helpers.hpp>
 #include <boost/asynchronous/detail/any_joinable.hpp>
@@ -106,7 +106,7 @@ public:
         boost::promise<boost::thread*> new_thread_promise;
         boost::shared_future<boost::thread*> fu = new_thread_promise.get_future();
         boost::thread* new_thread =
-                new boost::thread(boost::bind(&tcp_server_scheduler::run,this->m_queue,m_diagnostics,m_private_queue,
+                new boost::thread(std::bind(&tcp_server_scheduler::run,this->m_queue,m_diagnostics,m_private_queue,
                                               others,fu,m_weak_self,m_worker_pool,m_address,m_port));
         new_thread_promise.set_value(new_thread);
         m_thread.reset(new_thread);

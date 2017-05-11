@@ -1,11 +1,11 @@
 #include <boost/asynchronous/extensions/qt/qt_servant.hpp>
-
+#include <functional>
 
 namespace boost { namespace asynchronous
 {
 namespace detail {
 #ifdef BOOST_ASYNCHRONOUS_QT_WORKAROUND
-connect_functor_helper::connect_functor_helper(unsigned long id, const boost::function<void(QEvent*)> &f)
+connect_functor_helper::connect_functor_helper(unsigned long id, const std::function<void(QEvent*)> &f)
     : QObject(0)
     , m_id(id)
     , m_function(f)

@@ -18,7 +18,7 @@
 #endif
 #include <boost/shared_ptr.hpp>
 #include <boost/asio.hpp>
-#include <boost/bind.hpp>
+#include <functional>
 #include <boost/thread/thread.hpp>
 #include <boost/thread/future.hpp>
 #include <boost/thread/tss.hpp>
@@ -109,7 +109,7 @@ public:
             boost::shared_future<boost::thread*> fu = new_thread_promise.get_future();
             boost::shared_ptr<boost::promise<void> > p(new boost::promise<void>);
             boost::thread* new_thread =
-                    m_group->create_thread(boost::bind(&asio_scheduler::run,m_ioservices[i],fu,p,other_ioservices,others,weak_self));
+                    m_group->create_thread(std::bind(&asio_scheduler::run,m_ioservices[i],fu,p,other_ioservices,others,weak_self));
             all_threads_started.push_back(p->get_future());
             new_thread_promise.set_value(new_thread);
 

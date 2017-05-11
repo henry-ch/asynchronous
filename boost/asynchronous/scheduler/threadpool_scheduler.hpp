@@ -13,6 +13,7 @@
 #include <utility>
 #include <vector>
 #include <cstddef>
+#include <functional>
 
 #ifndef BOOST_THREAD_PROVIDES_FUTURE
 #define BOOST_THREAD_PROVIDES_FUTURE
@@ -21,7 +22,6 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
 #include <boost/thread/thread.hpp>
-#include <boost/bind.hpp>
 #include <boost/thread/future.hpp>
 
 #include <boost/asynchronous/scheduler/detail/scheduler_helpers.hpp>
@@ -92,7 +92,7 @@ public:
             boost::promise<boost::thread*> new_thread_promise;
             boost::shared_future<boost::thread*> fu = new_thread_promise.get_future();
             boost::thread* new_thread =
-                    m_group->create_thread(boost::bind(&threadpool_scheduler::run,this->m_queue,
+                    m_group->create_thread(std::bind(&threadpool_scheduler::run,this->m_queue,
                                                        m_private_queues[i],m_diagnostics,fu,weak_self,i));
             new_thread_promise.set_value(new_thread);
             m_thread_ids.push_back(new_thread->get_id());

@@ -3,7 +3,7 @@
 
 #include <cstddef>
 #include <boost/asio.hpp>
-#include <boost/function.hpp>
+#include <functional>
 #include <boost/shared_ptr.hpp>
 
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
@@ -24,7 +24,7 @@ public:
     }
 
     void unsafe_async_resolve(boost::asio::ip::tcp::resolver::query q, 
-                              boost::function<void(const::boost::system::error_code&,boost::asio::ip::tcp::resolver::iterator )> fct)
+                              std::function<void(const::boost::system::error_code&,boost::asio::ip::tcp::resolver::iterator )> fct)
     {
         m_resolver.async_resolve(q,fct);
     }
