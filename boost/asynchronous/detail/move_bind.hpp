@@ -71,7 +71,8 @@ namespace boost { namespace asynchronous
     };
 
     template <typename Func,typename... Args>
-    boost::asynchronous::moveable_binder<Func,Args...> move_bind(Func f,Args... args)
+    auto move_bind(Func f,Args... args)
+    -> boost::asynchronous::moveable_binder<Func,Args...>
     {
         return boost::asynchronous::moveable_binder<Func,Args...>(std::move(f),std::move(args)...);
     }
