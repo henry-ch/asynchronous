@@ -17,7 +17,6 @@
 #include <memory>
 #include <limits>
 
-#include <boost/type_traits/is_same.hpp>
 #include <boost/smart_ptr/shared_array.hpp>
 
 #include <boost/asynchronous/queue/lockfree_queue.hpp>

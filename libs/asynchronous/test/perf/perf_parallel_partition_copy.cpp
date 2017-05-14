@@ -7,10 +7,9 @@
 #include <vector>
 #include <memory>
 //#include <stdlib.h>
+#include <type_traits>
 
 #include <boost/lexical_cast.hpp>
-#include <boost/type_traits/is_same.hpp>
-#include <type_traits>
 #include <boost/smart_ptr/shared_array.hpp>
 
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
@@ -58,13 +57,13 @@ inline std::string lexical_cast(const uint32_t& arg)
 }
 
 template <class T, class U>
-typename std::enable_if<!boost::is_same<T,U>::value,U >::type
+typename std::enable_if<!std::is_same<T,U>::value,U >::type
 test_cast(T const& t)
 {
     return boost::lexical_cast<U>(t);
 }
 template <class T, class U>
-typename std::enable_if<boost::is_same<T,U>::value,U >::type
+typename std::enable_if<std::is_same<T,U>::value,U >::type
 test_cast(T const& t)
 {
     return t;

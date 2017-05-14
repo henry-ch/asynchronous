@@ -12,7 +12,6 @@
 
 #include <type_traits>
 
-#include <boost/type_traits/is_same.hpp>
 #include <boost/weak_ptr.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/exception/all.hpp>

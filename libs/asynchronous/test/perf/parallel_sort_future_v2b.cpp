@@ -10,11 +10,10 @@
 #include <algorithm>
 #include <iostream>
 #include <vector>
+#include <type_traits>
 
 #include <boost/smart_ptr/shared_array.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/type_traits/is_same.hpp>
-#include <type_traits>
 
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/servant_proxy.hpp>
@@ -87,13 +86,13 @@ long tasksize = NELEM / tasks;
 
 #ifndef __MIC__
 template <class T, class U>
-typename std::enable_if<!(boost::is_same<T,U>::value || boost::is_same<LongOne,U>::value),U >::type
+typename std::enable_if<!(std::is_same<T,U>::value || std::is_same<LongOne,U>::value),U >::type
 test_cast(T const& t)
 {
     return boost::lexical_cast<U>(t);
 }
 template <class T, class U>
-typename std::enable_if<boost::is_same<LongOne,U>::value,U >::type
+typename std::enable_if<std::is_same<LongOne,U>::value,U >::type
 test_cast(T const& t)
 {
     return t;
@@ -101,7 +100,7 @@ test_cast(T const& t)
 #endif
 
 template <class T, class U>
-typename std::enable_if<boost::is_same<T,U>::value,U >::type
+typename std::enable_if<std::is_same<T,U>::value,U >::type
 test_cast(T const& t)
 {
     return t;

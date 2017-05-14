@@ -109,7 +109,7 @@ class get_turns_in_sections
         boost::ignore_unused_variable_warning(index1);
         boost::ignore_unused_variable_warning(index2);
 
-        return boost::is_same
+        return std::is_same
                     <
                         typename tag_cast
                             <

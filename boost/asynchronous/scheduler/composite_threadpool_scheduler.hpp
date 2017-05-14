@@ -15,6 +15,7 @@
 #include <cstddef>
 #include <atomic>
 #include <numeric>
+#include <type_traits>
 
 #ifndef BOOST_THREAD_PROVIDES_FUTURE
 #define BOOST_THREAD_PROVIDES_FUTURE
@@ -26,7 +27,6 @@
 #include <boost/bind.hpp>
 #include <boost/thread/future.hpp>
 #include <boost/thread/tss.hpp>
-#include <type_traits>
 #include <boost/enable_shared_from_this.hpp>
 
 #include <boost/asynchronous/scheduler/detail/exceptions.hpp>
@@ -251,25 +251,25 @@ private:
     std::vector<subpool_type> m_subpools;
     
     template <class T,class S>
-    typename std::enable_if< boost::is_same<job_type, typename S::job_type>::value,void >::type
+    typename std::enable_if< std::is_same<job_type, typename S::job_type>::value,void >::type
     add_scheduler_helper(T& t,S& s)
     {
         t.push_back(s);
     }
     template <class T,class S>
-    typename std::enable_if< !boost::is_same<job_type, typename S::job_type>::value,void >::type
+    typename std::enable_if< !std::is_same<job_type, typename S::job_type>::value,void >::type
     add_scheduler_helper(T&,S&)
     {
     }
     template <class T,class S>
-    typename std::enable_if< boost::is_same<job_type, typename S::job_type>::value,void >::type
+    typename std::enable_if< std::is_same<job_type, typename S::job_type>::value,void >::type
     add_queue_helper(T& t,S& s)
     {
         std::vector<boost::asynchronous::any_queue_ptr<job_type> > q = (*(s).get_internal_scheduler_aspect()).get_queues();
         t.push_back(q);
     }
     template <class T,class S>
-    typename std::enable_if< !boost::is_same<job_type, typename S::job_type>::value,void >::type
+    typename std::enable_if< !std::is_same<job_type, typename S::job_type>::value,void >::type
     add_queue_helper(T& t,S& s)
     {
         std::vector<boost::asynchronous::any_queue_ptr<typename S::job_type> > q = (*(s).get_internal_scheduler_aspect()).get_queues();

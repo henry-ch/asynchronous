@@ -20,7 +20,6 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/chrono.hpp>
 #include <boost/type_erasure/is_empty.hpp>
-#include <boost/type_traits/is_same.hpp>
 
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/post.hpp>
@@ -1152,7 +1151,7 @@ struct callback_continuation_as_seq
     };
     template <class Continuation>
     struct callback_continuation_wrapper<Continuation,
-                                         typename std::enable_if<boost::is_same<typename Continuation::return_type,void>::value >::type>
+                                         typename std::enable_if<std::is_same<typename Continuation::return_type,void>::value >::type>
             : public boost::asynchronous::continuation_task<void>
     {
         callback_continuation_wrapper(Continuation cont)

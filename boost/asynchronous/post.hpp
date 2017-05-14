@@ -27,11 +27,9 @@
 #include <boost/exception/all.hpp>
 #include <boost/shared_ptr.hpp>
 #include <type_traits>
-#include <boost/type_traits/is_same.hpp>
 #include <boost/mpl/not.hpp>
 #include <boost/mpl/and.hpp>
 #include <boost/mpl/has_xxx.hpp>
-#include <boost/type_traits/is_same.hpp>
 
 #include <boost/asynchronous/any_shared_scheduler_proxy.hpp>
 #include <boost/asynchronous/callable_any.hpp>
@@ -123,7 +121,7 @@ namespace detail
     struct post_future_helper_base<R,F,JOB,OP,Scheduler,
             typename std::enable_if<
                 boost::asynchronous::detail::is_serializable<F>::value &&
-                !boost::is_same<R,void>::value >::type >
+                !std::is_same<R,void>::value >::type >
             : public boost::asynchronous::job_traits<JOB>::diagnostic_type
     {
         post_future_helper_base():boost::asynchronous::job_traits<JOB>::diagnostic_type(){}
@@ -194,7 +192,7 @@ namespace detail
     struct post_future_helper_base<R,F,JOB,OP,Scheduler,
             typename std::enable_if<
                 boost::asynchronous::detail::is_serializable<F>::value &&
-                boost::is_same<R,void>::value >::type >
+                std::is_same<R,void>::value >::type >
             : public boost::asynchronous::job_traits<JOB>::diagnostic_type
     {
         post_future_helper_base():boost::asynchronous::job_traits<JOB>::diagnostic_type(){}
@@ -336,7 +334,7 @@ namespace detail
 
     // version for void continuations
     template <class R,class F,class JOB>
-    struct post_future_helper_continuation<R,F,JOB,typename std::enable_if<boost::is_same<R,void>::value>::type>
+    struct post_future_helper_continuation<R,F,JOB,typename std::enable_if<std::is_same<R,void>::value>::type>
             : public boost::asynchronous::job_traits<JOB>::diagnostic_type
     {
         post_future_helper_continuation():boost::asynchronous::job_traits<JOB>::diagnostic_type(){}
@@ -551,11 +549,11 @@ auto post_future(S const& scheduler, F const& func,
 #endif
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                  const std::string& task_name, std::size_t prio,
-                 typename std::enable_if< !(boost::is_same<void,decltype(func())>::value ||
+                 typename std::enable_if< !(std::is_same<void,decltype(func())>::value ||
                                               boost::asynchronous::detail::has_is_continuation_task<decltype(func())>::value)>::type* =0)
 #else
                  const std::string& task_name="", std::size_t prio=0,
-                 typename std::enable_if< !(boost::is_same<void,decltype(func())>::value ||
+                 typename std::enable_if< !(std::is_same<void,decltype(func())>::value ||
                                               boost::asynchronous::detail::has_is_continuation_task<decltype(func())>::value)>::type* =0)
 #endif
     -> boost::future<decltype(func())>
@@ -600,12 +598,12 @@ auto post_future(S const& scheduler, F const& func,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                  const std::string& task_name, std::size_t prio,
                  typename std::enable_if<
-                                     boost::is_same<void,decltype(func())>::value &&
+                                     std::is_same<void,decltype(func())>::value &&
                                     !boost::asynchronous::detail::has_is_continuation_task<decltype(func())>::value>::type* =0)
 #else
                  const std::string& task_name="", std::size_t prio=0,
                  typename std::enable_if<
-                                     boost::is_same<void,decltype(func())>::value &&
+                                     std::is_same<void,decltype(func())>::value &&
                                     !boost::asynchronous::detail::has_is_continuation_task<decltype(func())>::value>::type* =0)
 #endif
     -> boost::future<void>
@@ -679,12 +677,12 @@ auto interruptible_post_future(S const& scheduler, F const& func,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                  const std::string& task_name, std::size_t prio,
                  typename std::enable_if<
-                    !(boost::is_same<void, decltype(func())>::value ||
+                    !(std::is_same<void, decltype(func())>::value ||
                     boost::asynchronous::detail::has_is_continuation_task<decltype(func())>::value) >::type* = 0)
 #else
                  const std::string& task_name="", std::size_t prio=0,
                  typename std::enable_if<
-                    !(boost::is_same<void, decltype(func())>::value ||
+                    !(std::is_same<void, decltype(func())>::value ||
                     boost::asynchronous::detail::has_is_continuation_task<decltype(func())>::value) >::type* = 0)
 #endif
     -> std::tuple<boost::future<decltype(func())>,boost::asynchronous::any_interruptible >
@@ -715,12 +713,12 @@ auto interruptible_post_future(S const& scheduler, F const& func,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                  const std::string& task_name, std::size_t prio, 
                  typename std::enable_if<
-                   boost::is_same<void, decltype(func())>::value &&
+                   std::is_same<void, decltype(func())>::value &&
                   !boost::asynchronous::detail::has_is_continuation_task<decltype(func())>::value> ::type* = 0)
 #else
                  const std::string& task_name="", std::size_t prio=0,
                  typename std::enable_if<
-                     boost::is_same<void, decltype(func())>::value &&
+                     std::is_same<void, decltype(func())>::value &&
                     !boost::asynchronous::detail::has_is_continuation_task<decltype(func())>::value> ::type* = 0)
 #endif
     -> std::tuple<boost::future<void>,boost::asynchronous::any_interruptible > 
@@ -1055,7 +1053,7 @@ namespace detail
         }
     };
     template <class Ret,class Sched,class Func,class Work,class F1,class F2,class CallbackFct,class Callback>
-    struct post_helper_continuation<Ret,Sched,Func,Work,F1,F2,CallbackFct,Callback,typename std::enable_if<boost::is_same<Ret,void>::value >::type>
+    struct post_helper_continuation<Ret,Sched,Func,Work,F1,F2,CallbackFct,Callback,typename std::enable_if<std::is_same<Ret,void>::value >::type>
     {
         void operator()(std::string const& task_name,std::size_t cb_prio, Sched scheduler,
                         move_task_helper<typename Func::return_type,F1,F2>& work)const
@@ -1337,7 +1335,7 @@ auto post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_schedule
 #else
                    const std::string& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
 #endif
-    -> typename std::enable_if< boost::is_same<void,decltype(func())>::value,void >::type
+    -> typename std::enable_if< std::is_same<void,decltype(func())>::value,void >::type
 {
     // abstract away the return value of work functor
     struct post_helper
@@ -1367,7 +1365,7 @@ auto post_callback(S1 const& scheduler,F1 const& func,S2 const& weak_cb_schedule
 #else
                    const std::string& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
 #endif
-    -> typename std::enable_if<!boost::is_same<void,decltype(func())>::value &&
+    -> typename std::enable_if<!std::is_same<void,decltype(func())>::value &&
                                ! boost::asynchronous::detail::has_is_continuation_task<decltype(func())>::value
                                ,void >::type
 {
@@ -1424,7 +1422,7 @@ auto interruptible_post_callback(S1 const& scheduler,F1 const& func,S2 const& we
 #else
                                  const std::string& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
 #endif
-    -> typename std::enable_if< boost::is_same<void,decltype(func())>::value,boost::asynchronous::any_interruptible >::type
+    -> typename std::enable_if< std::is_same<void,decltype(func())>::value,boost::asynchronous::any_interruptible >::type
 {
     // abstract away the return value of work functor
     struct post_helper
@@ -1454,7 +1452,7 @@ auto interruptible_post_callback(S1 const& scheduler,F1 const& func,S2 const& we
 #else
                                  const std::string& task_name="", std::size_t post_prio=0, std::size_t cb_prio=0)
 #endif
-        -> typename std::enable_if< !boost::is_same<void,decltype(func())>::value &&
+        -> typename std::enable_if< !std::is_same<void,decltype(func())>::value &&
                                     !boost::asynchronous::detail::has_is_continuation_task<decltype(func())>::value
                                    ,boost::asynchronous::any_interruptible >::type
 {

@@ -13,7 +13,6 @@
 #include <utility>
 #include <boost/exception_ptr.hpp>
 #include <type_traits>
-#include <boost/type_traits/is_same.hpp>
 #include <boost/smart_ptr.hpp>
 #include <type_traits>
 
@@ -329,7 +328,7 @@ private:
  * Version for void as template type.
  */
 template<class T>
-class expected<T, typename std::enable_if<boost::is_same<T,void>::value>::type>
+class expected<T, typename std::enable_if<std::is_same<T,void>::value>::type>
 {
 public:
     typedef void value_type;

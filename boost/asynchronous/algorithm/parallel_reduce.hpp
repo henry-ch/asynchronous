@@ -25,7 +25,6 @@
 #include <boost/asynchronous/algorithm/detail/safe_advance.hpp>
 #include <boost/asynchronous/detail/metafunctions.hpp>
 #include <boost/asynchronous/detail/function_traits.hpp>
-#include <boost/type_traits/is_same.hpp>
 
 #include <boost/range/begin.hpp>
 #include <boost/range/end.hpp>
@@ -59,7 +58,7 @@ struct reduce_helper
 template <class Iterator, class Func, class ReturnType>
 struct reduce_helper<Iterator,Func,ReturnType,
                      typename std::enable_if<
-                        boost::is_same<
+                        std::is_same<
                            typename std::remove_cv<
                                typename std::remove_reference<
                                     typename boost::asynchronous::function_traits<Func>::template arg_<0>::type>::type>::type,
