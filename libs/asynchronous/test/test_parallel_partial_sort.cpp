@@ -76,7 +76,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         generate(m_data1,100000,90000);
         auto data_copy = m_data1;
         // we need a promise to inform caller when we're done
-        boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
+        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
         boost::shared_future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
@@ -123,7 +123,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         generate(m_data1,100000,90000);
         auto data_copy = m_data1;
         // we need a promise to inform caller when we're done
-        boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
+        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
         boost::shared_future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
@@ -170,7 +170,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         generate(m_data1,100000,20000);
         auto data_copy = m_data1;
         // we need a promise to inform caller when we're done
-        boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
+        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
         boost::shared_future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();

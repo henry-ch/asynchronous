@@ -141,7 +141,7 @@ template <class Range,class Return,class Job>
 struct parallel_geometry_intersection_of_x_range_helper: public boost::asynchronous::continuation_task<Return>
 {
     template <class Iterator>
-    parallel_geometry_intersection_of_x_range_helper(boost::shared_ptr<Range> range,Iterator beg, Iterator end,
+    parallel_geometry_intersection_of_x_range_helper(std::shared_ptr<Range> range,Iterator beg, Iterator end,
                             long cutoff,long overlay_cutoff,long partition_cutoff, const std::string& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<Return>(task_name),
           range_(range),begin_(beg),end_(end),cutoff_(cutoff),overlay_cutoff_(overlay_cutoff),partition_cutoff_(partition_cutoff),prio_(prio)
@@ -220,7 +220,7 @@ struct parallel_geometry_intersection_of_x_range_helper: public boost::asynchron
         }
     }
 
-    boost::shared_ptr<Range> range_;
+    std::shared_ptr<Range> range_;
     decltype(boost::begin(*range_)) begin_;
     decltype(boost::end(*range_)) end_;
     long cutoff_;
@@ -244,7 +244,7 @@ parallel_geometry_intersection_of_x(Range&& range,
                                 typename std::remove_reference<decltype(*boost::begin(range))
                               >::type,Job>>::type
 {
-    auto r = boost::make_shared<Range>(std::forward<Range>(range));
+    auto r = std::make_shared<Range>(std::forward<Range>(range));
     auto beg = boost::begin(*r);
     auto end = boost::end(*r);
 

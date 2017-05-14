@@ -52,7 +52,7 @@ struct Servant
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_void_async_work not posted.");
         // we need a promise to inform caller when we're done
-        boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
+        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
         boost::shared_future<void> fu = aPromise->get_future();
         std::vector<boost::thread::id> ids = m_threadpool.thread_ids();
         // start long tasks
@@ -76,7 +76,7 @@ struct Servant
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work not posted.");
         // we need a promise to inform caller when we're done
-        boost::shared_ptr<boost::promise<int> > aPromise(new boost::promise<int>);
+        std::shared_ptr<boost::promise<int> > aPromise(new boost::promise<int>);
         boost::shared_future<int> fu = aPromise->get_future();
         std::vector<boost::thread::id> ids = m_threadpool.thread_ids();
         // start long tasks
@@ -101,7 +101,7 @@ struct Servant
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_exception_async_work not posted.");
         // we need a promise to inform caller when we're done
-        boost::shared_ptr<boost::promise<int> > aPromise(new boost::promise<int>);
+        std::shared_ptr<boost::promise<int> > aPromise(new boost::promise<int>);
         boost::shared_future<int> fu = aPromise->get_future();
         std::vector<boost::thread::id> ids = m_threadpool.thread_ids();
         // start long tasks

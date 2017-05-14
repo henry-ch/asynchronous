@@ -167,13 +167,13 @@ PlayerGui::PlayerGui(QWidget *parent)
                       make_safe_callback([this](){stopTimer();})
                  ))),
       // for simplicity we simulate real hardware with a timer. Asio will provide one
-      ioservice_(boost::make_shared<boost::asio::io_service>()),
+      ioservice_(std::make_shared<boost::asio::io_service>()),
       work_(new boost::asio::io_service::work(*ioservice_)),
       thread_()
 {
     // create Asio thread
     auto service = ioservice_;
-    thread_ = boost::make_shared<boost::thread>([service](){service->run();});
+    thread_ = std::make_shared<boost::thread>([service](){service->run();});
 
     // create UI
     display = new QLineEdit("");

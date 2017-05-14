@@ -3,13 +3,12 @@
 #include <cstring>
 #include <cmath>
 #include <type_traits>
+#include <memory>
 
 
 #include <algorithm>
 #include <iostream>
 #include <vector>
-
-#include <boost/smart_ptr/shared_array.hpp>
 
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/scheduler/multiqueue_threadpool_scheduler.hpp>
@@ -90,7 +89,7 @@ void ParallelAsyncPostCbSpreadsort(SORTED_TYPE a[], size_t n)
 
 void test_sorted_elements(void(*pf)(SORTED_TYPE [], size_t ))
 {
-    boost::shared_array<SORTED_TYPE> a (new SORTED_TYPE[NELEM]);
+    std::shared_ptr<SORTED_TYPE> a (new SORTED_TYPE[NELEM],[](SORTED_TYPE* p){delete[] p;});
     auto lazy = boost::asynchronous::lazy_irange(
                   0, NELEM,
                   [](uint32_t index) {
@@ -115,7 +114,7 @@ void test_sorted_elements(void(*pf)(SORTED_TYPE [], size_t ))
 }
 void test_random_elements_many_repeated(void(*pf)(SORTED_TYPE [], size_t ))
 {
-    boost::shared_array<SORTED_TYPE> a (new SORTED_TYPE[NELEM]);
+    std::shared_ptr<SORTED_TYPE> a (new SORTED_TYPE[NELEM],[](SORTED_TYPE* p){delete[] p;});
     auto fu = boost::asynchronous::post_future(
                 pool,
                 [&]{
@@ -138,7 +137,7 @@ void test_random_elements_many_repeated(void(*pf)(SORTED_TYPE [], size_t ))
 }
 void test_random_elements_few_repeated(void(*pf)(SORTED_TYPE [], size_t ))
 {
-    boost::shared_array<SORTED_TYPE> a (new SORTED_TYPE[NELEM]);
+    std::shared_ptr<SORTED_TYPE> a (new SORTED_TYPE[NELEM],[](SORTED_TYPE* p){delete[] p;});
     auto fu = boost::asynchronous::post_future(
                 pool,
                 [&]{
@@ -160,7 +159,7 @@ void test_random_elements_few_repeated(void(*pf)(SORTED_TYPE [], size_t ))
 }
 void test_random_elements_quite_repeated(void(*pf)(SORTED_TYPE [], size_t ))
 {
-    boost::shared_array<SORTED_TYPE> a (new SORTED_TYPE[NELEM]);
+    std::shared_ptr<SORTED_TYPE> a (new SORTED_TYPE[NELEM],[](SORTED_TYPE* p){delete[] p;});
     auto fu = boost::asynchronous::post_future(
                 pool,
                 [&]{
@@ -183,7 +182,7 @@ void test_random_elements_quite_repeated(void(*pf)(SORTED_TYPE [], size_t ))
 }
 void test_reversed_sorted_elements(void(*pf)(SORTED_TYPE [], size_t ))
 {
-    boost::shared_array<SORTED_TYPE> a (new SORTED_TYPE[NELEM]);
+    std::shared_ptr<SORTED_TYPE> a (new SORTED_TYPE[NELEM],[](SORTED_TYPE* p){delete[] p;});
     auto lazy = boost::asynchronous::lazy_irange(
                   0, NELEM,
                   [](uint32_t index) {
@@ -208,7 +207,7 @@ void test_reversed_sorted_elements(void(*pf)(SORTED_TYPE [], size_t ))
 }
 void test_equal_elements(void(*pf)(SORTED_TYPE [], size_t ))
 {
-    boost::shared_array<SORTED_TYPE> a (new SORTED_TYPE[NELEM]);
+    std::shared_ptr<SORTED_TYPE> a (new SORTED_TYPE[NELEM],[](SORTED_TYPE* p){delete[] p;});
     auto fu = boost::asynchronous::post_future(
                 pool,
                 [&]{

@@ -16,7 +16,7 @@
 #ifndef BOOST_THREAD_PROVIDES_FUTURE
 #define BOOST_THREAD_PROVIDES_FUTURE
 #endif
-#include <boost/shared_ptr.hpp>
+#include <memory>
 #include <boost/asio.hpp>
 #include <functional>
 #include <boost/thread/thread.hpp>
@@ -85,7 +85,7 @@ public:
         // not supported
     }
 
-    void init(size_t number_of_workers,std::vector<boost::asynchronous::any_queue_ptr<job_type> > const& others,boost::weak_ptr<this_type> weak_self)
+    void init(size_t number_of_workers,std::vector<boost::asynchronous::any_queue_ptr<job_type> > const& others,std::weak_ptr<this_type> weak_self)
     {
         m_works.reserve(number_of_workers);
         m_ioservices.reserve(number_of_workers);
@@ -95,19 +95,19 @@ public:
         for (size_t i=0; i<number_of_workers; ++i)
         {
             // create worker
-            boost::shared_ptr<boost::asio::io_service> ioservice = boost::make_shared<boost::asio::io_service>();
+            std::shared_ptr<boost::asio::io_service> ioservice = std::make_shared<boost::asio::io_service>();
             m_ioservices.push_back(ioservice);
-            m_works.push_back(boost::make_shared<boost::asio::io_service::work>(*ioservice));
+            m_works.push_back(std::make_shared<boost::asio::io_service::work>(*ioservice));
         }
         for (size_t i=0; i<number_of_workers; ++i)
         {
             // a worker gets the other io_services, so that he can try to steal
-            std::vector<boost::shared_ptr<boost::asio::io_service > > other_ioservices(m_ioservices);
+            std::vector<std::shared_ptr<boost::asio::io_service > > other_ioservices(m_ioservices);
             other_ioservices.erase(other_ioservices.begin()+i);
             // create thread and add to group
             boost::promise<boost::thread*> new_thread_promise;
             boost::shared_future<boost::thread*> fu = new_thread_promise.get_future();
-            boost::shared_ptr<boost::promise<void> > p(new boost::promise<void>);
+            std::shared_ptr<boost::promise<void> > p(new boost::promise<void>);
             boost::thread* new_thread =
                     m_group->create_thread(std::bind(&asio_scheduler::run,m_ioservices[i],fu,p,other_ioservices,others,weak_self));
             all_threads_started.push_back(p->get_future());
@@ -118,7 +118,7 @@ public:
         // wait for all threads to be started
         boost::wait_for_all(all_threads_started.begin(),all_threads_started.end());
     }
-    void constructor_done(boost::weak_ptr<this_type> weak_self)
+    void constructor_done(std::weak_ptr<this_type> weak_self)
     {
         m_weak_self = weak_self;
         if (m_immediate)
@@ -232,12 +232,12 @@ public:
     boost::asynchronous::any_interruptible interruptible_post(job_type job,
                                                           std::size_t prio)
     {
-        boost::shared_ptr<boost::asynchronous::detail::interrupt_state>
-                state = boost::make_shared<boost::asynchronous::detail::interrupt_state>();
+        std::shared_ptr<boost::asynchronous::detail::interrupt_state>
+                state = std::make_shared<boost::asynchronous::detail::interrupt_state>();
         // write to tss in case the task requires it
         boost::asynchronous::get_interrupt_state<>(state,true);
 
-        boost::shared_ptr<boost::promise<boost::thread*> > wpromise = boost::make_shared<boost::promise<boost::thread*> >();
+        std::shared_ptr<boost::promise<boost::thread*> > wpromise = std::make_shared<boost::promise<boost::thread*> >();
         boost::asynchronous::job_traits<job_type>::set_posted_time(job);
         boost::asynchronous::interruptible_job<job_type,this_type>
                 ijob(std::move(job),wpromise,state);
@@ -307,9 +307,9 @@ public:
     }  
     boost::asynchronous::any_interruptible interruptible_post(job_type& job, std::size_t prio=0)
     {
-        boost::shared_ptr<boost::asynchronous::detail::interrupt_state>
-                state = boost::make_shared<boost::asynchronous::detail::interrupt_state>();
-        boost::shared_ptr<boost::promise<boost::thread*> > wpromise = boost::make_shared<boost::promise<boost::thread*> >();
+        std::shared_ptr<boost::asynchronous::detail::interrupt_state>
+                state = std::make_shared<boost::asynchronous::detail::interrupt_state>();
+        std::shared_ptr<boost::promise<boost::thread*> > wpromise = std::make_shared<boost::promise<boost::thread*> >();
         boost::asynchronous::job_traits<job_type>::set_posted_time(job);
         boost::asynchronous::interruptible_job<job_type,this_type>
                 ijob(job,wpromise,state);
@@ -355,11 +355,11 @@ public:
     static boost::thread_specific_ptr<thread_ptr_wrapper> m_self_thread;
     
 private:
-    static void run(boost::shared_ptr<boost::asio::io_service> ioservice,boost::shared_future<boost::thread*> self,
-                    boost::shared_ptr<boost::promise<void> > started,
-                    std::vector<boost::shared_ptr<boost::asio::io_service > > other_ioservices,
+    static void run(std::shared_ptr<boost::asio::io_service> ioservice,boost::shared_future<boost::thread*> self,
+                    std::shared_ptr<boost::promise<void> > started,
+                    std::vector<std::shared_ptr<boost::asio::io_service > > other_ioservices,
                     std::vector<boost::asynchronous::any_queue_ptr<job_type> > other_queues,
-                    boost::weak_ptr<this_type> this_)
+                    std::weak_ptr<this_type> this_)
     {
         boost::thread* t = self.get();
         m_self_thread.reset(new thread_ptr_wrapper(t));
@@ -437,7 +437,7 @@ private:
                     boost::this_thread::yield();
                 }
                 // remove state from tss
-                boost::asynchronous::get_interrupt_state<>(boost::shared_ptr<boost::asynchronous::detail::interrupt_state>(),true);
+                boost::asynchronous::get_interrupt_state<>(std::shared_ptr<boost::asynchronous::detail::interrupt_state>(),true);
             }
             catch(boost::asynchronous::detail::shutdown_exception&)
             {
@@ -455,7 +455,7 @@ private:
                 {
                     boost::asynchronous::job_traits<job_type>::set_failed(job);
                     // remove state from tss
-                    boost::asynchronous::get_interrupt_state<>(boost::shared_ptr<boost::asynchronous::detail::interrupt_state>(),true);
+                    boost::asynchronous::get_interrupt_state<>(std::shared_ptr<boost::asynchronous::detail::interrupt_state>(),true);
                 }
             }
         }
@@ -464,11 +464,11 @@ private:
     
     std::atomic<size_t> m_next_shutdown_bucket;
     size_t m_number_of_workers;
-    std::vector<boost::shared_ptr<boost::asio::io_service::work> > m_works;
-    std::vector<boost::shared_ptr<boost::asio::io_service > > m_ioservices;
-    boost::shared_ptr<boost::thread_group> m_group;
+    std::vector<std::shared_ptr<boost::asio::io_service::work> > m_works;
+    std::vector<std::shared_ptr<boost::asio::io_service > > m_ioservices;
+    std::shared_ptr<boost::thread_group> m_group;
     std::vector<boost::thread::id> m_thread_ids;
-    boost::weak_ptr<this_type> m_weak_self;
+    std::weak_ptr<this_type> m_weak_self;
     bool m_immediate;
     const std::string m_name;
 };

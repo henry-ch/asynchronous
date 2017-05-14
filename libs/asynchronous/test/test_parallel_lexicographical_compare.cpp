@@ -63,7 +63,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"start_parallel_lexicographical_compare_equal not posted.");
         // we need a promise to inform caller when we're done
-        boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
+        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
         boost::shared_future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
@@ -93,7 +93,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"start_parallel_lexicographical_compare_less not posted.");
         // we need a promise to inform caller when we're done
-        boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
+        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
         boost::shared_future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
@@ -124,7 +124,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"start_parallel_lexicographical_compare_greater not posted.");
         // we need a promise to inform caller when we're done
-        boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
+        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
         boost::shared_future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
@@ -155,7 +155,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"start_parallel_lexicographical_compare_equal2 not posted.");
         // we need a promise to inform caller when we're done
-        boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
+        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
         boost::shared_future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
@@ -185,7 +185,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"start_parallel_lexicographical_compare_less2 not posted.");
         // we need a promise to inform caller when we're done
-        boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
+        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
         boost::shared_future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
@@ -216,7 +216,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"start_parallel_lexicographical_compare_greater2 not posted.");
         // we need a promise to inform caller when we're done
-        boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
+        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
         boost::shared_future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();

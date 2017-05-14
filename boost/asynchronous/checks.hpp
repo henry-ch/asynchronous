@@ -12,8 +12,8 @@
 
 #include <type_traits>
 
-#include <boost/weak_ptr.hpp>
-#include <boost/shared_ptr.hpp>
+
+#include <memory>
 #include <boost/exception/all.hpp>
 
 #include <boost/asynchronous/exceptions.hpp>
@@ -31,9 +31,9 @@ template <class Func, class T,class R>
 struct call_if_alive
 {
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    call_if_alive(Func f, boost::weak_ptr<T> tracked):m_wrapped(std::move(f)),m_tracked(tracked){}
+    call_if_alive(Func f, std::weak_ptr<T> tracked):m_wrapped(std::move(f)),m_tracked(tracked){}
 #else
-    call_if_alive(Func const& f, boost::weak_ptr<T> tracked):m_wrapped(f),m_tracked(tracked){}
+    call_if_alive(Func const& f, std::weak_ptr<T> tracked):m_wrapped(f),m_tracked(tracked){}
 #endif
     call_if_alive(call_if_alive&& rhs)noexcept
         : m_wrapped(std::move(rhs.m_wrapped))
@@ -65,15 +65,15 @@ struct call_if_alive
     }
 
     Func m_wrapped;
-    boost::weak_ptr<T> m_tracked;
+    std::weak_ptr<T> m_tracked;
 };
 template <class Func, class T>
 struct call_if_alive<Func,T,void>
 {
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    call_if_alive(Func f, boost::weak_ptr<T> tracked):m_wrapped(std::move(f)),m_tracked(tracked){}
+    call_if_alive(Func f, std::weak_ptr<T> tracked):m_wrapped(std::move(f)),m_tracked(tracked){}
 #else
-    call_if_alive(Func const& f, boost::weak_ptr<T> tracked):m_wrapped(f),m_tracked(tracked){}
+    call_if_alive(Func const& f, std::weak_ptr<T> tracked):m_wrapped(f),m_tracked(tracked){}
 #endif
     call_if_alive(call_if_alive&& rhs)noexcept
         : m_wrapped(std::move(rhs.m_wrapped))
@@ -109,7 +109,7 @@ struct call_if_alive<Func,T,void>
             m_wrapped();
     }
     Func m_wrapped;
-    boost::weak_ptr<T> m_tracked;
+    std::weak_ptr<T> m_tracked;
 };
 
 template <class Func, class T,class R,class Enable=void>
@@ -120,9 +120,9 @@ struct call_if_alive_exec
     // TODO a bit better...
     typedef int is_continuation_task;
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    call_if_alive_exec(Func&& f, boost::weak_ptr<T> tracked):m_wrapped(std::forward<Func>(f)),m_tracked(tracked){}
+    call_if_alive_exec(Func&& f, std::weak_ptr<T> tracked):m_wrapped(std::forward<Func>(f)),m_tracked(tracked){}
 #else
-    call_if_alive_exec(Func const& f, boost::weak_ptr<T> tracked):m_wrapped(f),m_tracked(tracked){}
+    call_if_alive_exec(Func const& f, std::weak_ptr<T> tracked):m_wrapped(f),m_tracked(tracked){}
 #endif
     call_if_alive_exec(call_if_alive_exec&& rhs)noexcept
         : m_wrapped(std::move(rhs.m_wrapped))
@@ -155,7 +155,7 @@ struct call_if_alive_exec
         boost::throw_exception(boost::asynchronous::task_aborted_exception());
     }
     Func m_wrapped;
-    boost::weak_ptr<T> m_tracked;
+    std::weak_ptr<T> m_tracked;
 };
 template <class Func, class T,class R>
 struct call_if_alive_exec<Func,T,R,typename std::enable_if<boost::asynchronous::detail::is_serializable<Func>::value >::type>
@@ -166,9 +166,9 @@ struct call_if_alive_exec<Func,T,R,typename std::enable_if<boost::asynchronous::
     typedef int is_continuation_task;
 
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    call_if_alive_exec(Func&& f, boost::weak_ptr<T> tracked):m_wrapped(std::forward<Func>(f)),m_tracked(tracked){}
+    call_if_alive_exec(Func&& f, std::weak_ptr<T> tracked):m_wrapped(std::forward<Func>(f)),m_tracked(tracked){}
 #else
-    call_if_alive_exec(Func const& f, boost::weak_ptr<T> tracked):m_wrapped(f),m_tracked(tracked){}
+    call_if_alive_exec(Func const& f, std::weak_ptr<T> tracked):m_wrapped(f),m_tracked(tracked){}
 #endif
     call_if_alive_exec(call_if_alive_exec&& rhs)noexcept
         : m_wrapped(std::move(rhs.m_wrapped))
@@ -218,31 +218,31 @@ struct call_if_alive_exec<Func,T,R,typename std::enable_if<boost::asynchronous::
         return m_wrapped.get_task_name();
     }
     Func m_wrapped;
-    boost::weak_ptr<T> m_tracked;
+    std::weak_ptr<T> m_tracked;
 };
 
 #ifndef BOOST_NO_RVALUE_REFERENCES
 template <class F, class T,class R=void>
-call_if_alive<F,T,R> check_alive(F func, boost::shared_ptr<T> tracked)
+call_if_alive<F,T,R> check_alive(F func, std::shared_ptr<T> tracked)
 {
-    call_if_alive<F,T,R> wrapped(std::move(func),boost::weak_ptr<T>(tracked));
+    call_if_alive<F,T,R> wrapped(std::move(func),std::weak_ptr<T>(tracked));
     return std::move(wrapped);
 }
 template <class F, class T,class R=void>
-call_if_alive<F,T,R> check_alive(F func, boost::weak_ptr<T> tracked)
+call_if_alive<F,T,R> check_alive(F func, std::weak_ptr<T> tracked)
 {
     call_if_alive<F,T,R> wrapped(std::move(func),tracked);
     return std::move(wrapped);
 }
 #else
 template <class F, class T,class R=void>
-call_if_alive<F,T,R> check_alive(F const& func, boost::shared_ptr<T> tracked)
+call_if_alive<F,T,R> check_alive(F const& func, std::shared_ptr<T> tracked)
 {
-    call_if_alive<F,T,R> wrapped(func,boost::weak_ptr<T>(tracked));
+    call_if_alive<F,T,R> wrapped(func,std::weak_ptr<T>(tracked));
     return wrapped;
 }
 template <class F, class T,class R=void>
-call_if_alive<F,T,R> check_alive(F const& func, boost::weak_ptr<T> tracked)
+call_if_alive<F,T,R> check_alive(F const& func, std::weak_ptr<T> tracked)
 {
     call_if_alive<F,T,R> wrapped(func,tracked);
     return wrapped;
@@ -252,26 +252,26 @@ call_if_alive<F,T,R> check_alive(F const& func, boost::weak_ptr<T> tracked)
 
 #ifndef BOOST_NO_RVALUE_REFERENCES
 template <class F, class T>
-auto check_alive_before_exec(F func, boost::shared_ptr<T> tracked) -> call_if_alive_exec<F,T,decltype(func())>
+auto check_alive_before_exec(F func, std::shared_ptr<T> tracked) -> call_if_alive_exec<F,T,decltype(func())>
 {
-    call_if_alive_exec<F,T,decltype(func())> wrapped(std::move(func),boost::weak_ptr<T>(tracked));
+    call_if_alive_exec<F,T,decltype(func())> wrapped(std::move(func),std::weak_ptr<T>(tracked));
     return std::move(wrapped);
 }
 template <class F, class T>
-auto check_alive_before_exec(F func, boost::weak_ptr<T> tracked) -> call_if_alive_exec<F,T,decltype(func())>
+auto check_alive_before_exec(F func, std::weak_ptr<T> tracked) -> call_if_alive_exec<F,T,decltype(func())>
 {
     call_if_alive_exec<F,T,decltype(func())> wrapped(std::move(func),tracked);
     return std::move(wrapped);
 }
 #else
 template <class F, class T>
-auto check_alive_before_exec(F const& func, boost::shared_ptr<T> tracked) -> call_if_alive_exec<F,T,decltype(func())>
+auto check_alive_before_exec(F const& func, std::shared_ptr<T> tracked) -> call_if_alive_exec<F,T,decltype(func())>
 {
-    call_if_alive_exec<F,T,decltype(func())> wrapped(func,boost::weak_ptr<T>(tracked));
+    call_if_alive_exec<F,T,decltype(func())> wrapped(func,std::weak_ptr<T>(tracked));
     return wrapped;
 }
 template <class F, class T>
-auto check_alive_before_exec(F const& func, boost::weak_ptr<T> tracked) -> call_if_alive_exec<F,T,decltype(func())>
+auto check_alive_before_exec(F const& func, std::weak_ptr<T> tracked) -> call_if_alive_exec<F,T,decltype(func())>
 {
     call_if_alive_exec<F,T,decltype(func())> wrapped(func,tracked);
     return wrapped;

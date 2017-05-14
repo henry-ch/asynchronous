@@ -52,10 +52,10 @@ struct update_selection_map_fct
     update_selection_map_fct(Geometry1 geometry1,
                              Geometry2 geometry2,
                              TurnInfoMap turn_info_map,
-                             boost::shared_ptr<RingPropertyMap> all_ring_properties)
-        : geometry1_(boost::make_shared<Geometry1>(std::move(geometry1)))
-        , geometry2_(boost::make_shared<Geometry2>(std::move(geometry2)))
-        , turn_info_map_(boost::make_shared<TurnInfoMap>(std::move(turn_info_map)))
+                             std::shared_ptr<RingPropertyMap> all_ring_properties)
+        : geometry1_(std::make_shared<Geometry1>(std::move(geometry1)))
+        , geometry2_(std::make_shared<Geometry2>(std::move(geometry2)))
+        , turn_info_map_(std::make_shared<TurnInfoMap>(std::move(turn_info_map)))
         , all_ring_properties_(all_ring_properties)
     {}
     update_selection_map_fct(update_selection_map_fct&& rhs)noexcept
@@ -138,10 +138,10 @@ struct update_selection_map_fct
         // TODO move possible?
         selected_ring_properties_.insert(rhs.selected_ring_properties_.begin(),rhs.selected_ring_properties_.end());
     }
-    boost::shared_ptr<Geometry1> geometry1_;
-    boost::shared_ptr<Geometry2> geometry2_;
-    boost::shared_ptr<TurnInfoMap> turn_info_map_;
-    boost::shared_ptr<RingPropertyMap> all_ring_properties_;
+    std::shared_ptr<Geometry1> geometry1_;
+    std::shared_ptr<Geometry2> geometry2_;
+    std::shared_ptr<TurnInfoMap> turn_info_map_;
+    std::shared_ptr<RingPropertyMap> all_ring_properties_;
     RingPropertyMap selected_ring_properties_;
 };
 
@@ -164,7 +164,7 @@ struct parallel_overlay
                 long overlay_cutoff,
                 long partition_cutoff)
     {
-        boost::shared_ptr<typename TaskRes::return_type> output_collection(boost::make_shared<typename TaskRes::return_type>());
+        std::shared_ptr<typename TaskRes::return_type> output_collection(std::make_shared<typename TaskRes::return_type>());
         auto out = std::back_inserter(*output_collection);
 
         if ( geometry::num_points(geometry1) == 0
@@ -253,7 +253,7 @@ std::cout << "traverse" << std::endl;
             // Traverse through intersection/turn points and create rings of them.
             // Note that these rings are always in clockwise order, even in CCW polygons,
             // and are marked as "to be reversed" below
-            boost::shared_ptr<ring_container_type> rings(boost::make_shared<ring_container_type>());
+            std::shared_ptr<ring_container_type> rings(std::make_shared<ring_container_type>());
             traverse<Reverse1, Reverse2, Geometry1, Geometry2>::apply
                 (
                     geometry1, geometry2,

@@ -25,7 +25,7 @@
 #endif
 #include <boost/thread/future.hpp>
 #include <boost/exception/all.hpp>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 #include <type_traits>
 #include <boost/mpl/not.hpp>
 #include <boost/mpl/and.hpp>

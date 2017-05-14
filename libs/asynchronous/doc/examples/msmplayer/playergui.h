@@ -7,7 +7,7 @@
 #ifndef CALCULATOR_H
 #define CALCULATOR_H
 #include <boost/asio.hpp>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 
 #include <boost/asynchronous/extensions/qt/qt_servant.hpp>
 
@@ -90,9 +90,9 @@ private:
     PlayerLogicProxy logic_;
     // our asio worker thread
     // is used to simulate hardware
-    boost::shared_ptr<boost::asio::io_service > ioservice_;
-    boost::shared_ptr<boost::asio::io_service::work> work_;
-    boost::shared_ptr<boost::thread> thread_;
+    std::shared_ptr<boost::asio::io_service > ioservice_;
+    std::shared_ptr<boost::asio::io_service::work> work_;
+    std::shared_ptr<boost::thread> thread_;
 
 
     std::function<void()> currentCallback;

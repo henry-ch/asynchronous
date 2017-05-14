@@ -130,7 +130,7 @@ namespace detail {
 template <class Range, class ResultIterator, class Job,class Enable=void>
 struct parallel_move_range_move_helper: public boost::asynchronous::continuation_task<Range>
 {
-    parallel_move_range_move_helper(boost::shared_ptr<Range> range, ResultIterator out, long cutoff,
+    parallel_move_range_move_helper(std::shared_ptr<Range> range, ResultIterator out, long cutoff,
                         const std::string& task_name, std::size_t prio)
         :boost::asynchronous::continuation_task<Range>(task_name)
         ,range_(range),out_(out),cutoff_(cutoff),prio_(prio)
@@ -146,7 +146,7 @@ struct parallel_move_range_move_helper: public boost::asynchronous::continuation
         boost::asynchronous::continuation_result<Range> task_res = this->this_task_result();
         try
         {
-            boost::shared_ptr<Range> range = std::move(range_);
+            std::shared_ptr<Range> range = std::move(range_);
             // advance up to cutoff
             auto it = boost::asynchronous::detail::find_cutoff(boost::begin(*range),cutoff_,boost::end(*range));
             std::size_t dist = std::distance(boost::begin(*range), it);
@@ -188,7 +188,7 @@ struct parallel_move_range_move_helper: public boost::asynchronous::continuation
             task_res.set_exception(boost::copy_exception(e));
         }
     }
-    boost::shared_ptr<Range> range_;
+    std::shared_ptr<Range> range_;
     ResultIterator out_;
     long cutoff_;
     std::size_t prio_;
@@ -205,7 +205,7 @@ parallel_move(Range&& range, ResultIterator out, long cutoff,
              const std::string& task_name="", std::size_t prio=0)
 #endif
 {
-    auto r = boost::make_shared<Range>(std::forward<Range>(range));
+    auto r = std::make_shared<Range>(std::forward<Range>(range));
     return boost::asynchronous::top_level_callback_continuation_job<Range, Job>
             (boost::asynchronous::detail::parallel_move_range_move_helper<Range, ResultIterator, Job>
                 (r,out,cutoff,task_name,prio));

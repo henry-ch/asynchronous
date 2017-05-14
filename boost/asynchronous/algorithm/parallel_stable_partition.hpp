@@ -393,7 +393,7 @@ template <class Range, class Iterator,class Func, class Job,class Enable=void>
 struct parallel_stable_partition_range_move_helper:
         public boost::asynchronous::continuation_task<std::pair<Range,Iterator>>
 {
-    parallel_stable_partition_range_move_helper(boost::shared_ptr<Range> range,Iterator beg, Iterator end,Func func,long cutoff,
+    parallel_stable_partition_range_move_helper(std::shared_ptr<Range> range,Iterator beg, Iterator end,Func func,long cutoff,
                         const std::string& task_name, std::size_t prio)
         :boost::asynchronous::continuation_task<std::pair<Range,Iterator>>(task_name)
         ,range_(range),beg_(beg),end_(end),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
@@ -409,9 +409,9 @@ struct parallel_stable_partition_range_move_helper:
         boost::asynchronous::continuation_result<std::pair<Range,Iterator>> task_res = this->this_task_result();
         try
         {
-            boost::shared_ptr<Range> range = range_;
+            std::shared_ptr<Range> range = range_;
             // TODO better ctor?
-            boost::shared_ptr<Range> new_range = boost::make_shared<Range>(range->size());
+            std::shared_ptr<Range> new_range = std::make_shared<Range>(range->size());
             auto cont = boost::asynchronous::parallel_stable_partition<decltype(beg_),decltype(beg_),Func,Job>
                     (beg_,end_,boost::begin(*new_range),std::move(func_),cutoff_,this->get_name(),prio_);
             cont.on_done([task_res,range,new_range]
@@ -432,7 +432,7 @@ struct parallel_stable_partition_range_move_helper:
             task_res.set_exception(boost::copy_exception(e));
         }
     }
-    boost::shared_ptr<Range> range_;
+    std::shared_ptr<Range> range_;
     Iterator beg_;
     Iterator end_;
     Func func_;
@@ -454,7 +454,7 @@ auto parallel_stable_partition(Range&& range,Func func,long cutoff,
               boost::asynchronous::detail::callback_continuation<std::pair<Range,decltype(range.begin())>,Job> >::type
 
 {
-    auto r = boost::make_shared<Range>(std::forward<Range>(range));
+    auto r = std::make_shared<Range>(std::forward<Range>(range));
     auto beg = boost::begin(*r);
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<std::pair<Range,decltype(boost::begin(range))>,Job>

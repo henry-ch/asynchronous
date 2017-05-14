@@ -57,14 +57,14 @@ struct Servant : boost::asynchronous::trackable_servant<>
         m_counter = cpt;
         m_current=0;
         m_worker_ids.clear();
-        boost::shared_ptr<boost::promise<void> > apromise(new boost::promise<void>);
+        std::shared_ptr<boost::promise<void> > apromise(new boost::promise<void>);
         boost::promise<void> block_promise;
         boost::shared_future<void> fub = block_promise.get_future();
         std::vector<boost::shared_future<void> > first_tasks;
         // start long tasks
         for (size_t i = 0; i< m_counter ; ++i)
         {
-            boost::shared_ptr<boost::promise<void> > bpromise(new boost::promise<void>);
+            std::shared_ptr<boost::promise<void> > bpromise(new boost::promise<void>);
             if (i<4)
             {
                 boost::shared_future<void> fubp = bpromise->get_future();
@@ -101,7 +101,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                  boost::asynchronous::lockfree_queue<>>>(8,16));
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant test_many_tasks not posted.");
         m_current=0;
-        boost::shared_ptr<boost::promise<void> > apromise(new boost::promise<void>);
+        std::shared_ptr<boost::promise<void> > apromise(new boost::promise<void>);
         boost::promise<void> block_promise;
         boost::shared_future<void> fub = block_promise.get_future();
         // start long tasks
@@ -122,7 +122,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         return apromise->get_future();
     }
 
-boost::shared_ptr<boost::promise<void> > m_dtor_done;
+std::shared_ptr<boost::promise<void> > m_dtor_done;
 size_t m_counter;
 size_t m_current;
 std::set<boost::thread::id> m_worker_ids;

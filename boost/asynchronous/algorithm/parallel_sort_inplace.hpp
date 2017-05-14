@@ -194,7 +194,7 @@ parallel_sort_move_inplace(Range&& range,Func func,long cutoff,
                    const std::string& task_name="", std::size_t prio=0)
 #endif
 {
-    auto r = boost::make_shared<Range>(std::forward<Range>(range));
+    auto r = std::make_shared<Range>(std::forward<Range>(range));
     auto beg = boost::begin(*r);
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
@@ -211,7 +211,7 @@ parallel_stable_sort_move_inplace(Range&& range,Func func,long cutoff,
                           const std::string& task_name="", std::size_t prio=0)
 #endif
 {
-    auto r = boost::make_shared<Range>(std::forward<Range>(range));
+    auto r = std::make_shared<Range>(std::forward<Range>(range));
     auto beg = boost::begin(*r);
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
@@ -229,7 +229,7 @@ parallel_spreadsort_move_inplace(Range&& range,Func func,long cutoff,
                    const std::string& task_name="", std::size_t prio=0)
 #endif
 {
-    auto r = boost::make_shared<Range>(std::forward<Range>(range));
+    auto r = std::make_shared<Range>(std::forward<Range>(range));
     auto beg = boost::begin(*r);
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>

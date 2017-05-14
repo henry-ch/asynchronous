@@ -1,5 +1,5 @@
 #include <iostream>
-#include <boost/enable_shared_from_this.hpp>
+
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/scheduler/threadpool_scheduler.hpp>
@@ -123,7 +123,7 @@ struct Servant : boost::asynchronous::trackable_servant<log_servant_job,log_serv
     }
 private:
 // for testing
-boost::shared_ptr<boost::promise<int> > m_promise;
+std::shared_ptr<boost::promise<int> > m_promise;
 int m_total;
 unsigned int m_tasks_done;//will count until 10, then we are done (we start 10 tasks)
 // keep the remore pool composite connection alive

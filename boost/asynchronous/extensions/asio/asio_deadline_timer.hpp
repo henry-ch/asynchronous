@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <boost/asio.hpp>
 #include <functional>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/servant_proxy.hpp>
@@ -60,7 +60,7 @@ public:
         m_timer.reset(new boost::asio::deadline_timer(*boost::asynchronous::get_io_service<>(),duration));
     }
 private:
-   boost::shared_ptr<boost::asio::deadline_timer> m_timer; 
+   std::shared_ptr<boost::asio::deadline_timer> m_timer; 
 };
 
 class asio_deadline_timer_proxy : public boost::asynchronous::servant_proxy< boost::asynchronous::asio_deadline_timer_proxy, boost::asynchronous::asio_deadline_timer >

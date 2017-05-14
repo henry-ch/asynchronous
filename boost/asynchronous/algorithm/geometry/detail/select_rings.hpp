@@ -41,7 +41,7 @@ inline boost::asynchronous::detail::callback_continuation<Fct,Job>
 update_selection_map(Geometry1 geometry1,
                      Geometry2 geometry2,
                      RingTurnInfoMap turn_info_per_ring,
-                     boost::shared_ptr<RingPropertyMap> map_with_all,
+                     std::shared_ptr<RingPropertyMap> map_with_all,
                      long cutoff)
 {
     typedef decltype(boost::begin(*map_with_all)) Iterator;
@@ -73,7 +73,7 @@ parallel_select_rings(Geometry1 geometry1, Geometry2 geometry2,
 {
     typedef typename geometry::tag<Geometry1>::type tag1;
     typedef typename geometry::tag<Geometry2>::type tag2;
-    boost::shared_ptr<RingPropertyMap> map_with_all(boost::make_shared<RingPropertyMap>());
+    std::shared_ptr<RingPropertyMap> map_with_all(std::make_shared<RingPropertyMap>());
     dispatch::select_rings<tag1, Geometry1>::apply(geometry1, geometry2,
                 ring_identifier(0, -1, -1), *map_with_all);
     dispatch::select_rings<tag2, Geometry2>::apply(geometry2, geometry1,
@@ -97,7 +97,7 @@ parallel_select_rings(Geometry& geometry,
 {
     typedef typename geometry::tag<Geometry>::type tag;
 
-    boost::shared_ptr<SelectionMap> map_with_all(boost::make_shared<SelectionMap>());
+    std::shared_ptr<SelectionMap> map_with_all(std::make_shared<SelectionMap>());
     dispatch::select_rings<tag, Geometry>::apply(geometry,
                 ring_identifier(0, -1, -1), *map_with_all, midpoint);
 

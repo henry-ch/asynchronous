@@ -98,14 +98,14 @@ struct any_queue_concept
     virtual void reset_max_queue_size()=0;
 };
 template <class JOB>
-struct any_queue_ptr: boost::shared_ptr<boost::asynchronous::any_queue_concept<JOB> >
+struct any_queue_ptr: std::shared_ptr<boost::asynchronous::any_queue_concept<JOB> >
 {
     any_queue_ptr():
-        boost::shared_ptr<boost::asynchronous::any_queue_concept<JOB> > (){}
+        std::shared_ptr<boost::asynchronous::any_queue_concept<JOB> > (){}
 
     template <class U>
     any_queue_ptr(U const& u):
-        boost::shared_ptr<boost::asynchronous::any_queue_concept<JOB> > (u){}
+        std::shared_ptr<boost::asynchronous::any_queue_concept<JOB> > (u){}
 };
 
 #endif

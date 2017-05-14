@@ -10,8 +10,8 @@
 #ifndef BOOST_ASYNCHRON_SCHEDULER_LOCKABLE_WEAK_SCHEDULER_HPP
 #define BOOST_ASYNCHRON_SCHEDULER_LOCKABLE_WEAK_SCHEDULER_HPP
 
-#include <boost/weak_ptr.hpp>
-#include <boost/shared_ptr.hpp>
+
+#include <memory>
 #include <boost/asynchronous/any_scheduler.hpp>
 
 namespace boost { namespace asynchronous { namespace detail
@@ -22,16 +22,16 @@ namespace boost { namespace asynchronous { namespace detail
 template <class S>
 struct lockable_weak_scheduler
 {
-    lockable_weak_scheduler(boost::shared_ptr<S> scheduler): m_scheduler(scheduler){}
-    lockable_weak_scheduler(boost::weak_ptr<S> scheduler): m_scheduler(scheduler){}
+    lockable_weak_scheduler(std::shared_ptr<S> scheduler): m_scheduler(scheduler){}
+    lockable_weak_scheduler(std::weak_ptr<S> scheduler): m_scheduler(scheduler){}
     any_shared_scheduler<typename S::job_type> lock()const
     {
-        boost::shared_ptr<S> wscheduler = m_scheduler.lock();
+        std::shared_ptr<S> wscheduler = m_scheduler.lock();
         any_shared_scheduler_ptr<typename S::job_type> pscheduler(std::move(wscheduler));
         return any_shared_scheduler<typename S::job_type>(std::move(pscheduler));
     }
 private:
-    boost::weak_ptr<S> m_scheduler;
+    std::weak_ptr<S> m_scheduler;
 };
 
 }}}

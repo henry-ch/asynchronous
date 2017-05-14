@@ -37,7 +37,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     boost::future<int> start_async_work()
     {
         // we need a promise to inform caller when we're done
-        boost::shared_ptr<boost::promise<int> > aPromise(new boost::promise<int>);
+        std::shared_ptr<boost::promise<int> > aPromise(new boost::promise<int>);
         boost::future<int> fu = aPromise->get_future();
         auto cb = make_safe_callback(
                     [aPromise](int,boost::future<int> fu)mutable

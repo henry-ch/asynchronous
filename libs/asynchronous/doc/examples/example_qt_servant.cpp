@@ -1,7 +1,7 @@
 #include <QApplication>
 #include <QPushButton>
 #include <iostream>
-#include <boost/enable_shared_from_this.hpp>
+
 
 #include <boost/asynchronous/scheduler/threadpool_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>

@@ -90,7 +90,7 @@ struct Servant2 : boost::asynchronous::trackable_servant<>
     }
     boost::future<void> doIt()
     {
-        boost::shared_ptr<boost::promise<void> > p (new boost::promise<void>);
+        std::shared_ptr<boost::promise<void> > p (new boost::promise<void>);
         boost::future<void> fu = p->get_future();
         boost::thread::id this_thread_id = boost::this_thread::get_id();
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant2 doIt not posted.");

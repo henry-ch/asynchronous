@@ -13,7 +13,7 @@
 #include <vector>
 
 #include <boost/noncopyable.hpp>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 #include <boost/thread/thread.hpp>
 #include <boost/thread/tss.hpp>
 
@@ -62,9 +62,9 @@ public:
     boost::asynchronous::any_interruptible interruptible_post(typename queue_type::job_type job,
                                                           std::size_t prio)
     {
-        boost::shared_ptr<boost::asynchronous::detail::interrupt_state>
-                state = boost::make_shared<boost::asynchronous::detail::interrupt_state>();
-        boost::shared_ptr<boost::promise<boost::thread*> > wpromise = boost::make_shared<boost::promise<boost::thread*> >();
+        std::shared_ptr<boost::asynchronous::detail::interrupt_state>
+                state = std::make_shared<boost::asynchronous::detail::interrupt_state>();
+        std::shared_ptr<boost::promise<boost::thread*> > wpromise = std::make_shared<boost::promise<boost::thread*> >();
         boost::asynchronous::job_traits<typename queue_type::job_type>::set_posted_time(job);
         boost::asynchronous::interruptible_job<typename queue_type::job_type,this_type>
                 ijob(std::move(job),wpromise,state);
@@ -88,9 +88,9 @@ public:
     }
     boost::asynchronous::any_interruptible interruptible_post(typename queue_type::job_type& job, std::size_t prio=0)
     {
-        boost::shared_ptr<boost::asynchronous::detail::interrupt_state>
-                state = boost::make_shared<boost::asynchronous::detail::interrupt_state>();
-        boost::shared_ptr<boost::promise<boost::thread*> > wpromise = boost::make_shared<boost::promise<boost::thread*> >();
+        std::shared_ptr<boost::asynchronous::detail::interrupt_state>
+                state = std::make_shared<boost::asynchronous::detail::interrupt_state>();
+        std::shared_ptr<boost::promise<boost::thread*> > wpromise = std::make_shared<boost::promise<boost::thread*> >();
         boost::asynchronous::job_traits<typename queue_type::job_type>::set_posted_time(job);
         boost::asynchronous::interruptible_job<typename queue_type::job_type,this_type> ijob(job,wpromise,state);
 
@@ -116,25 +116,25 @@ public:
 protected:
 
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    single_queue_scheduler_policy(boost::shared_ptr<queue_type>&& queue)
-        : m_queue(std::forward<boost::shared_ptr<queue_type> >(queue))
+    single_queue_scheduler_policy(std::shared_ptr<queue_type>&& queue)
+        : m_queue(std::forward<std::shared_ptr<queue_type> >(queue))
     {
     }
 #endif
 #ifndef BOOST_NO_CXX11_VARIADIC_TEMPLATES
     template<typename... Args>
-    single_queue_scheduler_policy(Args... args): m_queue(boost::make_shared<queue_type>(std::move(args)...))
+    single_queue_scheduler_policy(Args... args): m_queue(std::make_shared<queue_type>(std::move(args)...))
     {
     }
 #endif
 #ifndef _MSC_VER
     single_queue_scheduler_policy()
     {
-        m_queue = boost::make_shared<queue_type>();
+        m_queue = std::make_shared<queue_type>();
     }
 #endif
 
-    boost::shared_ptr<queue_type> m_queue;
+    std::shared_ptr<queue_type> m_queue;
 };
 
 template<class Q>

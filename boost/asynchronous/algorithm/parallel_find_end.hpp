@@ -194,7 +194,7 @@ struct parallel_find_end_range_helper: public boost::asynchronous::continuation_
             {
                 try
                 {
-                    auto res = boost::make_shared<typename Continuation::return_type>(std::move(std::get<0>(continuation_res).get()));
+                    auto res = std::make_shared<typename Continuation::return_type>(std::move(std::get<0>(continuation_res).get()));
                     auto new_continuation = boost::asynchronous::parallel_find_end
                             <Iterator1,
                             decltype(boost::begin(std::declval<typename Continuation::return_type>())),

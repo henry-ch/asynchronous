@@ -28,7 +28,7 @@ class server_connection: public boost::asynchronous::trackable_servant<boost::as
 {
 public:
     explicit server_connection(boost::asynchronous::any_weak_scheduler<boost::asynchronous::any_callable> scheduler,
-                               boost::shared_ptr<boost::asio::ip::tcp::socket> socket)
+                               std::shared_ptr<boost::asio::ip::tcp::socket> socket)
         : boost::asynchronous::trackable_servant<boost::asynchronous::any_callable>(scheduler)
         , m_socket(socket)
     {
@@ -39,7 +39,7 @@ public:
 
     void start(std::function<void(boost::asynchronous::tcp::client_request)> callback)
     {
-        boost::shared_ptr<std::vector<char> > inbound_header = boost::make_shared<std::vector<char> >(m_header_length);
+        std::shared_ptr<std::vector<char> > inbound_header = std::make_shared<std::vector<char> >(m_header_length);
         auto asocket= m_socket;
         boost::asio::async_read(*m_socket,boost::asio::buffer(*inbound_header),
                                 this->make_safe_callback(std::function<void(boost::system::error_code ec, size_t )>(
@@ -57,7 +57,7 @@ public:
                         callback(boost::asynchronous::tcp::client_request(BOOST_ASYNCHRONOUS_TCP_CLIENT_COM_ERROR));
                     }
                     // read message
-                    boost::shared_ptr<std::vector<char> > inbound_buffer = boost::make_shared<std::vector<char> >();
+                    std::shared_ptr<std::vector<char> > inbound_buffer = std::make_shared<std::vector<char> >();
                     inbound_buffer->resize(inbound_data_size);
                     auto asocket= m_socket;
                     boost::asio::async_read(*m_socket,boost::asio::buffer(*inbound_buffer),
@@ -104,7 +104,7 @@ public:
         std::ostringstream archive_stream;
         typename SerializableType::oarchive archive(archive_stream);
         archive << reply;
-        boost::shared_ptr<std::string> outbound_buffer = boost::make_shared<std::string>(archive_stream.str());
+        std::shared_ptr<std::string> outbound_buffer = std::make_shared<std::string>(archive_stream.str());
 
         // Format the header.
         std::ostringstream header_stream;
@@ -115,7 +115,7 @@ public:
             // Something went wrong
             cb_if_failed(reply);
         }
-        boost::shared_ptr<std::string> outbound_header = boost::make_shared<std::string>(header_stream.str());
+        std::shared_ptr<std::string> outbound_header = std::make_shared<std::string>(header_stream.str());
         // Write the serialized data to the socket. We use "gather-write" to send
         // both the header and the data in a single write operation.
         std::vector<boost::asio::const_buffer> buffers;
@@ -135,7 +135,7 @@ public:
     }
 
 private:
-    boost::shared_ptr<boost::asio::ip::tcp::socket> m_socket;
+    std::shared_ptr<boost::asio::ip::tcp::socket> m_socket;
     std::string m_address;
     // The size of a fixed length header.
     // TODO not fixed
@@ -149,7 +149,7 @@ struct server_connection_proxy : public boost::asynchronous::servant_proxy<serve
 public:
     template<class Scheduler>
     server_connection_proxy( Scheduler scheduler,
-                            boost::shared_ptr<boost::asio::ip::tcp::socket> socket)
+                            std::shared_ptr<boost::asio::ip::tcp::socket> socket)
         : boost::asynchronous::servant_proxy<server_connection_proxy,
                                              boost::asynchronous::tcp::server_connection<Job>>
           (scheduler,std::move(socket))

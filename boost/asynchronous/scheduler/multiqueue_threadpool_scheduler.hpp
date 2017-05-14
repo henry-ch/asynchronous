@@ -18,13 +18,13 @@
 #define BOOST_THREAD_PROVIDES_FUTURE
 #endif
 #include <boost/noncopyable.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/weak_ptr.hpp>
+#include <memory>
+
 #include <boost/thread/thread.hpp>
 #include <functional>
 #include <boost/thread/future.hpp>
 #include <boost/thread/tss.hpp>
-#include <boost/enable_shared_from_this.hpp>
+
 
 #include <boost/asynchronous/scheduler/detail/scheduler_helpers.hpp>
 #include <boost/asynchronous/scheduler/detail/exceptions.hpp>
@@ -75,7 +75,7 @@ public:
         for (size_t i = 0; i< number_of_workers;++i)
         {
             m_private_queues.push_back(
-                        boost::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >());
+                        std::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >());
         }
     }
     template<typename... Args>
@@ -88,13 +88,13 @@ public:
         for (size_t i = 0; i< number_of_workers;++i)
         {
             m_private_queues.push_back(
-                        boost::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >());
+                        std::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >());
         }
         set_name(name);
     }
-    void constructor_done(boost::weak_ptr<this_type> weak_self)
+    void constructor_done(std::weak_ptr<this_type> weak_self)
     {
-        m_diagnostics = boost::make_shared<diag_type>(m_number_of_workers);
+        m_diagnostics = std::make_shared<diag_type>(m_number_of_workers);
         m_thread_ids.reserve(m_number_of_workers);
         m_group.reset(new boost::thread_group);
         for (size_t i = 0; i< m_number_of_workers;++i)
@@ -189,7 +189,7 @@ public:
         }
     }
     // try to execute a job, return true
-    static bool execute_one_job(std::vector<boost::shared_ptr<queue_type> > const& queues,size_t index,CPULoad& cpu_load,boost::shared_ptr<diag_type> diagnostics,
+    static bool execute_one_job(std::vector<std::shared_ptr<queue_type> > const& queues,size_t index,CPULoad& cpu_load,std::shared_ptr<diag_type> diagnostics,
                                 std::list<boost::asynchronous::any_continuation>& waiting)
     {
         bool popped = false;
@@ -269,11 +269,11 @@ public:
         return popped;
     }
 
-    static void run(std::vector<boost::shared_ptr<queue_type> > const& queues,
-                    boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > const& private_queue,
-                    size_t index,boost::shared_ptr<diag_type> diagnostics,
+    static void run(std::vector<std::shared_ptr<queue_type> > const& queues,
+                    std::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > const& private_queue,
+                    size_t index,std::shared_ptr<diag_type> diagnostics,
                     boost::shared_future<boost::thread*> self,
-                    boost::weak_ptr<this_type> this_)
+                    std::weak_ptr<this_type> this_)
     {
         boost::thread* t = self.get();
         boost::asynchronous::detail::multi_queue_scheduler_policy<Q,FindPosition>::m_self_thread.reset(new thread_ptr_wrapper(t));
@@ -327,10 +327,10 @@ public:
     }
 private:
     size_t m_number_of_workers;
-    boost::shared_ptr<boost::thread_group> m_group;
+    std::shared_ptr<boost::thread_group> m_group;
     std::vector<boost::thread::id> m_thread_ids;
-    boost::shared_ptr<diag_type> m_diagnostics;
-    std::vector<boost::shared_ptr<
+    std::shared_ptr<diag_type> m_diagnostics;
+    std::vector<std::shared_ptr<
                 boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable>>> m_private_queues;
     std::function<void(boost::asynchronous::scheduler_diagnostics)> m_diagnostics_fct;
     const std::string m_name;

@@ -240,7 +240,7 @@ namespace detail
 template <class Range1, class Range2, class T, class BinaryOperation, class Reduce, class Job, class Enable1=void, class Enable2=void>
 struct parallel_inner_product_range_move_helper: public boost::asynchronous::continuation_task<T>
 {
-    parallel_inner_product_range_move_helper(boost::shared_ptr<Range1> range1, boost::shared_ptr<Range2> range2, BinaryOperation op, Reduce red,
+    parallel_inner_product_range_move_helper(std::shared_ptr<Range1> range1, std::shared_ptr<Range2> range2, BinaryOperation op, Reduce red,
                                              long cutoff, const std::string& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<T>(task_name)
         , range1_(range1)
@@ -256,8 +256,8 @@ struct parallel_inner_product_range_move_helper: public boost::asynchronous::con
         boost::asynchronous::continuation_result<T> task_res = this->this_task_result();
         try
         {
-            boost::shared_ptr<Range1> range1 = std::move(range1_);
-            boost::shared_ptr<Range2> range2 = std::move(range2_);
+            std::shared_ptr<Range1> range1 = std::move(range1_);
+            std::shared_ptr<Range2> range2 = std::move(range2_);
             // Get iterators for range 1
             auto beg1 = boost::begin(*range1);
             auto end1 = boost::end(*range1);
@@ -302,8 +302,8 @@ struct parallel_inner_product_range_move_helper: public boost::asynchronous::con
         }
     }
 
-    boost::shared_ptr<Range1> range1_;
-    boost::shared_ptr<Range2> range2_;
+    std::shared_ptr<Range1> range1_;
+    std::shared_ptr<Range2> range2_;
     BinaryOperation op_;
     Reduce red_;
     long cutoff_;
@@ -321,7 +321,7 @@ struct parallel_inner_product_range_move_helper<Range1, Range2, T, BinaryOperati
     // default constructor only when deserialized immediately after
     parallel_inner_product_range_move_helper() : boost::asynchronous::serializable_task("parallel_inner_product_range_move_helper") {}
 
-    parallel_inner_product_range_move_helper(boost::shared_ptr<Range1> range1, boost::shared_ptr<Range2> range2, BinaryOperation op, Reduce red,
+    parallel_inner_product_range_move_helper(std::shared_ptr<Range1> range1, std::shared_ptr<Range2> range2, BinaryOperation op, Reduce red,
                                              long cutoff, const std::string& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<T>(task_name)
         , boost::asynchronous::serializable_task(op.get_task_name())
@@ -337,7 +337,7 @@ struct parallel_inner_product_range_move_helper<Range1, Range2, T, BinaryOperati
         , beg2_(boost::begin(*range2_))
     {}
 
-    parallel_inner_product_range_move_helper(boost::shared_ptr<Range1> range1, boost::shared_ptr<Range2> range2,
+    parallel_inner_product_range_move_helper(std::shared_ptr<Range1> range1, std::shared_ptr<Range2> range2,
                                              Iterator1 beg1, Iterator1 end1, Iterator2 beg2,
                                              BinaryOperation op, Reduce red,
                                              long cutoff, const std::string& task_name, std::size_t prio)
@@ -420,8 +420,8 @@ struct parallel_inner_product_range_move_helper<Range1, Range2, T, BinaryOperati
     template <class Archive>
     void load(Archive & ar, const unsigned int /*version*/)
     {
-        range1_ = boost::make_shared<Range1>();
-        range2_ = boost::make_shared<Range2>();
+        range1_ = std::make_shared<Range1>();
+        range2_ = std::make_shared<Range2>();
         ar & (*range1_);
         ar & (*range2_);
         ar & op_;
@@ -436,8 +436,8 @@ struct parallel_inner_product_range_move_helper<Range1, Range2, T, BinaryOperati
 
     BOOST_SERIALIZATION_SPLIT_MEMBER()
 
-    boost::shared_ptr<Range1> range1_;
-    boost::shared_ptr<Range2> range2_;
+    std::shared_ptr<Range1> range1_;
+    std::shared_ptr<Range2> range2_;
     BinaryOperation op_;
     Reduce red_;
     long cutoff_;
@@ -483,8 +483,8 @@ parallel_inner_product(Range1 && range1, Range2 && range2, BinaryOperation op, R
                        const std::string& task_name="", std::size_t prio=0)
 #endif
 {
-    auto r1 = boost::make_shared<Range1>(std::forward<Range1>(range1));
-    auto r2 = boost::make_shared<Range2>(std::forward<Range2>(range2));
+    auto r1 = std::make_shared<Range1>(std::forward<Range1>(range1));
+    auto r2 = std::make_shared<Range2>(std::forward<Range2>(range2));
     if (boost::begin(*r1) == boost::end(*r1)) {
         // There is no data, return the default value
         return boost::asynchronous::top_level_callback_continuation_job<T, Job>(boost::asynchronous::detail::default_value_helper<T>(value, task_name));
@@ -532,8 +532,8 @@ parallel_inner_product(Range1 && range1, Range2 && range2, BinaryOperation op, R
                        const std::string& task_name="", std::size_t prio=0)
 #endif
 {
-    auto r1 = boost::make_shared<Range1>(std::forward<Range1>(range1));
-    auto r2 = boost::make_shared<Range2>(std::forward<Range2>(range2));
+    auto r1 = std::make_shared<Range1>(std::forward<Range1>(range1));
+    auto r2 = std::make_shared<Range2>(std::forward<Range2>(range2));
     if (boost::begin(*r1) == boost::end(*r1)) {
         // There is no data, return the default value
         return boost::asynchronous::top_level_callback_continuation_job<T, Job>(boost::asynchronous::detail::default_value_helper<T>(task_name));

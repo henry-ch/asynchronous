@@ -1,5 +1,5 @@
 #include <iostream>
-#include <boost/enable_shared_from_this.hpp>
+
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
@@ -83,7 +83,7 @@ struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any
     }
 private:
 // for testing
-boost::shared_ptr<boost::promise<int> > m_promise;
+std::shared_ptr<boost::promise<int> > m_promise;
 int m_total;
 unsigned int m_tasks_done;//will count until 10, then we are done (we start 10 tasks)
 };

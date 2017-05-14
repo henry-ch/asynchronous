@@ -222,7 +222,7 @@ template <class Range, class Func, class Job,class Enable=void>
 struct parallel_count_range_move_helper: public boost::asynchronous::continuation_task<long>
 {
     template <class Iterator>
-    parallel_count_range_move_helper(boost::shared_ptr<Range> range,Iterator , Iterator,Func func,long cutoff,
+    parallel_count_range_move_helper(std::shared_ptr<Range> range,Iterator , Iterator,Func func,long cutoff,
                         const std::string& task_name, std::size_t prio)
         :boost::asynchronous::continuation_task<long>(task_name)
         ,range_(range),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
@@ -232,7 +232,7 @@ struct parallel_count_range_move_helper: public boost::asynchronous::continuatio
         boost::asynchronous::continuation_result<long> task_res = this->this_task_result();
         try
         {
-            boost::shared_ptr<Range> range = std::move(range_);
+            std::shared_ptr<Range> range = std::move(range_);
             // advance up to cutoff
             auto it = boost::asynchronous::detail::find_cutoff(boost::begin(*range),cutoff_,boost::end(*range));
             // if not at end, recurse, otherwise execute here
@@ -270,7 +270,7 @@ struct parallel_count_range_move_helper: public boost::asynchronous::continuatio
             task_res.set_exception(boost::copy_exception(e));
         }
     }
-    boost::shared_ptr<Range> range_;
+    std::shared_ptr<Range> range_;
     Func func_;
     long cutoff_;
     std::size_t prio_;
@@ -286,7 +286,7 @@ struct parallel_count_range_move_helper<Range,Func,Job,typename std::enable_if<b
     {
     }
     template <class Iterator>
-    parallel_count_range_move_helper(boost::shared_ptr<Range> range,Iterator beg, Iterator end,Func func,long cutoff,
+    parallel_count_range_move_helper(std::shared_ptr<Range> range,Iterator beg, Iterator end,Func func,long cutoff,
                         const std::string& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<long>(task_name)
         , boost::asynchronous::serializable_task(func.get_task_name())
@@ -351,7 +351,7 @@ struct parallel_count_range_move_helper<Range,Func,Job,typename std::enable_if<b
     template <class Archive>
     void load(Archive & ar, const unsigned int /*version*/)
     {
-        range_ = boost::make_shared<Range>();
+        range_ = std::make_shared<Range>();
         ar & (*range_);
         ar & func_;
         ar & cutoff_;
@@ -361,7 +361,7 @@ struct parallel_count_range_move_helper<Range,Func,Job,typename std::enable_if<b
         end_ = boost::end(*range_);
     }
     BOOST_SERIALIZATION_SPLIT_MEMBER()
-    boost::shared_ptr<Range> range_;
+    std::shared_ptr<Range> range_;
     Func func_;
     long cutoff_;
     std::string task_name_;
@@ -379,7 +379,7 @@ parallel_count_if(Range&& range,Func func,long cutoff,
                const std::string& task_name="", std::size_t prio=0)
 #endif
 {
-    auto r = boost::make_shared<Range>(std::forward<Range>(range));
+    auto r = std::make_shared<Range>(std::forward<Range>(range));
     auto beg = boost::begin(*r);
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<long,Job>
@@ -394,7 +394,7 @@ parallel_count(Range&& range,const T& value,long cutoff,
                const std::string& task_name="", std::size_t prio=0)
 #endif
 {
-    auto r = boost::make_shared<Range>(std::forward<Range>(range));
+    auto r = std::make_shared<Range>(std::forward<Range>(range));
     auto beg = boost::begin(*r);
     auto end = boost::end(*r);
     auto l = [value](decltype(*beg) i)

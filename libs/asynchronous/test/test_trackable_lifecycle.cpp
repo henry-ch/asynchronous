@@ -64,7 +64,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         if (!!m_dtor_done)
             m_dtor_done->set_value();
     }
-    void start_endless_async_work(boost::shared_ptr<boost::promise<void> > startp,boost::shared_future<void> end)
+    void start_endless_async_work(std::shared_ptr<boost::promise<void> > startp,boost::shared_future<void> end)
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_endless_async_work not posted.");
         // start long tasks
@@ -89,7 +89,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     }
 
 // for start_endless_async_work2
-boost::shared_ptr<boost::promise<void> > m_dtor_done;
+std::shared_ptr<boost::promise<void> > m_dtor_done;
 };
 
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>
@@ -114,7 +114,7 @@ BOOST_AUTO_TEST_CASE( test_trackable_alive_callback_check )
         
         boost::promise<void> p;
         boost::shared_future<void> end=p.get_future();
-        boost::shared_ptr<boost::promise<void> > startp(new boost::promise<void>);
+        std::shared_ptr<boost::promise<void> > startp(new boost::promise<void>);
         boost::shared_future<void> start=startp->get_future();
         {
             ServantProxy proxy(scheduler);

@@ -381,7 +381,7 @@ struct parallel_section_visitor
     Geometry1 m_geometry1;
     int m_source_id2;
     Geometry2 m_geometry2;
-    boost::shared_ptr<RobustPolicy> m_rescale_policy;
+    std::shared_ptr<RobustPolicy> m_rescale_policy;
     Turns m_turns;
     InterruptPolicy m_interrupt_policy;
 
@@ -400,7 +400,7 @@ struct parallel_section_visitor
             Turns& turns, InterruptPolicy& ip)
         : m_source_id1(id1), m_geometry1(g1)
         , m_source_id2(id2), m_geometry2(g2)
-        , m_rescale_policy(boost::make_shared<RobustPolicy>(robust_policy))
+        , m_rescale_policy(std::make_shared<RobustPolicy>(robust_policy))
         , m_turns(turns)
         , m_interrupt_policy(ip)
     {}

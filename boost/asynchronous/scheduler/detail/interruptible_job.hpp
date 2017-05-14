@@ -15,7 +15,7 @@
 #endif
 
 #include <boost/thread/future.hpp>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 
 #include <boost/asynchronous/scheduler/detail/interrupt_state.hpp>
 #include <boost/asynchronous/job_traits.hpp>
@@ -33,7 +33,7 @@ struct thread_ptr_wrapper
 struct interrupt_helper
 {
     interrupt_helper(boost::future<boost::thread*>&& worker,
-                     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state)
+                     std::shared_ptr<boost::asynchronous::detail::interrupt_state> state)
         : m_worker(worker.share())
         , m_state(state)
     {}
@@ -43,7 +43,7 @@ struct interrupt_helper
     }
 private:
     boost::shared_future<boost::thread*>  m_worker;
-    boost::shared_ptr<boost::asynchronous::detail::interrupt_state>    m_state;
+    std::shared_ptr<boost::asynchronous::detail::interrupt_state>    m_state;
 };
 template <class Job,class Scheduler>
 struct interruptible_job : public boost::asynchronous::job_traits<Job>::diagnostic_type
@@ -58,8 +58,8 @@ struct interruptible_job : public boost::asynchronous::job_traits<Job>::diagnost
 #else
     interruptible_job(Job job,
 #endif
-                      boost::shared_ptr<boost::promise<boost::thread*> > worker_promise,
-                      boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state)
+                      std::shared_ptr<boost::promise<boost::thread*> > worker_promise,
+                      std::shared_ptr<boost::asynchronous::detail::interrupt_state> state)
         : m_worker(worker_promise)
         , m_state(state)
 #ifndef BOOST_NO_RVALUE_REFERENCES
@@ -84,7 +84,7 @@ struct interruptible_job : public boost::asynchronous::job_traits<Job>::diagnost
         if (m_state->is_interrupted())
         {
             // remove state from tss
-            boost::asynchronous::get_interrupt_state<>(boost::shared_ptr<boost::asynchronous::detail::interrupt_state>(),true);
+            boost::asynchronous::get_interrupt_state<>(std::shared_ptr<boost::asynchronous::detail::interrupt_state>(),true);
             return;
         }
         m_worker->set_value(Scheduler::m_self_thread.get()->m_thread);
@@ -93,7 +93,7 @@ struct interruptible_job : public boost::asynchronous::job_traits<Job>::diagnost
         if (m_state->is_interrupted())
         {
             // remove state from tss
-            boost::asynchronous::get_interrupt_state<>(boost::shared_ptr<boost::asynchronous::detail::interrupt_state>(),true);
+            boost::asynchronous::get_interrupt_state<>(std::shared_ptr<boost::asynchronous::detail::interrupt_state>(),true);
             return;
         }
         try
@@ -111,14 +111,14 @@ struct interruptible_job : public boost::asynchronous::job_traits<Job>::diagnost
             this->set_interrupted(false);
             m_state->complete();
             // remove state from tss
-            boost::asynchronous::get_interrupt_state<>(boost::shared_ptr<boost::asynchronous::detail::interrupt_state>(),true);
+            boost::asynchronous::get_interrupt_state<>(std::shared_ptr<boost::asynchronous::detail::interrupt_state>(),true);
             throw;
         }
         // ok we were not interrupted
         this->set_interrupted(false);
         m_state->complete();
         // remove state from tss
-        boost::asynchronous::get_interrupt_state<>(boost::shared_ptr<boost::asynchronous::detail::interrupt_state>(),true);
+        boost::asynchronous::get_interrupt_state<>(std::shared_ptr<boost::asynchronous::detail::interrupt_state>(),true);
     }
     template<class Archive>
     void serialize(Archive & , const unsigned int /* version */){/* not implemented */}
@@ -128,8 +128,8 @@ struct interruptible_job : public boost::asynchronous::job_traits<Job>::diagnost
         return "";
     }
 
-    boost::shared_ptr<boost::promise<boost::thread*> >                  m_worker;
-    boost::shared_ptr<boost::asynchronous::detail::interrupt_state>     m_state;
+    std::shared_ptr<boost::promise<boost::thread*> >                  m_worker;
+    std::shared_ptr<boost::asynchronous::detail::interrupt_state>     m_state;
     Job                                                                 m_job;
 };
 

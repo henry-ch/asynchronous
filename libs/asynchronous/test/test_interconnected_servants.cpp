@@ -41,7 +41,7 @@ class ServantProxy3 : public boost::asynchronous::servant_proxy<ServantProxy3,Se
 {
 public:
     template <class Scheduler>
-    ServantProxy3(Scheduler s, boost::future<boost::shared_ptr<Servant3> > servant):
+    ServantProxy3(Scheduler s, boost::future<std::shared_ptr<Servant3> > servant):
         boost::asynchronous::servant_proxy<ServantProxy3,Servant3>(s, std::move(servant))
     {}
     BOOST_ASYNC_FUTURE_MEMBER(foo)
@@ -55,7 +55,7 @@ struct Servant2 : boost::asynchronous::trackable_servant<>
     {
 
     }
-    void foo(boost::future<boost::shared_ptr<Servant3>> s)
+    void foo(boost::future<std::shared_ptr<Servant3>> s)
     {
         // create a servant3 in the same thread as servant1
         ServantProxy3 servant(m_servant1_scheduler,std::move(s));
@@ -96,9 +96,9 @@ struct Servant1 : boost::asynchronous::trackable_servant<>
         int i=5;
         m_sink.foo2(boost::ref(i)).get();
 
-        boost::shared_ptr<Servant3> s3 (boost::make_shared<Servant3>(get_scheduler()));
-        boost::promise<boost::shared_ptr<Servant3>> p;
-        boost::future<boost::shared_ptr<Servant3>> fu = p.get_future();
+        std::shared_ptr<Servant3> s3 (std::make_shared<Servant3>(get_scheduler()));
+        boost::promise<std::shared_ptr<Servant3>> p;
+        boost::future<std::shared_ptr<Servant3>> fu = p.get_future();
         p.set_value(s3);
         return m_sink.foo(std::move(fu));
     }

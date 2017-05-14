@@ -15,7 +15,7 @@
 #include <deque>
 #include <functional>
 
-#include <boost/shared_ptr.hpp>
+#include <memory>
 
 #include <boost/asynchronous/trackable_servant.hpp>
 #include <boost/asynchronous/scheduler/tcp/detail/server_response.hpp>
@@ -33,7 +33,7 @@ template <class PoolJobType, class SerializableType = boost::asynchronous::any_s
 struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,PoolJobType>
 {
     typedef int simple_ctor;
-    typedef boost::shared_ptr<typename boost::asynchronous::job_traits<SerializableType>::diagnostic_table_type> diag_type;
+    typedef std::shared_ptr<typename boost::asynchronous::job_traits<SerializableType>::diagnostic_table_type> diag_type;
     typedef server_connection_proxy<SerializableType> server_connection_type;
 
     job_server(boost::asynchronous::any_weak_scheduler<boost::asynchronous::any_callable> scheduler,
@@ -56,7 +56,7 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
 
     void add_task(SerializableType job,diag_type diag)
     {
-        boost::shared_ptr<SerializableType> moved_job(boost::make_shared<SerializableType>(std::move(job)));
+        std::shared_ptr<SerializableType> moved_job(std::make_shared<SerializableType>(std::move(job)));
         this->post_callback(
                     [moved_job]()mutable
                     {
@@ -91,7 +91,7 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
     void no_jobs()
     {
         // inform waiting connections
-        for (typename std::deque<boost::shared_ptr<server_connection_type> >::iterator it
+        for (typename std::deque<std::shared_ptr<server_connection_type> >::iterator it
              = m_waiting_connections.begin();
              it != m_waiting_connections.end(); ++it)
         {
@@ -104,14 +104,14 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
 
 private:
 
-    void handle_connect(boost::shared_ptr<boost::asio::ip::tcp::socket> s)
+    void handle_connect(std::shared_ptr<boost::asio::ip::tcp::socket> s)
     {
-        auto c = boost::make_shared<server_connection_type >(m_asioWorkers,s);
+        auto c = std::make_shared<server_connection_type >(m_asioWorkers,s);
         // short wait to see if we can steal some job
         m_keepalive_connections.insert(c);
 
         // use a weak_ptr so that connection will not keep itself alive
-        boost::weak_ptr<server_connection_type> wconnection(c);
+        std::weak_ptr<server_connection_type> wconnection(c);
         std::function<void(boost::asynchronous::tcp::client_request)> cb=
                 [this,wconnection](boost::asynchronous::tcp::client_request request){this->handleRequest(request, wconnection);};
         c->start(this->make_safe_callback(cb,"",0));
@@ -120,14 +120,14 @@ private:
     void setup_connection()
     {
         // created posted function when a client connects
-        std::function<void(boost::shared_ptr<boost::asio::ip::tcp::socket>)> f =
-                this->make_safe_callback(std::function<void(boost::shared_ptr<boost::asio::ip::tcp::socket>)>(
-                                         [this](boost::shared_ptr<boost::asio::ip::tcp::socket> socket)
+        std::function<void(std::shared_ptr<boost::asio::ip::tcp::socket>)> f =
+                this->make_safe_callback(std::function<void(std::shared_ptr<boost::asio::ip::tcp::socket>)>(
+                                         [this](std::shared_ptr<boost::asio::ip::tcp::socket> socket)
                                          {this->handle_connect(socket);}),"",0);
         m_asio_comm.push_back(boost::asynchronous::tcp::asio_comm_server_proxy(m_asioWorkers, m_address, m_port, f));
     }
 
-    void send_first_job(boost::shared_ptr<server_connection_type > connection)
+    void send_first_job(std::shared_ptr<server_connection_type > connection)
     {
         // prepare callback if failed
         std::function<void(boost::asynchronous::tcp::server_reponse)> cb=
@@ -140,9 +140,9 @@ private:
         m_unprocessed_jobs.pop_front();
     }
     void handleRequest(boost::asynchronous::tcp::client_request request,
-                       boost::weak_ptr<server_connection_type> wconnection)
+                       std::weak_ptr<server_connection_type> wconnection)
     {
-        boost::shared_ptr<server_connection_type> connection = wconnection.lock();
+        std::shared_ptr<server_connection_type> connection = wconnection.lock();
         if (!connection)
             // there must have been a tcp error, ignore
             return;
@@ -246,10 +246,10 @@ private:
     boost::asynchronous::any_shared_scheduler_proxy<> m_asioWorkers;
     std::vector<boost::asynchronous::tcp::asio_comm_server_proxy> m_asio_comm;
     // connections for clients which connected and made a request but are waiting for us to answer
-    std::deque<boost::shared_ptr<server_connection_type > > m_waiting_connections;
+    std::deque<std::shared_ptr<server_connection_type > > m_waiting_connections;
     // connections for clients who just connected and made no request yet
     // TODO timer which closes them after a timeout
-    std::set<boost::shared_ptr<server_connection_type > > m_keepalive_connections;
+    std::set<std::shared_ptr<server_connection_type > > m_keepalive_connections;
 };
 #ifndef BOOST_ASYNCHRONOUS_USE_TEMPLATE_PROXY_CLASSES
 

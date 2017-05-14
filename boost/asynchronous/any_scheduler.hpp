@@ -110,15 +110,15 @@ struct any_shared_scheduler_concept
 
 // concept for shared pointer to a scheduler
 template <class T = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-struct any_shared_scheduler_ptr: boost::shared_ptr<boost::asynchronous::any_shared_scheduler_concept<T> >
+struct any_shared_scheduler_ptr: std::shared_ptr<boost::asynchronous::any_shared_scheduler_concept<T> >
 {
     typedef T job_type;
     any_shared_scheduler_ptr():
-        boost::shared_ptr<boost::asynchronous::any_shared_scheduler_concept<T> > (){}
+        std::shared_ptr<boost::asynchronous::any_shared_scheduler_concept<T> > (){}
 
     template <class U>
     any_shared_scheduler_ptr(U const& u):
-        boost::shared_ptr<boost::asynchronous::any_shared_scheduler_concept<T> > (u){}
+        std::shared_ptr<boost::asynchronous::any_shared_scheduler_concept<T> > (u){}
 };
 #endif
 

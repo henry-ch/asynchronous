@@ -36,7 +36,7 @@ namespace
 {
 struct DummyJob
 {
-    DummyJob(boost::shared_ptr<boost::promise<boost::thread::id> > p):m_done(p){}
+    DummyJob(std::shared_ptr<boost::promise<boost::thread::id> > p):m_done(p){}
     void operator()()const
     {
         //std::cout << "DummyJob called in thread:" << boost::this_thread::get_id() << std::endl;
@@ -44,7 +44,7 @@ struct DummyJob
         m_done->set_value(boost::this_thread::get_id());
     }
     // to check we ran in a correct thread
-    boost::shared_ptr<boost::promise<boost::thread::id> > m_done;
+    std::shared_ptr<boost::promise<boost::thread::id> > m_done;
 };
 
 struct BlockingJob
@@ -70,7 +70,7 @@ BOOST_AUTO_TEST_CASE( test_lockfree_max_size )
     {
         scheduler.post([](){});
     }
-    boost::shared_ptr<boost::promise<void>> pend = boost::make_shared<boost::promise<void>>();
+    std::shared_ptr<boost::promise<void>> pend = std::make_shared<boost::promise<void>>();
     auto fu = pend->get_future();
     scheduler.post([pend](){pend->set_value();});
     p.set_value();
@@ -93,7 +93,7 @@ BOOST_AUTO_TEST_CASE( post_single_thread_scheduler )
     std::vector<boost::shared_future<boost::thread::id> > fus;
     for (int i = 0 ; i< 10 ; ++i)
     {
-        boost::shared_ptr<boost::promise<boost::thread::id> > p = boost::make_shared<boost::promise<boost::thread::id> >();
+        std::shared_ptr<boost::promise<boost::thread::id> > p = std::make_shared<boost::promise<boost::thread::id> >();
         fus.push_back(p->get_future());
         scheduler.post(boost::asynchronous::any_callable(DummyJob(p)));
     }
@@ -119,7 +119,7 @@ BOOST_AUTO_TEST_CASE( post_threadpool_scheduler )
     std::vector<boost::shared_future<boost::thread::id> > fus;
     for (int i = 0 ; i< 10 ; ++i)
     {
-        boost::shared_ptr<boost::promise<boost::thread::id> > p = boost::make_shared<boost::promise<boost::thread::id> >();
+        std::shared_ptr<boost::promise<boost::thread::id> > p = std::make_shared<boost::promise<boost::thread::id> >();
         fus.push_back(p->get_future());
         scheduler.post(boost::asynchronous::any_callable(DummyJob(p)));
     }
@@ -146,7 +146,7 @@ BOOST_AUTO_TEST_CASE( post_stealing_threadpool_scheduler )
     std::vector<boost::shared_future<boost::thread::id> > fus;
     for (int i = 0 ; i< 10 ; ++i)
     {
-        boost::shared_ptr<boost::promise<boost::thread::id> > p = boost::make_shared<boost::promise<boost::thread::id> >();
+        std::shared_ptr<boost::promise<boost::thread::id> > p = std::make_shared<boost::promise<boost::thread::id> >();
         fus.push_back(p->get_future());
         scheduler.post(boost::asynchronous::any_callable(DummyJob(p)));
     }
@@ -176,7 +176,7 @@ BOOST_AUTO_TEST_CASE( post_stealing_multiqueue_threadpool_scheduler )
     std::vector<boost::shared_future<boost::thread::id> > fus;
     for (int i = 0 ; i< 10 ; ++i)
     {
-        boost::shared_ptr<boost::promise<boost::thread::id> > p = boost::make_shared<boost::promise<boost::thread::id> >();
+        std::shared_ptr<boost::promise<boost::thread::id> > p = std::make_shared<boost::promise<boost::thread::id> >();
         fus.push_back(p->get_future());
         scheduler.post(boost::asynchronous::any_callable(DummyJob(p)));
     }
@@ -203,7 +203,7 @@ BOOST_AUTO_TEST_CASE( post_multiqueue_threadpool_scheduler )
     std::vector<boost::shared_future<boost::thread::id> > fus;
     for (int i = 0 ; i< 10 ; ++i)
     {
-        boost::shared_ptr<boost::promise<boost::thread::id> > p = boost::make_shared<boost::promise<boost::thread::id> >();
+        std::shared_ptr<boost::promise<boost::thread::id> > p = std::make_shared<boost::promise<boost::thread::id> >();
         fus.push_back(p->get_future());
         scheduler.post(boost::asynchronous::any_callable(DummyJob(p)));
     }
@@ -239,7 +239,7 @@ BOOST_AUTO_TEST_CASE( post_composite_threadpool_scheduler )
     std::vector<boost::shared_future<boost::thread::id> > fus;
     for (int i = 0 ; i< 10 ; ++i)
     {
-        boost::shared_ptr<boost::promise<boost::thread::id> > p = boost::make_shared<boost::promise<boost::thread::id> >();
+        std::shared_ptr<boost::promise<boost::thread::id> > p = std::make_shared<boost::promise<boost::thread::id> >();
         fus.push_back(p->get_future());
         scheduler.post(boost::asynchronous::any_callable(DummyJob(p)));
     }
@@ -266,7 +266,7 @@ BOOST_AUTO_TEST_CASE( post_multiqueue_threadpool_scheduler_tbb_concurrent_queue 
     std::vector<boost::shared_future<boost::thread::id> > fus;
     for (int i = 0 ; i< 10 ; ++i)
     {
-        boost::shared_ptr<boost::promise<boost::thread::id> > p = boost::make_shared<boost::promise<boost::thread::id> >();
+        std::shared_ptr<boost::promise<boost::thread::id> > p = std::make_shared<boost::promise<boost::thread::id> >();
         fus.push_back(p->get_future());
         scheduler.post(boost::asynchronous::any_callable(DummyJob(p)));
     }

@@ -72,7 +72,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         BOOST_CHECK_MESSAGE(main_thread_id != boost::this_thread::get_id(), "servant async work not posted.");
 
         // we need a promise to inform caller when we're done
-        boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
+        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
         boost::shared_future<void> fu = aPromise->get_future();
 
         // start long tasks

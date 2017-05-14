@@ -51,7 +51,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     {
         std::cout << "start calculating PI" << std::endl;
         // we need a promise to inform caller when we're done
-        boost::shared_ptr<boost::promise<double> > aPromise(new boost::promise<double>);
+        std::shared_ptr<boost::promise<double> > aPromise(new boost::promise<double>);
         boost::shared_future<double> fu = aPromise->get_future();
         start_ = boost::chrono::high_resolution_clock::now();
         // start long tasks

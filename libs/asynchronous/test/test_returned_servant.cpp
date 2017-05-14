@@ -47,7 +47,7 @@ class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Serv
 {
 public:
     template <class Scheduler>
-    ServantProxy(Scheduler s, boost::future<boost::shared_ptr<Servant> > servant):
+    ServantProxy(Scheduler s, boost::future<std::shared_ptr<Servant> > servant):
         boost::asynchronous::servant_proxy<ServantProxy,Servant>(s, std::move(servant))
     {}
     BOOST_ASYNC_FUTURE_MEMBER(foo)
@@ -65,9 +65,9 @@ struct Servant2 : boost::asynchronous::trackable_servant<>
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant2 dtor not posted.");
     }
-    boost::shared_ptr<Servant> get_servant2()
+    std::shared_ptr<Servant> get_servant2()
     {
-        return boost::make_shared<Servant>(get_scheduler(),42);
+        return std::make_shared<Servant>(get_scheduler(),42);
     }
 private:
 };

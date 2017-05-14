@@ -70,7 +70,7 @@ struct parallel_replace_copy_if_continuation_helper: public boost::asynchronous:
             {
                 try
                 {
-                    auto res = boost::make_shared<typename Continuation::return_type>(std::move(std::get<0>(continuation_res).get()));
+                    auto res = std::make_shared<typename Continuation::return_type>(std::move(std::get<0>(continuation_res).get()));
                     auto new_continuation = boost::asynchronous::parallel_replace_copy_if
                             <decltype(boost::begin(std::declval<typename Continuation::return_type>())), Iterator2,T,Func, Job>
                                 (boost::begin(*res),boost::end(*res),res_it,func,new_value,cutoff,task_name,prio);
@@ -166,7 +166,7 @@ struct parallel_replace_copy_continuation_helper: public boost::asynchronous::co
             {
                 try
                 {
-                    auto res = boost::make_shared<typename Continuation::return_type>(std::move(std::get<0>(continuation_res).get()));
+                    auto res = std::make_shared<typename Continuation::return_type>(std::move(std::get<0>(continuation_res).get()));
                     auto new_continuation = boost::asynchronous::parallel_replace_copy
                             <decltype(boost::begin(std::declval<typename Continuation::return_type>())), Iterator2,T, Job>
                                 (boost::begin(*res),boost::end(*res),res_it,old_value,new_value,cutoff,task_name,prio);

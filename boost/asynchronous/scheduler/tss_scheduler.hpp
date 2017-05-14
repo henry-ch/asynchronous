@@ -54,14 +54,14 @@ std::list<boost::asynchronous::any_continuation>& get_continuations(
 
 struct tss_interrupt_state_wrapper
 {
-    tss_interrupt_state_wrapper(boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state)
+    tss_interrupt_state_wrapper(std::shared_ptr<boost::asynchronous::detail::interrupt_state> state)
         :m_state(state){}
 
-    boost::shared_ptr<boost::asynchronous::detail::interrupt_state> m_state;
+    std::shared_ptr<boost::asynchronous::detail::interrupt_state> m_state;
 };
 template <class dummy = void >
-boost::shared_ptr<boost::asynchronous::detail::interrupt_state> get_interrupt_state(
-        boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state= boost::shared_ptr<boost::asynchronous::detail::interrupt_state>(), bool reset=false )
+std::shared_ptr<boost::asynchronous::detail::interrupt_state> get_interrupt_state(
+        std::shared_ptr<boost::asynchronous::detail::interrupt_state> state= std::shared_ptr<boost::asynchronous::detail::interrupt_state>(), bool reset=false )
 {
     static boost::thread_specific_ptr<boost::asynchronous::tss_interrupt_state_wrapper > s_state;
     if (reset)
@@ -70,7 +70,7 @@ boost::shared_ptr<boost::asynchronous::detail::interrupt_state> get_interrupt_st
     }
     // state could be empty (no interrupt call from user, just return an empty pointer)
     if (s_state.get() == 0)
-        return boost::shared_ptr<boost::asynchronous::detail::interrupt_state>();
+        return std::shared_ptr<boost::asynchronous::detail::interrupt_state>();
     return s_state.get()->m_state;
 }
 

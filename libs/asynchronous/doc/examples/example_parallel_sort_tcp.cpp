@@ -2,7 +2,7 @@
 #include <iostream>
 #include <random>
 
-#include <boost/enable_shared_from_this.hpp>
+
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
@@ -96,7 +96,7 @@ void generate()
     std::uniform_int_distribution<> dis(0, 10000);
     std::generate(m_data.begin(), m_data.end(), std::bind(dis, std::ref(mt)));
 }
-boost::shared_ptr<boost::promise<void> > m_promise;
+std::shared_ptr<boost::promise<void> > m_promise;
 // attribute to keep composite alive
 boost::asynchronous::any_shared_scheduler_proxy<boost::asynchronous::any_serializable> m_composite;
 std::vector<int> m_data;

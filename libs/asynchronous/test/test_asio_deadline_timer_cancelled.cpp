@@ -36,7 +36,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant dtor not posted.");
     } 
-    void timer_expired(boost::shared_ptr<boost::promise<void> > p)
+    void timer_expired(std::shared_ptr<boost::promise<void> > p)
     {
         boost::asynchronous::any_shared_scheduler<> s = get_scheduler().lock();
         std::vector<boost::thread::id> ids = s.thread_ids();
@@ -57,7 +57,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                        p->set_value();
                    });
     }
-    void timer_cancelled(boost::shared_ptr<boost::promise<void> > p)
+    void timer_cancelled(std::shared_ptr<boost::promise<void> > p)
     {
         m_timer =  boost::asynchronous::asio_deadline_timer_proxy(get_worker(),boost::posix_time::milliseconds(50000));
         boost::asynchronous::any_shared_scheduler<> s = get_scheduler().lock();
@@ -105,7 +105,7 @@ BOOST_AUTO_TEST_CASE( test_asio_timer_cancelled )
     
     main_thread_id = boost::this_thread::get_id();   
     ServantProxy proxy(scheduler);
-    boost::shared_ptr<boost::promise<void> > p(new boost::promise<void>);
+    std::shared_ptr<boost::promise<void> > p(new boost::promise<void>);
     boost::shared_future<void> fu = p->get_future();
     boost::shared_future<void> fuv = proxy.timer_cancelled(p);
     fu.get();

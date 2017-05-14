@@ -139,7 +139,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
     }
 private:
 // for testing
-boost::shared_ptr<boost::promise<long> > m_promise;
+std::shared_ptr<boost::promise<long> > m_promise;
 };
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant,servant_job>
 {

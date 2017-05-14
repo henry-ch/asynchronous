@@ -14,7 +14,7 @@
 #include <limits>
 #include <type_traits>
 
-#include <boost/shared_ptr.hpp>
+#include <memory>
 #include <boost/asynchronous/algorithm/parallel_placement.hpp>
 #include <boost/asynchronous/algorithm/parallel_move_if_noexcept.hpp>
 #include <boost/asynchronous/algorithm/parallel_move.hpp>
@@ -93,7 +93,7 @@ public:
     typedef Alloc                       allocator_type;
 
     typedef boost::asynchronous::vector<T,Job,force_move,Alloc> this_type;
-    typedef boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>> internal_data_type;
+    typedef std::shared_ptr<boost::asynchronous::placement_deleter<T,Job,std::shared_ptr<T>>> internal_data_type;
 
     enum { default_capacity = 10 };
 
@@ -107,10 +107,10 @@ public:
     , m_capacity(default_capacity)
     , m_allocator(alloc)
     {
-        boost::shared_ptr<T> raw (m_allocator.allocate(default_capacity),
+        std::shared_ptr<T> raw (m_allocator.allocate(default_capacity),
                                   [this](T* p){this->m_allocator.deallocate(p,default_capacity);});
 
-        m_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>>(0,raw,m_cutoff,m_task_name,m_prio);
+        m_data =  std::make_shared<boost::asynchronous::placement_deleter<T,Job,std::shared_ptr<T>>>(0,raw,m_cutoff,m_task_name,m_prio);
     }
 
     vector() noexcept(std::is_nothrow_default_constructible<Alloc>::value)
@@ -124,8 +124,8 @@ public:
         , m_capacity(n)
         , m_allocator(alloc)
     {
-        boost::shared_ptr<T> raw (m_allocator.allocate(n),[this,n](T* p){this->m_allocator.deallocate(p,n);});
-        m_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>>(n,raw,m_cutoff,m_task_name,m_prio);
+        std::shared_ptr<T> raw (m_allocator.allocate(n),[this,n](T* p){this->m_allocator.deallocate(p,n);});
+        m_data =  std::make_shared<boost::asynchronous::placement_deleter<T,Job,std::shared_ptr<T>>>(n,raw,m_cutoff,m_task_name,m_prio);
         boost::asynchronous::detail::serial_placement<T,std::size_t>((std::size_t)0,n,(char*)raw.get(),value);
     }
 
@@ -139,8 +139,8 @@ public:
         auto n = std::distance(first,last);
         m_size=n;
         m_capacity=n;
-        boost::shared_ptr<T> raw (m_allocator.allocate(n),[this,n](T* p){this->m_allocator.deallocate(p,n);});
-        m_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>>(n,raw,m_cutoff,m_task_name,m_prio);
+        std::shared_ptr<T> raw (m_allocator.allocate(n),[this,n](T* p){this->m_allocator.deallocate(p,n);});
+        m_data =  std::make_shared<boost::asynchronous::placement_deleter<T,Job,std::shared_ptr<T>>>(n,raw,m_cutoff,m_task_name,m_prio);
         boost::asynchronous::detail::serial_placement_it<T,std::size_t,InputIt>((std::size_t)0,n,(char*)raw.get(),first);
     }
 
@@ -154,8 +154,8 @@ public:
         auto first = init.begin();
         m_size=n;
         m_capacity=n;
-        boost::shared_ptr<T> raw (m_allocator.allocate(n),[this,n](T* p){this->m_allocator.deallocate(p,n);});
-        m_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>>(n,raw,m_cutoff,m_task_name,m_prio);
+        std::shared_ptr<T> raw (m_allocator.allocate(n),[this,n](T* p){this->m_allocator.deallocate(p,n);});
+        m_data =  std::make_shared<boost::asynchronous::placement_deleter<T,Job,std::shared_ptr<T>>>(n,raw,m_cutoff,m_task_name,m_prio);
         boost::asynchronous::detail::serial_placement_it<T,std::size_t,decltype(first)>((std::size_t)0,n,(char*)raw.get(),first);
     }
 
@@ -189,8 +189,8 @@ public:
         , m_capacity(n)
         , m_allocator(alloc)
     {
-        boost::shared_ptr<T> raw (m_allocator.allocate(n),[this,n](T* p){this->m_allocator.deallocate(p,n);});
-        m_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>>(n,raw,cutoff,task_name,prio);
+        std::shared_ptr<T> raw (m_allocator.allocate(n),[this,n](T* p){this->m_allocator.deallocate(p,n);});
+        m_data =  std::make_shared<boost::asynchronous::placement_deleter<T,Job,std::shared_ptr<T>>>(n,raw,cutoff,task_name,prio);
         if (m_scheduler.is_valid())
         {
             auto fu = boost::asynchronous::post_future(scheduler,
@@ -221,10 +221,10 @@ public:
         , m_capacity(default_capacity)
         , m_allocator(alloc)
     {
-        boost::shared_ptr<T> raw (m_allocator.allocate(default_capacity),
+        std::shared_ptr<T> raw (m_allocator.allocate(default_capacity),
                                   [this](T* p){this->m_allocator.deallocate(p,default_capacity);});
 
-        m_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>>(0,raw,cutoff,task_name,prio);
+        m_data =  std::make_shared<boost::asynchronous::placement_deleter<T,Job,std::shared_ptr<T>>>(0,raw,cutoff,task_name,prio);
     }
     explicit vector(boost::asynchronous::any_shared_scheduler_proxy<Job> scheduler,long cutoff,
            size_type n,
@@ -242,9 +242,9 @@ public:
         , m_capacity(n)
         , m_allocator(alloc)
     {
-        boost::shared_ptr<T> raw (m_allocator.allocate(n),[this,n](T* p){this->m_allocator.deallocate(p,n);});
+        std::shared_ptr<T> raw (m_allocator.allocate(n),[this,n](T* p){this->m_allocator.deallocate(p,n);});
 
-        m_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>>(n,raw,cutoff,task_name,prio);
+        m_data =  std::make_shared<boost::asynchronous::placement_deleter<T,Job,std::shared_ptr<T>>>(n,raw,cutoff,task_name,prio);
         if (m_scheduler.is_valid())
         {
             auto fu = boost::asynchronous::post_future(scheduler,
@@ -278,14 +278,14 @@ public:
         auto n = std::distance(first,last);
         m_size=n;
         m_capacity=n;
-        boost::shared_ptr<T> raw (m_allocator.allocate(n),[this,n](T* p){this->m_allocator.deallocate(p,n);});
-        m_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>>(n,raw,cutoff,task_name,prio);
+        std::shared_ptr<T> raw (m_allocator.allocate(n),[this,n](T* p){this->m_allocator.deallocate(p,n);});
+        m_data =  std::make_shared<boost::asynchronous::placement_deleter<T,Job,std::shared_ptr<T>>>(n,raw,cutoff,task_name,prio);
         if (m_scheduler.is_valid())
         {
             auto fu = boost::asynchronous::post_future(scheduler,
             [n,raw,first,cutoff,task_name,prio]()mutable
             {
-                return boost::asynchronous::parallel_placement<T,InputIt,boost::shared_ptr<T>,Job>
+                return boost::asynchronous::parallel_placement<T,InputIt,std::shared_ptr<T>,Job>
                             (0,n,first,raw,cutoff,task_name+"_vector_ctor_placement",prio);
             },
             task_name+"vector_ctor",prio);
@@ -321,11 +321,11 @@ public:
         auto n = other.size();
         m_size=n;
         m_capacity=n;
-        boost::shared_ptr<T> raw (m_allocator.allocate(n),[this,n](T* p){this->m_allocator.deallocate(p,n);});
+        std::shared_ptr<T> raw (m_allocator.allocate(n),[this,n](T* p){this->m_allocator.deallocate(p,n);});
         auto cutoff = m_cutoff;
         auto task_name = m_task_name;
         auto prio = m_prio;
-        m_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>>(n,raw,cutoff,task_name,prio);
+        m_data =  std::make_shared<boost::asynchronous::placement_deleter<T,Job,std::shared_ptr<T>>>(n,raw,cutoff,task_name,prio);
         if (m_scheduler.is_valid())
         {
             auto fu = boost::asynchronous::post_future(m_scheduler,
@@ -381,14 +381,14 @@ public:
         auto first = init.begin();
         m_size=n;
         m_capacity=n;
-        boost::shared_ptr<T> raw (m_allocator.allocate(n),[this,n](T* p){this->m_allocator.deallocate(p,n);});
-        m_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>>(n,raw,cutoff,task_name,prio);
+        std::shared_ptr<T> raw (m_allocator.allocate(n),[this,n](T* p){this->m_allocator.deallocate(p,n);});
+        m_data =  std::make_shared<boost::asynchronous::placement_deleter<T,Job,std::shared_ptr<T>>>(n,raw,cutoff,task_name,prio);
         if (m_scheduler.is_valid())
         {
             auto fu = boost::asynchronous::post_future(scheduler,
             [n,raw,first,cutoff,task_name,prio]()mutable
             {
-                return boost::asynchronous::parallel_placement<T,decltype(first),boost::shared_ptr<T>,Job>
+                return boost::asynchronous::parallel_placement<T,decltype(first),std::shared_ptr<T>,Job>
                         (0,n,first,raw,cutoff,task_name+"_vector_ctor_placement",prio);
             },
             task_name+"vector_ctor",prio);
@@ -932,7 +932,7 @@ public:
             auto n = cur_end-last;
 
             // create temporary buffer
-            boost::shared_array<char> raw (new char[n * sizeof(T)]);
+            std::shared_ptr<char> raw (new char[n * sizeof(T)],[](char* p){delete[] p;});
             if (m_scheduler.is_valid())
             {
                 auto fu = boost::asynchronous::post_future(m_scheduler,
@@ -1013,18 +1013,18 @@ public:
             {
                 boost::asynchronous::serial_move_if_noexcept(temp_begin,temp_end,(iterator)first);
             }
-            boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> temp_deleter =
-                    boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
+            std::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> temp_deleter =
+                    std::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
             if (m_scheduler.is_valid())
             {
                 // call dtors on temp
                 auto fu4 =
                 boost::asynchronous::post_future(m_scheduler,
                                                  boost::asynchronous::move_bind(
-                                                     [](boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> data)mutable
+                                                     [](std::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> data)mutable
                                                      {
                                                         return boost::asynchronous::top_level_callback_continuation_job<void,Job>(
-                                                         boost::asynchronous::detail::move_only<boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>
+                                                         boost::asynchronous::detail::move_only<std::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>
                                                             (std::move(data)));
                                                      },
                                                      std::move(temp_deleter)),
@@ -1060,7 +1060,7 @@ public:
         // we need move twice data after pos as parallel_move does not support overlapping ranges
         // first we create a temporary buffer and move our data after pos to temporary buffer
         auto n = cend() - pos;
-        boost::shared_array<char> raw (new char[n * sizeof(T)]);
+        std::shared_ptr<char> raw (new char[n * sizeof(T)],[](char* p){delete[] p;});
         auto cutoff = m_cutoff;
         auto task_name = m_task_name;
         auto prio = m_prio;
@@ -1157,17 +1157,17 @@ public:
             boost::asynchronous::serial_move_if_noexcept(temp_begin,temp_end,(iterator)beg_move_back);
         }
         // call dtors on temp
-        boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> temp_deleter =
-                boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
+        std::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> temp_deleter =
+                std::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
         if (m_scheduler.is_valid())
         {
             auto fu6 =
             boost::asynchronous::post_future(m_scheduler,
                                              boost::asynchronous::move_bind(
-                                                 [](boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> data)mutable
+                                                 [](std::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> data)mutable
                                                  {
                                                     return boost::asynchronous::top_level_callback_continuation_job<void,Job>(
-                                                     boost::asynchronous::detail::move_only<boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>
+                                                     boost::asynchronous::detail::move_only<std::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>
                                                         (std::move(data)));
                                                  },
                                                  std::move(temp_deleter)),
@@ -1205,7 +1205,7 @@ public:
         // we need move twice data after pos as parallel_move does not support overlapping ranges
         // first we create a temporary buffer and move our data after pos to temporary buffer
         auto n = cend() - pos;
-        boost::shared_array<char> raw (new char[n * sizeof(T)]);
+        std::shared_ptr<char> raw (new char[n * sizeof(T)],[](char* p){delete[] p;});
         auto cutoff = m_cutoff;
         auto task_name = m_task_name;
         auto prio = m_prio;
@@ -1331,17 +1331,17 @@ public:
             boost::asynchronous::serial_move_if_noexcept(temp_begin,temp_end,(iterator)beg_move_back);
         }
         // call dtors on temp
-        boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> temp_deleter =
-                boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
+        std::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> temp_deleter =
+                std::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
         if (m_scheduler.is_valid())
         {
             auto fu6 =
             boost::asynchronous::post_future(m_scheduler,
                                              boost::asynchronous::move_bind(
-                                                 [](boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> data)mutable
+                                                 [](std::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> data)mutable
                                                  {
                                                     return boost::asynchronous::top_level_callback_continuation_job<void,Job>(
-                                                     boost::asynchronous::detail::move_only<boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>
+                                                     boost::asynchronous::detail::move_only<std::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>
                                                         (std::move(data)));
                                                  },
                                                  std::move(temp_deleter)),
@@ -1373,7 +1373,7 @@ public:
         // we need move twice data after pos as parallel_move does not support overlapping ranges
         // first we create a temporary buffer and move our data after pos to temporary buffer
         auto n = cend() - pos;
-        boost::shared_array<char> raw (new char[n * sizeof(T)]);
+        std::shared_ptr<char> raw (new char[n * sizeof(T)],[](char* p){delete[] p;});
         auto cutoff = m_cutoff;
         auto task_name = m_task_name;
         auto prio = m_prio;
@@ -1468,17 +1468,17 @@ public:
             boost::asynchronous::serial_move_if_noexcept(temp_begin,temp_end,(iterator)beg_move_back);
         }
         // call dtors on temp
-        boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> temp_deleter =
-                boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
+        std::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> temp_deleter =
+                std::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
         if (m_scheduler.is_valid())
         {
             auto fu6 =
             boost::asynchronous::post_future(m_scheduler,
                                              boost::asynchronous::move_bind(
-                                                 [](boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> data)mutable
+                                                 [](std::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> data)mutable
                                                  {
                                                     return boost::asynchronous::top_level_callback_continuation_job<void,Job>(
-                                                     boost::asynchronous::detail::move_only<boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>
+                                                     boost::asynchronous::detail::move_only<std::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>
                                                         (std::move(data)));
                                                  },
                                                  std::move(temp_deleter)),
@@ -1510,7 +1510,7 @@ public:
         // we need move twice data after pos as parallel_move does not support overlapping ranges
         // first we create a temporary buffer and move our data after pos to temporary buffer
         auto n = cend() - pos;
-        boost::shared_array<char> raw (new char[n * sizeof(T)]);
+        std::shared_ptr<char> raw (new char[n * sizeof(T)],[](char* p){delete[] p;});
         auto cutoff = m_cutoff;
         auto task_name = m_task_name;
         auto prio = m_prio;
@@ -1637,17 +1637,17 @@ public:
             boost::asynchronous::serial_move_if_noexcept(temp_begin,temp_end,(iterator)beg_move_back);
         }
         // call dtors on temp
-        boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> temp_deleter =
-                boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
+        std::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> temp_deleter =
+                std::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
         if (m_scheduler.is_valid())
         {
             auto fu6 =
             boost::asynchronous::post_future(m_scheduler,
                                              boost::asynchronous::move_bind(
-                                                 [](boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> data)mutable
+                                                 [](std::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> data)mutable
                                                  {
                                                     return boost::asynchronous::top_level_callback_continuation_job<void,Job>(
-                                                     boost::asynchronous::detail::move_only<boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>
+                                                     boost::asynchronous::detail::move_only<std::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>
                                                         (std::move(data)));
                                                  },
                                                  std::move(temp_deleter)),
@@ -1680,7 +1680,7 @@ public:
         // we need move twice data after pos as parallel_move does not support overlapping ranges
         // first we create a temporary buffer and move our data after pos to temporary buffer
         auto n = cend() - pos;
-        boost::shared_array<char> raw (new char[n * sizeof(T)]);
+        std::shared_ptr<char> raw (new char[n * sizeof(T)],[](char* p){delete[] p;});
         auto cutoff = m_cutoff;
         auto task_name = m_task_name;
         auto prio = m_prio;
@@ -1807,17 +1807,17 @@ public:
             boost::asynchronous::serial_move_if_noexcept(temp_begin,temp_end,(iterator)beg_move_back);
         }
         // call dtors on temp
-        boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> temp_deleter =
-                boost::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
+        std::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> temp_deleter =
+                std::make_shared<boost::asynchronous::placement_deleter<T,Job>>(n,std::move(raw),cutoff,task_name,prio);
         if (m_scheduler.is_valid())
         {
             auto fu6 =
             boost::asynchronous::post_future(m_scheduler,
                                              boost::asynchronous::move_bind(
-                                                 [](boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> data)mutable
+                                                 [](std::shared_ptr<boost::asynchronous::placement_deleter<T,Job>> data)mutable
                                                  {
                                                     return boost::asynchronous::top_level_callback_continuation_job<void,Job>(
-                                                     boost::asynchronous::detail::move_only<boost::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>
+                                                     boost::asynchronous::detail::move_only<std::shared_ptr<boost::asynchronous::placement_deleter<T,Job>>>
                                                         (std::move(data)));
                                                  },
                                                  std::move(temp_deleter)),
@@ -1917,7 +1917,7 @@ private:
 
     std::size_t reallocate_helper(size_type new_memory)
     {
-        boost::shared_ptr<T> raw (m_allocator.allocate(new_memory),[this,new_memory](T* p){this->m_allocator.deallocate(p,new_memory);});
+        std::shared_ptr<T> raw (m_allocator.allocate(new_memory),[this,new_memory](T* p){this->m_allocator.deallocate(p,new_memory);});
 
         // create our current number of objects with placement new
         auto n = m_size;
@@ -1944,7 +1944,7 @@ private:
             boost::asynchronous::detail::serial_placement<T,std::size_t>((std::size_t)0,(std::size_t)n,(char*)raw.get(),T());
         }
 
-        auto new_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>>
+        auto new_data =  std::make_shared<boost::asynchronous::placement_deleter<T,Job,std::shared_ptr<T>>>
                 (n,std::move(raw),cutoff,task_name,prio);
 
         auto beg_it = begin();
@@ -2028,7 +2028,7 @@ private:
                 auto prio = m_prio;
                 auto beg = m_begin; auto end =m_end;
 
-                boost::shared_ptr<T> raw (m_allocator.allocate(new_memory),[this,new_memory,alloc](T* p)mutable{alloc.deallocate(p,new_memory);});
+                std::shared_ptr<T> raw (m_allocator.allocate(new_memory),[this,new_memory,alloc](T* p)mutable{alloc.deallocate(p,new_memory);});
 
                 auto cont_p = boost::asynchronous::parallel_placement<T,Job>
                         (0,m_size,(char*)raw.get(),T(),m_cutoff,this->get_name()+"vector_reallocate_placement",m_prio);
@@ -2041,7 +2041,7 @@ private:
                         task_res.set_exception(res.second);
                         return;
                     }
-                    auto new_data =  boost::make_shared<boost::asynchronous::placement_deleter<T,Job,boost::shared_ptr<T>>>
+                    auto new_data =  std::make_shared<boost::asynchronous::placement_deleter<T,Job,std::shared_ptr<T>>>
                             (size,std::move(raw),cutoff,task_name,prio);
                     boost::asynchronous::detail::callback_continuation<void, Job> cont_m;
 #if __cpp_if_constexpr >= 201606

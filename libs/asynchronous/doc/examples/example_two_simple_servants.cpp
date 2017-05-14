@@ -50,7 +50,7 @@ struct Servant2 : public boost::asynchronous::trackable_servant<>
     boost::shared_future<void> doIt()
     {
         // we return a future so that the caller knows when we're done.
-        boost::shared_ptr<boost::promise<void> > p (new boost::promise<void>);
+        std::shared_ptr<boost::promise<void> > p (new boost::promise<void>);
         boost::shared_future<void> fu = p->get_future();
         call_callback(m_worker.get_proxy(),
                       m_worker.foo(),

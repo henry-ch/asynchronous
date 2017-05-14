@@ -45,7 +45,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant dtor not posted.");
     }
     std::tuple<boost::future<void>,boost::asynchronous::any_interruptible>
-    start_posting(boost::shared_ptr<boost::promise<void> > done, boost::shared_ptr<boost::promise<void> > ready)
+    start_posting(std::shared_ptr<boost::promise<void> > done, std::shared_ptr<boost::promise<void> > ready)
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_posting not posted.");
         // post task to self
@@ -82,8 +82,8 @@ BOOST_AUTO_TEST_CASE( test_post_self_interrupt )
         auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
                                                                             boost::asynchronous::lockfree_queue<>>>();
 
-        boost::shared_ptr<boost::promise<void> > done(new boost::promise<void>);
-        boost::shared_ptr<boost::promise<void> > ready(new boost::promise<void>);
+        std::shared_ptr<boost::promise<void> > done(new boost::promise<void>);
+        std::shared_ptr<boost::promise<void> > ready(new boost::promise<void>);
         boost::shared_future<void> end=ready->get_future();
         {
             ServantProxy proxy(scheduler);

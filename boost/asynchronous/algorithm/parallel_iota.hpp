@@ -105,7 +105,7 @@ struct parallel_iota_generate_helper : public boost::asynchronous::continuation_
 {
     using value_type = typename boost::asynchronous::detail::range_value_type<Range>::type;
 
-    parallel_iota_generate_helper(boost::shared_ptr<Range> range, value_type start, long cutoff,
+    parallel_iota_generate_helper(std::shared_ptr<Range> range, value_type start, long cutoff,
                                  std::string const& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<Range>(task_name)
         , range_(range), start_(start), cutoff_(cutoff), prio_(prio)
@@ -113,7 +113,7 @@ struct parallel_iota_generate_helper : public boost::asynchronous::continuation_
 
     void operator()()
     {
-        boost::shared_ptr<Range> range = std::move(range_);
+        std::shared_ptr<Range> range = std::move(range_);
         boost::asynchronous::continuation_result<Range> task_res = this->this_task_result();
         
         // Get iterators
@@ -155,7 +155,7 @@ struct parallel_iota_generate_helper : public boost::asynchronous::continuation_
         }
     }
 
-    boost::shared_ptr<Range> range_;
+    std::shared_ptr<Range> range_;
     value_type start_;
     long cutoff_;
     std::size_t prio_;
@@ -172,7 +172,7 @@ parallel_iota(Range && range, T const& value, long cutoff,
               const std::string& task_name="", std::size_t prio=0)
 #endif
 {
-    auto range_ptr = boost::make_shared<Range>(std::forward<Range>(range));
+    auto range_ptr = std::make_shared<Range>(std::forward<Range>(range));
     return boost::asynchronous::top_level_callback_continuation_job<Range, Job>(boost::asynchronous::detail::parallel_iota_generate_helper<Range, Job>(range_ptr, value, cutoff, task_name, prio));
 }
 

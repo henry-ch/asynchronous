@@ -15,8 +15,8 @@
 #include <fstream>
 
 #include <boost/noncopyable.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/weak_ptr.hpp>
+#include <memory>
+
 #include <boost/thread/thread.hpp>
 #include <boost/thread/tss.hpp>
 #include <functional>
@@ -65,8 +65,8 @@ public:
                          unsigned int port,
                          std::string const& name,
                          Args... args)
-        : boost::asynchronous::detail::single_queue_scheduler_policy<Q>(boost::make_shared<queue_type>(std::move(args)...))
-        , m_private_queue (boost::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >())
+        : boost::asynchronous::detail::single_queue_scheduler_policy<Q>(std::make_shared<queue_type>(std::move(args)...))
+        , m_private_queue (std::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >())
         , m_worker_pool(worker_pool)
         , m_address(address)
         , m_port(port)
@@ -79,8 +79,8 @@ public:
                          std::string const & address,
                          unsigned int port,
                          Args... args)
-        : boost::asynchronous::detail::single_queue_scheduler_policy<Q>(boost::make_shared<queue_type>(std::move(args)...))
-        , m_private_queue (boost::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >())
+        : boost::asynchronous::detail::single_queue_scheduler_policy<Q>(std::make_shared<queue_type>(std::move(args)...))
+        , m_private_queue (std::make_shared<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> >())
         , m_worker_pool(worker_pool)
         , m_address(address)
         , m_port(port)
@@ -102,7 +102,7 @@ public:
 
     void init(std::vector<boost::asynchronous::any_queue_ptr<job_type> > const& others)
     {
-        m_diagnostics = boost::make_shared<diag_type>(1);
+        m_diagnostics = std::make_shared<diag_type>(1);
         boost::promise<boost::thread*> new_thread_promise;
         boost::shared_future<boost::thread*> fu = new_thread_promise.get_future();
         boost::thread* new_thread =
@@ -112,7 +112,7 @@ public:
         m_thread.reset(new_thread);
     }
 
-    void constructor_done(boost::weak_ptr<this_type> weak_self)
+    void constructor_done(std::weak_ptr<this_type> weak_self)
     {
         m_weak_self = weak_self;
         if (!IsStealing)
@@ -174,9 +174,9 @@ public:
     boost::asynchronous::any_interruptible interruptible_post(typename queue_type::job_type /*job*/,
                                                           std::size_t /*prio*/)
     {
-//        boost::shared_ptr<boost::asynchronous::detail::interrupt_state>
-//                state = boost::make_shared<boost::asynchronous::detail::interrupt_state>();
-//        boost::shared_ptr<boost::promise<boost::thread*> > wpromise = boost::make_shared<boost::promise<boost::thread*> >();
+//        std::shared_ptr<boost::asynchronous::detail::interrupt_state>
+//                state = std::make_shared<boost::asynchronous::detail::interrupt_state>();
+//        std::shared_ptr<boost::promise<boost::thread*> > wpromise = std::make_shared<boost::promise<boost::thread*> >();
 //        boost::asynchronous::job_traits<typename queue_type::job_type>::set_posted_time(job);
 //        boost::asynchronous::interruptible_job<typename queue_type::job_type,this_type>
 //                ijob(std::forward<typename queue_type::job_type>(job),wpromise,state);
@@ -246,11 +246,11 @@ public:
         return std::vector<boost::asynchronous::any_queue_ptr<job_type> >();
     }
 
-    static void run(boost::shared_ptr<queue_type> queue,boost::shared_ptr<diag_type> diagnostics,
-                    boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > private_queue,
+    static void run(std::shared_ptr<queue_type> queue,std::shared_ptr<diag_type> diagnostics,
+                    std::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > private_queue,
                     std::vector<boost::asynchronous::any_queue_ptr<job_type> > other_queues,
                     boost::shared_future<boost::thread*> self,
-                    boost::weak_ptr<this_type> this_,
+                    std::weak_ptr<this_type> this_,
                     boost::asynchronous::any_shared_scheduler_proxy<pool_job_type> worker_pool,
                     std::string const& address,
                     unsigned int port)
@@ -334,13 +334,13 @@ public:
         }
     }
 private:
-    boost::shared_ptr<boost::thread> m_thread;
-    boost::shared_ptr<diag_type> m_diagnostics;
-    boost::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > m_private_queue;
+    std::shared_ptr<boost::thread> m_thread;
+    std::shared_ptr<diag_type> m_diagnostics;
+    std::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > m_private_queue;
     boost::asynchronous::any_shared_scheduler_proxy<pool_job_type> m_worker_pool;
     std::string m_address;
     unsigned int m_port;
-    boost::weak_ptr<this_type> m_weak_self;
+    std::weak_ptr<this_type> m_weak_self;
     std::function<void(boost::asynchronous::scheduler_diagnostics)> m_diagnostics_fct;
     const std::string m_name;
 };

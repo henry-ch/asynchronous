@@ -14,7 +14,7 @@
 #include <vector>
 
 #include <boost/mpl/vector.hpp>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 #include <boost/thread/thread.hpp>
 
 #include <boost/type_erasure/any.hpp>
@@ -200,14 +200,14 @@ struct internal_scheduler_aspect_concept
 };
 template <class T>
 struct internal_scheduler_aspect
-        : boost::shared_ptr<boost::asynchronous::internal_scheduler_aspect_concept<T> >
+        : std::shared_ptr<boost::asynchronous::internal_scheduler_aspect_concept<T> >
 {
     internal_scheduler_aspect():
-        boost::shared_ptr<boost::asynchronous::internal_scheduler_aspect_concept<T> > (){}
+        std::shared_ptr<boost::asynchronous::internal_scheduler_aspect_concept<T> > (){}
 
     template <class U>
     internal_scheduler_aspect(U const& u):
-        boost::shared_ptr<boost::asynchronous::internal_scheduler_aspect_concept<T> > (u){}
+        std::shared_ptr<boost::asynchronous::internal_scheduler_aspect_concept<T> > (u){}
 };
 
 /*!
@@ -492,7 +492,7 @@ private:
     template <class J>
     friend class scheduler_weak_proxy;
 
-    boost::shared_ptr<boost::asynchronous::any_shared_scheduler_proxy_concept<JOB> > my_ptr;
+    std::shared_ptr<boost::asynchronous::any_shared_scheduler_proxy_concept<JOB> > my_ptr;
 };
 
 /*!

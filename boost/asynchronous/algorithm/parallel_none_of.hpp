@@ -93,7 +93,7 @@ struct parallel_none_of_continuation_range_helper: public boost::asynchronous::c
             {
                 try
                 {
-                    auto res = boost::make_shared<typename Continuation::return_type>(std::move(std::get<0>(continuation_res).get()));
+                    auto res = std::make_shared<typename Continuation::return_type>(std::move(std::get<0>(continuation_res).get()));
                     auto new_continuation = boost::asynchronous::parallel_none_of
                             <decltype(boost::begin(std::declval<typename Continuation::return_type>())), Func, Job>
                                 (boost::begin(*res),boost::end(*res),func,cutoff,task_name,prio);

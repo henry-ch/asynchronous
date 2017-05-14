@@ -1,5 +1,5 @@
 #include <iostream>
-#include <boost/enable_shared_from_this.hpp>
+
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
@@ -57,7 +57,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     }
 private:
 // for testing
-boost::shared_ptr<boost::promise<int> > m_promise;
+std::shared_ptr<boost::promise<int> > m_promise;
 };
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>
 {

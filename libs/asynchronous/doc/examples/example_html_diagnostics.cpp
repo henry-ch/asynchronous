@@ -89,7 +89,7 @@ public:
         return fu;
     }
 private:
-    boost::shared_ptr<boost::promise<void> > m_promise;
+    std::shared_ptr<boost::promise<void> > m_promise;
     std::vector<long long> m_data;
 };
 

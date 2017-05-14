@@ -21,7 +21,7 @@ namespace
 {
 struct DummyJob
 {
-    DummyJob(boost::shared_ptr<boost::promise<boost::thread::id> > p):m_done(p){}
+    DummyJob(std::shared_ptr<boost::promise<boost::thread::id> > p):m_done(p){}
     void operator()()const
     {
         //std::cout << "DummyJob called in thread:" << boost::this_thread::get_id() << std::endl;
@@ -29,7 +29,7 @@ struct DummyJob
         m_done->set_value(boost::this_thread::get_id());
     }
     // to check we ran in a correct thread
-    boost::shared_ptr<boost::promise<boost::thread::id> > m_done;
+    std::shared_ptr<boost::promise<boost::thread::id> > m_done;
 };
 
 }  
@@ -52,7 +52,7 @@ BOOST_AUTO_TEST_CASE( default_post_asio_scheduler )
         std::vector<boost::shared_future<boost::thread::id> > fus;
         for (int i = 1 ; i< 4 ; ++i)
         {
-            boost::shared_ptr<boost::promise<boost::thread::id> > p = boost::make_shared<boost::promise<boost::thread::id> >();
+            std::shared_ptr<boost::promise<boost::thread::id> > p = std::make_shared<boost::promise<boost::thread::id> >();
             fus.push_back(p->get_future());
             scheduler.post(boost::asynchronous::any_callable(DummyJob(p)),i);
         }

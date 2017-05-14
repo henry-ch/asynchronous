@@ -97,8 +97,8 @@ BOOST_AUTO_TEST_CASE( test_vector_async_ctor_push_back )
                                                                             boost::asynchronous::lockfree_queue<>>>(8);
 
         // make shared_ptr to avoid requiring C++14 move-capture lambda
-        boost::shared_ptr<boost::asynchronous::vector<some_type>> pv =
-                boost::make_shared<boost::asynchronous::vector<some_type>>(scheduler, 100 /* cutoff */, 10000 /* number of elements */);
+        std::shared_ptr<boost::asynchronous::vector<some_type>> pv =
+                std::make_shared<boost::asynchronous::vector<some_type>>(scheduler, 100 /* cutoff */, 10000 /* number of elements */);
         // we have to release scheduler as a scheduler cannot live into its own thread
         // (inside the pool, it doesn't need any anyway)
         pv->release_scheduler();
@@ -156,8 +156,8 @@ BOOST_AUTO_TEST_CASE( test_vector_async_resize)
                                                                             boost::asynchronous::lockfree_queue<>>>(8);
 
         // make shared_ptr to avoid requiring C++14 move-capture lambda
-        boost::shared_ptr<boost::asynchronous::vector<some_type>> pv =
-                boost::make_shared<boost::asynchronous::vector<some_type>>(scheduler, 100 /* cutoff */, 10000 /* number of elements */);
+        std::shared_ptr<boost::asynchronous::vector<some_type>> pv =
+                std::make_shared<boost::asynchronous::vector<some_type>>(scheduler, 100 /* cutoff */, 10000 /* number of elements */);
         // we have to release scheduler as a scheduler cannot live into its own thread
         // (inside the pool, it doesn't need any anyway)
         pv->release_scheduler();
@@ -213,8 +213,8 @@ BOOST_AUTO_TEST_CASE( test_vector_async_resize_to_smaller)
                                                                             boost::asynchronous::lockfree_queue<>>>(8);
 
         // make shared_ptr to avoid requiring C++14 move-capture lambda
-        boost::shared_ptr<boost::asynchronous::vector<some_type>> pv =
-                boost::make_shared<boost::asynchronous::vector<some_type>>(scheduler, 100 /* cutoff */, 10000 /* number of elements */);
+        std::shared_ptr<boost::asynchronous::vector<some_type>> pv =
+                std::make_shared<boost::asynchronous::vector<some_type>>(scheduler, 100 /* cutoff */, 10000 /* number of elements */);
         // we have to release scheduler as a scheduler cannot live into its own thread
         // (inside the pool, it doesn't need any anyway)
         pv->release_scheduler();
@@ -334,12 +334,12 @@ BOOST_AUTO_TEST_CASE( test_vector_async_merge)
                     try
                     {
                         // we must forget no move because we want to avoid a copy (the vector has no scheduler yet, so not possible anyway)
-                        boost::shared_ptr<boost::asynchronous::vector<some_type>> res =
-                                boost::make_shared<boost::asynchronous::vector<some_type>>(std::move(std::get<0>(cont_res).get()));
+                        std::shared_ptr<boost::asynchronous::vector<some_type>> res =
+                                std::make_shared<boost::asynchronous::vector<some_type>>(std::move(std::get<0>(cont_res).get()));
                         // we want to merge a few vectors
-                        auto v1 = boost::make_shared<std::vector<some_type>>(10000, some_type(1));
-                        auto v2 = boost::make_shared<std::vector<some_type>>(10000, some_type(2));
-                        auto v3 = boost::make_shared<std::vector<some_type>>(10000, some_type(3));
+                        auto v1 = std::make_shared<std::vector<some_type>>(10000, some_type(1));
+                        auto v2 = std::make_shared<std::vector<some_type>>(10000, some_type(2));
+                        auto v3 = std::make_shared<std::vector<some_type>>(10000, some_type(3));
                         // create a vector of continuations and wait for all of them
                         std::vector<boost::asynchronous::detail::callback_continuation<void>> subs;
                         subs.push_back(boost::asynchronous::parallel_move(v1->begin(),v1->end(),res->begin(),100));
@@ -395,13 +395,13 @@ BOOST_AUTO_TEST_CASE( test_vector_async_merge_task )
                                                                             boost::asynchronous::lockfree_queue<>>>(8);
 
         // make shared_ptr to avoid requiring C++14 move-capture lambda
-        boost::shared_ptr<boost::asynchronous::vector<some_type>> pv1 =
-                boost::make_shared<boost::asynchronous::vector<some_type>>(scheduler, 100 /* cutoff */, 10000 /* number of elements */);
+        std::shared_ptr<boost::asynchronous::vector<some_type>> pv1 =
+                std::make_shared<boost::asynchronous::vector<some_type>>(scheduler, 100 /* cutoff */, 10000 /* number of elements */);
         // we have to release scheduler as a scheduler cannot live into its own thread
         // (inside the pool, it doesn't need any anyway)
         pv1->release_scheduler();
-        boost::shared_ptr<boost::asynchronous::vector<some_type>> pv2 =
-                boost::make_shared<boost::asynchronous::vector<some_type>>(scheduler, 100 /* cutoff */, 20000 /* number of elements */);
+        std::shared_ptr<boost::asynchronous::vector<some_type>> pv2 =
+                std::make_shared<boost::asynchronous::vector<some_type>>(scheduler, 100 /* cutoff */, 20000 /* number of elements */);
         // we have to release scheduler as a scheduler cannot live into its own thread
         // (inside the pool, it doesn't need any anyway)
         pv2->release_scheduler();
@@ -436,8 +436,8 @@ BOOST_AUTO_TEST_CASE( test_vector_async_merge_task_vec )
         // we have to release scheduler as a scheduler cannot live into its own thread
         // (inside the pool, it doesn't need any anyway)
         pv2.release_scheduler();
-        boost::shared_ptr<std::vector<boost::asynchronous::vector<some_type>>> vecs =
-                boost::make_shared<std::vector<boost::asynchronous::vector<some_type>>>();
+        std::shared_ptr<std::vector<boost::asynchronous::vector<some_type>>> vecs =
+                std::make_shared<std::vector<boost::asynchronous::vector<some_type>>>();
         vecs->push_back(std::move(pv1));
         vecs->push_back(std::move(pv2));
 

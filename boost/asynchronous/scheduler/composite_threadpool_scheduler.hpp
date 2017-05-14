@@ -21,13 +21,13 @@
 #define BOOST_THREAD_PROVIDES_FUTURE
 #endif
 #include <boost/noncopyable.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/weak_ptr.hpp>
+#include <memory>
+
 #include <boost/thread/thread.hpp>
 #include <boost/bind.hpp>
 #include <boost/thread/future.hpp>
 #include <boost/thread/tss.hpp>
-#include <boost/enable_shared_from_this.hpp>
+
 
 #include <boost/asynchronous/scheduler/detail/exceptions.hpp>
 #include <boost/asynchronous/detail/any_interruptible.hpp>
@@ -51,7 +51,7 @@ class composite_threadpool_scheduler:
 #ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
         public any_shared_scheduler_proxy_concept<Job>, public internal_scheduler_aspect_concept<Job>,
 #endif        
-        public FindPosition, public boost::enable_shared_from_this<composite_threadpool_scheduler<Job,FindPosition> >
+        public FindPosition, public std::enable_shared_from_this<composite_threadpool_scheduler<Job,FindPosition> >
 {
 public:
     typedef Job job_type;
@@ -276,7 +276,7 @@ private:
         std::vector<boost::asynchronous::any_queue_ptr<job_type> > converted;
         for (auto aqueue : q)
         {
-            converted.push_back(boost::make_shared<boost::asynchronous::queue_converter<job_type,typename S::job_type>>(aqueue));
+            converted.push_back(std::make_shared<boost::asynchronous::queue_converter<job_type,typename S::job_type>>(aqueue));
         }
         t.push_back(converted);
     }
@@ -510,7 +510,7 @@ private:
                     locked_schedulers.emplace_back(std::move(s));
                 }
             }
-            boost::shared_ptr<lockable_shared_scheduler> s = boost::make_shared<lockable_shared_scheduler>(std::move(locked_schedulers));
+            std::shared_ptr<lockable_shared_scheduler> s = std::make_shared<lockable_shared_scheduler>(std::move(locked_schedulers));
             any_shared_scheduler_ptr<job_type> pscheduler(std::move(s));
             return any_shared_scheduler<job_type>(std::move(pscheduler));
         }
@@ -525,7 +525,7 @@ create_shared_scheduler_proxy(composite_threadpool_scheduler<Job,FindPosition>* 
 #ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
     boost::asynchronous::any_shared_scheduler_proxy<Job> pcomposite(scheduler);
 #else
-    boost::shared_ptr<boost::asynchronous::composite_threadpool_scheduler<Job> > sp(scheduler);
+    std::shared_ptr<boost::asynchronous::composite_threadpool_scheduler<Job> > sp(scheduler);
     boost::asynchronous::any_shared_scheduler_proxy_ptr<Job> pcomposite = sp;
 #endif
     boost::asynchronous::any_shared_scheduler_proxy<Job> composite(pcomposite);
@@ -535,11 +535,11 @@ template< class S, class... Args >
 typename std::enable_if<boost::asynchronous::has_self_proxy_creation<S>::value,boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type> >::type
 make_shared_scheduler_proxy(Args && ... args)
 {
-    auto sps = boost::make_shared<S>(std::forward<Args>(args)...);
+    auto sps = std::make_shared<S>(std::forward<Args>(args)...);
 #ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
     boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type> pcomposite(sps);
 #else
-    boost::shared_ptr<boost::asynchronous::composite_threadpool_scheduler<typename S::job_type> > sp(sps);
+    std::shared_ptr<boost::asynchronous::composite_threadpool_scheduler<typename S::job_type> > sp(sps);
     boost::asynchronous::any_shared_scheduler_proxy_ptr<typename S::job_type> pcomposite = sp;
 #endif
     boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type> composite(pcomposite);

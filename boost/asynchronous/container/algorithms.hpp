@@ -13,7 +13,7 @@
 #include <type_traits>
 
 #include <boost/mpl/has_xxx.hpp>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 #include <boost/asynchronous/continuation_task.hpp>
 #include <boost/asynchronous/algorithm/parallel_placement.hpp>
 #include <boost/asynchronous/algorithm/parallel_move_if_noexcept.hpp>
@@ -49,7 +49,7 @@ struct push_back_task: public boost::asynchronous::continuation_task<Container>
                 return;
             }
             // reallocate
-            boost::shared_ptr<Container> c = boost::make_shared<Container>(std::move(m_container));
+            std::shared_ptr<Container> c = std::make_shared<Container>(std::move(m_container));
             auto v = m_value;
             auto capacity = c->calc_new_capacity(c->size());
             auto cont = c->async_reallocate(capacity,c->size());
@@ -169,7 +169,7 @@ struct resize_task: public boost::asynchronous::continuation_task<Container>
                 task_res.set_value(std::move(m_container));
                 return;
             }
-            boost::shared_ptr<Container> c = boost::make_shared<Container>(std::move(m_container));
+            std::shared_ptr<Container> c = std::make_shared<Container>(std::move(m_container));
             if (m_value > c->size())
             {
                 // we need to allocate new elements
@@ -317,7 +317,7 @@ struct reserve_task: public boost::asynchronous::continuation_task<Container>
                 return;
             }
             // more memory, same size
-            boost::shared_ptr<Container> c = boost::make_shared<Container>(std::move(m_container));
+            std::shared_ptr<Container> c = std::make_shared<Container>(std::move(m_container));
             auto v = m_value;
             auto cont = c->async_reallocate(m_value,c->size());
             cont.on_done([task_res,c,v]
@@ -436,7 +436,7 @@ struct shrink_to_fit_task: public boost::asynchronous::continuation_task<Contain
                 return;
             }
             // reduce memory to size
-            boost::shared_ptr<Container> c = boost::make_shared<Container>(std::move(m_container));
+            std::shared_ptr<Container> c = std::make_shared<Container>(std::move(m_container));
             auto cont = c->async_reallocate(c->size(),c->size());
             cont.on_done([task_res,c]
                            (std::tuple<boost::asynchronous::expected<typename Container::internal_data_type> >&& res)mutable
@@ -549,10 +549,10 @@ void make_asynchronous_range_task<Range,Job>::operator()()
     boost::asynchronous::continuation_result<Range> task_res = this->this_task_result();
     try
     {
-        auto v = boost::make_shared<Range>(m_cutoff,m_size,m_task_name,m_prio);
+        auto v = std::make_shared<Range>(m_cutoff,m_size,m_task_name,m_prio);
         auto alloc = v->get_allocator();
         auto n = m_size;
-        boost::shared_ptr<typename Range::value_type> raw (alloc.allocate(n),
+        std::shared_ptr<typename Range::value_type> raw (alloc.allocate(n),
                                                            [alloc,n](typename Range::value_type* p)mutable{alloc.deallocate(p,n);});
 
         auto cutoff = m_cutoff;
@@ -574,9 +574,9 @@ void make_asynchronous_range_task<Range,Job>::operator()()
                 }
                 else
                 {
-                    v->set_internal_data(boost::make_shared<boost::asynchronous::placement_deleter<typename Range::value_type,
+                    v->set_internal_data(std::make_shared<boost::asynchronous::placement_deleter<typename Range::value_type,
                                                                                           Job,
-                                                                                          boost::shared_ptr<typename Range::value_type>>>
+                                                                                          std::shared_ptr<typename Range::value_type>>>
                             (n,raw,cutoff,task_name,prio),n);
                     task_res.set_value(std::move(*v));
                 }
@@ -672,7 +672,7 @@ struct async_merge_task: public boost::asynchronous::continuation_task<Container
                 task_res.set_value(std::move(m_container2));
                 return;
             }
-            boost::shared_ptr<Container> c2 = boost::make_shared<Container>(std::move(m_container2));
+            std::shared_ptr<Container> c2 = std::make_shared<Container>(std::move(m_container2));
             auto s1 = m_container1.size();auto s2 = c2->size();
             auto name = this->get_name();
 
@@ -682,7 +682,7 @@ struct async_merge_task: public boost::asynchronous::continuation_task<Container
             {
                 try
                 {
-                    boost::shared_ptr<Container> c1 = boost::make_shared<Container>(std::move(std::get<0>(res).get()));
+                    std::shared_ptr<Container> c1 = std::make_shared<Container>(std::move(std::get<0>(res).get()));
                     using iterator = typename Container::iterator;
                     auto cont_move = boost::asynchronous::parallel_move_if_noexcept<iterator,iterator,Job>
                                                 (c2->begin(),c2->end(),c1->end(),c2->get_cutoff(),
@@ -759,15 +759,15 @@ struct async_merge_container_of_containers_task: public boost::asynchronous::con
             }
             auto name = this->get_name();
             auto cont = boost::asynchronous::async_resize(std::move(m_container[0]),s);
-            boost::shared_ptr<Container> c = boost::make_shared<Container>(std::move(m_container));
+            std::shared_ptr<Container> c = std::make_shared<Container>(std::move(m_container));
 
             cont.on_done([task_res,name,c]
                            (std::tuple<boost::asynchronous::expected<typename Container::value_type> >&& res)mutable
             {
                 try
                 {
-                    boost::shared_ptr<typename Container::value_type> c1 =
-                            boost::make_shared<typename Container::value_type>(std::move(std::get<0>(res).get()));
+                    std::shared_ptr<typename Container::value_type> c1 =
+                            std::make_shared<typename Container::value_type>(std::move(std::get<0>(res).get()));
                     using iterator = typename Container::value_type::iterator;
                     std::vector<boost::asynchronous::detail::callback_continuation<void>> subs;
                     for (auto it = c->begin()+1; it != c->end();++it)

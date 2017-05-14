@@ -42,7 +42,7 @@ public:
      * \brief constructor taking a value as argument.
      */
     expected(value_type value)
-        : m_value(boost::make_shared<value_type>(std::move(value)))
+        : m_value(std::make_shared<value_type>(std::move(value)))
         , m_exception() {}
 
     /*!
@@ -65,7 +65,7 @@ public:
      * \brief copy constructor noexcept
      */
     expected(expected const& rhs) noexcept
-        : m_value(boost::make_shared<value_type>(*rhs.m_value))
+        : m_value(std::make_shared<value_type>(*rhs.m_value))
         , m_exception(rhs.m_exception)
     {
     }
@@ -88,7 +88,7 @@ public:
         if(!!m_value)
             *m_value=*rhs.m_value;
         else
-            m_value = boost::make_shared<value_type>(*rhs.m_value);
+            m_value = std::make_shared<value_type>(*rhs.m_value);
         m_exception = rhs.m_exception;
         return *this;
     }
@@ -111,7 +111,7 @@ public:
         if(!!m_value)
             *m_value=std::move(value);
         else
-            m_value = boost::make_shared<value_type>(std::move(value));
+            m_value = std::make_shared<value_type>(std::move(value));
     }
 
     /*!
@@ -168,7 +168,7 @@ public:
     }
 
 private:
-    boost::shared_ptr<value_type>   m_value;
+    std::shared_ptr<value_type>   m_value;
     boost::exception_ptr            m_exception;
 };
 

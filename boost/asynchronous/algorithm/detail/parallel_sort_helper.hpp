@@ -86,7 +86,7 @@ namespace detail
 template <class Continuation, class Range1>
 struct parallel_sort_range_move_helper : public boost::asynchronous::continuation_task<Range1>
 {
-    parallel_sort_range_move_helper(Continuation const& c,boost::shared_ptr<Range1> range_in,
+    parallel_sort_range_move_helper(Continuation const& c,std::shared_ptr<Range1> range_in,
                                     const std::string& task_name)
         :boost::asynchronous::continuation_task<Range1>(task_name)
         ,cont_(c),range_in_(std::move(range_in))
@@ -111,7 +111,7 @@ struct parallel_sort_range_move_helper : public boost::asynchronous::continuatio
         );
     }
     Continuation cont_;
-    boost::shared_ptr<Range1> range_in_;
+    std::shared_ptr<Range1> range_in_;
 };
 }
 

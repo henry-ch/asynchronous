@@ -171,13 +171,13 @@ class parallel_partition_two_collections
     struct simple_parallel_partition_task : public boost::asynchronous::continuation_task<Policy>
     {
         simple_parallel_partition_task(Box const& box,
-                                boost::shared_ptr<InputCollection1> collection1,boost::shared_ptr<index_vector_type> input1,
+                                std::shared_ptr<InputCollection1> collection1,std::shared_ptr<index_vector_type> input1,
                                 index_iterator_type beg1,index_iterator_type end1,
-                                boost::shared_ptr<InputCollection2> collection2,boost::shared_ptr<index_vector_type> input2,
+                                std::shared_ptr<InputCollection2> collection2,std::shared_ptr<index_vector_type> input2,
                                 index_iterator_type beg2,index_iterator_type end2,
                                 int level,
                                 std::size_t min_elements,
-                                boost::shared_ptr<Policy> policy, VisitBoxPolicy& box_policy,
+                                std::shared_ptr<Policy> policy, VisitBoxPolicy& box_policy,
                                 long cutoff,const std::string& task_name, std::size_t prio)
             : boost::asynchronous::continuation_task<Policy>(task_name)
             // TODO move
@@ -202,7 +202,7 @@ class parallel_partition_two_collections
                 // if not at end, recurse, otherwise execute here
                 if (it1 == end1_)
                 {
-                    auto policy = boost::make_shared<Policy>(std::move(policy_->clone()));
+                    auto policy = std::make_shared<Policy>(std::move(policy_->clone()));
                     Owner::apply3(box_,collection1_,beg1_,end1_,collection2_,beg2_,end2_,level_,min_elements_,policy,box_policy_);
                     task_res.set_value(std::move(*policy));
                 }
@@ -248,7 +248,7 @@ class parallel_partition_two_collections
                 // if not at end, recurse, otherwise execute here
                 if (it2 == end2_)
                 {
-                    auto policy = boost::make_shared<Policy>(std::move(policy_->clone()));
+                    auto policy = std::make_shared<Policy>(std::move(policy_->clone()));
 
                     Owner::apply3(box_,collection1_,beg1_,end1_,collection2_,beg2_,end2_,level_,min_elements_,policy,box_policy_);
                     task_res.set_value(std::move(*policy));
@@ -291,17 +291,17 @@ class parallel_partition_two_collections
         }
 
         Box box_;
-        boost::shared_ptr<InputCollection1> collection1_;
-        boost::shared_ptr<InputCollection2> collection2_;
-        boost::shared_ptr<index_vector_type> input1_;
+        std::shared_ptr<InputCollection1> collection1_;
+        std::shared_ptr<InputCollection2> collection2_;
+        std::shared_ptr<index_vector_type> input1_;
         index_iterator_type beg1_;
         index_iterator_type end1_;
-        boost::shared_ptr<index_vector_type> input2_;
+        std::shared_ptr<index_vector_type> input2_;
         index_iterator_type beg2_;
         index_iterator_type end2_;
         int level_;
         std::size_t min_elements_;
-        boost::shared_ptr<Policy> policy_;
+        std::shared_ptr<Policy> policy_;
         VisitBoxPolicy box_policy_;
         long cutoff_;
         std::size_t prio_;
@@ -324,17 +324,17 @@ public :
             long partition_cutoff)
     {
         // TODO name +prio
-        auto input1_ = boost::make_shared<index_vector_type>(std::move(input1));
-        auto input2_ = boost::make_shared<index_vector_type>(std::move(input2));
+        auto input1_ = std::make_shared<index_vector_type>(std::move(input1));
+        auto input2_ = std::make_shared<index_vector_type>(std::move(input2));
         return boost::asynchronous::top_level_callback_continuation_job<Policy,Job>
                  (simple_parallel_partition_task<InputCollection1,InputCollection2,Policy,this_type>(
                       box,
-                      boost::make_shared<InputCollection1>(collection1),input1_,
+                      std::make_shared<InputCollection1>(collection1),input1_,
                       boost::begin(*input1_),boost::end(*input1_),
-                      boost::make_shared<InputCollection2>(collection2),input2_,
+                      std::make_shared<InputCollection2>(collection2),input2_,
                       boost::begin(*input2_),boost::end(*input2_),
                       level,min_elements,
-                      boost::make_shared<Policy>(std::move(policy)),box_policy,
+                      std::make_shared<Policy>(std::move(policy)),box_policy,
                       partition_cutoff,"geometry::parallel_partition_two",0));
     }
 
@@ -345,11 +345,11 @@ public :
         typename Policy
     >
     static inline void apply3(Box const& box,
-            boost::shared_ptr<InputCollection1> collection1, index_iterator_type beg1,index_iterator_type end1,
-            boost::shared_ptr<InputCollection2> collection2, index_iterator_type beg2,index_iterator_type end2,
+            std::shared_ptr<InputCollection1> collection1, index_iterator_type beg1,index_iterator_type end1,
+            std::shared_ptr<InputCollection2> collection2, index_iterator_type beg2,index_iterator_type end2,
             int level,
             std::size_t min_elements,
-            boost::shared_ptr<Policy> policy, VisitBoxPolicy& box_policy)
+            std::shared_ptr<Policy> policy, VisitBoxPolicy& box_policy)
     {
         box_policy.apply(box, level);
 
@@ -649,12 +649,12 @@ public :
     struct next_level_2_task : public boost::asynchronous::continuation_task<Policy>
     {
         next_level_2_task(Box const& box,
-                                boost::shared_ptr<InputCollection> collection,
-                                boost::shared_ptr<index_vector_type> input1,
-                                boost::shared_ptr<index_vector_type> input2,
+                                std::shared_ptr<InputCollection> collection,
+                                std::shared_ptr<index_vector_type> input1,
+                                std::shared_ptr<index_vector_type> input2,
                                 int level,
                                 std::size_t min_elements,
-                                boost::shared_ptr<Policy> policy, VisitBoxPolicy& box_policy,
+                                std::shared_ptr<Policy> policy, VisitBoxPolicy& box_policy,
                                 long cutoff,const std::string& task_name, std::size_t prio)
             : boost::asynchronous::continuation_task<Policy>(task_name)
             // TODO move
@@ -719,12 +719,12 @@ public :
         }
 
         Box box_;
-        boost::shared_ptr<InputCollection> collection_;
-        boost::shared_ptr<index_vector_type> input1_;
-        boost::shared_ptr<index_vector_type> input2_;
+        std::shared_ptr<InputCollection> collection_;
+        std::shared_ptr<index_vector_type> input1_;
+        std::shared_ptr<index_vector_type> input2_;
         int level_;
         std::size_t min_elements_;
-        boost::shared_ptr<Policy> policy_;
+        std::shared_ptr<Policy> policy_;
         VisitBoxPolicy box_policy_;
         long cutoff_;
         std::size_t prio_;
@@ -739,10 +739,10 @@ public :
     struct simple_parallel_partition_task : public boost::asynchronous::continuation_task<Policy>
     {
         simple_parallel_partition_task(Box const& box,
-                                boost::shared_ptr<InputCollection> collection,boost::shared_ptr<index_vector_type> input,
+                                std::shared_ptr<InputCollection> collection,std::shared_ptr<index_vector_type> input,
                                 int level,
                                 std::size_t min_elements,
-                                boost::shared_ptr<Policy> policy, VisitBoxPolicy& box_policy,
+                                std::shared_ptr<Policy> policy, VisitBoxPolicy& box_policy,
                                 long cutoff,const std::string& task_name, std::size_t prio)
             : boost::asynchronous::continuation_task<Policy>(task_name)
             // TODO move
@@ -775,8 +775,8 @@ public :
                 Owner::next_level(exceeding_box, *collection_, exceeding, level_,
                     min_elements_, *policy_, box_policy_);
 
-/*              auto p1 = boost::make_shared<Policy>(policy_->clone());
-                auto p2 = boost::make_shared<Policy>(policy_->clone());
+/*              auto p1 = std::make_shared<Policy>(policy_->clone());
+                auto p2 = std::make_shared<Policy>(policy_->clone());
 
                 next_level2(exceeding_box, *collection_, exceeding, lower, level_,
                                     min_elements_, *p1, box_policy_);
@@ -793,9 +793,9 @@ public :
                 next_level2(exceeding_box, *collection_, exceeding, upper, level_,
                     min_elements_, *policy_, box_policy_);
 
-               /* boost::shared_ptr<index_vector_type> exceeding_ = boost::make_shared<index_vector_type>(std::move(exceeding));
-                boost::shared_ptr<index_vector_type> lower_ = boost::make_shared<index_vector_type>(std::move(lower));
-                boost::shared_ptr<index_vector_type> upper_ = boost::make_shared<index_vector_type>(std::move(upper));
+               /* std::shared_ptr<index_vector_type> exceeding_ = std::make_shared<index_vector_type>(std::move(exceeding));
+                std::shared_ptr<index_vector_type> lower_ = std::make_shared<index_vector_type>(std::move(lower));
+                std::shared_ptr<index_vector_type> upper_ = std::make_shared<index_vector_type>(std::move(upper));
                 auto policy = policy_;
                 auto collection = collection_;
                 auto level = level_;
@@ -835,11 +835,11 @@ public :
                             next_level_2_task<InputCollection,Policy>
                                 (exceeding_box,
                                  collection_,exceeding_,lower_,
-                                 level_,min_elements_,boost::make_shared<Policy>(policy_->clone()),box_policy_,cutoff_,this->get_name(),prio_),
+                                 level_,min_elements_,std::make_shared<Policy>(policy_->clone()),box_policy_,cutoff_,this->get_name(),prio_),
                             next_level_2_task<InputCollection,Policy>
                                 (exceeding_box,
                                  collection_,exceeding_,upper_,
-                                 level_,min_elements_,boost::make_shared<Policy>(policy_->clone()),box_policy_,cutoff_,this->get_name(),prio_)
+                                 level_,min_elements_,std::make_shared<Policy>(policy_->clone()),box_policy_,cutoff_,this->get_name(),prio_)
                    );*/
 /*
                 boost::asynchronous::create_callback_continuation_job<Job>(
@@ -879,7 +879,7 @@ public :
                                                 next_level_2_task<InputCollection,Policy>
                                                     (exceeding_box,
                                                      collection,exceeding_,upper_,
-                                                     level,min_elements,boost::make_shared<Policy>(policy->clone()),box_policy,cutoff,name,prio)
+                                                     level,min_elements,std::make_shared<Policy>(policy->clone()),box_policy,cutoff,name,prio)
                                        );
                                 }
                                 catch(std::exception& e)
@@ -891,7 +891,7 @@ public :
                             next_level_2_task<InputCollection,Policy>
                                 (exceeding_box,
                                  collection_,exceeding_,lower_,
-                                 level_,min_elements_,boost::make_shared<Policy>(policy_->clone()),box_policy_,cutoff_,this->get_name(),prio_)
+                                 level_,min_elements_,std::make_shared<Policy>(policy_->clone()),box_policy_,cutoff_,this->get_name(),prio_)
                    );*/
             }
           //  else
@@ -907,11 +907,11 @@ public :
         }
 
         Box box_;
-        boost::shared_ptr<InputCollection> collection_;
-        boost::shared_ptr<index_vector_type> input_;
+        std::shared_ptr<InputCollection> collection_;
+        std::shared_ptr<index_vector_type> input_;
         int level_;
         std::size_t min_elements_;
-        boost::shared_ptr<Policy> policy_;
+        std::shared_ptr<Policy> policy_;
         VisitBoxPolicy box_policy_;
         long cutoff_;
         std::size_t prio_;
@@ -932,13 +932,13 @@ public :
             long partition_cutoff)
     {
         // TODO name +prio
-        auto input_ = boost::make_shared<index_vector_type>(std::move(input));
+        auto input_ = std::make_shared<index_vector_type>(std::move(input));
         return boost::asynchronous::top_level_callback_continuation_job<Policy,Job>
                  (simple_parallel_partition_task<InputCollection,Policy,this_type>(
                       box,
-                      boost::make_shared<InputCollection>(collection),input_,
+                      std::make_shared<InputCollection>(collection),input_,
                       level,min_elements,
-                      boost::make_shared<Policy>(std::move(policy)),box_policy,
+                      std::make_shared<Policy>(std::move(policy)),box_policy,
                       partition_cutoff,"geometry::parallel_partition_one",0));
     }
 
@@ -948,10 +948,10 @@ public :
         typename Policy
     >
     static inline void apply3(Box const& box,
-            boost::shared_ptr<InputCollection> collection, index_iterator_type beg,index_iterator_type end,
+            std::shared_ptr<InputCollection> collection, index_iterator_type beg,index_iterator_type end,
             int level,
             std::size_t min_elements,
-            boost::shared_ptr<Policy> policy, VisitBoxPolicy& box_policy)
+            std::shared_ptr<Policy> policy, VisitBoxPolicy& box_policy)
     {
         box_policy.apply(box, level);
 

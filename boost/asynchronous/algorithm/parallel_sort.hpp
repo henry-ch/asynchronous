@@ -51,7 +51,7 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
 {
     typedef typename std::iterator_traits<Iterator>::value_type value_type;
 
-    parallel_sort_fast_helper(Iterator beg, Iterator end,unsigned int depth,boost::shared_ptr<boost::asynchronous::placement_deleter<value_type,Job>> merge_memory,
+    parallel_sort_fast_helper(Iterator beg, Iterator end,unsigned int depth,std::shared_ptr<boost::asynchronous::placement_deleter<value_type,Job>> merge_memory,
                               value_type* beg2, value_type* end2,
                               Func func,long cutoff,const std::string& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<void>(task_name),
@@ -59,7 +59,7 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
         , merge_beg_( beg2), merge_end_(end2)
     {
     }
-    static void helper(Iterator beg, Iterator end,unsigned int depth,boost::shared_ptr<boost::asynchronous::placement_deleter<value_type,Job>> merge_memory,
+    static void helper(Iterator beg, Iterator end,unsigned int depth,std::shared_ptr<boost::asynchronous::placement_deleter<value_type,Job>> merge_memory,
                        value_type* beg2, value_type* end2,
                        Func func,long cutoff,const std::string& task_name, std::size_t prio,
                        boost::asynchronous::continuation_result<void> task_res)
@@ -262,8 +262,8 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
 #ifdef BOOST_ASYNCHRONOUS_TIMING
                                 auto alloc_start = boost::chrono::high_resolution_clock::now();
 #endif
-                                boost::shared_array<char> merge_memory_ (
-                                            new char[size * sizeof(typename std::iterator_traits<Iterator>::value_type)]);
+                                std::shared_ptr<char> merge_memory_ (
+                                            new char[size * sizeof(typename std::iterator_traits<Iterator>::value_type)],[](char* p){delete[] p;});
 
 #ifdef BOOST_ASYNCHRONOUS_TIMING
                                 auto alloc_stop = boost::chrono::high_resolution_clock::now();
@@ -296,7 +296,7 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
                                         else
                                         {
                                             auto merge_memory =
-                                                    boost::make_shared<boost::asynchronous::placement_deleter<value_type,Job>>(size,merge_memory_,cutoff,task_name,prio);
+                                                    std::make_shared<boost::asynchronous::placement_deleter<value_type,Job>>(size,merge_memory_,cutoff,task_name,prio);
                                             helper(beg,end,depth,merge_memory,(value_type*)merge_memory_.get(),((value_type*)merge_memory_.get())+size,func,cutoff,task_name,prio,task_res);
                                         }
                                     }
@@ -332,7 +332,7 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
     Func func_;
     long cutoff_;
     std::size_t prio_;
-    boost::shared_ptr<boost::asynchronous::placement_deleter<value_type,Job>> merge_memory_;
+    std::shared_ptr<boost::asynchronous::placement_deleter<value_type,Job>> merge_memory_;
     value_type* merge_beg_;
     value_type* merge_end_;
 };
@@ -349,7 +349,7 @@ parallel_sort(Iterator beg, Iterator end,Func func,long cutoff,
 {
     return boost::asynchronous::top_level_callback_continuation_job<void,Job>
             (boost::asynchronous::detail::parallel_sort_fast_helper<Iterator,Func,Job,boost::asynchronous::std_sort>
-              (beg,end,0, boost::shared_ptr<boost::asynchronous::placement_deleter<typename std::iterator_traits<Iterator>::value_type,Job>>(),
+              (beg,end,0, std::shared_ptr<boost::asynchronous::placement_deleter<typename std::iterator_traits<Iterator>::value_type,Job>>(),
                nullptr,nullptr,std::move(func),cutoff,task_name,prio));
 }
 
@@ -364,7 +364,7 @@ parallel_stable_sort(Iterator beg, Iterator end,Func func,long cutoff,
 {
     return boost::asynchronous::top_level_callback_continuation_job<void,Job>
             (boost::asynchronous::detail::parallel_sort_fast_helper<Iterator,Func,Job,boost::asynchronous::std_stable_sort>
-               (beg,end,0,boost::shared_ptr<boost::asynchronous::placement_deleter<typename std::iterator_traits<Iterator>::value_type,Job>>(),
+               (beg,end,0,std::shared_ptr<boost::asynchronous::placement_deleter<typename std::iterator_traits<Iterator>::value_type,Job>>(),
                 nullptr,nullptr,std::move(func),cutoff,task_name,prio));
 }
 // test boost sort
@@ -380,7 +380,7 @@ parallel_boost_stable_sort(Iterator beg, Iterator end,Func func,long cutoff,
 {
     return boost::asynchronous::top_level_callback_continuation_job<void,Job>
             (boost::asynchronous::detail::parallel_sort_fast_helper<Iterator,Func,Job,boost::asynchronous::boost_stable_sort>
-               (beg,end,0,boost::shared_ptr<boost::asynchronous::placement_deleter<typename std::iterator_traits<Iterator>::value_type,Job>>(),
+               (beg,end,0,std::shared_ptr<boost::asynchronous::placement_deleter<typename std::iterator_traits<Iterator>::value_type,Job>>(),
                 nullptr,nullptr,std::move(func),cutoff,task_name,prio));
 }
 #endif
@@ -397,7 +397,7 @@ parallel_spreadsort(Iterator beg, Iterator end,Func func,long cutoff,
 {
     return boost::asynchronous::top_level_callback_continuation_job<void,Job>
             (boost::asynchronous::detail::parallel_sort_fast_helper<Iterator,Func,Job,boost::asynchronous::boost_spreadsort>
-               (beg,end,0,boost::shared_ptr<boost::asynchronous::placement_deleter<typename std::iterator_traits<Iterator>::value_type,Job>>(),
+               (beg,end,0,std::shared_ptr<boost::asynchronous::placement_deleter<typename std::iterator_traits<Iterator>::value_type,Job>>(),
                 nullptr,nullptr,std::move(func),cutoff,task_name,prio));
 }
 #endif
@@ -415,7 +415,7 @@ parallel_indirect_sort(Iterator beg, Iterator end,Func func,long cutoff,
 {
     return boost::asynchronous::top_level_callback_continuation_job<void,Job>
             (boost::asynchronous::detail::parallel_sort_fast_helper<Iterator,Func,Job,boost::asynchronous::boost_indirect_sort>
-               (beg,end,0,boost::shared_ptr<boost::asynchronous::placement_deleter<typename std::iterator_traits<Iterator>::value_type,Job>>(),
+               (beg,end,0,std::shared_ptr<boost::asynchronous::placement_deleter<typename std::iterator_traits<Iterator>::value_type,Job>>(),
                 nullptr,nullptr,std::move(func),cutoff,task_name,prio));
 }
 template <class Iterator, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
@@ -429,7 +429,7 @@ parallel_intro_sort(Iterator beg, Iterator end,Func func,long cutoff,
 {
     return boost::asynchronous::top_level_callback_continuation_job<void,Job>
             (boost::asynchronous::detail::parallel_sort_fast_helper<Iterator,Func,Job,boost::asynchronous::boost_intro_sort>
-               (beg,end,0,boost::shared_ptr<boost::asynchronous::placement_deleter<typename std::iterator_traits<Iterator>::value_type,Job>>(),
+               (beg,end,0,std::shared_ptr<boost::asynchronous::placement_deleter<typename std::iterator_traits<Iterator>::value_type,Job>>(),
                 nullptr,nullptr,std::move(func),cutoff,task_name,prio));
 }
 template <class Iterator, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
@@ -443,7 +443,7 @@ parallel_boost_spin_sort(Iterator beg, Iterator end,Func func,long cutoff,
 {
     return boost::asynchronous::top_level_callback_continuation_job<void,Job>
             (boost::asynchronous::detail::parallel_sort_fast_helper<Iterator,Func,Job,boost::asynchronous::boost_spin_sort>
-               (beg,end,0,boost::shared_ptr<boost::asynchronous::placement_deleter<typename std::iterator_traits<Iterator>::value_type,Job>>(),
+               (beg,end,0,std::shared_ptr<boost::asynchronous::placement_deleter<typename std::iterator_traits<Iterator>::value_type,Job>>(),
                 nullptr,nullptr,std::move(func),cutoff,task_name,prio));
 }
 #endif
@@ -460,7 +460,7 @@ parallel_sort(Range&& range,Func func,long cutoff,
                    const std::string& task_name="", std::size_t prio=0)
 #endif
 {
-    auto r = boost::make_shared<Range>(std::forward<Range>(range));
+    auto r = std::make_shared<Range>(std::forward<Range>(range));
     auto beg = boost::begin(*r);
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
@@ -480,7 +480,7 @@ parallel_stable_sort(Range&& range,Func func,long cutoff,
                           const std::string& task_name="", std::size_t prio=0)
 #endif
 {
-    auto r = boost::make_shared<Range>(std::forward<Range>(range));
+    auto r = std::make_shared<Range>(std::forward<Range>(range));
     auto beg = boost::begin(*r);
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
@@ -500,7 +500,7 @@ parallel_spreadsort(Range&& range,Func func,long cutoff,
                    const std::string& task_name="", std::size_t prio=0)
 #endif
 {
-    auto r = boost::make_shared<Range>(std::forward<Range>(range));
+    auto r = std::make_shared<Range>(std::forward<Range>(range));
     auto beg = boost::begin(*r);
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
@@ -519,7 +519,7 @@ struct parallel_sort_range_move_helper_serializable
     {
     }
     template <class Iterator>
-    parallel_sort_range_move_helper_serializable(boost::shared_ptr<Range> range,Iterator beg, Iterator end,Func func,unsigned int depth, long cutoff,
+    parallel_sort_range_move_helper_serializable(std::shared_ptr<Range> range,Iterator beg, Iterator end,Func func,unsigned int depth, long cutoff,
                         const std::string& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<Range>(task_name)
         , boost::asynchronous::serializable_task(func.get_task_name())
@@ -529,7 +529,7 @@ struct parallel_sort_range_move_helper_serializable
         , end_(end)
     {
     }
-    static void helper(boost::shared_ptr<Range> full_range,decltype(boost::begin(*full_range)) beg, decltype(boost::begin(*full_range)) end,unsigned int depth,
+    static void helper(std::shared_ptr<Range> full_range,decltype(boost::begin(*full_range)) beg, decltype(boost::begin(*full_range)) end,unsigned int depth,
                        Func func,long cutoff,const std::string& task_name, std::size_t prio,
                        boost::asynchronous::continuation_result<Range> task_res)
     {
@@ -569,9 +569,9 @@ struct parallel_sort_range_move_helper_serializable
                                     std::merge(r1.begin(),r1.end(),r2.begin(),r2.end(),range.begin(),func);
                                     task_res.set_value(std::move(range));
                                     //TODO reactivate parallel_merge when it supports serialization
-                                    /*boost::shared_ptr<Range> r1 =  boost::make_shared<Range>(std::move(std::get<0>(res).get()));
-                                    boost::shared_ptr<Range> r2 =  boost::make_shared<Range>(std::move(std::get<1>(res).get()));
-                                    boost::shared_ptr<Range> range = boost::make_shared<Range>(r1->size()+r2->size());
+                                    /*std::shared_ptr<Range> r1 =  std::make_shared<Range>(std::move(std::get<0>(res).get()));
+                                    std::shared_ptr<Range> r2 =  std::make_shared<Range>(std::move(std::get<1>(res).get()));
+                                    std::shared_ptr<Range> range = std::make_shared<Range>(r1->size()+r2->size());
 
                                     // merge both sorted sub-ranges
                                     auto on_done_fct = [full_range,task_res,r1,r2,range](std::tuple<boost::asynchronous::expected<void> >&& merge_res)
@@ -636,7 +636,7 @@ struct parallel_sort_range_move_helper_serializable
     template <class Archive>
     void load(Archive & ar, const unsigned int /*version*/)
     {
-        range_ = boost::make_shared<Range>();
+        range_ = std::make_shared<Range>();
         ar & (*range_);
         ar & func_;
         ar & cutoff_;
@@ -648,7 +648,7 @@ struct parallel_sort_range_move_helper_serializable
     }
     BOOST_SERIALIZATION_SPLIT_MEMBER()
 
-    boost::shared_ptr<Range> range_;
+    std::shared_ptr<Range> range_;
     Func func_;
     long cutoff_;
     std::string task_name_;
@@ -669,7 +669,7 @@ parallel_sort(Range&& range,Func func,long cutoff,
                    const std::string& task_name="", std::size_t prio=0)
 #endif
 {
-    auto r = boost::make_shared<Range>(std::forward<Range>(range));
+    auto r = std::make_shared<Range>(std::forward<Range>(range));
     auto beg = boost::begin(*r);
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
@@ -687,7 +687,7 @@ parallel_stable_sort(Range&& range,Func func,long cutoff,
                           const std::string& task_name="", std::size_t prio=0)
 #endif
 {
-    auto r = boost::make_shared<Range>(std::forward<Range>(range));
+    auto r = std::make_shared<Range>(std::forward<Range>(range));
     auto beg = boost::begin(*r);
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
@@ -706,7 +706,7 @@ parallel_spreadsort(Range&& range,Func func,long cutoff,
                    const std::string& task_name="", std::size_t prio=0)
 #endif
 {
-    auto r = boost::make_shared<Range>(std::forward<Range>(range));
+    auto r = std::make_shared<Range>(std::forward<Range>(range));
     auto beg = boost::begin(*r);
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
@@ -725,7 +725,7 @@ struct parallel_sort_range_move_helper2 : public boost::asynchronous::continuati
     {
     }
     template <class Iterator>
-    parallel_sort_range_move_helper2(boost::shared_ptr<Range> range,Iterator beg, Iterator end,Func func,unsigned int depth, long cutoff,
+    parallel_sort_range_move_helper2(std::shared_ptr<Range> range,Iterator beg, Iterator end,Func func,unsigned int depth, long cutoff,
                         const std::string& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<Range>(task_name)
         , range_(range),func_(std::move(func))
@@ -734,7 +734,7 @@ struct parallel_sort_range_move_helper2 : public boost::asynchronous::continuati
         , end_(end)
     {
     }
-    static void helper(boost::shared_ptr<Range> full_range,decltype(boost::begin(*full_range)) beg, decltype(boost::begin(*full_range)) end,unsigned int depth,
+    static void helper(std::shared_ptr<Range> full_range,decltype(boost::begin(*full_range)) beg, decltype(boost::begin(*full_range)) end,unsigned int depth,
                        Func func,long cutoff,const std::string& task_name, std::size_t prio,
                        boost::asynchronous::continuation_result<Range> task_res)
     {
@@ -777,15 +777,15 @@ struct parallel_sort_range_move_helper2 : public boost::asynchronous::continuati
                         {
                             try
                             {
-                                boost::shared_ptr<Range> r1 =  boost::make_shared<Range>(std::move(std::get<0>(res).get()));
-                                boost::shared_ptr<Range> r2 =  boost::make_shared<Range>(std::move(std::get<1>(res).get()));
+                                std::shared_ptr<Range> r1 =  std::make_shared<Range>(std::move(std::get<0>(res).get()));
+                                std::shared_ptr<Range> r2 =  std::make_shared<Range>(std::move(std::get<1>(res).get()));
                                 auto vec_cont = boost::asynchronous::make_asynchronous_range<Range,Job>(r1->size()+r2->size(),cutoff);
                                 vec_cont.on_done([full_range,task_res,it,cutoff,func,task_name,prio,r1,r2]
                                                  (std::tuple<boost::asynchronous::expected<Range>>&& vec_res)
                                 {
                                     try
                                     {
-                                        boost::shared_ptr<Range> range = boost::make_shared<Range>(std::move(std::get<0>(vec_res).get()));
+                                        std::shared_ptr<Range> range = std::make_shared<Range>(std::move(std::get<0>(vec_res).get()));
                                         // merge both sorted sub-ranges
                                         auto on_done_fct = [full_range,task_res,r1,r2,range]
                                                            (std::tuple<boost::asynchronous::expected<void> >&& merge_res) mutable
@@ -915,7 +915,7 @@ struct parallel_sort_range_move_helper2 : public boost::asynchronous::continuati
             task_res.set_exception(boost::copy_exception(e));
         }
     }
-    boost::shared_ptr<Range> range_;
+    std::shared_ptr<Range> range_;
     Func func_;
     long cutoff_;
     std::string task_name_;
@@ -936,7 +936,7 @@ parallel_sort2(Range&& range,Func func,long cutoff,
                    const std::string& task_name="", std::size_t prio=0)
 #endif
 {
-    auto r = boost::make_shared<Range>(std::forward<Range>(range));
+    auto r = std::make_shared<Range>(std::forward<Range>(range));
     auto beg = boost::begin(*r);
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
@@ -953,7 +953,7 @@ parallel_stable_sort2(Range&& range,Func func,long cutoff,
                           const std::string& task_name="", std::size_t prio=0)
 #endif
 {
-    auto r = boost::make_shared<Range>(std::forward<Range>(range));
+    auto r = std::make_shared<Range>(std::forward<Range>(range));
     auto beg = boost::begin(*r);
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
@@ -971,7 +971,7 @@ parallel_spreadsort2(Range&& range,Func func,long cutoff,
                    const std::string& task_name="", std::size_t prio=0)
 #endif
 {
-    auto r = boost::make_shared<Range>(std::forward<Range>(range));
+    auto r = std::make_shared<Range>(std::forward<Range>(range));
     auto beg = boost::begin(*r);
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>

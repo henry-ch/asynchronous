@@ -15,7 +15,7 @@
 #include <numeric>
 
 #include <boost/noncopyable.hpp>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 #include <boost/thread/thread.hpp>
 #include <boost/thread/tss.hpp>
 
@@ -40,7 +40,7 @@ public:
     std::vector<std::size_t> get_queue_size() const
     {
         std::size_t res = 0;
-        for (typename std::vector<boost::shared_ptr<queue_type> >::const_iterator it = m_queues.begin(); it != m_queues.end();++it)
+        for (typename std::vector<std::shared_ptr<queue_type> >::const_iterator it = m_queues.begin(); it != m_queues.end();++it)
         {
             auto vec = (*it)->get_queue_size();
             res += std::accumulate(vec.begin(),vec.end(),0,[](std::size_t rhs,std::size_t lhs){return rhs + lhs;});
@@ -53,7 +53,7 @@ public:
     std::vector<std::size_t> get_max_queue_size() const
     {
         std::size_t res = 0;
-        for (typename std::vector<boost::shared_ptr<queue_type> >::const_iterator it = m_queues.begin(); it != m_queues.end();++it)
+        for (typename std::vector<std::shared_ptr<queue_type> >::const_iterator it = m_queues.begin(); it != m_queues.end();++it)
         {
             auto vec = (*it)->get_max_queue_size();
             res += std::accumulate(vec.begin(),vec.end(),0,[](std::size_t rhs,std::size_t lhs){return std::max(rhs,lhs);});
@@ -64,7 +64,7 @@ public:
     }
     void reset_max_queue_size()
     {
-        for (typename std::vector<boost::shared_ptr<queue_type> >::const_iterator it = m_queues.begin(); it != m_queues.end();++it)
+        for (typename std::vector<std::shared_ptr<queue_type> >::const_iterator it = m_queues.begin(); it != m_queues.end();++it)
         {
             (*it)->reset_max_queue_size();
         }
@@ -112,9 +112,9 @@ public:
     }    
     boost::asynchronous::any_interruptible interruptible_post(typename queue_type::job_type job,std::size_t prio)
     {
-        boost::shared_ptr<boost::asynchronous::detail::interrupt_state>
-                state = boost::make_shared<boost::asynchronous::detail::interrupt_state>();
-        boost::shared_ptr<boost::promise<boost::thread*> > wpromise = boost::make_shared<boost::promise<boost::thread*> >();
+        std::shared_ptr<boost::asynchronous::detail::interrupt_state>
+                state = std::make_shared<boost::asynchronous::detail::interrupt_state>();
+        std::shared_ptr<boost::promise<boost::thread*> > wpromise = std::make_shared<boost::promise<boost::thread*> >();
         boost::asynchronous::job_traits<typename queue_type::job_type>::set_posted_time(job);
         boost::asynchronous::interruptible_job<typename queue_type::job_type,this_type>
                 ijob(std::move(job),wpromise,state);
@@ -156,8 +156,8 @@ public:
     
 protected:
 
-    multi_queue_scheduler_policy(boost::shared_ptr<queue_type>&& queues)
-        : m_queues(std::forward<std::vector<boost::shared_ptr<queue_type> > >(queues))
+    multi_queue_scheduler_policy(std::shared_ptr<queue_type>&& queues)
+        : m_queues(std::forward<std::vector<std::shared_ptr<queue_type> > >(queues))
         , m_next_shutdown_bucket(0)
     {
     }
@@ -168,7 +168,7 @@ protected:
         m_queues.reserve(number_of_workers);
         for (size_t i = 0; i< number_of_workers;++i)
         {
-            m_queues.push_back(boost::make_shared<queue_type>(args...));
+            m_queues.push_back(std::make_shared<queue_type>(args...));
         }
     }
     multi_queue_scheduler_policy(size_t number_of_workers)
@@ -177,11 +177,11 @@ protected:
         m_queues.reserve(number_of_workers);
         for (size_t i = 0; i< number_of_workers;++i)
         {
-            m_queues.push_back(boost::make_shared<queue_type>());
+            m_queues.push_back(std::make_shared<queue_type>());
         }
     }
     
-    std::vector<boost::shared_ptr<queue_type> > m_queues;
+    std::vector<std::shared_ptr<queue_type> > m_queues;
     std::atomic<size_t> m_next_shutdown_bucket;
 };
 

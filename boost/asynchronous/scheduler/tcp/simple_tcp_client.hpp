@@ -47,8 +47,8 @@ struct client_time_check_policy: boost::asynchronous::trackable_servant<boost::a
     void prepare_check_for_work(T cb,WS /*weak_scheduler*/)
     {
         // start timer to check for work again later
-        boost::shared_ptr<boost::asio::deadline_timer> atimer
-                (boost::make_shared<boost::asio::deadline_timer>(*boost::asynchronous::get_io_service<>(),
+        std::shared_ptr<boost::asio::deadline_timer> atimer
+                (std::make_shared<boost::asio::deadline_timer>(*boost::asynchronous::get_io_service<>(),
                                                                  boost::posix_time::milliseconds(m_time_in_ms_between_requests)));
 
         std::function<void(const boost::system::error_code&)> checked =
@@ -78,8 +78,8 @@ struct queue_size_check_policy: boost::asynchronous::trackable_servant<boost::as
     void prepare_check_for_work(T cb,WS weak_scheduler)
     {
         // start timer to check for work again later
-        boost::shared_ptr<boost::asio::deadline_timer> atimer
-                (boost::make_shared<boost::asio::deadline_timer>(*boost::asynchronous::get_io_service<>(),
+        std::shared_ptr<boost::asio::deadline_timer> atimer
+                (std::make_shared<boost::asio::deadline_timer>(*boost::asynchronous::get_io_service<>(),
                                                                  boost::posix_time::milliseconds(m_time_in_ms_between_requests)));
 
         std::function<void(const boost::system::error_code&)> checked =
@@ -130,7 +130,7 @@ struct simple_tcp_client : boost::asynchronous::trackable_servant<boost::asynchr
         , m_server(server)
         , m_path(path)
         , m_resolver(*boost::asynchronous::get_io_service<>())
-        , m_socket(boost::make_shared<boost::asio::ip::tcp::socket>(*boost::asynchronous::get_io_service<>()))
+        , m_socket(std::make_shared<boost::asio::ip::tcp::socket>(*boost::asynchronous::get_io_service<>()))
         , m_executor(executor)
     {
         // no delay
@@ -159,7 +159,7 @@ private:
                       std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,
                                          std::function<void(boost::asynchronous::tcp::client_request const&)>)> executor,
                       boost::asynchronous::any_weak_scheduler<> this_scheduler,
-                      std::function<void(boost::shared_ptr<boost::asynchronous::tcp::client_request>)> done_fct)
+                      std::function<void(std::shared_ptr<boost::asynchronous::tcp::client_request>)> done_fct)
             : m_done(done_fct)
             , m_response(std::forward<boost::asynchronous::tcp::server_reponse>(resp))
             , m_executor(executor)
@@ -193,7 +193,7 @@ private:
             m_executor(m_response.m_task_name,m_response,
                 [done_fct](boost::asynchronous::tcp::client_request const& req)
                 {
-                    boost::shared_ptr<boost::asynchronous::tcp::client_request> request (boost::make_shared<boost::asynchronous::tcp::client_request>(std::move(req)));
+                    std::shared_ptr<boost::asynchronous::tcp::client_request> request (std::make_shared<boost::asynchronous::tcp::client_request>(std::move(req)));
                     done_fct(request);
                 }
             );
@@ -220,7 +220,7 @@ private:
             boost::asynchronous::tcp::client_request::message_payload payload;
             ar >> payload;
             // send to original server
-            boost::shared_ptr<boost::asynchronous::tcp::client_request> request (boost::make_shared<boost::asynchronous::tcp::client_request>(BOOST_ASYNCHRONOUS_TCP_CLIENT_JOB_RESULT));
+            std::shared_ptr<boost::asynchronous::tcp::client_request> request (std::make_shared<boost::asynchronous::tcp::client_request>(BOOST_ASYNCHRONOUS_TCP_CLIENT_JOB_RESULT));
             request->m_task_id = m_response.m_task_id;
             request->m_load = std::move(payload);
 
@@ -229,7 +229,7 @@ private:
         }
         BOOST_SERIALIZATION_SPLIT_MEMBER()
 
-        std::function<void(boost::shared_ptr<boost::asynchronous::tcp::client_request>)> m_done;
+        std::function<void(std::shared_ptr<boost::asynchronous::tcp::client_request>)> m_done;
         boost::asynchronous::tcp::server_reponse m_response;
         std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,
                            std::function<void(boost::asynchronous::tcp::client_request const&)>)> m_executor;
@@ -253,9 +253,9 @@ private:
                 // if no task, give up
                 if (!resp.m_task.empty())
                 {
-                    std::function<void(boost::shared_ptr<boost::asynchronous::tcp::client_request>)> sending_fct =
-                            this->make_safe_callback(std::function<void(boost::shared_ptr<boost::asynchronous::tcp::client_request>)>(
-                                                         [this](boost::shared_ptr<boost::asynchronous::tcp::client_request> req)
+                    std::function<void(std::shared_ptr<boost::asynchronous::tcp::client_request>)> sending_fct =
+                            this->make_safe_callback(std::function<void(std::shared_ptr<boost::asynchronous::tcp::client_request>)>(
+                                                         [this](std::shared_ptr<boost::asynchronous::tcp::client_request> req)
                                                          {this->send_task_result(req);}),"",0);
                     this->get_worker().post(
                                 stealable_job(std::move(resp),m_executor,this->get_scheduler(),sending_fct)
@@ -344,7 +344,7 @@ private:
         boost::asynchronous::tcp::client_request request (BOOST_ASYNCHRONOUS_TCP_CLIENT_GET_JOB);
         archive << request;
         // shared to keep it alive until end of sending
-        boost::shared_ptr<std::string> outbound_buffer = boost::make_shared<std::string>(archive_stream.str());
+        std::shared_ptr<std::string> outbound_buffer = std::make_shared<std::string>(archive_stream.str());
         // Format the header.
         std::ostringstream header_stream;
         header_stream << std::setw(m_header_length)<< std::hex << outbound_buffer->size();
@@ -354,7 +354,7 @@ private:
           stop();
           cb(std::string(""));
         }
-        boost::shared_ptr<std::string> outbound_header = boost::make_shared<std::string>(header_stream.str());
+        std::shared_ptr<std::string> outbound_header = std::make_shared<std::string>(header_stream.str());
         // Write the serialized data to the socket. We use "gather-write" to send
         // both the header and the data in a single write operation.
         std::vector<boost::asio::const_buffer> buffers;
@@ -374,7 +374,7 @@ private:
             callback(std::string(""));
             return;
         }
-        boost::shared_ptr<std::vector<char> > inbound_header = boost::make_shared<std::vector<char> >();
+        std::shared_ptr<std::vector<char> > inbound_header = std::make_shared<std::vector<char> >();
         inbound_header->resize(m_header_length);
         boost::asio::async_read(*m_socket,boost::asio::buffer(*inbound_header),
             this->make_safe_callback(std::function<void(const boost::system::error_code&,size_t)>(
@@ -393,7 +393,7 @@ private:
                         return;
                     }
                     // read message
-                    boost::shared_ptr<std::vector<char> > inbound_buffer = boost::make_shared<std::vector<char> >();
+                    std::shared_ptr<std::vector<char> > inbound_buffer = std::make_shared<std::vector<char> >();
                     inbound_buffer->resize(inbound_data_size);
                     boost::asio::async_read(*(this->m_socket),boost::asio::buffer(*inbound_buffer),
                                             this->make_safe_callback(std::function<void(const boost::system::error_code&,size_t)>(
@@ -420,7 +420,7 @@ private:
                 }
             }),"",0));
     }
-    void send_task_result(boost::shared_ptr<boost::asynchronous::tcp::client_request> request)
+    void send_task_result(std::shared_ptr<boost::asynchronous::tcp::client_request> request)
     {
         // if writing, we will have to wait...
         if (m_is_writing)
@@ -432,7 +432,7 @@ private:
         std::ostringstream archive_stream;
         typename SerializableType::oarchive archive(archive_stream);
         archive << *request;
-        boost::shared_ptr<std::string> outbound_buffer = boost::make_shared<std::string>(archive_stream.str());
+        std::shared_ptr<std::string> outbound_buffer = std::make_shared<std::string>(archive_stream.str());
         // Format the header.
         std::ostringstream header_stream;
         header_stream << std::setw(m_header_length)<< std::hex << outbound_buffer->size();
@@ -440,7 +440,7 @@ private:
         {
           // Something went wrong, ignore
         }
-        boost::shared_ptr<std::string> outbound_header = boost::make_shared<std::string>(header_stream.str());
+        std::shared_ptr<std::string> outbound_header = std::make_shared<std::string>(header_stream.str());
         // Write the serialized data to the socket. We use "gather-write" to send
         // both the header and the data in a single write operation.
         std::vector<boost::asio::const_buffer> buffers;
@@ -470,13 +470,13 @@ private:
     };
     // we need to write once at a time and queue requests
     bool m_is_writing;
-    std::deque<boost::shared_ptr<boost::asynchronous::tcp::client_request>> m_waiting_requests;
+    std::deque<std::shared_ptr<boost::asynchronous::tcp::client_request>> m_waiting_requests;
     CheckPolicy m_check_policy;
     connection_state m_connection_state;
     std::string m_server;
     std::string m_path;
     boost::asio::ip::tcp::resolver m_resolver;
-    boost::shared_ptr<boost::asio::ip::tcp::socket> m_socket;
+    std::shared_ptr<boost::asio::ip::tcp::socket> m_socket;
     std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,
                        std::function<void(boost::asynchronous::tcp::client_request const&)>)> m_executor;
     boost::promise<void> m_done;

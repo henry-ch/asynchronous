@@ -15,7 +15,7 @@
 #include <utility>
 #include <numeric>
 
-#include <boost/shared_ptr.hpp>
+#include <memory>
 #include <boost/asynchronous/queue/any_queue.hpp>
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/queue/queue_base.hpp>
@@ -28,13 +28,13 @@ template <class Queue>
 struct any_queue_container_config
 {
     typedef Queue queue_type;
-    typedef std::vector<boost::shared_ptr<Queue> > queue_sequence;
+    typedef std::vector<std::shared_ptr<Queue> > queue_sequence;
     template <typename... Args>
     any_queue_container_config(std::size_t number,Args... args):m_number(number)
     {
         for (std::size_t i = 0; i< number; ++i)
         {
-            m_queues.push_back(boost::make_shared<Queue>(std::move(args)...));
+            m_queues.push_back(std::make_shared<Queue>(std::move(args)...));
         }
     }
     std::pair<typename queue_sequence::const_iterator,typename queue_sequence::const_iterator> queues()const

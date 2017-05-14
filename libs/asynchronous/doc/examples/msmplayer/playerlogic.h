@@ -9,7 +9,7 @@
 
 #include <vector>
 #include <string>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 #include <boost/asynchronous/trackable_servant.hpp>
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/scheduler/threadpool_scheduler.hpp>
@@ -80,7 +80,7 @@ public:
 
 private:
     struct StateMachine;
-    boost::shared_ptr<StateMachine> fsm_;
+    std::shared_ptr<StateMachine> fsm_;
 };
 
 // shareable proxy hiding PlayerLogic from the external world. It serializes calls to PlayerLogic.

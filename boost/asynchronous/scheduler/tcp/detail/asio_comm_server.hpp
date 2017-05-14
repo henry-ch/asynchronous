@@ -14,7 +14,7 @@
 #include <string>
 
 #include <boost/asio.hpp>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 
 #include <boost/asynchronous/trackable_servant.hpp>
 #include <boost/asynchronous/extensions/asio/tss_asio.hpp>
@@ -27,7 +27,7 @@ struct asio_comm_server : boost::asynchronous::trackable_servant<>
     asio_comm_server(boost::asynchronous::any_weak_scheduler<> scheduler,
                      std::string const & address,
                      unsigned int port,
-                     std::function<void(boost::shared_ptr<boost::asio::ip::tcp::socket>)> connectionHandler)
+                     std::function<void(std::shared_ptr<boost::asio::ip::tcp::socket>)> connectionHandler)
     : boost::asynchronous::trackable_servant<>(scheduler)
         , m_connection_handler(std::move(connectionHandler))
         , m_acceptor(*boost::asynchronous::get_io_service<>())
@@ -63,7 +63,7 @@ private:
 
                                     if (!ec)
                                     {
-                                        m_connection_handler(boost::make_shared<boost::asio::ip::tcp::socket>(std::move(m_socket)));
+                                        m_connection_handler(std::make_shared<boost::asio::ip::tcp::socket>(std::move(m_socket)));
                                     }
 
                                     do_accept();
@@ -71,7 +71,7 @@ private:
     }
 
 private:
-    std::function<void(boost::shared_ptr<boost::asio::ip::tcp::socket>)> m_connection_handler;
+    std::function<void(std::shared_ptr<boost::asio::ip::tcp::socket>)> m_connection_handler;
     boost::asio::ip::tcp::acceptor m_acceptor;
     boost::asio::ip::tcp::socket m_socket;
 };
@@ -83,7 +83,7 @@ public:
     asio_comm_server_proxy( Scheduler scheduler,
                             std::string const & address,
                             unsigned int port,
-                            std::function<void(boost::shared_ptr<boost::asio::ip::tcp::socket>)> connectionHandler)
+                            std::function<void(std::shared_ptr<boost::asio::ip::tcp::socket>)> connectionHandler)
         : boost::asynchronous::servant_proxy<asio_comm_server_proxy, boost::asynchronous::tcp::asio_comm_server>(scheduler,
                                                                                                                  address,
                                                                                                                  port,

@@ -37,7 +37,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     }
     ~Servant(){BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant dtor not posted.");}
 
-    boost::shared_future<boost::asynchronous::any_interruptible> start_async_work(boost::shared_ptr<boost::promise<void> > p)
+    boost::shared_future<boost::asynchronous::any_interruptible> start_async_work(std::shared_ptr<boost::promise<void> > p)
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work not posted.");
         boost::promise<boost::asynchronous::any_interruptible> apromise;
@@ -52,7 +52,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         return fu;
     }
     std::pair<
-       boost::shared_ptr<boost::promise<void> >,
+       std::shared_ptr<boost::promise<void> >,
        boost::shared_future<boost::asynchronous::any_interruptible>
     >
     start_async_work2()
@@ -193,7 +193,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     }
 
 private:
-    boost::shared_ptr<boost::promise<void> > m_ready;
+    std::shared_ptr<boost::promise<void> > m_ready;
     boost::promise<int> m_promise;
     std::atomic<int> m_posted;
     int m_cb=0;
@@ -227,7 +227,7 @@ BOOST_AUTO_TEST_CASE( test_interrupt_running_task )
     {
         auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
                                                                             boost::asynchronous::lockfree_queue<>>>();
-        boost::shared_ptr<boost::promise<void> > p(new boost::promise<void>);
+        std::shared_ptr<boost::promise<void> > p(new boost::promise<void>);
         boost::shared_future<void> end=p->get_future();
         {
             ServantProxy proxy(scheduler);
@@ -248,7 +248,7 @@ BOOST_AUTO_TEST_CASE( test_interrupt_not_running_task )
                                                                             boost::asynchronous::lockfree_queue<>>>();
         {
             typedef std::pair<
-                    boost::shared_ptr<boost::promise<void> >,
+                    std::shared_ptr<boost::promise<void> >,
                     boost::shared_future<boost::asynchronous::any_interruptible>
                  > res_type;
             

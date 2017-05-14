@@ -13,7 +13,7 @@
 #include<string>
 #include <functional>
 
-#include <boost/shared_ptr.hpp>
+#include <memory>
 #include <boost/thread/thread.hpp>
 #include <boost/asynchronous/scheduler/detail/exceptions.hpp>
 #include <boost/asynchronous/scheduler/detail/processor_bind.hpp>
@@ -66,12 +66,12 @@ struct thread_join_helper<boost::thread_group>
 template <class ThreadType>
 struct worker_wrap
 {
-    worker_wrap(boost::shared_ptr<ThreadType> g):m_group(g){}
+    worker_wrap(std::shared_ptr<ThreadType> g):m_group(g){}
     void join()
     {
         thread_join_helper<ThreadType>::join(m_group.get());
     }
-    boost::shared_ptr<ThreadType> m_group;
+    std::shared_ptr<ThreadType> m_group;
 };
 template <class Diag>
 struct set_name_task: public Diag

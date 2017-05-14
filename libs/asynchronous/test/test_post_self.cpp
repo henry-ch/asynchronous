@@ -43,7 +43,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         dtor_called=true;
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant dtor not posted.");
     }
-    void start_posting(boost::shared_ptr<boost::promise<void> > done)
+    void start_posting(std::shared_ptr<boost::promise<void> > done)
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_posting not posted.");
         auto fct_alive = make_check_alive_functor();
@@ -93,7 +93,7 @@ BOOST_AUTO_TEST_CASE( test_post_self )
         auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
                                                                             boost::asynchronous::lockfree_queue<>>>();
 
-        boost::shared_ptr<boost::promise<void> > done(new boost::promise<void>);
+        std::shared_ptr<boost::promise<void> > done(new boost::promise<void>);
         boost::shared_future<void> end=done->get_future();
         {
             ServantProxy proxy(scheduler);

@@ -19,7 +19,7 @@
 
 #include <boost/mpl/eval_if.hpp>
 #include <boost/mpl/identity.hpp>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 #include <boost/asynchronous/detail/metafunctions.hpp>
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/post.hpp>
@@ -31,8 +31,8 @@
 #include <boost/asynchronous/extensions/qt/qt_safe_callback_helper.hpp>
 
 #include <boost/system/error_code.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/weak_ptr.hpp>
+#include <memory>
+
 #include <boost/make_shared.hpp>
 #include <boost/thread.hpp>
 
@@ -73,13 +73,13 @@ class qt_servant
 {
 public:
     qt_servant(boost::asynchronous::any_shared_scheduler_proxy<WJOB> w=boost::asynchronous::any_shared_scheduler_proxy<WJOB>())
-        : m_tracking(boost::make_shared<boost::asynchronous::detail::qt_track>())
+        : m_tracking(std::make_shared<boost::asynchronous::detail::qt_track>())
         , m_worker(w)
         , m_next_helper_id(0)
     {}
     // copy-ctor and operator= are needed for correct tracking
     qt_servant(qt_servant const& rhs)
-        : m_tracking(boost::make_shared<boost::asynchronous::detail::qt_track>())
+        : m_tracking(std::make_shared<boost::asynchronous::detail::qt_track>())
         , m_worker(rhs.m_worker)
         , m_next_helper_id(0)
     {
@@ -90,7 +90,7 @@ public:
 
     qt_servant& operator= (qt_servant const& rhs)
     {
-        m_tracking = boost::make_shared<boost::asynchronous::detail::qt_track>();
+        m_tracking = std::make_shared<boost::asynchronous::detail::qt_track>();
         m_worker = rhs.m_worker;
         m_next_helper_id = rhs.m_next_helper_id;
     }
@@ -115,11 +115,11 @@ public:
         >::type f1_result_type;
 
         unsigned long connect_id = m_next_helper_id;
-        boost::shared_ptr<F2> cbptr(boost::make_shared<F2>(std::forward<F2>(cb_func)));
-        boost::weak_ptr<boost::asynchronous::detail::qt_track> tracking (m_tracking);
+        std::shared_ptr<F2> cbptr(std::make_shared<F2>(std::forward<F2>(cb_func)));
+        std::weak_ptr<boost::asynchronous::detail::qt_track> tracking (m_tracking);
 
-        boost::shared_ptr<boost::asynchronous::detail::connect_functor_helper> c =
-                boost::make_shared<boost::asynchronous::detail::connect_functor_helper>
+        std::shared_ptr<boost::asynchronous::detail::connect_functor_helper> c =
+                std::make_shared<boost::asynchronous::detail::connect_functor_helper>
                 (m_next_helper_id,
                  [this,connect_id,cbptr,tracking](QEvent* e)
                  {
@@ -155,11 +155,11 @@ public:
     {
         typedef decltype(func()) f1_result_type;
         unsigned long connect_id = m_next_helper_id;
-        boost::weak_ptr<boost::asynchronous::detail::qt_track> tracking (m_tracking);
+        std::weak_ptr<boost::asynchronous::detail::qt_track> tracking (m_tracking);
 
-        boost::shared_ptr<F2> cbptr(boost::make_shared<F2>(std::forward<F2>(cb_func)));
-        boost::shared_ptr<boost::asynchronous::detail::connect_functor_helper> c =
-                boost::make_shared<boost::asynchronous::detail::connect_functor_helper>
+        std::shared_ptr<F2> cbptr(std::make_shared<F2>(std::forward<F2>(cb_func)));
+        std::shared_ptr<boost::asynchronous::detail::connect_functor_helper> c =
+                std::make_shared<boost::asynchronous::detail::connect_functor_helper>
                 (m_next_helper_id,
                  [this,connect_id,cbptr,tracking](QEvent* e)
                  {
@@ -195,10 +195,10 @@ public:
      -> boost::future<typename boost::asynchronous::detail::get_return_type_if_possible_continuation<decltype(func())>::type>
     {
         unsigned long connect_id = m_next_helper_id;
-        boost::weak_ptr<boost::asynchronous::detail::qt_track> tracking (m_tracking);
+        std::weak_ptr<boost::asynchronous::detail::qt_track> tracking (m_tracking);
 
-        boost::shared_ptr<boost::asynchronous::detail::connect_functor_helper> c =
-                boost::make_shared<boost::asynchronous::detail::connect_functor_helper>
+        std::shared_ptr<boost::asynchronous::detail::connect_functor_helper> c =
+                std::make_shared<boost::asynchronous::detail::connect_functor_helper>
                 (m_next_helper_id,
                  [this,connect_id,tracking](QEvent* e)
                  {
@@ -255,17 +255,17 @@ private:
                                                      const std::string& task_name="", std::size_t prio=0)
 #endif
     {
-        boost::weak_ptr<boost::asynchronous::detail::qt_track> tracking (m_tracking);
+        std::weak_ptr<boost::asynchronous::detail::qt_track> tracking (m_tracking);
         // now we are sure about our thread id
         m_own_thread_id = boost::this_thread::get_id();
         auto thread_id=m_own_thread_id;
-        boost::shared_ptr<std::function<void(Args... )>> func_ptr =
-                boost::make_shared<std::function<void(Args... )>>(std::move(func));
+        std::shared_ptr<std::function<void(Args... )>> func_ptr =
+                std::make_shared<std::function<void(Args... )>>(std::move(func));
 
         unsigned long connect_id = m_next_helper_id;
 
-        boost::shared_ptr<boost::asynchronous::detail::connect_functor_helper> c =
-                boost::make_shared<boost::asynchronous::detail::connect_functor_helper>
+        std::shared_ptr<boost::asynchronous::detail::connect_functor_helper> c =
+                std::make_shared<boost::asynchronous::detail::connect_functor_helper>
                 (m_next_helper_id,
                  [this,connect_id,tracking](QEvent* e)mutable
                  {
@@ -300,12 +300,12 @@ private:
         return res;
     }
     // tracking object for callbacks / tasks
-    boost::shared_ptr<boost::asynchronous::detail::qt_track> m_tracking;
+    std::shared_ptr<boost::asynchronous::detail::qt_track> m_tracking;
 private:
     // our worker pool
     boost::asynchronous::any_shared_scheduler_proxy<WJOB> m_worker;
     unsigned long m_next_helper_id;
-    std::map<unsigned long, boost::shared_ptr<boost::asynchronous::detail::connect_functor_helper> > m_waiting_callbacks;
+    std::map<unsigned long, std::shared_ptr<boost::asynchronous::detail::connect_functor_helper> > m_waiting_callbacks;
     // we support just one id in Qt
     boost::thread::id m_own_thread_id;
 };

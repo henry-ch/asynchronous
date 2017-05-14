@@ -172,7 +172,7 @@ template <class Range, class Func, class Func2,class ReturnType, class Job,class
 struct parallel_reduce_range_move_helper: public boost::asynchronous::continuation_task<ReturnType>
 {
     template <class Iterator>
-    parallel_reduce_range_move_helper(boost::shared_ptr<Range> range,Iterator, Iterator,Func func,Func2 func2,long cutoff,
+    parallel_reduce_range_move_helper(std::shared_ptr<Range> range,Iterator, Iterator,Func func,Func2 func2,long cutoff,
                         const std::string& task_name, std::size_t prio)
         :boost::asynchronous::continuation_task<ReturnType>(task_name)
         ,range_(range),func_(std::move(func)),func2_(std::move(func2)),cutoff_(cutoff),prio_(prio)
@@ -182,7 +182,7 @@ struct parallel_reduce_range_move_helper: public boost::asynchronous::continuati
         boost::asynchronous::continuation_result<ReturnType> task_res = this->this_task_result();
         try
         {
-            boost::shared_ptr<Range> range = std::move(range_);
+            std::shared_ptr<Range> range = std::move(range_);
             // advance up to cutoff
             auto it = boost::asynchronous::detail::find_cutoff(boost::begin(*range),cutoff_,boost::end(*range));
             // if not at end, recurse, otherwise execute here
@@ -221,7 +221,7 @@ struct parallel_reduce_range_move_helper: public boost::asynchronous::continuati
             task_res.set_exception(boost::copy_exception(e));
         }
     }
-    boost::shared_ptr<Range> range_;
+    std::shared_ptr<Range> range_;
     Func func_;
     Func2 func2_;
     long cutoff_;
@@ -238,7 +238,7 @@ struct parallel_reduce_range_move_helper<Range,Func,Func2,ReturnType,Job,typenam
     {
     }
     template <class Iterator>
-    parallel_reduce_range_move_helper(boost::shared_ptr<Range> range,Iterator beg, Iterator end,Func func,Func2 func2,long cutoff,
+    parallel_reduce_range_move_helper(std::shared_ptr<Range> range,Iterator beg, Iterator end,Func func,Func2 func2,long cutoff,
                         const std::string& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<ReturnType>(task_name)
         , boost::asynchronous::serializable_task(func.get_task_name())
@@ -306,7 +306,7 @@ struct parallel_reduce_range_move_helper<Range,Func,Func2,ReturnType,Job,typenam
     template <class Archive>
     void load(Archive & ar, const unsigned int /*version*/)
     {
-        range_ = boost::make_shared<Range>();
+        range_ = std::make_shared<Range>();
         ar & (*range_);
         ar & func_;
         ar & func2_;
@@ -317,7 +317,7 @@ struct parallel_reduce_range_move_helper<Range,Func,Func2,ReturnType,Job,typenam
         end_ = boost::end(*range_);
     }
     BOOST_SERIALIZATION_SPLIT_MEMBER()
-    boost::shared_ptr<Range> range_;
+    std::shared_ptr<Range> range_;
     Func func_;
     Func2 func2_;
     long cutoff_;
@@ -337,7 +337,7 @@ auto parallel_reduce(Range&& range,Func func,long cutoff,
 -> typename std::enable_if<!boost::asynchronous::detail::has_is_continuation_task<Range>::value,boost::asynchronous::detail::callback_continuation<decltype(func(*(range.begin()), *(range.end()))),Job> >::type
 {
     typedef decltype(func(*(range.begin()), *(range.end()))) ReturnType;
-    auto r = boost::make_shared<Range>(std::forward<Range>(range));
+    auto r = std::make_shared<Range>(std::forward<Range>(range));
     auto beg = boost::begin(*r);
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<ReturnType,Job>
@@ -356,7 +356,7 @@ auto parallel_reduce(Range&& range,Func func,Func2 func2,long cutoff,
 -> typename std::enable_if<!boost::asynchronous::detail::has_is_continuation_task<Range>::value,boost::asynchronous::detail::callback_continuation<decltype(func2(*(range.begin()), *(range.end()))),Job> >::type
 {
     typedef decltype(func2(*(range.begin()), *(range.end()))) ReturnType;
-    auto r = boost::make_shared<Range>(std::forward<Range>(range));
+    auto r = std::make_shared<Range>(std::forward<Range>(range));
     auto beg = boost::begin(*r);
     auto end = boost::end(*r);
     return boost::asynchronous::top_level_callback_continuation_job<ReturnType,Job>

@@ -10,8 +10,8 @@
 #include <algorithm>
 #include <iostream>
 #include <vector>
+#include <memory>
 
-#include <boost/smart_ptr/shared_array.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/servant_proxy.hpp>
 #include <boost/asynchronous/scheduler/multiqueue_threadpool_scheduler.hpp>
@@ -75,7 +75,7 @@ void ParallelAsyncPostFuture(float a[], size_t n)
 void test(void(*pf)(float [], size_t ))
 {
     auto start_mem = boost::chrono::high_resolution_clock::now();
-    boost::shared_array<float> a (new float[SIZE]);
+    std::shared_ptr<float> a (new float[SIZE],[](float* p){delete[] p;});
     auto duration_mem = (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start_mem).count() / 1000);
     std::cout << "memory alloc: " << duration_mem <<std::endl;
 

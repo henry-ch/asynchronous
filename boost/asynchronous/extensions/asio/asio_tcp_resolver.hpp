@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <boost/asio.hpp>
 #include <functional>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/servant_proxy.hpp>

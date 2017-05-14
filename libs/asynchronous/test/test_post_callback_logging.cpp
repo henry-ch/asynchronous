@@ -59,7 +59,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_void_async_work not posted.");
         // we need a promise to inform caller when we're done
-        boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
+        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
         boost::shared_future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<servant_job> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
@@ -83,7 +83,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work not posted.");
         // we need a promise to inform caller when we're done
-        boost::shared_ptr<boost::promise<int> > aPromise(new boost::promise<int>);
+        std::shared_ptr<boost::promise<int> > aPromise(new boost::promise<int>);
         boost::shared_future<int> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<servant_job> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
@@ -109,7 +109,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_exception_async_work not posted.");
         // we need a promise to inform caller when we're done
-        boost::shared_ptr<boost::promise<int> > aPromise(new boost::promise<int>);
+        std::shared_ptr<boost::promise<int> > aPromise(new boost::promise<int>);
         boost::shared_future<int> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<servant_job> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
@@ -136,13 +136,13 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant test_current not posted.");
         // we need a promise to inform caller when we're done
-        boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
+        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
         boost::shared_future<void> fu = aPromise->get_future();
 
-        boost::shared_ptr<boost::promise<void> > blocking_promise(new boost::promise<void>);
+        std::shared_ptr<boost::promise<void> > blocking_promise(new boost::promise<void>);
         boost::shared_future<void> block_fu = blocking_promise->get_future();
 
-        boost::shared_ptr<boost::promise<void> > blocking_promise2(new boost::promise<void>);
+        std::shared_ptr<boost::promise<void> > blocking_promise2(new boost::promise<void>);
         boost::shared_future<void> block_fu2 = blocking_promise2->get_future();
 
         // start long tasks

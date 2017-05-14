@@ -13,7 +13,7 @@
 #include <cstddef>
 
 #include <boost/asynchronous/detail/function_traits.hpp>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/checks.hpp>
@@ -54,7 +54,7 @@ public:
      */
     trackable_servant(boost::asynchronous::any_weak_scheduler<JOB> const& s,
                       boost::asynchronous::any_shared_scheduler_proxy<WJOB> w=boost::asynchronous::any_shared_scheduler_proxy<WJOB>())
-        : m_tracking(boost::make_shared<boost::asynchronous::track>())
+        : m_tracking(std::make_shared<boost::asynchronous::track>())
         , m_scheduler(s)
         , m_worker(w)
     {}
@@ -69,7 +69,7 @@ public:
      * \brief where this servant lives is already known.
      */
     trackable_servant(boost::asynchronous::any_shared_scheduler_proxy<WJOB> w=boost::asynchronous::any_shared_scheduler_proxy<WJOB>())
-        : m_tracking(boost::make_shared<boost::asynchronous::track>())
+        : m_tracking(std::make_shared<boost::asynchronous::track>())
         , m_scheduler(boost::asynchronous::get_thread_scheduler<JOB>())
         , m_worker(w)
     {}
@@ -79,7 +79,7 @@ public:
      * \brief Copy-Constructor. Does not throw
      */
     trackable_servant(trackable_servant const& rhs) noexcept
-        : m_tracking(boost::make_shared<boost::asynchronous::track>())
+        : m_tracking(std::make_shared<boost::asynchronous::track>())
         , m_scheduler(rhs.m_scheduler)
         , m_worker(rhs.m_worker)
     {
@@ -89,7 +89,7 @@ public:
      * \brief Move-Constructor. Does not throw
      */
     trackable_servant(trackable_servant&& rhs) noexcept
-        : m_tracking(boost::make_shared<boost::asynchronous::track>())
+        : m_tracking(std::make_shared<boost::asynchronous::track>())
         , m_scheduler(std::move(rhs.m_scheduler))
         , m_worker(std::move(rhs.m_worker))
     {
@@ -108,7 +108,7 @@ public:
     {
         if (this != &rhs)
         {
-            m_tracking = boost::make_shared<boost::asynchronous::track>();
+            m_tracking = std::make_shared<boost::asynchronous::track>();
             m_scheduler = rhs.m_scheduler;
             m_worker = rhs.m_worker;
         }
@@ -153,7 +153,7 @@ public:
      */
     std::function<bool()> make_check_alive_functor()const
     {
-        boost::weak_ptr<track> tracking (m_tracking);
+        std::weak_ptr<track> tracking (m_tracking);
         return [tracking](){return !tracking.expired();};
     }
 
@@ -533,7 +533,7 @@ public:
     const std::string& task_name="", std::size_t prio=0)
 #endif
     {
-        signal.connect(typename Signal::slot_type(make_safe_callback(std::move(slot),task_name,prio)).track(m_tracking));
+        signal.connect(typename Signal::slot_type(make_safe_callback(std::move(slot),task_name,prio)));
     }
 
     /*!
@@ -582,11 +582,11 @@ private:
                                                      const std::string& task_name="", std::size_t prio=0) const
 #endif
     {
-        boost::weak_ptr<track> tracking (m_tracking);
+        std::weak_ptr<track> tracking (m_tracking);
         boost::asynchronous::any_weak_scheduler<JOB> wscheduler = get_scheduler();
         //TODO functor with move
-        boost::shared_ptr<std::function<void(Args... )>> func_ptr =
-                boost::make_shared<std::function<void(Args... )>>(std::move(func));
+        std::shared_ptr<std::function<void(Args... )>> func_ptr =
+                std::make_shared<std::function<void(Args... )>>(std::move(func));
         std::function<void(Args...)> res = [func_ptr,tracking,wscheduler,task_name,prio](Args... as)mutable
         {
             boost::asynchronous::any_shared_scheduler<JOB> sched = wscheduler.lock();
@@ -614,7 +614,7 @@ private:
 
 protected:
     // tracking object for callbacks / tasks
-    boost::shared_ptr<track> m_tracking;
+    std::shared_ptr<track> m_tracking;
 private:
     // scheduler where we are living
     boost::asynchronous::any_weak_scheduler<JOB> m_scheduler;

@@ -7,8 +7,8 @@
 #ifndef BOOST_ASYNC_SCHEDULER_WEAK_PROXY_HPP
 #define BOOST_ASYNC_SCHEDULER_WEAK_PROXY_HPP
 
-#include <boost/weak_ptr.hpp>
-#include <boost/shared_ptr.hpp>
+
+#include <memory>
 #include <boost/async/any_shared_scheduler.hpp>
 
 namespace boost { namespace asynchronous
@@ -22,14 +22,14 @@ public:
     typedef S scheduler_type;
     typedef typename S::job_type job_type;
 
-    explicit scheduler_weak_proxy(boost::shared_ptr<scheduler_type> scheduler): m_scheduler(std::move(scheduler)){}
+    explicit scheduler_weak_proxy(std::shared_ptr<scheduler_type> scheduler): m_scheduler(std::move(scheduler)){}
     any_shared_scheduler<job_type> lock()
     {
 
     }
 
 private:
-    boost::weak_ptr<scheduler_type> m_scheduler;
+    std::weak_ptr<scheduler_type> m_scheduler;
 };
 
 }} // boost::asynchronous

@@ -125,7 +125,7 @@ void serial_dtor(Iterator beg, Iterator end,char* data)
 template <class T, class Job>
 struct parallel_placement_helper: public boost::asynchronous::continuation_task<boost::asynchronous::detail::parallel_placement_helper_result>
 {
-    parallel_placement_helper(std::size_t beg, std::size_t end,boost::shared_array<char> data,long cutoff,const std::string& task_name, std::size_t prio)
+    parallel_placement_helper(std::size_t beg, std::size_t end,std::shared_ptr<char> data,long cutoff,const std::string& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<boost::asynchronous::detail::parallel_placement_helper_result>(task_name),
           beg_(beg),end_(end),data_(data),cutoff_(cutoff),prio_(prio)
     {
@@ -237,7 +237,7 @@ struct parallel_placement_helper: public boost::asynchronous::continuation_task<
     }
     std::size_t beg_;
     std::size_t end_;
-    boost::shared_array<char> data_;
+    std::shared_ptr<char> data_;
     long cutoff_;
     std::size_t prio_;
 };
@@ -245,7 +245,7 @@ struct parallel_placement_helper: public boost::asynchronous::continuation_task<
 
 template <class T, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<boost::asynchronous::detail::parallel_placement_helper_result,Job>
-parallel_placement(std::size_t beg, std::size_t end, boost::shared_array<char> data,long cutoff,
+parallel_placement(std::size_t beg, std::size_t end, std::shared_ptr<char> data,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
              const std::string& task_name, std::size_t prio)
 #else
@@ -602,7 +602,7 @@ struct parallel_placement_delete_helper: public boost::asynchronous::continuatio
 
 template <class T, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<void,Job>
-parallel_placement_delete(boost::shared_array<char> data,std::size_t size,long cutoff,
+parallel_placement_delete(std::shared_ptr<char> data,std::size_t size,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
              const std::string& task_name, std::size_t prio)
 #else
@@ -610,12 +610,12 @@ parallel_placement_delete(boost::shared_array<char> data,std::size_t size,long c
 #endif
 {
    return boost::asynchronous::top_level_callback_continuation_job<void,Job>
-            (boost::asynchronous::detail::parallel_placement_delete_helper<T,boost::shared_array<char>,Job>
+            (boost::asynchronous::detail::parallel_placement_delete_helper<T,std::shared_ptr<char>,Job>
                 (0,size,data,cutoff,task_name,prio));
 }
 template <class T, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<void,Job>
-parallel_placement_delete(boost::shared_array<char> data,std::size_t beg, std::size_t end,long cutoff,
+parallel_placement_delete(std::shared_ptr<char> data,std::size_t beg, std::size_t end,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
              const std::string& task_name, std::size_t prio)
 #else
@@ -623,14 +623,14 @@ parallel_placement_delete(boost::shared_array<char> data,std::size_t beg, std::s
 #endif
 {
    return boost::asynchronous::top_level_callback_continuation_job<void,Job>
-            (boost::asynchronous::detail::parallel_placement_delete_helper<T,boost::shared_array<char>,Job>
+            (boost::asynchronous::detail::parallel_placement_delete_helper<T,std::shared_ptr<char>,Job>
                 (beg,end,data,cutoff,task_name,prio));
 }
 
 // used by placement_deleter
 template <class T, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<void,Job>
-parallel_placement_delete(boost::shared_ptr<T> data,std::size_t size,long cutoff,
+parallel_placement_delete(std::shared_ptr<T> data,std::size_t size,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
              const std::string& task_name, std::size_t prio)
 #else
@@ -638,12 +638,12 @@ parallel_placement_delete(boost::shared_ptr<T> data,std::size_t size,long cutoff
 #endif
 {
    return boost::asynchronous::top_level_callback_continuation_job<void,Job>
-            (boost::asynchronous::detail::parallel_placement_delete_helper<T,boost::shared_ptr<T>,Job>
+            (boost::asynchronous::detail::parallel_placement_delete_helper<T,std::shared_ptr<T>,Job>
                 (0,size,data,cutoff,task_name,prio));
 }
 template <class T, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<void,Job>
-parallel_placement_delete(boost::shared_ptr<T> data,std::size_t beg, std::size_t end,long cutoff,
+parallel_placement_delete(std::shared_ptr<T> data,std::size_t beg, std::size_t end,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
              const std::string& task_name, std::size_t prio)
 #else
@@ -651,11 +651,11 @@ parallel_placement_delete(boost::shared_ptr<T> data,std::size_t beg, std::size_t
 #endif
 {
    return boost::asynchronous::top_level_callback_continuation_job<void,Job>
-            (boost::asynchronous::detail::parallel_placement_delete_helper<T,boost::shared_ptr<T>,Job>
+            (boost::asynchronous::detail::parallel_placement_delete_helper<T,std::shared_ptr<T>,Job>
                 (beg,end,data,cutoff,task_name,prio));
 }
 
-template <class T, class Job, class Ptr = boost::shared_array<char> >
+template <class T, class Job, class Ptr = std::shared_ptr<char> >
 struct placement_deleter
 {
     placement_deleter(std::size_t s, Ptr d,long cutoff,const std::string& task_name, std::size_t prio):size_(s),data_(d),cutoff_(cutoff),task_name_(task_name),prio_(prio){}

@@ -73,7 +73,7 @@ struct Servant2 : boost::asynchronous::trackable_servant<>
         :boost::asynchronous::trackable_servant<>(scheduler)
         ,m_data(0)
         ,m_future_value()
-        ,m_sub(boost::make_shared<ServantProxy>(boost::asynchronous::make_shared_scheduler_proxy<
+        ,m_sub(std::make_shared<ServantProxy>(boost::asynchronous::make_shared_scheduler_proxy<
                                                         boost::asynchronous::single_thread_scheduler<
                                                                 boost::asynchronous::lockfree_queue<>>>(), 42))
 
@@ -108,7 +108,7 @@ struct Servant2 : boost::asynchronous::trackable_servant<>
 private:
     int m_data;
     boost::promise<int> m_future_value;
-    boost::shared_ptr<ServantProxy> m_sub;
+    std::shared_ptr<ServantProxy> m_sub;
 };
 
 class ServantProxy2 : public boost::asynchronous::servant_proxy<ServantProxy2,Servant2>

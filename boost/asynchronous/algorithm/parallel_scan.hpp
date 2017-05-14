@@ -141,7 +141,7 @@ template <class Iterator, class OutIterator, class T, class Scan, class Combine,
 struct parallel_scan_part2_helper: public boost::asynchronous::continuation_task<T>
 {
     parallel_scan_part2_helper(Iterator beg, Iterator end, OutIterator out, T init, Scan s, Combine c,int depth,
-                               boost::shared_ptr<boost::asynchronous::detail::scan_data<T>> part1_accumulated,
+                               std::shared_ptr<boost::asynchronous::detail::scan_data<T>> part1_accumulated,
                                boost::asynchronous::detail::scan_data<T>* d,
                                long cutoff, const std::string& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<T>(task_name)
@@ -215,7 +215,7 @@ struct parallel_scan_part2_helper: public boost::asynchronous::continuation_task
     Scan scan_;
     Combine combine_;
     int depth_;
-    boost::shared_ptr<boost::asynchronous::detail::scan_data<T>> part1_accumulated_;
+    std::shared_ptr<boost::asynchronous::detail::scan_data<T>> part1_accumulated_;
     boost::asynchronous::detail::scan_data<T>* data_;
     long cutoff_;
     std::size_t prio_;
@@ -224,7 +224,7 @@ struct parallel_scan_part2_helper: public boost::asynchronous::continuation_task
 template <class Iterator, class OutIterator, class T, class Scan, class Combine, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<T,Job>
 parallel_scan_part2(Iterator beg, Iterator end, OutIterator out, T init,
-                    Scan s, Combine c, boost::shared_ptr<boost::asynchronous::detail::scan_data<T>> part1_accumulated,
+                    Scan s, Combine c, std::shared_ptr<boost::asynchronous::detail::scan_data<T>> part1_accumulated,
                     boost::asynchronous::detail::scan_data<T>* d, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                     const std::string& task_name, std::size_t prio=0)
@@ -270,8 +270,8 @@ struct parallel_scan_helper: public boost::asynchronous::continuation_task<T>
             {
                 try
                 {
-                    boost::shared_ptr<boost::asynchronous::detail::scan_data<T>> data =
-                            boost::make_shared<boost::asynchronous::detail::scan_data<T>>(std::move(std::get<0>(res).get()));
+                    std::shared_ptr<boost::asynchronous::detail::scan_data<T>> data =
+                            std::make_shared<boost::asynchronous::detail::scan_data<T>>(std::move(std::get<0>(res).get()));
                     auto cont = boost::asynchronous::detail::parallel_scan_part2<Iterator,OutIterator,T,Scan,Combine,Job>
                             (beg,end,out,std::move(init),std::move(scan),std::move(combine),
                              data, data.get(),cutoff,task_name,prio);
@@ -333,7 +333,7 @@ parallel_scan(Iterator beg, Iterator end, OutIterator out, T init,
 template <class Range, class OutRange, class T, class Reduce, class Combine, class Scan, class Job,class Enable=void>
 struct parallel_scan_range_move_helper: public boost::asynchronous::continuation_task<std::pair<Range,OutRange>>
 {
-    parallel_scan_range_move_helper(boost::shared_ptr<Range> range,boost::shared_ptr<OutRange> out_range, T init,
+    parallel_scan_range_move_helper(std::shared_ptr<Range> range,std::shared_ptr<OutRange> out_range, T init,
                                     Reduce r, Combine c, Scan s,
                                     long cutoff, const std::string& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<std::pair<Range,OutRange>>(task_name)
@@ -377,8 +377,8 @@ struct parallel_scan_range_move_helper: public boost::asynchronous::continuation
         }
     }
 
-    boost::shared_ptr<Range> range_;
-    boost::shared_ptr<OutRange> out_range_;
+    std::shared_ptr<Range> range_;
+    std::shared_ptr<OutRange> out_range_;
     T init_;
     Reduce reduce_;
     Combine combine_;
@@ -397,8 +397,8 @@ parallel_scan(Range&& range,OutRange&& out_range,T init,Reduce r, Combine c, Sca
               const std::string& task_name="", std::size_t prio=0)
 #endif
 {
-    auto pr = boost::make_shared<Range>(std::forward<Range>(range));
-    auto pout = boost::make_shared<OutRange>(std::forward<OutRange>(out_range));
+    auto pr = std::make_shared<Range>(std::forward<Range>(range));
+    auto pout = std::make_shared<OutRange>(std::forward<OutRange>(out_range));
     return boost::asynchronous::top_level_callback_continuation_job<std::pair<Range,OutRange>,Job>
             (boost::asynchronous::parallel_scan_range_move_helper<Range,OutRange,T,Reduce,Combine,Scan,Job>
                 (pr,pout,std::move(init),std::move(r),std::move(c),std::move(s),cutoff,task_name,prio));
@@ -408,7 +408,7 @@ parallel_scan(Range&& range,OutRange&& out_range,T init,Reduce r, Combine c, Sca
 template <class Range, class T, class Reduce, class Combine, class Scan, class Job,class Enable=void>
 struct parallel_scan_range_move_single_helper: public boost::asynchronous::continuation_task<Range>
 {
-    parallel_scan_range_move_single_helper(boost::shared_ptr<Range> range, T init,
+    parallel_scan_range_move_single_helper(std::shared_ptr<Range> range, T init,
                                     Reduce r, Combine c, Scan s,
                                     long cutoff, const std::string& task_name, std::size_t prio)
         : boost::asynchronous::continuation_task<Range>(task_name)
@@ -451,7 +451,7 @@ struct parallel_scan_range_move_single_helper: public boost::asynchronous::conti
         }
     }
 
-    boost::shared_ptr<Range> range_;
+    std::shared_ptr<Range> range_;
     T init_;
     Reduce reduce_;
     Combine combine_;
@@ -470,7 +470,7 @@ parallel_scan(Range&& range,T init,Reduce r, Combine c, Scan s,long cutoff,
               const std::string& task_name="", std::size_t prio=0)
 #endif
 {
-    auto pr = boost::make_shared<Range>(std::forward<Range>(range));
+    auto pr = std::make_shared<Range>(std::forward<Range>(range));
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
             (boost::asynchronous::parallel_scan_range_move_single_helper<Range,T,Reduce,Combine,Scan,Job>
                 (pr,std::move(init),std::move(r),std::move(c),std::move(s),cutoff,task_name,prio));
