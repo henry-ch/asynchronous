@@ -36,12 +36,13 @@ class lockfree_queue:
 #ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
         public boost::asynchronous::any_queue_concept<JOB>,
 #endif          
-        public boost::asynchronous::queue_base<JOB>, Size, private boost::noncopyable
+        public boost::asynchronous::queue_base<JOB>, Size
 {
 public:
     typedef lockfree_queue<JOB> this_type;
     typedef JOB job_type;
-
+    lockfree_queue(const lockfree_queue&) = delete;
+    lockfree_queue& operator=(const lockfree_queue&) = delete;
     std::vector<std::size_t> get_queue_size() const
     {
         std::vector<std::size_t> res;

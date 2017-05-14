@@ -13,9 +13,8 @@
 #include <vector>
 #include <atomic>
 #include <numeric>
-
-#include <boost/noncopyable.hpp>
 #include <memory>
+
 #include <boost/thread/thread.hpp>
 #include <boost/thread/tss.hpp>
 
@@ -30,13 +29,15 @@ class multi_queue_scheduler_policy:
 #ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
         public any_shared_scheduler_concept<typename Q::job_type>,
 #endif  
-        private boost::noncopyable, public FindPosition
+        public FindPosition
 {
 public:
     typedef Q queue_type;
     typedef typename Q::job_type job_type;
     typedef multi_queue_scheduler_policy<Q,FindPosition> this_type;
-    
+
+    multi_queue_scheduler_policy(const multi_queue_scheduler_policy&) = delete;
+    multi_queue_scheduler_policy& operator=(const multi_queue_scheduler_policy&) = delete;
     std::vector<std::size_t> get_queue_size() const
     {
         std::size_t res = 0;

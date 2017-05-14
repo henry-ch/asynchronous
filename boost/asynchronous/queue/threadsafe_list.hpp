@@ -29,7 +29,7 @@ class threadsafe_list:
 #ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
         public boost::asynchronous::any_queue_concept<JOB>,
 #endif            
-        public boost::asynchronous::queue_base<JOB>, private boost::noncopyable
+        public boost::asynchronous::queue_base<JOB>
 {
 private:
     struct node

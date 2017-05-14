@@ -21,10 +21,12 @@ class queue_converter:
         #ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
                 public boost::asynchronous::any_queue_concept<To>,
         #endif
-                public boost::asynchronous::queue_base<To>, private boost::noncopyable
+                public boost::asynchronous::queue_base<To>
 {
 public:
     queue_converter(boost::asynchronous::any_queue_ptr<From> const& f):m_from_queue(f){}
+    queue_converter(const queue_converter&) = delete;
+    queue_converter& operator=(const queue_converter&) = delete;
 
     virtual ~queue_converter<To,From>(){}
     virtual void push(To&&,std::size_t)

@@ -12,7 +12,6 @@
 
 // circular queue
 #include <boost/circular_buffer.hpp>
-#include <boost/noncopyable.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/locks.hpp>
 #include <boost/thread/condition.hpp>
@@ -29,7 +28,7 @@ class circular_queue:
 #ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
         public boost::asynchronous::any_queue_concept<JOB>,
 #endif         
-        public boost::asynchronous::queue_base<JOB>, private boost::noncopyable
+        public boost::asynchronous::queue_base<JOB>
 {
 public:
     typedef circular_queue<JOB> this_type;
@@ -41,7 +40,8 @@ public:
     {
 
     }
-
+    circular_queue(const circular_queue&) = delete;
+    circular_queue& operator=(const circular_queue&) = delete;
     std::vector<std::size_t> get_queue_size() const
     {
         std::vector<std::size_t> res;

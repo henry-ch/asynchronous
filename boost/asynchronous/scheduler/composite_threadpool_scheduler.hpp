@@ -16,12 +16,11 @@
 #include <atomic>
 #include <numeric>
 #include <type_traits>
+#include <memory>
 
 #ifndef BOOST_THREAD_PROVIDES_FUTURE
 #define BOOST_THREAD_PROVIDES_FUTURE
 #endif
-#include <boost/noncopyable.hpp>
-#include <memory>
 
 #include <boost/thread/thread.hpp>
 #include <boost/thread/future.hpp>

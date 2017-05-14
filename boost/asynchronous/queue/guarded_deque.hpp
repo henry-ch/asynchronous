@@ -10,7 +10,6 @@
 #ifndef BOOST_ASYNC_QUEUE_GUARDED_DEQUE_HPP
 #define BOOST_ASYNC_QUEUE_GUARDED_DEQUE_HPP
 
-#include <boost/noncopyable.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/locks.hpp>
 #include <boost/thread/condition.hpp>
@@ -28,7 +27,7 @@ class guarded_deque:
 #ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
         public boost::asynchronous::any_queue_concept<JOB>,
 #endif           
-        public boost::asynchronous::queue_base<JOB>,  private boost::noncopyable
+        public boost::asynchronous::queue_base<JOB>
 {
 public:
     typedef guarded_deque<JOB,Size> this_type;
@@ -36,6 +35,9 @@ public:
     typedef boost::unique_lock<mutex_type> lock_type;
     template<typename... Args>
     guarded_deque(Args... ){}
+    guarded_deque(const guarded_deque&) = delete;
+    guarded_deque& operator=(const guarded_deque&) = delete;
+
     std::vector<std::size_t> get_queue_size() const
     {
         std::vector<std::size_t> res;

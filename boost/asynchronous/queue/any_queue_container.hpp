@@ -55,12 +55,13 @@ class any_queue_container:
                            public boost::asynchronous::any_queue_concept<JOB>,
 #endif          
                            public boost::asynchronous::queue_base<JOB>,
-                           public PushPolicy,
-                           private boost::noncopyable
+                           public PushPolicy
 {
     typedef std::vector<boost::asynchronous::any_queue_ptr<JOB> > queues_type;
 public:
     typedef JOB job_type;
+    any_queue_container(const any_queue_container&) = delete;
+    any_queue_container& operator=(const any_queue_container&) = delete;
 
     template <typename... Args>
     any_queue_container(Args... args)

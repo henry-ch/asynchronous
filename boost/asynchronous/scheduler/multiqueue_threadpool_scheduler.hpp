@@ -13,15 +13,14 @@
 #include <utility>
 #include <vector>
 #include <cstddef>
+#include <memory>
+#include <functional>
 
 #ifndef BOOST_THREAD_PROVIDES_FUTURE
 #define BOOST_THREAD_PROVIDES_FUTURE
 #endif
-#include <boost/noncopyable.hpp>
-#include <memory>
 
 #include <boost/thread/thread.hpp>
-#include <functional>
 #include <boost/thread/future.hpp>
 #include <boost/thread/tss.hpp>
 

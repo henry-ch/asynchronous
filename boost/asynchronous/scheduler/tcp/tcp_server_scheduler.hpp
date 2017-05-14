@@ -13,13 +13,11 @@
 #include <utility>
 #include <cstddef>
 #include <fstream>
-
-#include <boost/noncopyable.hpp>
 #include <memory>
+#include <functional>
 
 #include <boost/thread/thread.hpp>
 #include <boost/thread/tss.hpp>
-#include <functional>
 
 #include <boost/asynchronous/scheduler/detail/scheduler_helpers.hpp>
 #include <boost/asynchronous/detail/any_joinable.hpp>

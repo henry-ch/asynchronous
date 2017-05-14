@@ -15,7 +15,7 @@ class tbb_concurrent_queue:
 #ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
         public boost::asynchronous::any_queue_concept<JOB>,
 #endif
-        public boost::asynchronous::queue_base<JOB>, private boost::noncopyable
+        public boost::asynchronous::queue_base<JOB>
 {
 public:
     typedef boost::asynchronous::tbb_concurrent_queue<JOB> this_type;
@@ -24,7 +24,8 @@ public:
     tbb_concurrent_queue(): m_queue()
     {
     }
-
+    tbb_concurrent_queue(const tbb_concurrent_queue&) = delete;
+    tbb_concurrent_queue& operator=(const tbb_concurrent_queue&) = delete;
     std::vector<std::size_t> get_queue_size() const
     {
         std::vector<std::size_t> res;

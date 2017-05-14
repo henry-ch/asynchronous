@@ -11,8 +11,6 @@
 #define BOOST_ASYNC_SCHEDULER_SINGLE_QUEUE_SCHEDULER_POLICY_HPP
 
 #include <vector>
-
-#include <boost/noncopyable.hpp>
 #include <memory>
 #include <boost/thread/thread.hpp>
 #include <boost/thread/tss.hpp>
@@ -26,15 +24,16 @@ namespace boost { namespace asynchronous { namespace detail
 template<class Q>
 class single_queue_scheduler_policy: 
 #ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
-        public any_shared_scheduler_concept<typename Q::job_type>,
+        public any_shared_scheduler_concept<typename Q::job_type>
 #endif          
-        private boost::noncopyable
 {
 public:
     typedef Q queue_type;
     typedef typename Q::job_type job_type;
     typedef single_queue_scheduler_policy<Q> this_type;
     
+    single_queue_scheduler_policy(const single_queue_scheduler_policy&) = delete;
+    single_queue_scheduler_policy& operator=(const single_queue_scheduler_policy&) = delete;
     std::vector<std::size_t> get_queue_size() const
     {
         return m_queue->get_queue_size();
