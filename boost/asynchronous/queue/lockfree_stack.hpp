@@ -12,7 +12,7 @@
 
 #include <boost/lockfree/stack.hpp>
 #include <boost/thread/thread.hpp>
-#include <boost/smart_ptr/scoped_ptr.hpp>
+#include <memory>
 
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/queue/queue_base.hpp>
@@ -97,7 +97,7 @@ public:
             boost::this_thread::yield();
         }
         Size::decrease();
-        boost::scoped_ptr<JOB> for_cleanup(resp);
+        std::unique_ptr<JOB> for_cleanup(resp);
 #ifndef BOOST_NO_RVALUE_REFERENCES
         JOB res(std::move(*resp));
         return std::move(res);
@@ -113,7 +113,7 @@ public:
         if (res)
         {
             Size::decrease();
-            boost::scoped_ptr<JOB> for_cleanup(jptr);
+            std::unique_ptr<JOB> for_cleanup(jptr);
 #ifndef BOOST_NO_RVALUE_REFERENCES
             job = std::move(*jptr);
 #else
@@ -130,7 +130,7 @@ public:
         if (res)
         {
             Size::decrease();
-            boost::scoped_ptr<JOB> for_cleanup(jptr);
+            std::unique_ptr<JOB> for_cleanup(jptr);
 #ifndef BOOST_NO_RVALUE_REFERENCES
             job = std::move(*jptr);
 #else
