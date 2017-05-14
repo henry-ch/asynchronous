@@ -16,6 +16,7 @@
 #include <cstddef>
 #include <map>
 #include <functional>
+#include <memory>
 
 #include <boost/mpl/eval_if.hpp>
 #include <boost/mpl/identity.hpp>
@@ -31,9 +32,7 @@
 #include <boost/asynchronous/extensions/qt/qt_safe_callback_helper.hpp>
 
 #include <boost/system/error_code.hpp>
-#include <memory>
 
-#include <boost/make_shared.hpp>
 #include <boost/thread.hpp>
 
 namespace boost { namespace asynchronous

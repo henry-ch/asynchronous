@@ -18,7 +18,6 @@
 
 #include <functional>
 #include <memory>
-#include <boost/chrono.hpp>
 #include <boost/type_erasure/is_empty.hpp>
 
 #include <boost/asynchronous/callable_any.hpp>
