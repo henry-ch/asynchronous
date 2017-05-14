@@ -31,7 +31,7 @@ using namespace std;
 #define SIZE 1000000
 #define LOOP 10
 
-boost::chrono::high_resolution_clock::time_point servant_time;
+std::chrono::high_resolution_clock::time_point servant_time;
 double servant_intern=0.0;
 double serial_duration=0.0;
 
@@ -76,7 +76,7 @@ OutIterator inclusive_scan(Iterator beg, Iterator end, OutIterator out, T init)
 void ParallelAsyncPostFuture(Iterator beg, Iterator end, Iterator out, element init)
 {
     long tasksize = SIZE / tasks;
-    servant_time = boost::chrono::high_resolution_clock::now();
+    servant_time = std::chrono::high_resolution_clock::now();
     auto fu = boost::asynchronous::post_future(scheduler,
                [beg,end,out,init,tasksize]()
                {
@@ -108,7 +108,7 @@ void ParallelAsyncPostFuture(Iterator beg, Iterator end, Iterator out, element i
                                                              tasksize,"",0);
                });
     fu.get();
-    servant_intern += (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - servant_time).count() / 1000);
+    servant_intern += (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - servant_time).count() / 1000);
 }
 
 
@@ -144,9 +144,9 @@ int main( int argc, const char *argv[] )
         container res(SIZE,(element)0.0);
         generate(data,SIZE);
          // serial version
-        boost::chrono::high_resolution_clock::time_point start = boost::chrono::high_resolution_clock::now();
+        std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
         inclusive_scan(data.begin(),data.end(),res.begin(),(element)0.0);
-        serial_duration += (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000);
+        serial_duration += (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000);
     }
     printf ("%24s: time = %.1f usec\n","parallel_scan", servant_intern);
     printf ("%24s: time = %.1f usec\n","serial_scan", serial_duration);

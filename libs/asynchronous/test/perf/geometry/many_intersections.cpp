@@ -146,7 +146,7 @@ void test_many_intersections(int count_x, int count_y, double distance, bool met
     double elapsed=0.0;
     if (method1)
     {
-        auto start = boost::chrono::high_resolution_clock::now();
+        auto start = std::chrono::high_resolution_clock::now();
 
         // Sequentially intersection all input geometries
         multi_polygon_type final_output;
@@ -168,7 +168,7 @@ void test_many_intersections(int count_x, int count_y, double distance, bool met
                 final_output = result;
             }
         }
-        elapsed = (double)(boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000000.0);
+        elapsed = (double)(std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000000000.0);
         std::cout << "Method 1: " << elapsed << " " << bg::area(final_output) << std::endl;
 
         #ifdef TEST_WITH_SVG
@@ -180,7 +180,7 @@ void test_many_intersections(int count_x, int count_y, double distance, bool met
     double elapsed2=0.0;
     if (method2)
     {
-        auto start = boost::chrono::high_resolution_clock::now();
+        auto start = std::chrono::high_resolution_clock::now();
 
         std::vector<multi_polygon_type> final_output;
         pairwise_intersections(many_polygons, final_output);
@@ -192,7 +192,7 @@ void test_many_intersections(int count_x, int count_y, double distance, bool met
         }
 
         BOOST_ASSERT(final_output.size() == 1);
-        elapsed2 = (double)(boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000000.0);
+        elapsed2 = (double)(std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000000000.0);
         std::cout << "Method 2: " << elapsed2 << " " << bg::area(final_output.front()) << std::endl;
 
 
@@ -211,7 +211,7 @@ void test_many_intersections(int count_x, int count_y, double distance, bool met
                     >>(tpsize,64);
 
     {
-        auto start = boost::chrono::high_resolution_clock::now();
+        auto start = std::chrono::high_resolution_clock::now();
 
         /*auto beg = many_polygons.begin();
         auto end = many_polygons.end();
@@ -232,7 +232,7 @@ void test_many_intersections(int count_x, int count_y, double distance, bool met
         }
         ,"",0);
         multi_polygon_type final_output = std::move(fu.get());
-        elapsed3 = (double)(boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000000.0);
+        elapsed3 = (double)(std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000000000.0);
 
         std::cout << "Method 3: " << elapsed3 << " " << bg::area(final_output) << std::endl;
         #ifdef TEST_WITH_SVG

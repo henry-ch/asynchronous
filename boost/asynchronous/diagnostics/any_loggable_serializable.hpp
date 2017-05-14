@@ -20,7 +20,7 @@ struct any_loggable_serializable_concept :
 
 struct any_loggable_serializable: public boost::type_erasure::any<any_loggable_serializable_concept>
 {
-    typedef boost::chrono::high_resolution_clock clock_type;
+    typedef std::chrono::high_resolution_clock clock_type;
     typedef int task_failed_handling;
 
     any_loggable_serializable(){}

@@ -766,10 +766,10 @@ public:
     std::ostringstream body;
     std::ostringstream footer;
 
-    boost::chrono::high_resolution_clock::time_point reference_time;
+    std::chrono::high_resolution_clock::time_point reference_time;
 
     document(boost::asynchronous::html_formatter::parameters const& params)
-        : reference_time(boost::chrono::high_resolution_clock::now())
+        : reference_time(std::chrono::high_resolution_clock::now())
     {
         generate_header(params);
         generate_body(params);
@@ -806,7 +806,7 @@ struct histogram
     struct bin
     {
         std::size_t count;
-        boost::chrono::nanoseconds total;
+        std::chrono::nanoseconds total;
     };
 
     enum class draw_type
@@ -815,17 +815,17 @@ struct histogram
         TOTAL
     };
 
-    boost::chrono::nanoseconds min;
-    boost::chrono::nanoseconds max;
+    std::chrono::nanoseconds min;
+    std::chrono::nanoseconds max;
     std::vector<bin> bins;
 
-    histogram(boost::chrono::nanoseconds min_, boost::chrono::nanoseconds max_, std::size_t bin_count)
+    histogram(std::chrono::nanoseconds min_, std::chrono::nanoseconds max_, std::size_t bin_count)
         : min(min_), max(max_), bins(bin_count)
     {
         if (bins.size() == 0) throw std::logic_error("Invalid histogram with 0 bins");
     }
 
-    void add(boost::chrono::nanoseconds const& value)
+    void add(std::chrono::nanoseconds const& value)
     {
         if (bins.size() == 0) throw std::logic_error("Invalid histogram with 0 bins");
         if (max < value || min > value) throw std::logic_error("Cannot insert value into histogram: Boundaries exceeded.");
@@ -906,8 +906,8 @@ struct histogram
             std::size_t height = (std::size_t) (numbers[bin_id] * scale);
             std::size_t top = y_bottom - height;
 
-            boost::chrono::nanoseconds left_border = min + ((max - min) * bin_id / bins.size());
-            boost::chrono::nanoseconds right_border = min + ((max - min) * (bin_id + 1) / bins.size());
+            std::chrono::nanoseconds left_border = min + ((max - min) * bin_id / bins.size());
+            std::chrono::nanoseconds right_border = min + ((max - min) * (bin_id + 1) / bins.size());
 
             doc.body << "                        <polygon points=\"" << x_start << ", " << top      << " "
                                                                    << x_end   << ", " << top      << " "
@@ -1300,13 +1300,13 @@ void format(document & doc, std::size_t /* index */, std::string const& section,
              << "        <tbody>"                                                                             << std::endl;
 
     // Get the current time
-    auto now = boost::chrono::high_resolution_clock::now();
+    auto now = std::chrono::high_resolution_clock::now();
 
     // Maximum values for font coloring
 
-    boost::chrono::nanoseconds max_scheduling;
-    boost::chrono::nanoseconds max_execution;
-    boost::chrono::nanoseconds max_total;
+    std::chrono::nanoseconds max_scheduling;
+    std::chrono::nanoseconds max_execution;
+    std::chrono::nanoseconds max_total;
 
     bool extrema_set = false;
 
@@ -1316,9 +1316,9 @@ void format(document & doc, std::size_t /* index */, std::string const& section,
         if (item.first.empty()) continue;
 
         // Get times
-        boost::chrono::nanoseconds scheduling = item.second.get_started_time() - item.second.get_posted_time();
-        boost::chrono::nanoseconds execution = now - item.second.get_started_time(); // Use current time for running tasks.
-        boost::chrono::nanoseconds total = scheduling + execution;
+        std::chrono::nanoseconds scheduling = item.second.get_started_time() - item.second.get_posted_time();
+        std::chrono::nanoseconds execution = now - item.second.get_started_time(); // Use current time for running tasks.
+        std::chrono::nanoseconds total = scheduling + execution;
 
         // Set maxima
         if (!extrema_set || scheduling > max_scheduling) max_scheduling = scheduling;

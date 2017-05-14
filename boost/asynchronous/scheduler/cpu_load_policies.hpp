@@ -10,7 +10,9 @@
 #ifndef BOOST_ASYNCHRONOUS_SCHEDULER_CPU_LOAD_POLICIES_HPP
 #define BOOST_ASYNCHRONOUS_SCHEDULER_CPU_LOAD_POLICIES_HPP
 
-#include <boost/chrono/chrono.hpp>
+#include <chrono>
+#include <thread>
+
 #include <boost/thread/thread.hpp>
 
 namespace boost { namespace asynchronous
@@ -35,13 +37,13 @@ template <unsigned Loops=10, unsigned MinDurationUs=80000, unsigned SleepTimeUs=
 struct default_save_cpu_load
 {
 public:
-    default_save_cpu_load():m_cpt_nojob(0),m_start( boost::chrono::high_resolution_clock::now()){}
+    default_save_cpu_load():m_cpt_nojob(0),m_start( std::chrono::high_resolution_clock::now()){}
     // called each time a job is popped and executed
     void popped_job()
     {
         // reset counter and timer
         m_cpt_nojob=0;
-        m_start = boost::chrono::high_resolution_clock::now();
+        m_start = std::chrono::high_resolution_clock::now();
     }
     // called each time a loop on all queues is done and no job was found
     void loop_done_no_job()
@@ -50,17 +52,17 @@ public:
         if (m_cpt_nojob >= Loops)
         {
             m_cpt_nojob = 0;
-            auto elapsed = boost::chrono::high_resolution_clock::now() - m_start;
-            if(boost::chrono::duration_cast<boost::chrono::microseconds>(elapsed).count() <= MinDurationUs)
+            auto elapsed = std::chrono::high_resolution_clock::now() - m_start;
+            if(std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count() <= MinDurationUs)
             {
-                boost::this_thread::sleep_for( boost::chrono::microseconds(SleepTimeUs) );                
+                std::this_thread::sleep_for( std::chrono::microseconds(SleepTimeUs) );
             }
-            m_start = boost::chrono::high_resolution_clock::now();
+            m_start = std::chrono::high_resolution_clock::now();
         }
     }
 private:
     unsigned int m_cpt_nojob;
-    boost::chrono::high_resolution_clock::time_point m_start;
+    std::chrono::high_resolution_clock::time_point m_start;
 };
 
 }} // boost::asynchronous::scheduler

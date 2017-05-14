@@ -13,7 +13,7 @@
 #include <vector>
 #include <tuple>
 #include <numeric>
-#include <boost/chrono/chrono.hpp>
+#include <chrono>
 #include <boost/asynchronous/post.hpp>
 
 // provides a few helpers.
@@ -33,13 +33,13 @@ namespace boost { namespace asynchronous
 template <class Func, class Scheduler>
 std::size_t measure_cutoff(Scheduler s, Func f,std::size_t cutoff,const std::string& task_name, std::size_t prio)
 {
-    typename boost::chrono::high_resolution_clock::time_point start;
-    typename boost::chrono::high_resolution_clock::time_point stop;
-    start = boost::chrono::high_resolution_clock::now();
+    typename std::chrono::high_resolution_clock::time_point start;
+    typename std::chrono::high_resolution_clock::time_point stop;
+    start = std::chrono::high_resolution_clock::now();
     auto fu = boost::asynchronous::post_future(s,[cutoff,&f]()mutable{return f(cutoff);},task_name,prio);
     fu.get();
-    stop = boost::chrono::high_resolution_clock::now();
-    return (boost::chrono::nanoseconds(stop - start).count() / 1000);
+    stop = std::chrono::high_resolution_clock::now();
+    return (std::chrono::nanoseconds(stop - start).count() / 1000);
 }
 
 // uses measure_cutoff to build statistics to find best cutoff

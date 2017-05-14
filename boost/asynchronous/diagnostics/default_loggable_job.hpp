@@ -11,7 +11,7 @@
 #define BOOST_ASYNC_DIAGNOSTICS_DEFAULT_LOGGABLE_JOB_HPP
 
 #include <string>
-#include <boost/chrono/chrono.hpp>
+#include <chrono>
 #include <boost/asynchronous/diagnostics/diagnostic_item.hpp>
 #include <boost/thread/thread.hpp>
 
@@ -21,7 +21,7 @@ namespace boost { namespace asynchronous
 class default_loggable_job
 {
 public:
-    typedef boost::chrono::high_resolution_clock Clock;
+    typedef std::chrono::high_resolution_clock Clock;
 
     default_loggable_job(default_loggable_job const&)=default;
     default_loggable_job(default_loggable_job&&)=default;
@@ -97,7 +97,7 @@ private:
 class default_loggable_job_extended
 {
 public:
-    typedef boost::chrono::high_resolution_clock Clock;
+    typedef std::chrono::high_resolution_clock Clock;
 
     default_loggable_job_extended(default_loggable_job_extended const&)=default;
     default_loggable_job_extended(default_loggable_job_extended&&)=default;

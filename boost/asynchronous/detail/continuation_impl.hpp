@@ -453,7 +453,7 @@ if (!boost::type_erasure::is_empty(weak_scheduler))                         \
 }
 
 // the continuation task implementation
-template <class Return, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB, typename Tuple=std::tuple<boost::future<Return> > , typename Duration = boost::chrono::milliseconds >
+template <class Return, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB, typename Tuple=std::tuple<boost::future<Return> > , typename Duration = std::chrono::milliseconds >
 struct continuation
 {
     typedef int is_continuation_task;
@@ -520,7 +520,7 @@ struct continuation
     , m_timeout(d)
     {
         // remember when we started
-        m_start = boost::chrono::high_resolution_clock::now();
+        m_start = std::chrono::high_resolution_clock::now();
         std::vector<boost::asynchronous::any_interruptible> interruptibles;
         BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES0(Job)
         else
@@ -542,7 +542,7 @@ struct continuation
     , m_timeout(d)
     {
         // remember when we started
-        m_start = boost::chrono::high_resolution_clock::now();
+        m_start = std::chrono::high_resolution_clock::now();
         //TODO interruptible
     }
     template <typename T,typename Interruptibles,typename Last>
@@ -595,7 +595,7 @@ struct continuation
             return true;
         }
         // if timeout, we are ready too
-        typename boost::chrono::high_resolution_clock::time_point time_now = boost::chrono::high_resolution_clock::now();
+        typename std::chrono::high_resolution_clock::time_point time_now = std::chrono::high_resolution_clock::now();
         if (m_timeout.count() != 0 && (time_now - m_start >= m_timeout))
         {
             return true;
@@ -613,7 +613,7 @@ struct continuation
     std::function<void(Tuple)> m_done;
     std::shared_ptr<boost::asynchronous::detail::interrupt_state> m_state;
     Duration m_timeout;
-    typename boost::chrono::high_resolution_clock::time_point m_start;
+    typename std::chrono::high_resolution_clock::time_point m_start;
 
     template<std::size_t I = 0, typename... Tp>
     inline typename std::enable_if<I == sizeof...(Tp), void>::type
@@ -682,7 +682,7 @@ if (!boost::type_erasure::is_empty(weak_scheduler))                         \
 template <class Return,
           typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB,
           typename Tuple=std::tuple<boost::asynchronous::expected<Return> > ,
-          typename Duration = boost::chrono::milliseconds >
+          typename Duration = std::chrono::milliseconds >
 struct callback_continuation
 {
     typedef int is_continuation_task;
@@ -716,7 +716,7 @@ struct callback_continuation
     , m_post_policy(post_policy)
     {
         // remember when we started
-        m_start = boost::chrono::high_resolution_clock::now();
+        m_start = std::chrono::high_resolution_clock::now();
 
         on_done(std::move(f));
         std::vector<boost::asynchronous::any_interruptible> interruptibles;
@@ -744,7 +744,7 @@ struct callback_continuation
     , m_post_policy(post_policy)
     {
         // remember when we started
-        m_start = boost::chrono::high_resolution_clock::now();
+        m_start = std::chrono::high_resolution_clock::now();
 
         std::vector<boost::asynchronous::any_interruptible> interruptibles;
         BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES(Job)
@@ -770,7 +770,7 @@ struct callback_continuation
     , m_post_policy(post_policy)
     {
         // remember when we started
-        m_start = boost::chrono::high_resolution_clock::now();
+        m_start = std::chrono::high_resolution_clock::now();
 
         on_done(std::move(f));
         std::vector<boost::asynchronous::any_interruptible> interruptibles;
@@ -942,7 +942,7 @@ struct callback_continuation
             return true;
         }
         // if timeout, we are ready too
-        typename boost::chrono::high_resolution_clock::time_point time_now = boost::chrono::high_resolution_clock::now();
+        typename std::chrono::high_resolution_clock::time_point time_now = std::chrono::high_resolution_clock::now();
         if (m_timeout.count() != 0 && (time_now - m_start >= m_timeout))
         {
             m_finished->set_interrupted();
@@ -993,14 +993,14 @@ struct callback_continuation
 
     std::shared_ptr<boost::asynchronous::detail::interrupt_state> m_state;
     Duration m_timeout;
-    typename boost::chrono::high_resolution_clock::time_point m_start;
+    typename std::chrono::high_resolution_clock::time_point m_start;
     std::shared_ptr<subtask_finished> m_finished;
     boost::asynchronous::continuation_post_policy m_post_policy;
 
 };
 
 // version for sequences of futures
-template <class Return, typename Job, typename Seq, typename Duration = boost::chrono::milliseconds>
+template <class Return, typename Job, typename Seq, typename Duration = std::chrono::milliseconds>
 struct continuation_as_seq
 {
     typedef int is_continuation_task;
@@ -1026,7 +1026,7 @@ struct continuation_as_seq
     , m_timeout(d)
     {
         // remember when we started
-        m_start = boost::chrono::high_resolution_clock::now();
+        m_start = std::chrono::high_resolution_clock::now();
         //TODO interruptible
     }
     continuation_as_seq(continuation_as_seq&& rhs)noexcept
@@ -1086,7 +1086,7 @@ struct continuation_as_seq
             return true;
         }
         // if timeout, we are ready too
-        typename boost::chrono::high_resolution_clock::time_point time_now = boost::chrono::high_resolution_clock::now();
+        typename std::chrono::high_resolution_clock::time_point time_now = std::chrono::high_resolution_clock::now();
         if (m_timeout.count() != 0 && (time_now - m_start >= m_timeout))
         {
             return true;
@@ -1109,10 +1109,10 @@ struct continuation_as_seq
     std::function<void(Seq&&)> m_done;
     std::shared_ptr<boost::asynchronous::detail::interrupt_state> m_state;
     Duration m_timeout;
-    typename boost::chrono::high_resolution_clock::time_point m_start;
+    typename std::chrono::high_resolution_clock::time_point m_start;
 };
 
-template <class Return, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB, typename Duration = boost::chrono::milliseconds >
+template <class Return, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB, typename Duration = std::chrono::milliseconds >
 struct callback_continuation_as_seq
 {
     typedef int is_continuation_task;
@@ -1225,7 +1225,7 @@ struct callback_continuation_as_seq
     , m_finished(std::make_shared<subtask_finished>(args.size(),!!m_state,(m_timeout.count() != 0)))
     {
         // remember when we started
-        m_start = boost::chrono::high_resolution_clock::now();
+        m_start = std::chrono::high_resolution_clock::now();
 
         on_done(std::move(f));
 
@@ -1251,7 +1251,7 @@ struct callback_continuation_as_seq
     , m_finished(std::make_shared<subtask_finished>(args_.size(),!!m_state,(m_timeout.count() != 0)))
     {
         // remember when we started
-        m_start = boost::chrono::high_resolution_clock::now();
+        m_start = std::chrono::high_resolution_clock::now();
 
         on_done(std::move(f));
 
@@ -1335,7 +1335,7 @@ struct callback_continuation_as_seq
             return true;
         }
         // if timeout, we are ready too
-        typename boost::chrono::high_resolution_clock::time_point time_now = boost::chrono::high_resolution_clock::now();
+        typename std::chrono::high_resolution_clock::time_point time_now = std::chrono::high_resolution_clock::now();
         if (m_timeout.count() != 0 && (time_now - m_start >= m_timeout))
         {
             m_finished->set_interrupted();
@@ -1386,7 +1386,7 @@ struct callback_continuation_as_seq
 
     std::shared_ptr<boost::asynchronous::detail::interrupt_state> m_state;
     Duration m_timeout;
-    typename boost::chrono::high_resolution_clock::time_point m_start;
+    typename std::chrono::high_resolution_clock::time_point m_start;
     std::shared_ptr<subtask_finished> m_finished;
 
 };

@@ -156,7 +156,7 @@ void test_many_unions(int count_x, int count_y, double distance, bool method1,
     // Method 2: add geometries pair-wise (much faster)
    double elapsed2=0.0;
   /*   {
-        auto start = boost::chrono::high_resolution_clock::now();
+        auto start = std::chrono::high_resolution_clock::now();
 
         std::vector<multi_polygon_type> final_output;
         pairwise_unions(many_polygons, final_output);
@@ -167,7 +167,7 @@ void test_many_unions(int count_x, int count_y, double distance, bool method1,
             pairwise_unions(input, final_output);
         }
 
-        elapsed2 = (double)(boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000000.0);
+        elapsed2 = (double)(std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000000000.0);
         BOOST_ASSERT(final_output.size() == 1);
 
         std::cout << "Method 2: " << elapsed2 << " " << bg::area(final_output.front()) << std::endl;
@@ -188,7 +188,7 @@ void test_many_unions(int count_x, int count_y, double distance, bool method1,
                     >>(tpsize,64);
 
     {
-        auto start = boost::chrono::high_resolution_clock::now();
+        auto start = std::chrono::high_resolution_clock::now();
 
 /*        auto beg = many_polygons.begin();
         auto end = many_polygons.end();
@@ -212,7 +212,7 @@ void test_many_unions(int count_x, int count_y, double distance, bool method1,
         }
         ,"",0);
         std::vector<multi_polygon_type> final_output = std::move(fu.get());
-        elapsed3 = (double)(boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000000.0);
+        elapsed3 = (double)(std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000000000.0);
 
         BOOST_ASSERT(final_output.size() == 1);
         std::cout << "Method 3: " << elapsed3 << " " << bg::area(final_output.front()) << std::endl;

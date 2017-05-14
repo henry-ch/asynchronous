@@ -8,7 +8,7 @@
 
 using namespace std;
 
-typename boost::chrono::high_resolution_clock::time_point servant_time;
+typename std::chrono::high_resolution_clock::time_point servant_time;
 double duration1=0.0;
 double duration2=0.0;
 
@@ -82,9 +82,9 @@ int main( int argc, const char *argv[] )
 
     // creation std
     duration1=0.0;
-    auto start = boost::chrono::high_resolution_clock::now();
+    auto start = std::chrono::high_resolution_clock::now();
     auto stdv = test_vector_create(vec_size);
-    duration1 = (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000);
+    duration1 = (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000000);
     std::cout << "Construction of std::vector<LongOne>(" << stdv.size() << ") took in ms: " << duration1 << std::endl;
 
     pool = boost::asynchronous::make_shared_scheduler_proxy<
@@ -97,69 +97,69 @@ int main( int argc, const char *argv[] )
     pool.processor_bind(0);
     // creation asynchronous
     duration2=0.0;
-    start = boost::chrono::high_resolution_clock::now();
+    start = std::chrono::high_resolution_clock::now();
     auto asyncv = test_async_vector_create(vec_size);
-    duration2 = (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000);
+    duration2 = (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000000);
     std::cout << "Construction of boost::asynchronous::vector<LongOne>(" << asyncv.size() << ") took in ms: " << duration2 << std::endl;
     std::cout << "speedup asynchronous: " << duration1 / duration2 << std::endl << std::endl;
 
     // copy std
     duration1=0.0;
-    start = boost::chrono::high_resolution_clock::now();
+    start = std::chrono::high_resolution_clock::now();
     auto stdv2 = stdv;
-    duration1 = (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000);
+    duration1 = (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000000);
     std::cout << "Copy of std::vector<LongOne>(" << stdv.size() << ") took in ms: " << duration1 << std::endl;
 
     // copy asynchronous
     duration2=0.0;
-    start = boost::chrono::high_resolution_clock::now();
+    start = std::chrono::high_resolution_clock::now();
     auto asyncv2 = asyncv;
-    duration2 = (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000);
+    duration2 = (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000000);
     std::cout << "Copy of boost::asynchronous::vector<LongOne>(" << asyncv.size() << ") took in ms: " << duration2 << std::endl;
     std::cout << "speedup asynchronous: " << duration1 / duration2 << std::endl << std::endl;
 
     // compare std
     duration1=0.0;
-    start = boost::chrono::high_resolution_clock::now();
+    start = std::chrono::high_resolution_clock::now();
     bool equal = (stdv2 == stdv);
-    duration1 = (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000);
+    duration1 = (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000000);
     std::cout << "Compare of std::vector<LongOne>(" << stdv.size() << ") took in ms: " << duration1 << ". Res:" << equal << std::endl;
 
     // compare asynchronous
     duration2=0.0;
-    start = boost::chrono::high_resolution_clock::now();
+    start = std::chrono::high_resolution_clock::now();
     equal = (asyncv2 == asyncv);
-    duration2 = (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000);
+    duration2 = (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000000);
     std::cout << "Compare of boost::asynchronous::vector<LongOne>(" << asyncv.size() << ") took in ms: " << duration2 << ". Res:" << equal<< std::endl;
     std::cout << "speedup asynchronous: " << duration1 / duration2 << std::endl << std::endl;
 
     // clear std
     duration1=0.0;
-    start = boost::chrono::high_resolution_clock::now();
+    start = std::chrono::high_resolution_clock::now();
     stdv2.clear();
-    duration1 = (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000);
+    duration1 = (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000000);
     std::cout << "Clear of std::vector<LongOne>(" << stdv.size() << ") took in ms: " << duration1 << std::endl;
 
     // clear asynchronous
     duration2=0.0;
-    start = boost::chrono::high_resolution_clock::now();
+    start = std::chrono::high_resolution_clock::now();
     asyncv2.clear();
-    duration2 = (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000);
+    duration2 = (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000000);
     std::cout << "Clear of boost::asynchronous::vector<LongOne>(" << asyncv.size() << ") took in ms: " << duration2 << std::endl;
     std::cout << "speedup asynchronous: " << duration1 / duration2 << std::endl << std::endl;
 
     // resize std
     duration1=0.0;
-    start = boost::chrono::high_resolution_clock::now();
+    start = std::chrono::high_resolution_clock::now();
     stdv.resize(vec_size * 2);
-    duration1 = (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000);
+    duration1 = (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000000);
     std::cout << "Resize of std::vector<LongOne>(" << stdv.size() << ") took in ms: " << duration1 << std::endl;
 
     // resize asynchronous
     duration2=0.0;
-    start = boost::chrono::high_resolution_clock::now();
+    start = std::chrono::high_resolution_clock::now();
     asyncv.resize(vec_size * 2);;
-    duration2 = (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000);
+    duration2 = (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000000);
     std::cout << "Resize of boost::asynchronous::vector<LongOne>(" << asyncv.size() << ") took in ms: " << duration2 << std::endl;
     std::cout << "speedup asynchronous: " << duration1 / duration2 << std::endl << std::endl;
 

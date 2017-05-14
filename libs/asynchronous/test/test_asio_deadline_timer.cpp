@@ -45,14 +45,14 @@ struct Servant : boost::asynchronous::trackable_servant<>
 
         boost::asynchronous::asio_deadline_timer_proxy timer(get_worker(),boost::posix_time::milliseconds(500));
 
-        typename boost::chrono::high_resolution_clock::time_point start = boost::chrono::high_resolution_clock::now();
+        typename std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
         // capture the timer in lambda to force keeping alive
         async_wait(timer,
                    [p,start,threadid,timer](const ::boost::system::error_code& err){
                        BOOST_CHECK_MESSAGE(threadid==boost::this_thread::get_id(),"timer callback in wrong thread.");
                        BOOST_CHECK_MESSAGE(!err,"timer not expired.");
-                       typename boost::chrono::high_resolution_clock::time_point stop = boost::chrono::high_resolution_clock::now();
-                       auto d =  boost::chrono::nanoseconds(stop - start).count();
+                       typename std::chrono::high_resolution_clock::time_point stop = std::chrono::high_resolution_clock::now();
+                       auto d =  std::chrono::nanoseconds(stop - start).count();
                        BOOST_CHECK_MESSAGE(d/1000000 < 600,"timer was too long.");
                        BOOST_CHECK_MESSAGE(d/1000000 >= 490,"timer was too short.");
                        ++timer_expired_count;
@@ -66,14 +66,14 @@ struct Servant : boost::asynchronous::trackable_servant<>
         BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"timer_expired running in wrong thread.");
         boost::thread::id threadid = m_threadid;
 
-        typename boost::chrono::high_resolution_clock::time_point start = boost::chrono::high_resolution_clock::now();
+        typename std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
 
         async_wait(m_timer,
                    [this,p,start,threadid](const ::boost::system::error_code& err){
                        BOOST_CHECK_MESSAGE(threadid==boost::this_thread::get_id(),"timer callback in wrong thread.");
                        BOOST_CHECK_MESSAGE(!err,"timer not expired.");
-                       typename boost::chrono::high_resolution_clock::time_point stop = boost::chrono::high_resolution_clock::now();
-                       auto d =  boost::chrono::nanoseconds(stop - start).count();
+                       typename std::chrono::high_resolution_clock::time_point stop = std::chrono::high_resolution_clock::now();
+                       auto d =  std::chrono::nanoseconds(stop - start).count();
                        BOOST_CHECK_MESSAGE(d/1000000 < 600,"timer was too long.");
                        BOOST_CHECK_MESSAGE(d/1000000 >= 490,"timer was too short.");
                        ++timer_expired_count;
@@ -89,7 +89,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         boost::thread::id threadid = m_threadid;
         m_timer = boost::asynchronous::asio_deadline_timer_proxy(get_worker());
 
-        typename boost::chrono::high_resolution_clock::time_point start = boost::chrono::high_resolution_clock::now();
+        typename std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
 
         async_wait_duration(
                    m_timer,
@@ -97,8 +97,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
                    [this,p,start,threadid](const ::boost::system::error_code& err){
                        BOOST_CHECK_MESSAGE(threadid==boost::this_thread::get_id(),"timer callback in wrong thread.");
                        BOOST_CHECK_MESSAGE(!err,"timer not expired.");
-                       typename boost::chrono::high_resolution_clock::time_point stop = boost::chrono::high_resolution_clock::now();
-                       auto d =  boost::chrono::nanoseconds(stop - start).count();
+                       typename std::chrono::high_resolution_clock::time_point stop = std::chrono::high_resolution_clock::now();
+                       auto d =  std::chrono::nanoseconds(stop - start).count();
                        BOOST_CHECK_MESSAGE(d/1000000 < 600,"timer was too long.");
                        BOOST_CHECK_MESSAGE(d/1000000 >= 490,"timer was too short.");
                        ++timer_expired_count;
@@ -113,14 +113,14 @@ struct Servant : boost::asynchronous::trackable_servant<>
         BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"timer_cancelled running in wrong thread.");
         boost::thread::id threadid = m_threadid;
         
-        typename boost::chrono::high_resolution_clock::time_point start = boost::chrono::high_resolution_clock::now();
+        typename std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
         
         async_wait(timer,
                    [p,start,timer,threadid](const ::boost::system::error_code& err){
                        BOOST_CHECK_MESSAGE(threadid==boost::this_thread::get_id(),"timer callback in wrong thread.");
                        BOOST_CHECK_MESSAGE(err,"timer not expired.");
-                       typename boost::chrono::high_resolution_clock::time_point stop = boost::chrono::high_resolution_clock::now();
-                       auto d =  boost::chrono::nanoseconds(stop - start).count();
+                       typename std::chrono::high_resolution_clock::time_point stop = std::chrono::high_resolution_clock::now();
+                       auto d =  std::chrono::nanoseconds(stop - start).count();
                        BOOST_CHECK_MESSAGE(d/1000000 < 49999,"timer was too long.");
                        ++timer_cancelled_count;
                        p->set_value();

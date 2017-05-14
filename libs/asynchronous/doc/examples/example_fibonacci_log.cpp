@@ -120,14 +120,14 @@ public:
 void example_fibonacci_log(long fibo_val,long cutoff, int threads)
 {
     std::cout << "example_fibonacci_log single" << std::endl;
-    typename boost::chrono::high_resolution_clock::time_point start;
-    typename boost::chrono::high_resolution_clock::time_point stop;
-    start = boost::chrono::high_resolution_clock::now();
+    typename std::chrono::high_resolution_clock::time_point start;
+    typename std::chrono::high_resolution_clock::time_point stop;
+    start = std::chrono::high_resolution_clock::now();
     long sres = serial_fib(fibo_val);
-    stop = boost::chrono::high_resolution_clock::now();
+    stop = std::chrono::high_resolution_clock::now();
     std::cout << "sres= " << sres << std::endl;
     std::cout << "example_fibonacci_log single took in us:"
-              <<  (boost::chrono::nanoseconds(stop - start).count() / 1000) <<"\n" <<std::endl;
+              <<  (std::chrono::nanoseconds(stop - start).count() / 1000) <<"\n" <<std::endl;
 
     std::cout << "example_fibonacci_log parallel" << std::endl;
     {
@@ -137,14 +137,14 @@ void example_fibonacci_log(long fibo_val,long cutoff, int threads)
                                      boost::asynchronous::lockfree_queue<servant_job>>>();
         {
             ServantProxy proxy(scheduler, threads);
-            start = boost::chrono::high_resolution_clock::now();
+            start = std::chrono::high_resolution_clock::now();
             boost::shared_future<boost::shared_future<long> > fu = proxy.calc_fibonacci(fibo_val,cutoff);
             boost::shared_future<long> resfu = fu.get();
             long res = resfu.get();
-            stop = boost::chrono::high_resolution_clock::now();
+            stop = std::chrono::high_resolution_clock::now();
             std::cout << "res= " << res << std::endl;
             std::cout << "example_fibonacci_log parallel took in us:"
-                      <<  (boost::chrono::nanoseconds(stop - start).count() / 1000) <<"\n" <<std::endl;
+                      <<  (std::chrono::nanoseconds(stop - start).count() / 1000) <<"\n" <<std::endl;
 
             // now display run time of tasks
             boost::shared_future<diag_type> fu_diag = proxy.get_diagnostics();
@@ -155,8 +155,8 @@ void example_fibonacci_log(long fibo_val,long cutoff, int threads)
                 std::cout << "job type: " << (*mit).first << std::endl;
                 for (auto jit = (*mit).second.begin(); jit != (*mit).second.end();++jit)
                 {
-                    std::cout << "job waited in us: " << boost::chrono::nanoseconds((*jit).get_started_time() - (*jit).get_posted_time()).count() / 1000 << std::endl;
-                    std::cout << "job lasted in us: " << boost::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() / 1000 << std::endl;
+                    std::cout << "job waited in us: " << std::chrono::nanoseconds((*jit).get_started_time() - (*jit).get_posted_time()).count() / 1000 << std::endl;
+                    std::cout << "job lasted in us: " << std::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() / 1000 << std::endl;
                     std::cout << "job interrupted? "  << std::boolalpha << (*jit).is_interrupted() << std::endl;
                 }
             }

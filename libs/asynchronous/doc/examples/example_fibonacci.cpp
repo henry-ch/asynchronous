@@ -115,14 +115,14 @@ public:
 void example_fibonacci(long fibo_val,long cutoff, int threads)
 {
     std::cout << "example_fibonacci single" << std::endl;
-    typename boost::chrono::high_resolution_clock::time_point start;
-    typename boost::chrono::high_resolution_clock::time_point stop;
-    start = boost::chrono::high_resolution_clock::now();
+    typename std::chrono::high_resolution_clock::time_point start;
+    typename std::chrono::high_resolution_clock::time_point stop;
+    start = std::chrono::high_resolution_clock::now();
     long sres = serial_fib(fibo_val);
-    stop = boost::chrono::high_resolution_clock::now();
+    stop = std::chrono::high_resolution_clock::now();
     std::cout << "sres= " << sres << std::endl;
     std::cout << "example_fibonacci single took in us:"
-              <<  (boost::chrono::nanoseconds(stop - start).count() / 1000) <<"\n" <<std::endl;
+              <<  (std::chrono::nanoseconds(stop - start).count() / 1000) <<"\n" <<std::endl;
 
     std::cout << "example_fibonacci parallel" << std::endl;
     {
@@ -132,14 +132,14 @@ void example_fibonacci(long fibo_val,long cutoff, int threads)
                                      boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler,threads);
-            start = boost::chrono::high_resolution_clock::now();
+            start = std::chrono::high_resolution_clock::now();
             boost::shared_future<boost::shared_future<long> > fu = proxy.calc_fibonacci(fibo_val,cutoff);
             boost::shared_future<long> resfu = fu.get();
             long res = resfu.get();
-            stop = boost::chrono::high_resolution_clock::now();
+            stop = std::chrono::high_resolution_clock::now();
             std::cout << "res= " << res << std::endl;
             std::cout << "example_fibonacci parallel took in us:"
-                      <<  (boost::chrono::nanoseconds(stop - start).count() / 1000) <<"\n" <<std::endl;
+                      <<  (std::chrono::nanoseconds(stop - start).count() / 1000) <<"\n" <<std::endl;
         }
     }
     std::cout << "end example_fibonacci \n" << std::endl;

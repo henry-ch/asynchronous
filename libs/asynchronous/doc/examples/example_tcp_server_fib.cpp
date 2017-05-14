@@ -80,14 +80,14 @@ public:
 void example_post_tcp_fib(long fibo_val,long cutoff)
 {
     std::cout << "fibonacci single-threaded" << std::endl;
-    typename boost::chrono::high_resolution_clock::time_point start;
-    typename boost::chrono::high_resolution_clock::time_point stop;
-    start = boost::chrono::high_resolution_clock::now();
+    typename std::chrono::high_resolution_clock::time_point start;
+    typename std::chrono::high_resolution_clock::time_point stop;
+    start = std::chrono::high_resolution_clock::now();
     long sres = tcp_example::serial_fib(fibo_val);
-    stop = boost::chrono::high_resolution_clock::now();
+    stop = std::chrono::high_resolution_clock::now();
     std::cout << "sres= " << sres << std::endl;
     std::cout << "fibonacci single-threaded single took in us:"
-              <<  (boost::chrono::nanoseconds(stop - start).count() / 1000) <<"\n" <<std::endl;
+              <<  (std::chrono::nanoseconds(stop - start).count() / 1000) <<"\n" <<std::endl;
     {
         std::cout << "fibonacci parallel TCP" << std::endl;
         // a single-threaded world, where Servant will live.
@@ -96,16 +96,16 @@ void example_post_tcp_fib(long fibo_val,long cutoff)
                                      boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler);
-            start = boost::chrono::high_resolution_clock::now();
+            start = std::chrono::high_resolution_clock::now();
             // result of BOOST_ASYNC_FUTURE_MEMBER is a shared_future,
             // so we have a shared_future of a shared_future(result of start_async_work)
             boost::shared_future<boost::shared_future<long> > fu = proxy.calc_fibonacci(fibo_val,cutoff);
             boost::shared_future<long> resfu = fu.get();
             long res = resfu.get();
-            stop = boost::chrono::high_resolution_clock::now();
+            stop = std::chrono::high_resolution_clock::now();
             std::cout << "res= " << res << std::endl;
             std::cout << "fibonacci parallel TCP took in us:"
-                      <<  (boost::chrono::nanoseconds(stop - start).count() / 1000) <<"\n" <<std::endl;
+                      <<  (std::chrono::nanoseconds(stop - start).count() / 1000) <<"\n" <<std::endl;
         }
     }
     std::cout << "end example_post_tcp_fib \n" << std::endl;

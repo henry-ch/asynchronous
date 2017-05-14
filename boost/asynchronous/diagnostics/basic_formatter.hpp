@@ -12,6 +12,7 @@
 
 #include <sstream>
 #include <vector>
+#include <chrono>
 
 #include <boost/core/enable_if.hpp>
 
@@ -40,11 +41,11 @@ struct color
     }
 };
 
-// Convert time (boost::chrono::nanoseconds) to string
-std::string format_duration(boost::chrono::nanoseconds const& d)
+// Convert time (std::chrono::nanoseconds) to string
+std::string format_duration(std::chrono::nanoseconds const& d)
 {
     // Get microsecond ticks
-    boost::chrono::microseconds casted = boost::chrono::duration_cast<boost::chrono::microseconds>(d);
+    std::chrono::microseconds casted = std::chrono::duration_cast<std::chrono::microseconds>(d);
     boost::int_least64_t ticks = casted.count();
 
     // Extract values

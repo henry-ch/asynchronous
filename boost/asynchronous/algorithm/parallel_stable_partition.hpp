@@ -289,7 +289,7 @@ struct parallel_stable_partition_helper: public boost::asynchronous::continuatio
         try
         {
 #ifdef BOOST_ASYNCHRONOUS_TIMING
-            auto p1_start = boost::chrono::high_resolution_clock::now();
+            auto p1_start = std::chrono::high_resolution_clock::now();
 #endif
             // call first pass
             auto cont = boost::asynchronous::detail::parallel_stable_partition_part1<Iterator,Func,Job>(beg_,end_,func_,cutoff_,this->get_name(),prio_);
@@ -309,8 +309,8 @@ struct parallel_stable_partition_helper: public boost::asynchronous::continuatio
                         (std::tuple<boost::asynchronous::expected<boost::asynchronous::detail::partition_data> >&& res)
             {
 #ifdef BOOST_ASYNCHRONOUS_TIMING
-                auto p1_stop = boost::chrono::high_resolution_clock::now();
-                double p1_time = (boost::chrono::nanoseconds(p1_stop - p1_start).count() / 1000000);
+                auto p1_stop = std::chrono::high_resolution_clock::now();
+                double p1_time = (std::chrono::nanoseconds(p1_stop - p1_start).count() / 1000000);
                 printf ("%50s: time = %.1f msec\n","p1_time", p1_time);
 #endif
                 try
@@ -318,7 +318,7 @@ struct parallel_stable_partition_helper: public boost::asynchronous::continuatio
                     boost::asynchronous::detail::partition_data data = std::move(std::get<0>(res).get());
                     std::size_t start_false = data.partition_true_;
 #ifdef BOOST_ASYNCHRONOUS_TIMING
-                    auto p2_start = boost::chrono::high_resolution_clock::now();
+                    auto p2_start = std::chrono::high_resolution_clock::now();
 #endif
                     // call second pass, get a continuation
                     auto cont =
@@ -334,8 +334,8 @@ struct parallel_stable_partition_helper: public boost::asynchronous::continuatio
                                  ](std::tuple<boost::asynchronous::expected<void> >&& res)mutable
                     {
 #ifdef BOOST_ASYNCHRONOUS_TIMING
-                        auto p2_stop = boost::chrono::high_resolution_clock::now();
-                        double p2_time = (boost::chrono::nanoseconds(p2_stop - p2_start).count() / 1000000);
+                        auto p2_stop = std::chrono::high_resolution_clock::now();
+                        double p2_time = (std::chrono::nanoseconds(p2_stop - p2_start).count() / 1000000);
                         printf ("%50s: time = %.1f msec\n","p2_time", p2_time);
 #endif
                         try

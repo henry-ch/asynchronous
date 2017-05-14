@@ -52,7 +52,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<double> > aPromise(new boost::promise<double>);
         boost::shared_future<double> fu = aPromise->get_future();
-        start_ = boost::chrono::high_resolution_clock::now();
+        start_ = std::chrono::high_resolution_clock::now();
         // start long tasks
         auto  cutoff = cutoff_;
         boost::asynchronous::post_callback(
@@ -65,9 +65,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
                    get_scheduler(),
                    [aPromise,this](boost::asynchronous::expected<double> res){
                         double p = res.get();
-                        stop_ = boost::chrono::high_resolution_clock::now();
+                        stop_ = std::chrono::high_resolution_clock::now();
                         std::cout << "parallel_pi_inner took in us:"
-                                  <<  (boost::chrono::nanoseconds(stop_ - start_).count() / 1000) <<"\n" <<std::endl;
+                                  <<  (std::chrono::nanoseconds(stop_ - start_).count() / 1000) <<"\n" <<std::endl;
                         aPromise->set_value(p*4.0);
                    }// callback functor.
                    ,"",0,0
@@ -76,8 +76,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
     }
 
 private:
-    typename boost::chrono::high_resolution_clock::time_point start_;
-    typename boost::chrono::high_resolution_clock::time_point stop_;
+    typename std::chrono::high_resolution_clock::time_point start_;
+    typename std::chrono::high_resolution_clock::time_point stop_;
     unsigned task_number_;
     double total_;
     int cutoff_;
@@ -102,9 +102,9 @@ int main(int argc, char* argv[])
     std::cout << "threads=" << threads << std::endl;
     
     std::cout.precision(std::numeric_limits< double >::digits10 +2);
-    typename boost::chrono::high_resolution_clock::time_point start;
-    typename boost::chrono::high_resolution_clock::time_point stop;
-    start = boost::chrono::high_resolution_clock::now();
+    typename std::chrono::high_resolution_clock::time_point start;
+    typename std::chrono::high_resolution_clock::time_point stop;
+    start = std::chrono::high_resolution_clock::now();
     double res = 0.0;
 
     auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
@@ -113,14 +113,14 @@ int main(int argc, char* argv[])
                                     boost::asynchronous::default_save_cpu_load<10,80000,1000>>>();
     {
         ServantProxy proxy(scheduler,threads,cutoff);
-        start = boost::chrono::high_resolution_clock::now();
+        start = std::chrono::high_resolution_clock::now();
         boost::shared_future<boost::shared_future<double> > fu = proxy.calc_pi();
         boost::shared_future<double> resfu = fu.get();
         res = resfu.get();
-        stop = boost::chrono::high_resolution_clock::now();
+        stop = std::chrono::high_resolution_clock::now();
         std::cout << "PI = " << res << std::endl;
         std::cout << "parallel_pi took in us:"
-                  <<  (boost::chrono::nanoseconds(stop - start).count() / 1000) <<"\n" <<std::endl;
+                  <<  (std::chrono::nanoseconds(stop - start).count() / 1000) <<"\n" <<std::endl;
     }
     return 0;
 }

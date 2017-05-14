@@ -33,7 +33,7 @@ float Foo(float f)
     return 0.42 * f*f*f + 2.3 * f*f + 5*f +1.4 /(f*f) +2.547 / f;
 }
 
-boost::chrono::high_resolution_clock::time_point servant_time;
+std::chrono::high_resolution_clock::time_point servant_time;
 double servant_intern=0.0;
 long tpsize = 12;
 long tasks = 48;
@@ -43,7 +43,7 @@ boost::asynchronous::any_shared_scheduler_proxy<> scheduler;
 void ParallelAsyncPostFuture(float a[], size_t n)
 {
     long tasksize = SIZE / tasks;
-    servant_time = boost::chrono::high_resolution_clock::now();
+    servant_time = std::chrono::high_resolution_clock::now();
     auto fu = boost::asynchronous::post_future(scheduler,
                [a,n,tasksize]()
                {
@@ -67,19 +67,19 @@ void ParallelAsyncPostFuture(float a[], size_t n)
                                                             },tasksize,"",0);
                });
     fu.get();
-    servant_intern += (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - servant_time).count() / 1000);
+    servant_intern += (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - servant_time).count() / 1000);
 }
 
 
 
 void test(void(*pf)(float [], size_t ))
 {
-    auto start_mem = boost::chrono::high_resolution_clock::now();
+    auto start_mem = std::chrono::high_resolution_clock::now();
     std::shared_ptr<float> a (new float[SIZE],[](float* p){delete[] p;});
-    auto duration_mem = (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start_mem).count() / 1000);
+    auto duration_mem = (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start_mem).count() / 1000);
     std::cout << "memory alloc: " << duration_mem <<std::endl;
 
-    auto start_generate = boost::chrono::high_resolution_clock::now();
+    auto start_generate = std::chrono::high_resolution_clock::now();
     int n = {0};
     // in case we have a huge input or complicated generate function
     /*long tasksize = SIZE / tasks;
@@ -88,7 +88,7 @@ void test(void(*pf)(float [], size_t ))
                 [&]{return boost::asynchronous::parallel_generate(a.get(), a.get()+SIZE,[&n]{ return n++; },tasksize);});
     fu.get();*/
     std::generate(a.get(), a.get()+SIZE,[&n]{ return n++; });
-    auto duration_generate = (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start_generate).count() / 1000);
+    auto duration_generate = (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start_generate).count() / 1000);
     std::cout << "generate: " << duration_generate <<std::endl;
     (*pf)(a.get(),SIZE);
 }

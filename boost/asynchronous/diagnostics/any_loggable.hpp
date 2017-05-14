@@ -17,7 +17,7 @@
 
 #include <boost/type_erasure/any.hpp>
 #include <boost/type_erasure/member.hpp>
-#include <boost/chrono/chrono.hpp>
+#include <chrono>
 #include <boost/thread/thread.hpp>
 
 //TODO find better
@@ -51,7 +51,7 @@ struct any_loggable_concept :
 
 struct any_loggable: boost::type_erasure::any<any_loggable_concept>
 {
-    typedef boost::chrono::high_resolution_clock clock_type;
+    typedef std::chrono::high_resolution_clock clock_type;
     typedef int task_failed_handling;
     template <class U>
     any_loggable(U const& u): boost::type_erasure::any< boost::asynchronous::any_loggable_concept> (u){}

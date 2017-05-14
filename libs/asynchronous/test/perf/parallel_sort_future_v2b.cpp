@@ -77,7 +77,7 @@ inline bool operator< (const LongOne& lhs, const LongOne& rhs){ return rhs.data[
 //#define NELEM 200000000
 //#define SORTED_TYPE double
 
-typename boost::chrono::high_resolution_clock::time_point servant_time;
+typename std::chrono::high_resolution_clock::time_point servant_time;
 double servant_intern=0.0;
 long tpsize = 12;
 long tasks = 48;
@@ -135,7 +135,7 @@ struct increasing_sort_subtask
 
 void ParallelAsyncPostCb(boost::asynchronous::vector<SORTED_TYPE> a, size_t n)
 {        
-    servant_time = boost::chrono::high_resolution_clock::now();
+    servant_time = std::chrono::high_resolution_clock::now();
     // we have to release scheduler as a scheduler cannot live into its own thread
     // (inside the pool, it doesn't need any anyway)
     a.release_scheduler();
@@ -148,12 +148,12 @@ void ParallelAsyncPostCb(boost::asynchronous::vector<SORTED_TYPE> a, size_t n)
     a = fu.get();
     // reset scheduler to avoid leak
     a.set_scheduler(pool);
-    servant_intern += (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - servant_time).count() / 1000000);           
+    servant_intern += (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - servant_time).count() / 1000000);           
 }
 void ParallelAsyncPostCbSpreadsort(boost::asynchronous::vector<SORTED_TYPE> a, size_t n)
 {
 #ifndef NO_SPREADSORT    
-    servant_time = boost::chrono::high_resolution_clock::now();
+    servant_time = std::chrono::high_resolution_clock::now();
     // we have to release scheduler as a scheduler cannot live into its own thread
     // (inside the pool, it doesn't need any anyway)
     a.release_scheduler();
@@ -166,7 +166,7 @@ void ParallelAsyncPostCbSpreadsort(boost::asynchronous::vector<SORTED_TYPE> a, s
     a = fu.get();
     // reset scheduler to avoid leak
     a.set_scheduler(pool);
-    servant_intern += (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - servant_time).count() / 1000000); 
+    servant_intern += (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - servant_time).count() / 1000000); 
 #endif
 }
     

@@ -110,8 +110,8 @@ void example_queue_container_log()
                 std::cout << "job type: " << (*mit).first << std::endl;
                 for (auto jit = (*mit).second.begin(); jit != (*mit).second.end();++jit)
                 {
-                    std::cout << "job waited in us: " << boost::chrono::nanoseconds((*jit).get_started_time() - (*jit).get_posted_time()).count() / 1000 << std::endl;
-                    std::cout << "job lasted in us: " << boost::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() / 1000 << std::endl;
+                    std::cout << "job waited in us: " << std::chrono::nanoseconds((*jit).get_started_time() - (*jit).get_posted_time()).count() / 1000 << std::endl;
+                    std::cout << "job lasted in us: " << std::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() / 1000 << std::endl;
                     std::cout << "job interrupted? "  << std::boolalpha << (*jit).is_interrupted() << std::endl;
                 }
             }
@@ -126,8 +126,8 @@ void example_queue_container_log()
             std::cout << "job type: " << (*mit).first << std::endl;
             for (auto jit = (*mit).second.begin(); jit != (*mit).second.end();++jit)
             {
-                std::cout << "job waited in us: " << boost::chrono::nanoseconds((*jit).get_started_time() - (*jit).get_posted_time()).count() / 1000 << std::endl;
-                std::cout << "job lasted in us: " << boost::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() / 1000 << std::endl;
+                std::cout << "job waited in us: " << std::chrono::nanoseconds((*jit).get_started_time() - (*jit).get_posted_time()).count() / 1000 << std::endl;
+                std::cout << "job lasted in us: " << std::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() / 1000 << std::endl;
                 std::cout << "job interrupted? "  << std::boolalpha << (*jit).is_interrupted() << std::endl;
             }
         }

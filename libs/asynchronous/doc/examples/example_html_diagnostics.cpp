@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <type_traits>
+#include <thread>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
@@ -147,7 +148,7 @@ void test_html_diagnostics(int argc, char *argv[])
         boost::future<boost::future<void> > fu = proxy.foo();
 
         // Sleep
-        boost::this_thread::sleep_for(boost::chrono::milliseconds(std::atoi(argv[3])));
+        std::this_thread::sleep_for(std::chrono::milliseconds(std::atoi(argv[3])));
 
         // Output intermediate statistics
 

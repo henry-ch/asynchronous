@@ -111,7 +111,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
 
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
                     return boost::asynchronous::parallel_invoke_timeout<boost::asynchronous::any_callable>(
-                                boost::chrono::milliseconds(1000),
+                                std::chrono::milliseconds(1000),
                                 boost::asynchronous::to_continuation_task(
                                     [](){boost::this_thread::sleep(boost::posix_time::milliseconds(500));}),
                                 boost::asynchronous::to_continuation_task(

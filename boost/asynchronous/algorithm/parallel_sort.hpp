@@ -255,16 +255,16 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
                                 // create extra memory for merge
                                 auto size = std::distance(beg,end);
 #ifdef BOOST_ASYNCHRONOUS_TIMING
-                                auto alloc_start = boost::chrono::high_resolution_clock::now();
+                                auto alloc_start = std::chrono::high_resolution_clock::now();
 #endif
                                 std::shared_ptr<char> merge_memory_ (
                                             new char[size * sizeof(typename std::iterator_traits<Iterator>::value_type)],[](char* p){delete[] p;});
 
 #ifdef BOOST_ASYNCHRONOUS_TIMING
-                                auto alloc_stop = boost::chrono::high_resolution_clock::now();
-                                double alloc_time = (boost::chrono::nanoseconds(alloc_stop - alloc_start).count() / 1000000);
+                                auto alloc_stop = std::chrono::high_resolution_clock::now();
+                                double alloc_time = (std::chrono::nanoseconds(alloc_stop - alloc_start).count() / 1000000);
                                 printf ("%50s: time = %.1f msec\n","alloc_time", alloc_time);
-                                auto placement_start = boost::chrono::high_resolution_clock::now();
+                                auto placement_start = std::chrono::high_resolution_clock::now();
 #endif
                                 auto cont = boost::asynchronous::parallel_placement<value_type,Job>
                                         (0,size,merge_memory_,cutoff,task_name+"_placement",prio);
@@ -276,8 +276,8 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
                                               (std::tuple<boost::asynchronous::expected<boost::asynchronous::detail::parallel_placement_helper_result> >&& continuation_res) mutable
                                 {
 #ifdef BOOST_ASYNCHRONOUS_TIMING
-                                    auto placement_stop = boost::chrono::high_resolution_clock::now();
-                                    double placement_time = (boost::chrono::nanoseconds(placement_stop - placement_start).count() / 1000000);
+                                    auto placement_stop = std::chrono::high_resolution_clock::now();
+                                    double placement_time = (std::chrono::nanoseconds(placement_stop - placement_start).count() / 1000000);
                                     printf ("%50s: time = %.1f msec\n","placement_time", placement_time);
 #endif
                                     try

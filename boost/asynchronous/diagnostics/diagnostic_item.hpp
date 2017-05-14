@@ -11,7 +11,7 @@
 #define BOOST_ASYNC_DIAGNOSTICS_DIAGNOSTIC_ITEM_HPP
 
 #include <string>
-#include <boost/chrono/chrono.hpp>
+#include <chrono>
 #include <boost/thread/thread.hpp>
 
 namespace boost { namespace asynchronous
@@ -20,7 +20,7 @@ namespace boost { namespace asynchronous
 class diagnostic_item
 {
 public:
-    typedef boost::chrono::high_resolution_clock Clock;
+    typedef std::chrono::high_resolution_clock Clock;
 
     diagnostic_item():m_posted(),m_started(),m_finished(){}
     diagnostic_item(Clock::time_point const& posted,

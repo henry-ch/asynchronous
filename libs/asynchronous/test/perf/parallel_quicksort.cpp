@@ -39,7 +39,7 @@ using namespace std;
 //#define NELEM 200000000
 //#define SORTED_TYPE double
 
-typename boost::chrono::high_resolution_clock::time_point servant_time;
+typename std::chrono::high_resolution_clock::time_point servant_time;
 double servant_intern=0.0;
 long tpsize = 12;
 long tasks = 48;
@@ -62,7 +62,7 @@ test_cast(T const& t)
 void ParallelAsyncPostCb(SORTED_TYPE a[], size_t n)
 {
     long tasksize = NELEM / tasks;
-    servant_time = boost::chrono::high_resolution_clock::now();
+    servant_time = std::chrono::high_resolution_clock::now();
     boost::future<void> fu = boost::asynchronous::post_future(pool,
     [a,n,tasksize]()
     {
@@ -70,13 +70,13 @@ void ParallelAsyncPostCb(SORTED_TYPE a[], size_t n)
     }
     ,"",0);
     fu.get();
-    servant_intern += (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - servant_time).count() / 1000000);           
+    servant_intern += (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - servant_time).count() / 1000000);           
 }   
 
 void ParallelAsyncPostCbSpreadsort(SORTED_TYPE a[], size_t n)
 {
     long tasksize = NELEM / tasks;
-    servant_time = boost::chrono::high_resolution_clock::now();
+    servant_time = std::chrono::high_resolution_clock::now();
     boost::future<void> fu = boost::asynchronous::post_future(pool,
     [a,n,tasksize]()
     {
@@ -84,7 +84,7 @@ void ParallelAsyncPostCbSpreadsort(SORTED_TYPE a[], size_t n)
     }
     ,"",0);
     fu.get();
-    servant_intern += (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - servant_time).count() / 1000000);
+    servant_intern += (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - servant_time).count() / 1000000);
 }
 
 void test_sorted_elements(void(*pf)(SORTED_TYPE [], size_t ))

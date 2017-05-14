@@ -200,7 +200,7 @@ struct parallel_overlay
 
         container_type turn_points;
 #ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
-        auto start = boost::chrono::high_resolution_clock::now();
+        auto start = std::chrono::high_resolution_clock::now();
 #endif
 #ifdef BOOST_GEOMETRY_DEBUG_ASSEMBLE
 std::cout << "get turns" << std::endl;
@@ -224,9 +224,9 @@ std::cout << "get turns" << std::endl;
             {
             container_type turn_points( std::move(std::get<0>(continuation_res).get()));
 #ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
-            double elapsed = (double)(boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
+            double elapsed = (double)(std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
             std::cout << "get_turns ms: " << elapsed <<std::endl;
-            start = boost::chrono::high_resolution_clock::now();
+            start = std::chrono::high_resolution_clock::now();
 #endif
 
 #ifdef BOOST_GEOMETRY_DEBUG_ASSEMBLE
@@ -242,9 +242,9 @@ std::cout << "enrich" << std::endl;
                     side_strategy);
 
 #ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
-            elapsed = (double)(boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
+            elapsed = (double)(std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
             std::cout << "enrich_intersection_points ms: " << elapsed <<std::endl;
-            start = boost::chrono::high_resolution_clock::now();
+            start = std::chrono::high_resolution_clock::now();
 #endif
 
 #ifdef BOOST_GEOMETRY_DEBUG_ASSEMBLE
@@ -264,18 +264,18 @@ std::cout << "traverse" << std::endl;
                     turn_points, *rings
                 );
 #ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
-            elapsed = (double)(boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
+            elapsed = (double)(std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
             std::cout << "traverse ms: " << elapsed <<std::endl;
-            start = boost::chrono::high_resolution_clock::now();
+            start = std::chrono::high_resolution_clock::now();
 #endif
 
             std::map<ring_identifier, ring_turn_info> turn_info_per_ring;
             get_ring_turn_info(turn_info_per_ring, turn_points);
 
 #ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
-            elapsed = (double)(boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
+            elapsed = (double)(std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
             std::cout << "map_turns ms: " << elapsed <<std::endl;
-            start = boost::chrono::high_resolution_clock::now();
+            start = std::chrono::high_resolution_clock::now();
 #endif
 
             typedef ring_properties
@@ -301,9 +301,9 @@ std::cout << "traverse" << std::endl;
                 try
                 {
 #ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
-                    double elapsed = (double)(boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
+                    double elapsed = (double)(std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
                     std::cout << "select_rings ms: " << elapsed <<std::endl;
-                    start = boost::chrono::high_resolution_clock::now();
+                    start = std::chrono::high_resolution_clock::now();
 #endif
                     select_ring_fct all_fct (std::move(std::get<0>(res).get()));
                     // Add rings created during traversal
@@ -336,9 +336,9 @@ std::cout << "traverse" << std::endl;
                         try
                         {
 #ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
-                            double elapsed = (double)(boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
+                            double elapsed = (double)(std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
                             std::cout << "assign_parents ms: " << elapsed <<std::endl;
-                            start = boost::chrono::high_resolution_clock::now();
+                            start = std::chrono::high_resolution_clock::now();
 #endif
                             auto res_parents = std::move(std::get<0>(res).get());
                             auto ring_map = std::move(res_parents.first);
@@ -351,7 +351,7 @@ std::cout << "traverse" << std::endl;
                                                   *rings, std::back_inserter(*output_collection));
 
 #ifdef BOOST_ASYNCHRONOUS_GEOMETRY_TIME_OVERLAY
-                            elapsed = (double)(boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
+                            elapsed = (double)(std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000000.0);
                             std::cout << "add_rings ms: " << elapsed <<std::endl;
 #endif
                             task_res.set_value(std::move(*output_collection));

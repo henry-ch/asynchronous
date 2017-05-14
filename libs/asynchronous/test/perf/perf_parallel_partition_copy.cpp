@@ -41,7 +41,7 @@ using namespace std;
 //#define NELEM 100000000
 //#define SORTED_TYPE std::string
 
-typename boost::chrono::high_resolution_clock::time_point servant_time;
+typename std::chrono::high_resolution_clock::time_point servant_time;
 double servant_intern=0.0;
 long tpsize = 12;
 long tasks = 500;
@@ -86,7 +86,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
 
     void on_callback_vec(std::pair<Iterator,Iterator>)
     {
-        servant_intern += (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - servant_time).count() / 1000000);
+        servant_intern += (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - servant_time).count() / 1000000);
         m_promise->set_value();
     }
     boost::shared_future<void> do_partition_vec(std::vector<SORTED_TYPE> a)
@@ -97,7 +97,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         std::shared_ptr<std::vector<SORTED_TYPE>> vec_true = std::make_shared<std::vector<SORTED_TYPE>>(NELEM);
         std::shared_ptr<std::vector<SORTED_TYPE>> vec_false = std::make_shared<std::vector<SORTED_TYPE>>(NELEM);
 
-        servant_time = boost::chrono::high_resolution_clock::now();
+        servant_time = std::chrono::high_resolution_clock::now();
         post_callback(
                [vec,vec_true,vec_false,tasksize](){
                         return boost::asynchronous::parallel_partition_copy(
@@ -145,7 +145,7 @@ void ParallelAsyncPostCb(std::vector<SORTED_TYPE>& vec)
         resfu.get();
     }
     {
-        auto seq_start = boost::chrono::high_resolution_clock::now();
+        auto seq_start = std::chrono::high_resolution_clock::now();
         std::vector<SORTED_TYPE> vec_true(NELEM);
         std::vector<SORTED_TYPE> vec_false(NELEM);
         std::partition_copy(vec.begin(),vec.end(),
@@ -154,8 +154,8 @@ void ParallelAsyncPostCb(std::vector<SORTED_TYPE>& vec)
                             {
                                 return i < compare_with;
                             });
-        auto seq_stop = boost::chrono::high_resolution_clock::now();
-        double seq_time = (boost::chrono::nanoseconds(seq_stop - seq_start).count() / 1000000);
+        auto seq_stop = std::chrono::high_resolution_clock::now();
+        double seq_time = (std::chrono::nanoseconds(seq_stop - seq_start).count() / 1000000);
         printf ("\n%50s: time = %.1f msec\n","sequential", seq_time);
     }
 }

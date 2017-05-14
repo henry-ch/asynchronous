@@ -17,7 +17,7 @@
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/diagnostics/default_loggable_job.hpp>
 #include <boost/asynchronous/diagnostics/diagnostics_table.hpp>
-#include <boost/chrono/chrono.hpp>
+#include <chrono>
 #include <boost/asynchronous/any_serializable.hpp>
 #include <boost/thread/thread.hpp>
 

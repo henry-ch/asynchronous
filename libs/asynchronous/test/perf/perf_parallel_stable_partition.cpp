@@ -46,7 +46,7 @@ using namespace std;
 //#define NELEM 10000000
 //#define SORTED_TYPE std::string
 
-typename boost::chrono::high_resolution_clock::time_point servant_time;
+typename std::chrono::high_resolution_clock::time_point servant_time;
 double servant_intern=0.0;
 long tpsize = 12;
 long tasks = 500;
@@ -61,7 +61,7 @@ void ParallelAsyncPostCb(std::vector<SORTED_TYPE>& a)
     std::shared_ptr<std::vector<SORTED_TYPE>> vec = std::make_shared<std::vector<SORTED_TYPE>>(a);
     std::shared_ptr<std::vector<SORTED_TYPE>> vec_res = std::make_shared<std::vector<SORTED_TYPE>>(vec->size());
     long tasksize = NELEM / tasks;
-    servant_time = boost::chrono::high_resolution_clock::now();
+    servant_time = std::chrono::high_resolution_clock::now();
     auto fu = boost::asynchronous::post_future(
                 scheduler,
                 [vec,vec_res,tasksize](){
@@ -78,11 +78,11 @@ void ParallelAsyncPostCb(std::vector<SORTED_TYPE>& a)
                        }
                 );
     fu.wait();
-    servant_intern += (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - servant_time).count() / 1000000);
+    servant_intern += (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - servant_time).count() / 1000000);
 
     if (with_sequential)
     {
-        auto seq_start = boost::chrono::high_resolution_clock::now();
+        auto seq_start = std::chrono::high_resolution_clock::now();
         std::partition(a.begin(),a.end(),[](SORTED_TYPE const& i)
         {
             // cheap version
@@ -90,8 +90,8 @@ void ParallelAsyncPostCb(std::vector<SORTED_TYPE>& a)
             // expensive version
             return i/(i*i)/i/i < compare_with/(compare_with * compare_with)/compare_with/compare_with;
         });
-        auto seq_stop = boost::chrono::high_resolution_clock::now();
-        double seq_time = (boost::chrono::nanoseconds(seq_stop - seq_start).count() / 1000000);
+        auto seq_stop = std::chrono::high_resolution_clock::now();
+        double seq_time = (std::chrono::nanoseconds(seq_stop - seq_start).count() / 1000000);
         printf ("\n%50s: time = %.1f msec\n","sequential", seq_time);
     }
 }

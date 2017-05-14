@@ -22,8 +22,8 @@ using namespace std;
 
 namespace
 {
-typename boost::chrono::high_resolution_clock::time_point start;
-typename boost::chrono::high_resolution_clock::time_point stop;
+typename std::chrono::high_resolution_clock::time_point start;
+typename std::chrono::high_resolution_clock::time_point stop;
 struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,boost::asynchronous::any_serializable>
 {
     // optional, ctor is simple enough not to be posted
@@ -38,7 +38,7 @@ struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any
     // called when task done, in our thread
     void on_callback(long res)
     {
-        stop = boost::chrono::high_resolution_clock::now();
+        stop = std::chrono::high_resolution_clock::now();
         // inform test caller
         m_promise->set_value(res);
     }
@@ -79,12 +79,12 @@ void example_post_tcp_fib2(std::string const& server_address,std::string const& 
                            std::string const& own_server_address, long own_server_port, int threads, long fibo_val,long cutoff)
 {
 //    std::cout << "fibonacci single-threaded" << std::endl;
-//    start = boost::chrono::high_resolution_clock::now();
+//    start = std::chrono::high_resolution_clock::now();
 //    long sres = tcp_example::serial_fib(fibo_val);
-//    stop = boost::chrono::high_resolution_clock::now();
+//    stop = std::chrono::high_resolution_clock::now();
 //    std::cout << "sres= " << sres << std::endl;
 //    std::cout << "fibonacci single-threaded single took in us:"
-//              <<  (boost::chrono::nanoseconds(stop - start).count() / 1000) <<"\n" <<std::endl;
+//              <<  (std::chrono::nanoseconds(stop - start).count() / 1000) <<"\n" <<std::endl;
     {
         std::cout << "fibonacci parallel TCP 2" << std::endl;
         // create pools
@@ -159,7 +159,7 @@ void example_post_tcp_fib2(std::string const& server_address,std::string const& 
                                      boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler,pool);
-            start = boost::chrono::high_resolution_clock::now();
+            start = std::chrono::high_resolution_clock::now();
             // result of BOOST_ASYNC_FUTURE_MEMBER is a shared_future,
             // so we have a shared_future of a shared_future(result of start_async_work)
             boost::shared_future<boost::shared_future<long> > fu = proxy.calc_fibonacci(fibo_val,cutoff);
@@ -167,7 +167,7 @@ void example_post_tcp_fib2(std::string const& server_address,std::string const& 
             long res = resfu.get();
             std::cout << "res= " << res << std::endl;
             std::cout << "fibonacci parallel TCP 2 took in us:"
-                      <<  (boost::chrono::nanoseconds(stop - start).count() / 1000) <<"\n" <<std::endl;
+                      <<  (std::chrono::nanoseconds(stop - start).count() / 1000) <<"\n" <<std::endl;
         }
     }
     std::cout << "end example_post_tcp_fib2 \n" << std::endl;

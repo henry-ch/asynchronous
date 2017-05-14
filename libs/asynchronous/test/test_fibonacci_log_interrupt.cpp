@@ -187,7 +187,7 @@ BOOST_AUTO_TEST_CASE( test_fibonacci_100_100_log_interrupt )
                     for (auto jit = (*mit).second.begin(); jit != (*mit).second.end();++jit)
                     {
                         //TODO seems to have a bug in is_interrupted
-//                        BOOST_CHECK_MESSAGE(boost::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() / 1000 >= 100000,
+//                        BOOST_CHECK_MESSAGE(std::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() / 1000 >= 100000,
 //                                            "fibonacci 99 task should have been interrupted.");
                         //BOOST_CHECK_MESSAGE((*jit).is_interrupted(),"fibonacci 99 task should have been interrupted.");
                     }
@@ -199,7 +199,7 @@ BOOST_AUTO_TEST_CASE( test_fibonacci_100_100_log_interrupt )
                     for (auto jit = (*mit).second.begin(); jit != (*mit).second.end();++jit)
                     {
                         //TODO seems to have a bug in is_interrupted
-//                        BOOST_CHECK_MESSAGE(boost::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() / 1000 >= 100000,
+//                        BOOST_CHECK_MESSAGE(std::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() / 1000 >= 100000,
 //                                            "fibonacci 98 task should have been interrupted.");
                         //BOOST_CHECK_MESSAGE((*jit).is_interrupted(),"fibonacci 98 task should have been interrupted.");
                     }

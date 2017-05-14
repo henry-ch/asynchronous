@@ -79,7 +79,7 @@ inline bool operator< (const LongOne& lhs, const LongOne& rhs)
 //#define NELEM 200000000
 //#define SORTED_TYPE double
 
-typename boost::chrono::high_resolution_clock::time_point servant_time;
+typename std::chrono::high_resolution_clock::time_point servant_time;
 double servant_intern=0.0;
 long tpsize = 12;
 long tasks = 48;
@@ -141,7 +141,7 @@ void ParallelAsyncPostCb(std::vector<SORTED_TYPE> a, size_t n)
     // check if sorted
     //std::cout << "sorted before? " << std::boolalpha << std::is_sorted(a.begin(), a.end()) << std::endl;
     long tasksize = NELEM / tasks;
-    servant_time = boost::chrono::high_resolution_clock::now();
+    servant_time = std::chrono::high_resolution_clock::now();
     boost::future<std::vector<SORTED_TYPE>> fu = boost::asynchronous::post_future(pool,
     [a=std::move(a),n,tasksize]()mutable
     {
@@ -149,7 +149,7 @@ void ParallelAsyncPostCb(std::vector<SORTED_TYPE> a, size_t n)
     }
     ,"",0);
     fu.wait();
-    servant_intern += (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - servant_time).count() / 1000000);
+    servant_intern += (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - servant_time).count() / 1000000);
     // check if sorted
     //auto vec = std::move(fu.get());
     //std::cout << "sorted? " << std::boolalpha << std::is_sorted(vec.begin(), vec.end()) << std::endl;
@@ -158,7 +158,7 @@ void ParallelAsyncPostCbSpreadsort(std::vector<SORTED_TYPE> a, size_t n)
 {
 #ifndef NO_SPREADSORT
     long tasksize = NELEM / tasks;
-    servant_time = boost::chrono::high_resolution_clock::now();
+    servant_time = std::chrono::high_resolution_clock::now();
     boost::future<std::vector<SORTED_TYPE>> fu = boost::asynchronous::post_future(pool,
     [a=std::move(a),n,tasksize]()mutable
     {
@@ -166,7 +166,7 @@ void ParallelAsyncPostCbSpreadsort(std::vector<SORTED_TYPE> a, size_t n)
     }
     ,"",0);
     fu.wait();
-    servant_intern += (boost::chrono::nanoseconds(boost::chrono::high_resolution_clock::now() - servant_time).count() / 1000000); 
+    servant_intern += (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - servant_time).count() / 1000000); 
 #endif
 }
     

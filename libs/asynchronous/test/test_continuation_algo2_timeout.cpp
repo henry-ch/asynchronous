@@ -101,7 +101,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         this->on_callback(r);
                     },
                     // timeout
-                    boost::chrono::milliseconds(1500),
+                    std::chrono::milliseconds(1500),
                     // future results of recursive tasks
                     std::move(fus));
         return fu;

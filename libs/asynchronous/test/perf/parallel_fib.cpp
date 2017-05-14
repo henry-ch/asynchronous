@@ -120,8 +120,8 @@ public:
 
 void example_fibonacci(long fibo_val,long cutoff, int threads)
 {
-    typename boost::chrono::high_resolution_clock::time_point start;
-    typename boost::chrono::high_resolution_clock::time_point stop;
+    typename std::chrono::high_resolution_clock::time_point start;
+    typename std::chrono::high_resolution_clock::time_point stop;
 
     {
         // a single-threaded world, where Servant will live.
@@ -131,14 +131,14 @@ void example_fibonacci(long fibo_val,long cutoff, int threads)
                                      boost::asynchronous::default_save_cpu_load<10,80000,1000>>>();
         {
             ServantProxy proxy(scheduler,threads);
-            start = boost::chrono::high_resolution_clock::now();
+            start = std::chrono::high_resolution_clock::now();
             boost::shared_future<boost::shared_future<long> > fu = proxy.calc_fibonacci(fibo_val,cutoff);
             boost::shared_future<long> resfu = fu.get();
             long res = resfu.get();
-            stop = boost::chrono::high_resolution_clock::now();
+            stop = std::chrono::high_resolution_clock::now();
             std::cout << "res= " << res << std::endl;
             std::cout << "example_fibonacci parallel took in us:"
-                      <<  (boost::chrono::nanoseconds(stop - start).count() / 1000) <<"\n" <<std::endl;
+                      <<  (std::chrono::nanoseconds(stop - start).count() / 1000) <<"\n" <<std::endl;
         }
     }
     std::cout << "end example_fibonacci \n" << std::endl;

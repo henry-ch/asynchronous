@@ -103,9 +103,9 @@ struct diagnostics_data
 struct simple_diagnostic_item
 {
     std::string job_name;
-    boost::chrono::nanoseconds scheduling;
-    boost::chrono::nanoseconds execution;
-    boost::chrono::nanoseconds total;
+    std::chrono::nanoseconds scheduling;
+    std::chrono::nanoseconds execution;
+    std::chrono::nanoseconds total;
     bool failed;
     bool interrupted;
 };
@@ -113,8 +113,8 @@ struct simple_diagnostic_item
 // Stores the results of all jobs with the same name.
 struct summary_diagnostic_item
 {
-    using duration_stats = diagnostics_stats<boost::chrono::nanoseconds>;
-    using time_stats = diagnostics_stats_unaccumulated<boost::chrono::high_resolution_clock::time_point>;
+    using duration_stats = diagnostics_stats<std::chrono::nanoseconds>;
+    using time_stats = diagnostics_stats_unaccumulated<std::chrono::high_resolution_clock::time_point>;
 
     diagnostics_data<duration_stats> durations;
     diagnostics_data<time_stats> last_times;
@@ -171,7 +171,7 @@ struct summary_diagnostic_item
 
         // Recalculate averages
 
-#define UPDATE_AVERAGE(key) if (count.key > 0) { durations.key.average = durations.key.total / count.key; } else { durations.key.average = boost::chrono::nanoseconds(0); }
+#define UPDATE_AVERAGE(key) if (count.key > 0) { durations.key.average = durations.key.total / count.key; } else { durations.key.average = std::chrono::nanoseconds(0); }
 
         UPDATE_AVERAGE(scheduling)
         UPDATE_AVERAGE(success)
@@ -186,8 +186,8 @@ struct summary_diagnostic_item
 // Stores summary results without individual job details
 struct summary_diagnostics
 {
-    using duration_stats = diagnostics_stats<boost::chrono::nanoseconds>;
-    using time_stats = diagnostics_stats_unaccumulated<boost::chrono::high_resolution_clock::time_point>;
+    using duration_stats = diagnostics_stats<std::chrono::nanoseconds>;
+    using time_stats = diagnostics_stats_unaccumulated<std::chrono::high_resolution_clock::time_point>;
 
     diagnostics_data<duration_stats> maxima; // We do not use .recent here.
     diagnostics_data<bool> maxima_present;
@@ -233,16 +233,16 @@ struct summary_diagnostics
             //  - calculate total time
             for (auto& item : it->second)
             {
-                boost::chrono::nanoseconds scheduling = item.get_started_time() - item.get_posted_time();
+                std::chrono::nanoseconds scheduling = item.get_started_time() - item.get_posted_time();
                 if (job_count.scheduling == 0 || scheduling > job_durations.scheduling.max) { job_durations.scheduling.max = scheduling; job_last_times.scheduling.max = item.get_started_time(); }
                 if (job_count.scheduling == 0 || scheduling < job_durations.scheduling.min) { job_durations.scheduling.min = scheduling; job_last_times.scheduling.min = item.get_started_time(); }
                 if (job_count.scheduling == 0 || item.get_posted_time() > job_last_times.scheduling.recent) { job_durations.scheduling.recent = scheduling; job_last_times.scheduling.recent = item.get_started_time(); }
                 job_durations.scheduling.total += scheduling;
                 ++job_count.scheduling;
 
-                boost::chrono::nanoseconds execution = item.get_finished_time() - item.get_started_time();
+                std::chrono::nanoseconds execution = item.get_finished_time() - item.get_started_time();
 
-                boost::chrono::nanoseconds total = scheduling + execution;
+                std::chrono::nanoseconds total = scheduling + execution;
                 if (job_count.total == 0 || total > job_durations.total.max) { job_durations.total.max = total; job_last_times.total.max = item.get_finished_time(); }
                 if (job_count.total == 0 || total < job_durations.total.min) { job_durations.total.min = total; job_last_times.total.min = item.get_finished_time(); }
                 if (job_count.total == 0 || item.get_finished_time() > job_last_times.total.recent) { job_durations.total.recent = total; job_last_times.total.recent = item.get_finished_time(); }
