@@ -17,9 +17,6 @@
 #include <boost/asynchronous/algorithm/parallel_copy.hpp>
 #include <boost/asynchronous/algorithm/detail/helpers.hpp>
 
-#include <boost/mpl/and.hpp>
-#include <boost/mpl/not.hpp>
-
 
 namespace boost { namespace asynchronous {
 // non parallel version

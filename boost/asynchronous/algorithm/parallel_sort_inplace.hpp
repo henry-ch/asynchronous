@@ -11,9 +11,8 @@
 
 #include <vector>
 #include <iterator> // for std::iterator_traits
-#include <boost/smart_ptr/shared_array.hpp>
-
 #include <type_traits>
+
 #include <boost/serialization/vector.hpp>
 
 #include <boost/asynchronous/detail/any_interruptible.hpp>

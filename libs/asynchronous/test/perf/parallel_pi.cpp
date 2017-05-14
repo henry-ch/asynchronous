@@ -2,7 +2,6 @@
 #include <vector>
 #include <limits>
 
-#include <boost/range/irange.hpp>
 #include <boost/asynchronous/callable_any.hpp>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>

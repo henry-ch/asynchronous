@@ -12,9 +12,6 @@
 
 #include <algorithm>
 
-#include <boost/range/begin.hpp>
-#include <boost/range/end.hpp>
-
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/continuation_task.hpp>
 #include <boost/asynchronous/post.hpp>

@@ -27,8 +27,6 @@
 #include <boost/exception/all.hpp>
 #include <memory>
 #include <type_traits>
-#include <boost/mpl/not.hpp>
-#include <boost/mpl/and.hpp>
 #include <boost/mpl/has_xxx.hpp>
 
 #include <boost/asynchronous/any_shared_scheduler_proxy.hpp>

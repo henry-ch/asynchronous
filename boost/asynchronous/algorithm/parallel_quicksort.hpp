@@ -30,14 +30,6 @@
 #include <boost/asynchronous/algorithm/parallel_sort.hpp>
 #include <boost/asynchronous/algorithm/parallel_is_sorted.hpp>
 
-#include <boost/mpl/or.hpp>
-#include <boost/mpl/and.hpp>
-#include <boost/mpl/not.hpp>
-
-#include <boost/range/begin.hpp>
-#include <boost/range/end.hpp>
-#include <boost/range/iterator_range.hpp>
-
 #ifdef BOOST_ASYNCHRONOUS_USE_BOOST_SORT
 #include <boost/sort/parallel/sort.hpp>
 #endif

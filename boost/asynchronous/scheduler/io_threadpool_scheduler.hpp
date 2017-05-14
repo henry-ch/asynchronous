@@ -16,18 +16,15 @@
 #include <set>
 #include <numeric>
 #include <functional>
+#include <memory>
 
 #ifndef BOOST_THREAD_PROVIDES_FUTURE
 #define BOOST_THREAD_PROVIDES_FUTURE
 #endif
 
-#include <memory>
-
 #include <boost/thread/thread.hpp>
-#include <functional>
 #include <boost/thread/future.hpp>
 #include <boost/thread/mutex.hpp>
-#include <boost/assert.hpp>
 
 #include <boost/asynchronous/scheduler/detail/scheduler_helpers.hpp>
 #include <boost/asynchronous/scheduler/detail/exceptions.hpp>

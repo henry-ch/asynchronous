@@ -28,11 +28,6 @@
 #include <boost/asynchronous/algorithm/detail/parallel_all_of_helper.hpp>
 #include <boost/asynchronous/detail/metafunctions.hpp>
 
-#include <boost/range/begin.hpp>
-#include <boost/range/end.hpp>
-#include <boost/range/iterator_range.hpp>
-#include <boost/range/adaptors.hpp>
-#include <boost/range/algorithm.hpp>
 
 namespace boost { namespace asynchronous
 {

@@ -12,9 +12,8 @@
 
 #include <vector>
 #include <iterator> // for std::iterator_traits
-#include <boost/smart_ptr/shared_array.hpp>
-
 #include <type_traits>
+
 #include <boost/serialization/vector.hpp>
 #include <boost/type_traits/has_trivial_destructor.hpp>
 
@@ -32,10 +31,6 @@
 #include <boost/asynchronous/algorithm/detail/parallel_sort_helper.hpp>
 #include <boost/asynchronous/algorithm/parallel_placement.hpp>
 #include <boost/asynchronous/container/algorithms.hpp>
-
-#include <boost/mpl/or.hpp>
-#include <boost/mpl/and.hpp>
-#include <boost/mpl/not.hpp>
 
 #include <boost/range/begin.hpp>
 #include <boost/range/end.hpp>

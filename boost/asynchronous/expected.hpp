@@ -11,10 +11,8 @@
 #define BOOST_ASYNCHRONOUS_EXPECTED_HPP
 
 #include <utility>
+#include <type_traits>
 #include <boost/exception_ptr.hpp>
-#include <type_traits>
-#include <boost/smart_ptr.hpp>
-#include <type_traits>
 
 namespace boost { namespace asynchronous {
 
