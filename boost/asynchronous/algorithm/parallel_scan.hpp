@@ -12,7 +12,7 @@
 
 #include <algorithm>
 
-#include <boost/utility/enable_if.hpp>
+#include <type_traits>
 #include <boost/range/begin.hpp>
 #include <boost/range/end.hpp>
 
@@ -124,14 +124,14 @@ parallel_scan_part1(Iterator beg, Iterator end, T /*init*/,
 template <class Func, class Arg0, class Arg1, class Arg2, class Arg3, class Arg4>
 void func_arity_helper(Func& f,
                        Arg0&& arg0,Arg1&& arg1,Arg2&& arg2,Arg3&& arg3,Arg4&& ,
-                       typename boost::enable_if_c<boost::asynchronous::function_traits<Func>::arity == 4>::type* =0)
+                       typename std::enable_if<boost::asynchronous::function_traits<Func>::arity == 4>::type* =0)
 {
     f(std::forward<Arg0>(arg0),std::forward<Arg1>(arg1),std::forward<Arg2>(arg2),std::forward<Arg3>(arg3));
 }
 template <class Func, class Arg0, class Arg1, class Arg2, class Arg3, class Arg4>
 void func_arity_helper(Func& f,
                        Arg0&& arg0,Arg1&& arg1,Arg2&& arg2,Arg3&& arg3,Arg4&& arg4,
-                       typename boost::enable_if_c<boost::asynchronous::function_traits<Func>::arity == 5>::type* =0)
+                       typename std::enable_if<boost::asynchronous::function_traits<Func>::arity == 5>::type* =0)
 {
     f(std::forward<Arg0>(arg0),std::forward<Arg1>(arg1),std::forward<Arg2>(arg2),std::forward<Arg3>(arg3),std::forward<Arg4>(arg4));
 }
@@ -388,7 +388,7 @@ struct parallel_scan_range_move_helper: public boost::asynchronous::continuation
 };
 // version for moved ranges
 template <class Range, class OutRange, class T, class Reduce, class Combine, class Scan, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,
+typename std::enable_if<!boost::asynchronous::detail::has_is_continuation_task<Range>::value,
                            boost::asynchronous::detail::callback_continuation<std::pair<Range,OutRange>,Job> >::type
 parallel_scan(Range&& range,OutRange&& out_range,T init,Reduce r, Combine c, Scan s,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -461,7 +461,7 @@ struct parallel_scan_range_move_single_helper: public boost::asynchronous::conti
 };
 // version for a single moved range (in/out) => will return the range as continuation
 template <class Range, class T, class Reduce, class Combine, class Scan, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,
+typename std::enable_if<!boost::asynchronous::detail::has_is_continuation_task<Range>::value,
                            boost::asynchronous::detail::callback_continuation<Range,Job> >::type
 parallel_scan(Range&& range,T init,Reduce r, Combine c, Scan s,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -554,7 +554,7 @@ struct parallel_scan_range_continuation_helper: public boost::asynchronous::cont
 }
 // version for ranges given as continuation => will return the range as continuation
 template <class Range, class T, class Reduce, class Combine, class Scan, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,
+typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>::value,
                           boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_scan(Range range,T init,Reduce r, Combine c, Scan s,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS

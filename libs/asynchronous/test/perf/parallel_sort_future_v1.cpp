@@ -18,7 +18,7 @@
 
 #include <boost/lexical_cast.hpp>
 #include <boost/type_traits/is_same.hpp>
-#include <boost/utility/enable_if.hpp>
+#include <type_traits>
 
 #include <boost/asynchronous/helpers/lazy_irange.hpp>
 #include <boost/asynchronous/algorithm/parallel_copy.hpp>
@@ -84,13 +84,13 @@ boost::asynchronous::any_shared_scheduler_proxy<> pool;
 
 #ifndef __MIC__
 template <class T, class U>
-typename boost::disable_if<boost::mpl::or_<boost::is_same<T,U>,boost::is_same<LongOne,U>>,U >::type
+typename std::enable_if<!(boost::is_same<T,U>::value || boost::is_same<LongOne,U>::value),U >::type
 test_cast(T const& t)
 {
     return boost::lexical_cast<U>(t);
 }
 template <class T, class U>
-typename boost::enable_if<boost::is_same<LongOne,U>,U >::type
+typename std::enable_if<boost::is_same<LongOne,U>::value,U >::type
 test_cast(T const& t)
 {
     return t;
@@ -98,7 +98,7 @@ test_cast(T const& t)
 #endif
 
 template <class T, class U>
-typename boost::enable_if<boost::is_same<T,U>,U >::type
+typename std::enable_if<boost::is_same<T,U>::value,U >::type
 test_cast(T const& t)
 {
     return t;

@@ -10,7 +10,9 @@
 #ifndef BOOST_ASYNCHRONOUS_PARALLEL_INCLUSIVE_SCAN_HPP
 #define BOOST_ASYNCHRONOUS_PARALLEL_INCLUSIVE_SCAN_HPP
 
+#include <type_traits>
 #include <boost/asynchronous/algorithm/parallel_scan.hpp>
+
 namespace boost { namespace asynchronous
 {
 
@@ -49,7 +51,7 @@ parallel_inclusive_scan(Iterator beg, Iterator end, OutIterator out, T init,Func
 
 // version for moved ranges
 template <class Range, class OutRange, class T, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,
+typename std::enable_if<!boost::asynchronous::detail::has_is_continuation_task<Range>::value,
                            boost::asynchronous::detail::callback_continuation<std::pair<Range,OutRange>,Job> >::type
 parallel_inclusive_scan(Range&& range,OutRange&& out_range,T init,Func f,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -83,7 +85,7 @@ parallel_inclusive_scan(Range&& range,OutRange&& out_range,T init,Func f,long cu
 
 // version for a single moved range (in/out) => will return the range as continuation
 template <class Range, class T, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,
+typename std::enable_if<!boost::asynchronous::detail::has_is_continuation_task<Range>::value,
                            boost::asynchronous::detail::callback_continuation<Range,Job> >::type
 parallel_inclusive_scan(Range&& range,T init,Func f,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -117,7 +119,7 @@ parallel_inclusive_scan(Range&& range,T init,Func f,long cutoff,
 
 // version for ranges given as continuation => will return the range as continuation
 template <class Range, class T, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,
+typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>::value,
                           boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_inclusive_scan(Range range,T init,Func f,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS

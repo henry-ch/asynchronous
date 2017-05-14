@@ -26,7 +26,7 @@
 #include <boost/bind.hpp>
 #include <boost/thread/future.hpp>
 #include <boost/thread/tss.hpp>
-#include <boost/utility/enable_if.hpp>
+#include <type_traits>
 #include <boost/enable_shared_from_this.hpp>
 
 #include <boost/asynchronous/scheduler/detail/exceptions.hpp>
@@ -251,25 +251,25 @@ private:
     std::vector<subpool_type> m_subpools;
     
     template <class T,class S>
-    typename ::boost::enable_if< boost::is_same<job_type, typename S::job_type>,void >::type
+    typename std::enable_if< boost::is_same<job_type, typename S::job_type>::value,void >::type
     add_scheduler_helper(T& t,S& s)
     {
         t.push_back(s);
     }
     template <class T,class S>
-    typename ::boost::disable_if< boost::is_same<job_type, typename S::job_type>,void >::type
+    typename std::enable_if< !boost::is_same<job_type, typename S::job_type>::value,void >::type
     add_scheduler_helper(T&,S&)
     {
     }
     template <class T,class S>
-    typename ::boost::enable_if< boost::is_same<job_type, typename S::job_type>,void >::type
+    typename std::enable_if< boost::is_same<job_type, typename S::job_type>::value,void >::type
     add_queue_helper(T& t,S& s)
     {
         std::vector<boost::asynchronous::any_queue_ptr<job_type> > q = (*(s).get_internal_scheduler_aspect()).get_queues();
         t.push_back(q);
     }
     template <class T,class S>
-    typename ::boost::disable_if< boost::is_same<job_type, typename S::job_type>,void >::type
+    typename std::enable_if< !boost::is_same<job_type, typename S::job_type>::value,void >::type
     add_queue_helper(T& t,S& s)
     {
         std::vector<boost::asynchronous::any_queue_ptr<typename S::job_type> > q = (*(s).get_internal_scheduler_aspect()).get_queues();
@@ -532,7 +532,7 @@ create_shared_scheduler_proxy(composite_threadpool_scheduler<Job,FindPosition>* 
     return composite;
 }
 template< class S, class... Args >
-typename boost::enable_if<boost::asynchronous::has_self_proxy_creation<S>,boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type> >::type
+typename std::enable_if<boost::asynchronous::has_self_proxy_creation<S>::value,boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type> >::type
 make_shared_scheduler_proxy(Args && ... args)
 {
     auto sps = boost::make_shared<S>(std::forward<Args>(args)...);

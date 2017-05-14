@@ -19,7 +19,7 @@
 #include <boost/range/begin.hpp>
 #include <boost/range/end.hpp>
 #include <boost/range/iterator_range.hpp>
-#include <boost/utility/enable_if.hpp>
+#include <type_traits>
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/continuation_task.hpp>
 #include <boost/asynchronous/post.hpp>
@@ -452,8 +452,8 @@ auto parallel_partition(Range&& range,Func func,
 #else
                         const uint32_t thread_num = boost::thread::hardware_concurrency(),const std::string& task_name="", std::size_t prio=0)
 #endif
--> typename boost::disable_if<
-              boost::asynchronous::detail::has_is_continuation_task<Range>,
+-> typename std::enable_if<
+              !boost::asynchronous::detail::has_is_continuation_task<Range>::value,
               // TODO make it work with boost::begin and clang
               boost::asynchronous::detail::callback_continuation<std::pair<Range,decltype(range.begin())>,Job> >::type
 
@@ -535,8 +535,8 @@ struct parallel_partition_continuation_helper:
 }
 
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<
-        boost::asynchronous::detail::has_is_continuation_task<Range>,
+typename std::enable_if<
+        boost::asynchronous::detail::has_is_continuation_task<Range>::value,
         boost::asynchronous::detail::callback_continuation<
               std::pair<typename Range::return_type,decltype(boost::begin(std::declval<typename Range::return_type&>()))>,
               Job>

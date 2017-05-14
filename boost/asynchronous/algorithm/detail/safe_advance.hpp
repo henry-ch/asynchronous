@@ -11,6 +11,7 @@
 #define BOOST_ASYNCHRONOUS_SAFE_ADVANCE_HPP
 
 #include <iterator>
+#include <type_traits>
 
 namespace boost { namespace asynchronous
 {
@@ -60,13 +61,13 @@ Iterator find_cutoff_helper(Iterator it, Distance n, Iterator end,std::input_ite
     return it;
 }
 template <class Iterator, class Distance>
-Iterator find_cutoff(Iterator it, Distance n, Iterator end, typename boost::disable_if<std::is_integral<Iterator>>::type* = 0)
+Iterator find_cutoff(Iterator it, Distance n, Iterator end, typename std::enable_if<!std::is_integral<Iterator>::value>::type* = 0)
 {
     return find_cutoff_helper(it,n,end,typename std::iterator_traits<Iterator>::iterator_category());
 }
 
 template <class Iterator, class Distance>
-Iterator find_cutoff(Iterator it, Distance n, Iterator end, typename boost::enable_if<std::is_integral<Iterator>>::type* = 0)
+Iterator find_cutoff(Iterator it, Distance n, Iterator end, typename std::enable_if<std::is_integral<Iterator>::value>::type* = 0)
 {
     // handle cutoff 1
     if (n == 1)

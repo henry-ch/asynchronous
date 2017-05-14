@@ -10,8 +10,9 @@
 #ifndef BOOST_ASYNC_JOB_TRAITS_HPP
 #define BOOST_ASYNC_JOB_TRAITS_HPP
 
-#include <boost/serialization/split_member.hpp>
+#include <type_traits>
 
+#include <boost/serialization/split_member.hpp>
 #include <boost/asynchronous/diagnostics/any_loggable.hpp>
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/diagnostics/default_loggable_job.hpp>
@@ -98,7 +99,7 @@ namespace detail
         Fct m_callable;
     };
     template <class Base, class Fct>
-    struct base_job<Base,Fct,typename ::boost::enable_if<typename boost::asynchronous::has_task_failed_handling<Fct>::type >::type> : public Base
+    struct base_job<Base,Fct,typename std::enable_if<boost::asynchronous::has_task_failed_handling<Fct>::value >::type> : public Base
     {
         struct non_loggable_helper : public Base
         {
@@ -193,7 +194,7 @@ namespace detail
         Fct m_callable;
     };
     template <class Base, class Fct>
-    struct serializable_base_job<Base,Fct,typename ::boost::enable_if<typename boost::asynchronous::has_task_failed_handling<Fct>::type >::type> : public Base
+    struct serializable_base_job<Base,Fct,typename std::enable_if<boost::asynchronous::has_task_failed_handling<Fct>::value >::type> : public Base
     {
         serializable_base_job(serializable_base_job&& rhs)noexcept
             : Base(std::forward<serializable_base_job>(rhs)),m_callable(std::move(rhs.m_callable)){}

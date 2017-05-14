@@ -16,7 +16,6 @@
 #include <iterator>
 
 #include <boost/thread/future.hpp>
-#include <boost/utility/enable_if.hpp>
 #include <boost/serialization/vector.hpp>
 
 #include <boost/asynchronous/detail/any_interruptible.hpp>

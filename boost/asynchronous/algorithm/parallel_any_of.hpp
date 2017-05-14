@@ -16,7 +16,7 @@
 #include <iterator>
 
 #include <boost/thread/future.hpp>
-#include <boost/utility/enable_if.hpp>
+#include <type_traits>
 #include <boost/serialization/vector.hpp>
 
 #include <boost/asynchronous/detail/any_interruptible.hpp>
@@ -121,7 +121,7 @@ struct parallel_any_of_continuation_range_helper: public boost::asynchronous::co
 
 }
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<bool,Job> >::type
+typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>::value,boost::asynchronous::detail::callback_continuation<bool,Job> >::type
 parallel_any_of(Range range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
              const std::string& task_name, std::size_t prio=0)

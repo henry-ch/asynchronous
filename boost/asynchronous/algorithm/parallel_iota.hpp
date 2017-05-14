@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <numeric>
+#include <type_traits>
 
 #include <boost/asynchronous/detail/continuation_impl.hpp>
 #include <boost/asynchronous/continuation_task.hpp>
@@ -163,7 +164,7 @@ struct parallel_iota_generate_helper : public boost::asynchronous::continuation_
 }
 
 template <typename Range, typename T, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<boost::has_range_iterator<Range>, boost::asynchronous::detail::callback_continuation<Range, Job>>::type
+typename std::enable_if<boost::has_range_iterator<Range>::value, boost::asynchronous::detail::callback_continuation<Range, Job>>::type
 parallel_iota(Range && range, T const& value, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
               const std::string& task_name, std::size_t prio=0)

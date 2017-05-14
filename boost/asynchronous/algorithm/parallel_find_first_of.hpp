@@ -13,7 +13,7 @@
 #include <vector>
 #include <iterator> // for std::iterator_traits
 
-#include <boost/utility/enable_if.hpp>
+#include <type_traits>
 #include <boost/serialization/vector.hpp>
 
 #include <boost/asynchronous/detail/any_interruptible.hpp>
@@ -197,7 +197,7 @@ struct parallel_find_first_of_range_helper: public boost::asynchronous::continua
 }
 // version for 2nd range returned as continuation
 template <class Iterator1,class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<Iterator1,Job> >::type
+typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>::value,boost::asynchronous::detail::callback_continuation<Iterator1,Job> >::type
 parallel_find_first_of(Iterator1 beg1, Iterator1 end1,Range range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
              const std::string& task_name, std::size_t prio=0)

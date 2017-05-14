@@ -14,7 +14,7 @@
 #include <vector>
 #include <iterator> // for std::iterator_traits
 
-#include <boost/utility/enable_if.hpp>
+#include <type_traits>
 #include <boost/serialization/vector.hpp>
 
 #include <boost/asynchronous/detail/any_interruptible.hpp>
@@ -47,7 +47,7 @@ struct for_each_helper
     }
 };
 template <class Iterator, class Func>
-struct for_each_helper<1,Iterator,Func,typename ::boost::enable_if<std::is_integral<Iterator>>::type>
+struct for_each_helper<1,Iterator,Func,typename std::enable_if<std::is_integral<Iterator>::value>::type>
 {
     Func operator()(Iterator beg, Iterator end, Func&& func)
     {   

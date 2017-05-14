@@ -10,7 +10,7 @@
 #ifndef BOOST_ASYNCHRONOUS_PARALLEL_GENERATE_HPP
 #define BOOST_ASYNCHRONOUS_PARALLEL_GENERATE_HPP
 
-#include <boost/utility/enable_if.hpp>
+#include <type_traits>
 #include <boost/asynchronous/algorithm/parallel_for.hpp>
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/continuation_task.hpp>
@@ -42,7 +42,7 @@ parallel_generate(Iterator beg, Iterator end, Func func, long cutoff,
 
 // Moved range
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>, boost::asynchronous::detail::callback_continuation<Range, Job>>::type
+typename std::enable_if<!boost::asynchronous::detail::has_is_continuation_task<Range>::value, boost::asynchronous::detail::callback_continuation<Range, Job>>::type
 parallel_generate(Range&& range, Func func, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
              const std::string& task_name, std::size_t prio=0)
@@ -59,7 +59,7 @@ parallel_generate(Range&& range, Func func, long cutoff,
 
 // Range reference
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>, boost::asynchronous::detail::callback_continuation<void, Job>>::type
+typename std::enable_if<!boost::asynchronous::detail::has_is_continuation_task<Range>::value, boost::asynchronous::detail::callback_continuation<void, Job>>::type
 parallel_generate(const Range& range, Func func, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
              const std::string& task_name, std::size_t prio=0)
@@ -77,7 +77,7 @@ parallel_generate(const Range& range, Func func, long cutoff,
 
 // Continuations
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>, boost::asynchronous::detail::callback_continuation<typename Range::return_type, Job>>::type
+typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>::value, boost::asynchronous::detail::callback_continuation<typename Range::return_type, Job>>::type
 parallel_generate(Range range, Func func, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
              const std::string& task_name, std::size_t prio=0)

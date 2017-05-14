@@ -12,7 +12,6 @@
 #include <vector>
 #include <iterator> // for std::iterator_traits
 
-#include <boost/utility/enable_if.hpp>
 #include <boost/serialization/vector.hpp>
 
 #include <boost/asynchronous/detail/any_interruptible.hpp>

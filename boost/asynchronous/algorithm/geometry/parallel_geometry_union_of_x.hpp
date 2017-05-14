@@ -12,7 +12,7 @@
 
 #include <algorithm>
 
-#include <boost/utility/enable_if.hpp>
+#include <type_traits>
 #include <boost/geometry.hpp>
 
 #include <boost/asynchronous/callable_any.hpp>
@@ -232,7 +232,7 @@ struct parallel_geometry_union_of_x_range_helper: public boost::asynchronous::co
 }
 
 template <class Range, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<Range,Job> >::type
+typename std::enable_if<!boost::asynchronous::detail::has_is_continuation_task<Range>::value,boost::asynchronous::detail::callback_continuation<Range,Job> >::type
 
 parallel_geometry_union_of_x(Range&& range,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -301,7 +301,7 @@ struct parallel_geometry_union_of_x_continuation_range_helper: public boost::asy
 // Continuation is a callback continuation
 template <class Continuation, class Job>
 struct parallel_geometry_union_of_x_continuation_range_helper<Continuation,Job,
-                                                              typename ::boost::enable_if< boost::asynchronous::detail::has_is_callback_continuation_task<Continuation> >::type>
+                                                              typename std::enable_if< boost::asynchronous::detail::has_is_callback_continuation_task<Continuation>::value >::type>
         : public boost::asynchronous::continuation_task<typename Continuation::return_type>
 {
     parallel_geometry_union_of_x_continuation_range_helper(Continuation c,long cutoff,long overlay_cutoff, long partition_cutoff,
@@ -345,7 +345,7 @@ struct parallel_geometry_union_of_x_continuation_range_helper<Continuation,Job,
 }
 // version for ranges given as continuation => will return the range as continuation
 template <class Range, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
+typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>::value,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_geometry_union_of_x(Range range,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                      const std::string& task_name, std::size_t prio=0,

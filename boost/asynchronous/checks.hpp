@@ -10,6 +10,8 @@
 #ifndef BOOST_ASYNCHRON_CHECKS_HPP
 #define BOOST_ASYNCHRON_CHECKS_HPP
 
+#include <type_traits>
+
 #include <boost/type_traits/is_same.hpp>
 #include <boost/weak_ptr.hpp>
 #include <boost/shared_ptr.hpp>
@@ -157,7 +159,7 @@ struct call_if_alive_exec
     boost::weak_ptr<T> m_tracked;
 };
 template <class Func, class T,class R>
-struct call_if_alive_exec<Func,T,R,typename ::boost::enable_if<boost::asynchronous::detail::is_serializable<Func> >::type>
+struct call_if_alive_exec<Func,T,R,typename std::enable_if<boost::asynchronous::detail::is_serializable<Func>::value >::type>
 {
     typedef typename boost::asynchronous::detail::get_return_type<Func>::type return_type;
     // pretend we are a continuation as we do not know and return the correct type above

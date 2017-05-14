@@ -11,6 +11,7 @@
 #define BOOST_ASYNCHRONOUS_PARALLEL_MOVE_IF_NOEXCEPT_HPP
 
 #include  <algorithm>
+#include <type_traits>
 
 #include <boost/asynchronous/algorithm/parallel_move.hpp>
 #include <boost/asynchronous/algorithm/parallel_copy.hpp>
@@ -23,13 +24,13 @@
 namespace boost { namespace asynchronous {
 // non parallel version
 template<class Iterator, class ResultIterator>
-typename boost::enable_if<std::is_nothrow_move_constructible<typename boost::asynchronous::detail::iterator_value_type<Iterator>::type>,void>::type
+typename std::enable_if<std::is_nothrow_move_constructible<typename boost::asynchronous::detail::iterator_value_type<Iterator>::type>::value,void>::type
 serial_move_if_noexcept(Iterator begin, Iterator end, ResultIterator result)
 {
     std::move(begin,end,result);
 }
 template<class Iterator, class ResultIterator>
-typename boost::disable_if<std::is_nothrow_move_constructible<typename boost::asynchronous::detail::iterator_value_type<Iterator>::type>,void>::type
+typename std::enable_if<!std::is_nothrow_move_constructible<typename boost::asynchronous::detail::iterator_value_type<Iterator>::type>::value,void>::type
 serial_move_if_noexcept(Iterator begin, Iterator end, ResultIterator result)
 {
     std::copy(begin,end,result);
@@ -38,9 +39,8 @@ serial_move_if_noexcept(Iterator begin, Iterator end, ResultIterator result)
 // version for iterators
 // nothrow move
 template<class Iterator, class ResultIterator, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<boost::mpl::and_<
-                                boost::asynchronous::detail::has_iterator_category<std::iterator_traits<Iterator>>,
-                                std::is_nothrow_move_constructible<typename boost::asynchronous::detail::iterator_value_type<Iterator>::type>>,
+typename std::enable_if<boost::asynchronous::detail::has_iterator_category<std::iterator_traits<Iterator>>::value &&
+                        std::is_nothrow_move_constructible<typename boost::asynchronous::detail::iterator_value_type<Iterator>::type>::value,
                           boost::asynchronous::detail::callback_continuation<void, Job>>::type
 parallel_move_if_noexcept(Iterator begin, Iterator end, ResultIterator result, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -55,9 +55,8 @@ parallel_move_if_noexcept(Iterator begin, Iterator end, ResultIterator result, l
 
 // no-nothrow move
 template<class Iterator, class ResultIterator, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<boost::mpl::and_<
-                                boost::asynchronous::detail::has_iterator_category<std::iterator_traits<Iterator>>,
-                                boost::mpl::not_<std::is_nothrow_move_constructible<typename boost::asynchronous::detail::iterator_value_type<Iterator>::type>>>,
+typename std::enable_if<boost::asynchronous::detail::has_iterator_category<std::iterator_traits<Iterator>>::value &&
+                        !std::is_nothrow_move_constructible<typename boost::asynchronous::detail::iterator_value_type<Iterator>::type>::value,
                           boost::asynchronous::detail::callback_continuation<void, Job>>::type
 parallel_move_if_noexcept(Iterator begin, Iterator end, ResultIterator result, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS

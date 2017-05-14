@@ -13,6 +13,7 @@
 #include <string>
 #include <sstream>
 #include <functional>
+#include <type_traits>
 #include <boost/asynchronous/expected.hpp>
 #include <boost/asynchronous/scheduler/tss_scheduler.hpp>
 #include <boost/asynchronous/detail/continuation_impl.hpp>
@@ -42,9 +43,8 @@ namespace boost { namespace asynchronous {
     \param args a variadic sequence of sub-tasks. All are posted except the last, which is immediately executed from within the caller context.
 */
 template <class OnDone, typename... Args>
-typename boost::disable_if< typename boost::mpl::or_<
-                            typename boost::asynchronous::detail::has_future_args<Args...>::type ,
-                            typename boost::asynchronous::detail::has_iterator_args<Args...>::type >
+typename std::enable_if< !(boost::asynchronous::detail::has_future_args<Args...>::value ||
+                           boost::asynchronous::detail::has_iterator_args<Args...>::value)
                           ,void >::type
 create_continuation(OnDone&& on_done, Args&&... args)
 {
@@ -64,7 +64,7 @@ create_continuation(OnDone&& on_done, Args&&... args)
     \param args a variadic sequence of futures.
 */
 template <class OnDone, typename... Args>
-typename boost::enable_if< typename boost::asynchronous::detail::has_future_args<boost::future<Args>...>::type ,void >::type
+typename std::enable_if< boost::asynchronous::detail::has_future_args<boost::future<Args>...>::value ,void >::type
 create_continuation(OnDone&& on_done, boost::future<Args>&&... args)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
@@ -85,7 +85,7 @@ create_continuation(OnDone&& on_done, boost::future<Args>&&... args)
     \param args a variadic sequence of futures.
 */
 template <class OnDone, typename... Args>
-typename boost::enable_if< typename boost::asynchronous::detail::has_future_args<boost::shared_future<Args>...>::type ,void >::type
+typename std::enable_if< boost::asynchronous::detail::has_future_args<boost::shared_future<Args>...>::value ,void >::type
 create_continuation(OnDone&& on_done, boost::shared_future<Args>&&... args)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
@@ -106,7 +106,7 @@ create_continuation(OnDone&& on_done, boost::shared_future<Args>&&... args)
     \param seq a sequence of futures.
 */
 template <class OnDone, typename Seq>
-typename boost::enable_if< typename boost::asynchronous::has_iterator<Seq>::type ,void >::type
+typename std::enable_if< boost::asynchronous::has_iterator<Seq>::value ,void >::type
 create_continuation(OnDone&& on_done, Seq&& seq)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
@@ -125,9 +125,8 @@ create_continuation(OnDone&& on_done, Seq&& seq)
     \param args a variadic sequence of sub-tasks. All are posted except the last, which is immediately executed from within the caller context.
 */
 template <class OnDone, class Duration, typename... Args>
-typename boost::disable_if< typename boost::mpl::or_<
-                            typename boost::asynchronous::detail::has_future_args<Args...>::type ,
-                            typename boost::asynchronous::detail::has_iterator_args<Args...>::type >
+typename std::enable_if< !( boost::asynchronous::detail::has_future_args<Args...>::value ||
+                            boost::asynchronous::detail::has_iterator_args<Args...>::value)
                           ,void >::type
 create_continuation_timeout(OnDone&& on_done, Duration const& d, Args&&... args)
 {
@@ -149,7 +148,7 @@ create_continuation_timeout(OnDone&& on_done, Duration const& d, Args&&... args)
     \param args a variadic sequence of futures.
 */
 template <class OnDone, class Duration, typename... Args>
-typename boost::enable_if< typename boost::asynchronous::detail::has_future_args<boost::future<Args>...>::type ,void >::type
+typename std::enable_if< boost::asynchronous::detail::has_future_args<boost::future<Args>...>::value ,void >::type
 create_continuation_timeout(OnDone&& on_done, Duration const& d, boost::future<Args>&&... args)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
@@ -170,7 +169,7 @@ create_continuation_timeout(OnDone&& on_done, Duration const& d, boost::future<A
     \param seq a sequence of futures.
 */
 template <class OnDone, class Duration, typename Seq>
-typename boost::enable_if< typename boost::asynchronous::has_iterator<Seq>::type ,void >::type
+typename std::enable_if< boost::asynchronous::has_iterator<Seq>::value ,void >::type
 create_continuation_timeout(OnDone&& on_done, Duration const& d, Seq&& seq)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
@@ -189,7 +188,7 @@ create_continuation_timeout(OnDone&& on_done, Duration const& d, Seq&& seq)
     \param args a variadic sequence of futures.
 */
 template <typename Job, class OnDone, typename... Args>
-typename boost::enable_if< typename boost::asynchronous::detail::has_future_args<boost::future<Args>...>::type ,void >::type
+typename std::enable_if< boost::asynchronous::detail::has_future_args<boost::future<Args>...>::value ,void >::type
 create_continuation_job(OnDone&& on_done, boost::future<Args>&&... args)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
@@ -210,9 +209,8 @@ create_continuation_job(OnDone&& on_done, boost::future<Args>&&... args)
     \param args a variadic sequence of sub-tasks. All are posted except the last, which is immediately executed from within the caller context.
 */
 template <typename Job, class OnDone, typename... Args>
-typename boost::disable_if< typename boost::mpl::or_<
-                            typename boost::asynchronous::detail::has_future_args<Args...>::type ,
-                            typename boost::asynchronous::detail::has_iterator_args<Args...>::type >
+typename std::enable_if< !(boost::asynchronous::detail::has_future_args<Args...>::value ||
+                           boost::asynchronous::detail::has_iterator_args<Args...>::value)
                           ,void >::type
 create_continuation_job(OnDone&& on_done, Args&&... args)
 {
@@ -234,7 +232,7 @@ create_continuation_job(OnDone&& on_done, Args&&... args)
     \param seq a sequence of futures.
 */
 template <typename Job, class OnDone, typename Seq>
-typename boost::enable_if< typename boost::asynchronous::has_iterator<Seq>::type ,void >::type
+typename std::enable_if< boost::asynchronous::has_iterator<Seq>::value ,void >::type
 create_continuation_job(OnDone&& on_done, Seq&& seq)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
@@ -255,7 +253,7 @@ create_continuation_job(OnDone&& on_done, Seq&& seq)
     \param args a variadic sequence of futures.
 */
 template <typename Job, class OnDone, class Duration, typename... Args>
-typename boost::enable_if< typename boost::asynchronous::detail::has_future_args<boost::future<Args>...>::type ,void >::type
+typename std::enable_if< boost::asynchronous::detail::has_future_args<boost::future<Args>...>::value ,void >::type
 create_continuation_job_timeout(OnDone&& on_done, Duration const& d, boost::future<Args>&&... args)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
@@ -278,10 +276,9 @@ create_continuation_job_timeout(OnDone&& on_done, Duration const& d, boost::futu
     \param args a variadic sequence of sub-tasks. All are posted except the last, which is immediately executed from within the caller context.
 */
 template <typename Job, class OnDone, class Duration, typename... Args>
-typename boost::disable_if< typename boost::mpl::or_<
-                            typename boost::asynchronous::detail::has_future_args<Args...>::type ,
-                            typename boost::asynchronous::detail::has_iterator_args<Args...>::type >
-                          ,void >::type
+typename std::enable_if<!(boost::asynchronous::detail::has_future_args<Args...>::value ||
+                        boost::asynchronous::detail::has_iterator_args<Args...>::value)
+                        ,void >::type
 create_continuation_job_timeout(OnDone&& on_done, Duration const& d, Args&&... args)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
@@ -303,7 +300,7 @@ create_continuation_job_timeout(OnDone&& on_done, Duration const& d, Args&&... a
     \param seq a sequence of futures.
 */
 template <typename Job, class OnDone, class Duration, typename Seq>
-typename boost::enable_if< typename boost::asynchronous::has_iterator<Seq>::type ,void >::type
+typename std::enable_if<boost::asynchronous::has_iterator<Seq>::value ,void >::type
 create_continuation_job_timeout(OnDone&& on_done, Duration const& d, Seq&& seq)
 {
     boost::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();

@@ -5,9 +5,10 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 
 #include <iostream>
+#include <type_traits>
 // we have more than the default 20 transitions, so we need to require more from Boost.MPL
 #include "boost/mpl/vector/vector30.hpp"
-#include <boost/utility/enable_if.hpp>
+#include <type_traits>
 #include <boost/type_traits/is_same.hpp>
 // back-end
 #include <boost/msm/back/state_machine.hpp>
@@ -251,12 +252,12 @@ namespace
 
         // we leave the state with another event than pause => we want to start from beginning
         template <class Event,class FSM>
-        typename boost::disable_if<typename boost::is_same<Event,pausing>::type,void>::type
+        typename std::enable_if<!boost::is_same<Event,pausing>::value,void>::type
         on_exit(Event const&,FSM& ){currentSong_ = 0;active_=false;}
 
         // we leave the state with pause => we want to continue where we left
         template <class Event,class FSM>
-        typename boost::enable_if<typename boost::is_same<Event,pausing>::type,void>::type
+        typename std::enable_if<boost::is_same<Event,pausing>::value,void>::type
         on_exit(Event const&,FSM& ){ active_=false;}
 
         // initial states (2 regions => 2 initial states)

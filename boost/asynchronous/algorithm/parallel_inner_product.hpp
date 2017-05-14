@@ -10,7 +10,7 @@
 #ifndef BOOST_ASYNCHRONOUS_PARALLEL_INNER_PRODUCT_HPP
 #define BOOST_ASYNCHRONOUS_PARALLEL_INNER_PRODUCT_HPP
 
-#include <boost/utility/enable_if.hpp>
+#include <type_traits>
 
 #include <boost/range/begin.hpp>
 #include <boost/range/end.hpp>
@@ -159,7 +159,7 @@ template <class Iterator1,
           class BinaryOperation,
           class Reduce,
           class Value,
-          class Enable = typename boost::disable_if<boost::has_range_iterator<Iterator1>>::type,
+          class Enable = typename std::enable_if<!boost::has_range_iterator<Iterator1>::value>::type,
           class T = decltype( // Automatically deduce return type
                         std::declval<Reduce>()(
                             std::declval<BinaryOperation>()(
@@ -199,7 +199,7 @@ template <class Iterator1,
           class Iterator2,
           class BinaryOperation,
           class Reduce,
-          class Enable = typename boost::disable_if<boost::has_range_iterator<Iterator1>>::type,
+          class Enable = typename std::enable_if<!boost::has_range_iterator<Iterator1>::value>::type,
           class T = decltype( // Automatically deduce return type
                         std::declval<Reduce>()(
                             std::declval<BinaryOperation>()(
@@ -311,7 +311,7 @@ struct parallel_inner_product_range_move_helper: public boost::asynchronous::con
 };
 
 template <class Range1, class Range2, class T, class BinaryOperation, class Reduce, class Job>
-struct parallel_inner_product_range_move_helper<Range1, Range2, T, BinaryOperation, Reduce, Job, typename ::boost::enable_if<boost::asynchronous::detail::is_serializable<BinaryOperation>>::type, typename ::boost::enable_if<boost::asynchronous::detail::is_serializable<Reduce>>::type>
+struct parallel_inner_product_range_move_helper<Range1, Range2, T, BinaryOperation, Reduce, Job, typename std::enable_if<boost::asynchronous::detail::is_serializable<BinaryOperation>::value>::type, typename std::enable_if<boost::asynchronous::detail::is_serializable<Reduce>::value>::type>
         : public boost::asynchronous::continuation_task<T>
         , public boost::asynchronous::serializable_task
 {
@@ -456,7 +456,7 @@ template <class Range1,
           class BinaryOperation,
           class Reduce,
           class Value,
-          class Enable = typename boost::enable_if_c<boost::has_range_iterator<Range1>::value && boost::has_range_iterator<Range2>::value &&
+          class Enable = typename std::enable_if<boost::has_range_iterator<Range1>::value && boost::has_range_iterator<Range2>::value &&
                                                      !boost::asynchronous::detail::has_is_continuation_task<Range1>::value &&
                                                      !boost::asynchronous::detail::has_is_continuation_task<Range2>::value>::type,
           class T = decltype( // Automatically deduce return type
@@ -472,7 +472,7 @@ template <class Range1,
                         )
                     ),
           class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if_c<boost::has_range_iterator<Range1>::value && boost::has_range_iterator<Range2>::value &&
+typename std::enable_if<boost::has_range_iterator<Range1>::value && boost::has_range_iterator<Range2>::value &&
                             !boost::asynchronous::detail::has_is_continuation_task<Range1>::value &&
                             !boost::asynchronous::detail::has_is_continuation_task<Range2>::value,
                             boost::asynchronous::detail::callback_continuation<T, Job>>::type
@@ -504,7 +504,7 @@ template <class Range1,
           class Range2,
           class BinaryOperation,
           class Reduce,
-          class Enable = typename boost::enable_if_c<boost::has_range_iterator<Range1>::value && boost::has_range_iterator<Range2>::value &&
+          class Enable = typename std::enable_if<boost::has_range_iterator<Range1>::value && boost::has_range_iterator<Range2>::value &&
                                                      !boost::asynchronous::detail::has_is_continuation_task<Range1>::value &&
                                                      !boost::asynchronous::detail::has_is_continuation_task<Range2>::value>::type,
           class T = decltype( // Automatically deduce return type
@@ -521,7 +521,7 @@ template <class Range1,
                     ),
           class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 
-typename boost::enable_if_c<boost::has_range_iterator<Range1>::value && boost::has_range_iterator<Range2>::value &&
+typename std::enable_if<boost::has_range_iterator<Range1>::value && boost::has_range_iterator<Range2>::value &&
                             !boost::asynchronous::detail::has_is_continuation_task<Range1>::value &&
                             !boost::asynchronous::detail::has_is_continuation_task<Range2>::value,
                             boost::asynchronous::detail::callback_continuation<T, Job>>::type
@@ -624,8 +624,8 @@ struct parallel_inner_product_continuation_helper: public boost::asynchronous::c
 // Continuation task for parallel_inner_product with callback continuations
 template <class Continuation1, class Continuation2, class T, class BinaryOperation, class Reduce, class Job>
 struct parallel_inner_product_continuation_helper<Continuation1, Continuation2, T, BinaryOperation, Reduce, Job,
-                                                  typename ::boost::enable_if<has_is_callback_continuation_task<Continuation1>>::type,
-                                                  typename ::boost::enable_if<has_is_callback_continuation_task<Continuation2>>::type>
+                                                  typename std::enable_if<has_is_callback_continuation_task<Continuation1>::value>::type,
+                                                  typename std::enable_if<has_is_callback_continuation_task<Continuation2>::value>::type>
     : public boost::asynchronous::continuation_task<T>
 {
     parallel_inner_product_continuation_helper(Continuation1 && cont1, Continuation2 && cont2, BinaryOperation op, Reduce red,
@@ -703,7 +703,7 @@ template <class Continuation1,
           class BinaryOperation,
           class Reduce,
           class Value,
-          class Enable = typename boost::enable_if_c<!boost::has_range_iterator<Continuation1>::value && !boost::has_range_iterator<Continuation2>::value &&
+          class Enable = typename std::enable_if<!boost::has_range_iterator<Continuation1>::value && !boost::has_range_iterator<Continuation2>::value &&
                                                       boost::asynchronous::detail::has_is_continuation_task<Continuation1>::value &&
                                                       boost::asynchronous::detail::has_is_continuation_task<Continuation2>::value>::type,
           class T = decltype( // Automatically deduce return type
@@ -719,7 +719,7 @@ template <class Continuation1,
                         )
                     ),
           class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if_c<boost::asynchronous::detail::has_is_continuation_task<Continuation1>::value &&
+typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Continuation1>::value &&
                             boost::asynchronous::detail::has_is_continuation_task<Continuation2>::value,
                             boost::asynchronous::detail::callback_continuation<T, Job>>::type
 parallel_inner_product(Continuation1 && cont1, Continuation2 && cont2, BinaryOperation op, Reduce red, const Value& value, long cutoff,
@@ -744,7 +744,7 @@ template <class Continuation1,
           class Continuation2,
           class BinaryOperation,
           class Reduce,
-          class Enable = typename boost::enable_if_c<!boost::has_range_iterator<Continuation1>::value && !boost::has_range_iterator<Continuation2>::value &&
+          class Enable = typename std::enable_if<!boost::has_range_iterator<Continuation1>::value && !boost::has_range_iterator<Continuation2>::value &&
                                                       boost::asynchronous::detail::has_is_continuation_task<Continuation1>::value &&
                                                       boost::asynchronous::detail::has_is_continuation_task<Continuation2>::value>::type,
           class T = decltype( // Automatically deduce return type
@@ -760,7 +760,7 @@ template <class Continuation1,
                         )
                     ),
           class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if_c<boost::asynchronous::detail::has_is_continuation_task<Continuation1>::value &&
+typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Continuation1>::value &&
                             boost::asynchronous::detail::has_is_continuation_task<Continuation2>::value,
                             boost::asynchronous::detail::callback_continuation<T, Job>>::type
 parallel_inner_product(Continuation1 && cont1, Continuation2 && cont2, BinaryOperation op, Reduce red, long cutoff,

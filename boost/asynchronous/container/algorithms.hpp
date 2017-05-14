@@ -10,6 +10,8 @@
 #ifndef BOOST_ASYNCHRONOUS_CONTAINER_ALGORITHMS_HPP
 #define BOOST_ASYNCHRONOUS_CONTAINER_ALGORITHMS_HPP
 
+#include <type_traits>
+
 #include <boost/mpl/has_xxx.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/asynchronous/continuation_task.hpp>
@@ -79,7 +81,7 @@ struct push_back_task: public boost::asynchronous::continuation_task<Container>
 }
 template <class Container, class T, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<Container,Job>
-async_push_back(Container c, T&& data,typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Container>>::type* = 0)
+async_push_back(Container c, T&& data,typename std::enable_if<!boost::asynchronous::detail::has_is_continuation_task<Container>::value>::type* = 0)
 {
     return boost::asynchronous::top_level_callback_continuation_job<Container,Job>
         (boost::asynchronous::detail::push_back_task<Container,T>(std::move(c), std::move(data)));
@@ -138,7 +140,7 @@ struct push_back_task_continuation: public boost::asynchronous::continuation_tas
 }
 template <class Container, class T, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<typename Container::return_type,Job>
-async_push_back(Container c, T&& data,typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Container>>::type* = 0)
+async_push_back(Container c, T&& data,typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Container>::value>::type* = 0)
 {
     return boost::asynchronous::top_level_callback_continuation_job<typename Container::return_type,Job>
         (boost::asynchronous::detail::push_back_task_continuation<Container,T,Job>(std::move(c), std::move(data)));
@@ -227,7 +229,7 @@ struct resize_task: public boost::asynchronous::continuation_task<Container>
 }
 template <class Container, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<Container,Job>
-async_resize(Container c, std::size_t s,typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Container>>::type* = 0)
+async_resize(Container c, std::size_t s,typename std::enable_if<!boost::asynchronous::detail::has_is_continuation_task<Container>::value>::type* = 0)
 {
     return boost::asynchronous::top_level_callback_continuation_job<Container,Job>
         (boost::asynchronous::detail::resize_task<Container,Job>(std::move(c), s));
@@ -286,7 +288,7 @@ struct resize_task_continuation: public boost::asynchronous::continuation_task<t
 }
 template <class Container, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<typename Container::return_type,Job>
-async_resize(Container c, std::size_t s,typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Container>>::type* = 0)
+async_resize(Container c, std::size_t s,typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Container>::value>::type* = 0)
 {
     return boost::asynchronous::top_level_callback_continuation_job<typename Container::return_type,Job>
         (boost::asynchronous::detail::resize_task_continuation<Container,Job>(std::move(c), s));
@@ -344,7 +346,7 @@ struct reserve_task: public boost::asynchronous::continuation_task<Container>
 }
 template <class Container, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<Container,Job>
-async_reserve(Container c, std::size_t s,typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Container>>::type* = 0)
+async_reserve(Container c, std::size_t s,typename std::enable_if<!boost::asynchronous::detail::has_is_continuation_task<Container>::value>::type* = 0)
 {
     return boost::asynchronous::top_level_callback_continuation_job<Container,Job>
         (boost::asynchronous::detail::reserve_task<Container>(std::move(c), s));
@@ -404,7 +406,7 @@ struct reserve_task_continuation: public boost::asynchronous::continuation_task<
 }
 template <class Container, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<typename Container::return_type,Job>
-async_reserve(Container c, std::size_t s,typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Container>>::type* = 0)
+async_reserve(Container c, std::size_t s,typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Container>::value>::type* = 0)
 {
     return boost::asynchronous::top_level_callback_continuation_job<typename Container::return_type,Job>
         (boost::asynchronous::detail::reserve_task_continuation<Container>(std::move(c), s));
@@ -461,7 +463,7 @@ struct shrink_to_fit_task: public boost::asynchronous::continuation_task<Contain
 }
 template <class Container, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<Container,Job>
-async_shrink_to_fit(Container c,typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Container>>::type* = 0)
+async_shrink_to_fit(Container c,typename std::enable_if<!boost::asynchronous::detail::has_is_continuation_task<Container>::value>::type* = 0)
 {
     return boost::asynchronous::top_level_callback_continuation_job<Container,Job>
         (boost::asynchronous::detail::shrink_to_fit_task<Container>(std::move(c)));
@@ -519,7 +521,7 @@ struct shrink_to_fit_task_continuation: public boost::asynchronous::continuation
 }
 template <class Container, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<typename Container::return_type,Job>
-async_shrink_to_fit(Container c, typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Container>>::type* = 0)
+async_shrink_to_fit(Container c, typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Container>::value>::type* = 0)
 {
     return boost::asynchronous::top_level_callback_continuation_job<typename Container::return_type,Job>
         (boost::asynchronous::detail::shrink_to_fit_task_continuation<Container>(std::move(c)));
@@ -615,10 +617,10 @@ boost::asynchronous::detail::callback_continuation<Range,Job>
 make_asynchronous_range(std::size_t n,long cutoff,
  #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
             const std::string& task_name, std::size_t prio=0,
-            typename boost::enable_if<boost::asynchronous::detail::has_asynchronous_container<Range>>::type* = 0)
+            typename std::enable_if<boost::asynchronous::detail::has_asynchronous_container<Range>::value>::type* = 0)
  #else
             const std::string& task_name="", std::size_t prio=0,
-            typename boost::enable_if<boost::asynchronous::detail::has_asynchronous_container<Range>>::type* = 0)
+            typename std::enable_if<boost::asynchronous::detail::has_asynchronous_container<Range>::value>::type* = 0)
  #endif
 {
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
@@ -632,10 +634,10 @@ boost::asynchronous::detail::callback_continuation<Range,Job>
 make_asynchronous_range(std::size_t n,long ,
  #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
             const std::string& , std::size_t =0,
-            typename boost::disable_if<boost::asynchronous::detail::has_asynchronous_container<Range>>::type* = 0)
+            typename std::enable_if<!boost::asynchronous::detail::has_asynchronous_container<Range>::value>::type* = 0)
  #else
             const std::string& ="", std::size_t =0,
-            typename boost::disable_if<boost::asynchronous::detail::has_asynchronous_container<Range>>::type* = 0)
+            typename std::enable_if<!boost::asynchronous::detail::has_asynchronous_container<Range>::value>::type* = 0)
  #endif
 {
     return boost::asynchronous::top_level_callback_continuation_job<Range,Job>
@@ -716,7 +718,7 @@ struct async_merge_task: public boost::asynchronous::continuation_task<Container
 }
 template <class Container, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<Container,Job>
-async_merge_containers(Container c1,Container c2,typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Container>>::type* = 0)
+async_merge_containers(Container c1,Container c2,typename std::enable_if<!boost::asynchronous::detail::has_is_continuation_task<Container>::value>::type* = 0)
 {
     return boost::asynchronous::top_level_callback_continuation_job<Container,Job>
         (boost::asynchronous::detail::async_merge_task<Container,Job>(std::move(c1),std::move(c2)));
@@ -809,7 +811,7 @@ struct async_merge_container_of_containers_task: public boost::asynchronous::con
 }
 template <class Container, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<typename Container::value_type,Job>
-async_merge_containers(Container c,typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Container>>::type* = 0)
+async_merge_containers(Container c,typename std::enable_if<!boost::asynchronous::detail::has_is_continuation_task<Container>::value>::type* = 0)
 {
     return boost::asynchronous::top_level_callback_continuation_job<typename Container::value_type,Job>
         (boost::asynchronous::detail::async_merge_container_of_containers_task<Container,Job>(std::move(c)));

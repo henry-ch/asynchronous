@@ -48,7 +48,7 @@ parallel_exclusive_scan(Iterator beg, Iterator end, OutIterator out, T init,Func
 
 // version for moved ranges
 template <class Range, class OutRange, class T, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>,
+typename std::enable_if<!boost::asynchronous::detail::has_is_continuation_task<Range>::value,
                            boost::asynchronous::detail::callback_continuation<std::pair<Range,OutRange>,Job> >::type
 parallel_exclusive_scan(Range&& range,OutRange&& out_range,T init,Func f,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS

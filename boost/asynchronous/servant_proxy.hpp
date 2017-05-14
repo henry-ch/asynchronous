@@ -39,7 +39,7 @@
 #include <boost/thread/future.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/type_traits/has_trivial_constructor.hpp>
-#include <boost/utility/enable_if.hpp>
+#include <type_traits>
 #include <boost/mpl/has_xxx.hpp>
 #include <boost/preprocessor/facilities/overload.hpp>
 
@@ -110,8 +110,6 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
 #define BOOST_ASYNC_POST_MEMBER_LOG(...)                                                                        \
     BOOST_PP_OVERLOAD(BOOST_ASYNC_POST_MEMBER_LOG_,__VA_ARGS__)(__VA_ARGS__)
 
-// with this, will not compile with gcc 4.7 :(
-// ,typename boost::disable_if< boost::is_same<void,decltype(m_servant->funcname(args...))> >::type* dummy = 0
 #ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
 #ifdef BOOST_NO_CXX14_RETURN_TYPE_DEDUCTION
 #define BOOST_ASYNC_FUTURE_MEMBER_LOG_2(funcname,taskname)                                                                                                  \
@@ -232,7 +230,7 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
 #define BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK_1(funcname)                                                                                              \
     template <typename F,typename... Args>                                                                                                          \
     auto funcname(F&& cb_func, Args... args)const                                                                                                   \
-    -> typename boost::disable_if<boost::is_same<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...)),void>,void>::type        \
+    -> typename std::enable_if<!boost::is_same<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...)),void>::value,void>::type   \
     {                                                                                                                                               \
         struct workaround_gcc{typedef decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...)) servant_return;};                   \
         auto servant = this->m_servant;                                                                                                             \
@@ -247,7 +245,7 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
     }                                                                                                                                               \
     template <typename F,typename... Args>                                                                                                          \
     auto funcname(F&& cb_func, Args... args)const                                                                                                   \
-    -> typename boost::enable_if<boost::is_same<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...)),void>,void>::type         \
+    -> typename std::enable_if<boost::is_same<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...)),void>::value,void>::type         \
     {                                                                                                                                               \
         auto servant = this->m_servant;                                                                                                             \
         std::size_t prio = 100000 * this->m_offset_id;                                                                                              \
@@ -263,7 +261,7 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
 #define BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK_2(funcname,prio)                                                                                         \
     template <typename F,typename... Args>                                                                                                          \
     auto funcname(F&& cb_func, Args... args)const                                                                                                   \
-    -> typename boost::disable_if<boost::is_same<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...)),void>,void>::type        \
+    -> typename std::enable_if<!boost::is_same<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...)),void>::value,void>::type   \
     {                                                                                                                                               \
         struct workaround_gcc{typedef decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...)) servant_return;};                   \
         auto servant = this->m_servant;                                                                                                             \
@@ -278,7 +276,7 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
     }                                                                                                                                               \
     template <typename F,typename... Args>                                                                                                          \
     auto funcname(F&& cb_func, Args... args)const                                                                                                   \
-    -> typename boost::enable_if<boost::is_same<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...)),void>,void>::type         \
+    -> typename std::enable_if<boost::is_same<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...)),void>::value,void>::type         \
     {                                                                                                                                               \
         auto servant = this->m_servant;                                                                                                             \
         std::size_t p = prio + 100000 * this->m_offset_id;                                                                                          \
@@ -298,7 +296,7 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
 #define BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK_LOG_2(funcname,taskname)                                                                                 \
     template <typename F,typename... Args>                                                                                                          \
     auto funcname(F&& cb_func, Args... args)const                                                                                                   \
-    -> typename boost::disable_if<boost::is_same<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...)),void>,void>::type        \
+    -> typename std::enable_if<!boost::is_same<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...)),void>::value,void>::type   \
     {                                                                                                                                               \
         struct workaround_gcc{typedef decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...)) servant_return;};                   \
         auto servant = this->m_servant;                                                                                                             \
@@ -313,7 +311,7 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
     }                                                                                                                                               \
     template <typename F,typename... Args>                                                                                                          \
     auto funcname(F&& cb_func, Args... args)const                                                                                                   \
-    -> typename boost::enable_if<boost::is_same<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...)),void>,void>::type         \
+    -> typename std::enable_if<boost::is_same<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...)),void>::value,void>::type    \
     {                                                                                                                                               \
         auto servant = this->m_servant;                                                                                                             \
         std::size_t prio = 100000 * this->m_offset_id;                                                                                              \
@@ -329,7 +327,7 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
 #define BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK_LOG_3(funcname,taskname,prio)                                                                            \
     template <typename F,typename... Args>                                                                                                          \
     auto funcname(F&& cb_func, Args... args)const                                                                                                   \
-    -> typename boost::disable_if<boost::is_same<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...)),void>,void>::type        \
+    -> typename std::enable_if<!boost::is_same<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...)),void>::value,void>::type   \
     {                                                                                                                                               \
         struct workaround_gcc{typedef decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...)) servant_return;};                   \
         auto servant = this->m_servant;                                                                                                             \
@@ -344,7 +342,7 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
     }                                                                                                                                               \
     template <typename F,typename... Args>                                                                                                          \
     auto funcname(F&& cb_func, Args... args)const                                                                                                   \
-    -> typename boost::enable_if<boost::is_same<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...)),void>,void>::type         \
+    -> typename std::enable_if<boost::is_same<decltype(boost::shared_ptr<servant_type>()->funcname(std::move(args)...)),void>::value,void>::type         \
     {                                                                                                                                               \
         auto servant = this->m_servant;                                                                                                             \
         std::size_t p = prio + 100000 * this->m_offset_id;                                                                                          \
@@ -479,7 +477,7 @@ public:
 protected:
     // AnotherProxy must be a derived class of a servant_proxy (used by dynamic_servant_proxy_cast)
     template <class AnotherProxy>
-    servant_proxy(AnotherProxy p, typename boost::enable_if<boost::asynchronous::has_servant_type<AnotherProxy>>::type* = 0)BOOST_NOEXCEPT
+    servant_proxy(AnotherProxy p, typename std::enable_if<boost::asynchronous::has_servant_type<AnotherProxy>::value>::type* = 0)BOOST_NOEXCEPT
         : m_proxy(p.m_proxy)
         , m_servant(boost::dynamic_pointer_cast<typename AnotherProxy::servant_type>(p.m_servant))
         , m_offset_id(0)
@@ -692,11 +690,9 @@ public:
 private:
     // safe creation of servant in our thread ctor is trivial or told us so
     template <typename S,typename... Args>
-    typename boost::enable_if<
-                typename ::boost::mpl::or_<
-                    typename boost::has_trivial_constructor<S>::type,
-                    typename boost::asynchronous::has_simple_ctor<S>::type
-                >,
+    typename std::enable_if<
+                boost::has_trivial_constructor<S>::value ||
+                boost::asynchronous::has_simple_ctor<S>::value,
             void>::type
     init_servant_proxy(Args... args)
     {
@@ -706,11 +702,9 @@ private:
     }
     // ctor has to be posted
     template <typename S,typename... Args>
-    typename boost::disable_if<
-                typename ::boost::mpl::or_<
-                    typename boost::has_trivial_constructor<S>::type,
-                    typename boost::asynchronous::has_simple_ctor<S>::type
-                >,
+    typename std::enable_if<
+                !(boost::has_trivial_constructor<S>::value ||
+                  boost::asynchronous::has_simple_ctor<S>::value),
             void>::type
     init_servant_proxy(Args... args)
     {
@@ -762,13 +756,9 @@ private:
     {
         template <typename S,typename... Args>
         static
-        typename boost::enable_if<  typename ::boost::mpl::or_<
-                                            typename boost::asynchronous::has_requires_weak_scheduler<S>::type,
-                                            typename ::boost::mpl::or_<
-                                                typename boost::has_trivial_constructor<S>::type,
-                                                typename boost::asynchronous::has_simple_ctor<S>::type
-                                            >::type
-                                          >::type,
+        typename std::enable_if< boost::asynchronous::has_requires_weak_scheduler<S>::value ||
+                                 boost::has_trivial_constructor<S>::value ||
+                                 boost::asynchronous::has_simple_ctor<S>::value,
         boost::shared_ptr<servant_type> >::type
         create(weak_scheduler_proxy_type proxy,Args... args)
         {
@@ -777,14 +767,10 @@ private:
         }
         template <typename S,typename... Args>
         static
-        typename boost::disable_if<  typename ::boost::mpl::or_<
-                                            typename boost::asynchronous::has_requires_weak_scheduler<S>::type,
-                                            typename ::boost::mpl::or_<
-                                                typename boost::has_trivial_constructor<S>::type,
-                                                typename boost::asynchronous::has_simple_ctor<S>::type
-                                            >::type
-                                          >::type,
-        boost::shared_ptr<servant_type> >::type
+        typename std::enable_if<!(boost::asynchronous::has_requires_weak_scheduler<S>::value ||
+                                  boost::has_trivial_constructor<S>::value ||
+                                  boost::asynchronous::has_simple_ctor<S>::value),
+                                boost::shared_ptr<servant_type> >::type
         create(weak_scheduler_proxy_type ,Args... args)
         {
             boost::shared_ptr<servant_type> res = boost::make_shared<servant_type>(std::move(args)...);

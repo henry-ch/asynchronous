@@ -14,6 +14,7 @@
 #include <tuple>
 #include <utility>
 #include <atomic>
+#include <type_traits>
 
 #include <functional>
 #include <boost/shared_ptr.hpp>
@@ -836,7 +837,7 @@ struct callback_continuation
         }
     };
     template<int I,class Task>
-    struct task_type_selector<I,Task,typename ::boost::enable_if< boost::asynchronous::detail::has_is_callback_continuation_task<Task> >::type>
+    struct task_type_selector<I,Task,typename std::enable_if< boost::asynchronous::detail::has_is_callback_continuation_task<Task>::value >::type>
     {
         template <typename S,typename Interruptibles,typename F>
         static void construct(S& ,Interruptibles&,F& func, boost::shared_ptr<boost::asynchronous::detail::interrupt_state>,bool,
@@ -865,7 +866,7 @@ struct callback_continuation
     }
 
     template <int I,typename T,typename Interruptibles,typename... ArgsTuple>
-    typename boost::enable_if_c<I == sizeof...(ArgsTuple)-1,void>::type
+    typename std::enable_if<I == sizeof...(ArgsTuple)-1,void>::type
     continuation_ctor_helper_tuple(T& sched, Interruptibles& interruptibles,std::tuple<ArgsTuple...>& l)
     {
         std::string n(std::move(std::get<I>(l).get_name()));
@@ -901,7 +902,7 @@ struct callback_continuation
     }
 
     template <int I,typename T,typename Interruptibles,typename... ArgsTuple>
-    typename boost::disable_if_c<I == sizeof...(ArgsTuple)-1,void>::type
+    typename std::enable_if<!(I == sizeof...(ArgsTuple)-1),void>::type
     continuation_ctor_helper_tuple(T& sched, Interruptibles& interruptibles,std::tuple<ArgsTuple...>& front)
     {
         auto finished = m_finished;
@@ -1151,7 +1152,7 @@ struct callback_continuation_as_seq
     };
     template <class Continuation>
     struct callback_continuation_wrapper<Continuation,
-                                         typename ::boost::enable_if<boost::is_same<typename Continuation::return_type,void> >::type>
+                                         typename std::enable_if<boost::is_same<typename Continuation::return_type,void>::value >::type>
             : public boost::asynchronous::continuation_task<void>
     {
         callback_continuation_wrapper(Continuation cont)
@@ -1422,24 +1423,28 @@ template <typename Front,typename... Tail>
 struct has_future_args_helper
 {
     typedef typename boost::asynchronous::has_state<Front>::type type;
+    enum {value = type::value};
 };
 
 template <typename... Args>
 struct has_future_args
 {
     typedef typename has_future_args_helper<Args...>::type type;
+    enum {value = type::value};
 };
 
 template <typename Front,typename... Tail>
 struct has_iterator_args_helper
 {
     typedef typename boost::asynchronous::has_iterator<Front>::type type;
+    enum {value = type::value};
 };
 
 template <typename... Args>
 struct has_iterator_args
 {
     typedef typename has_iterator_args_helper<Args...>::type type;
+    enum {value = type::value};
 };
 
 }}}

@@ -14,7 +14,7 @@
 #include <vector>
 
 #include <boost/thread/future.hpp>
-#include <boost/utility/enable_if.hpp>
+#include <type_traits>
 #include <boost/serialization/vector.hpp>
 
 #include <boost/asynchronous/detail/any_interruptible.hpp>
@@ -70,7 +70,7 @@ private:
     std::size_t prio_;
 };
 template <class Continuation, class Func, class Job,class Return>
-struct invoke_helper<Continuation,Func,Job,Return,typename ::boost::enable_if<boost::asynchronous::detail::is_serializable<Func> >::type>
+struct invoke_helper<Continuation,Func,Job,Return,typename std::enable_if<boost::asynchronous::detail::is_serializable<Func>::value >::type>
         : public boost::asynchronous::continuation_task<Return>
         , public boost::asynchronous::serializable_task
 {
@@ -126,7 +126,7 @@ auto invoke(Continuation c,Func func,
             const std::string& task_name = "", std::size_t prio = 0
 #endif
             )
-    -> typename boost::enable_if<boost::asynchronous::detail::has_is_continuation_task<Continuation>,
+    -> typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Continuation>::value,
             boost::asynchronous::detail::callback_continuation<decltype(func(typename Continuation::return_type())),Job> >::type
 {
     return boost::asynchronous::top_level_callback_continuation_job<decltype(func(typename Continuation::return_type())),Job>

@@ -15,7 +15,6 @@
 #include <string>
 #include <tuple>
 #include <type_traits>
-
 #include <boost/asynchronous/detail/any_interruptible.hpp>
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/detail/continuation_impl.hpp>
@@ -31,7 +30,7 @@
 #include <boost/range/end.hpp>
 #include <boost/range/iterator_range.hpp>
 
-#include <boost/utility/enable_if.hpp>
+#include <type_traits>
 
 namespace boost { namespace asynchronous
 {
@@ -39,11 +38,11 @@ namespace boost { namespace asynchronous
 namespace detail {
 
 template <class Tuple, std::size_t Size = std::tuple_size<Tuple>::value, std::size_t Index = 0>
-typename boost::disable_if_c<Index < Size, void>::type
+typename std::enable_if<!(Index < Size), void>::type
 advance_iterators(Tuple & /* tuple */, std::size_t /* distance */) { /* Index >= Size, do nothing */ }
 
 template <class Tuple, std::size_t Size = std::tuple_size<Tuple>::value, std::size_t Index = 0>
-typename boost::enable_if_c<Index < Size, void>::type
+typename std::enable_if<Index < Size, void>::type
 advance_iterators(Tuple & tuple, std::size_t distance) {
     std::advance(std::get<Index>(tuple), distance);
     advance_iterators<Tuple, Size, Index + 1>(tuple, distance);
@@ -173,7 +172,7 @@ struct parallel_transform_helper : public boost::asynchronous::continuation_task
 
 // version for iterators => will return nothing
 template<class Iterator, class ResultIterator, class Func, class Job = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<boost::asynchronous::detail::has_iterator_category<std::iterator_traits<Iterator> >,
+typename std::enable_if<boost::asynchronous::detail::has_iterator_category<std::iterator_traits<Iterator> >::value,
                           boost::asynchronous::detail::callback_continuation<ResultIterator, Job> >::type
 parallel_transform(Iterator begin, Iterator end, ResultIterator result, Func func, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -268,7 +267,7 @@ struct parallel_transform2_helper : public boost::asynchronous::continuation_tas
 
 // version for two iterators => will return nothing
 template<class Iterator1, class Iterator2, class ResultIterator, class Func, class Job = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::enable_if<boost::asynchronous::detail::has_iterator_category<std::iterator_traits<Iterator1> >,
+typename std::enable_if<boost::asynchronous::detail::has_iterator_category<std::iterator_traits<Iterator1> >::value,
                           boost::asynchronous::detail::callback_continuation<ResultIterator, Job> >::type
 parallel_transform(Iterator1 begin1, Iterator1 end1, Iterator2 begin2, ResultIterator result, Func func, long cutoff, std::string const & task_name = "", std::size_t prio = 0)
 {
@@ -350,8 +349,8 @@ struct parallel_transform_range_helper : public boost::asynchronous::continuatio
 
 // version for ranges held only by reference => will return nothing (void)
 template<class Range, class ResultIterator, class Func, class Job = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::disable_if<boost::asynchronous::detail::has_iterator_category<std::iterator_traits<Range> >,
-                           boost::asynchronous::detail::callback_continuation<ResultIterator, Job> >::type
+typename std::enable_if<!boost::asynchronous::detail::has_iterator_category<std::iterator_traits<Range> >::value,
+                        boost::asynchronous::detail::callback_continuation<ResultIterator, Job> >::type
 parallel_transform(Range & range, ResultIterator result, Func func, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                      const std::string& task_name, std::size_t prio=0)
@@ -442,8 +441,8 @@ struct parallel_transform2_range_helper : public boost::asynchronous::continuati
 
 // version for two ranges held only by reference => will return nothing (void)
 template<class Range1, class Range2, class ResultIterator, class Func, class Job = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-typename boost::disable_if<boost::asynchronous::detail::has_iterator_category<std::iterator_traits<Range1> >,
-                           boost::asynchronous::detail::callback_continuation<ResultIterator, Job> >::type
+typename std::enable_if<!boost::asynchronous::detail::has_iterator_category<std::iterator_traits<Range1> >::value,
+                         boost::asynchronous::detail::callback_continuation<ResultIterator, Job> >::type
 parallel_transform(Range1 & range1, Range2 & range2, ResultIterator result, Func func, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                      const std::string& task_name, std::size_t prio=0)
@@ -557,7 +556,7 @@ parallel_transform(ResultIterator result, Func func, Iterator begin, Iterator en
 
 // version for any number of ranges (held by reference) not with ICC
 template <class ResultIterator, class Func, class Job, class Range, class... Ranges>
-typename boost::disable_if<boost::asynchronous::detail::has_is_continuation_task<Range>, boost::asynchronous::detail::callback_continuation<ResultIterator, Job>>::type
+typename std::enable_if<!boost::asynchronous::detail::has_is_continuation_task<Range>::value, boost::asynchronous::detail::callback_continuation<ResultIterator, Job>>::type
 parallel_transform(ResultIterator result, Func func, Range & range, Ranges & ... ranges, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                    const std::string& task_name, std::size_t prio=0)

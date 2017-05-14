@@ -451,8 +451,8 @@ private:
 
     template< class Sched, class... Args >
     friend
-    typename boost::disable_if<boost::asynchronous::has_self_proxy_creation<Sched>,
-                               boost::asynchronous::any_shared_scheduler_proxy<typename Sched::job_type> >::type
+    typename std::enable_if<!boost::asynchronous::has_self_proxy_creation<Sched>::value,
+                            boost::asynchronous::any_shared_scheduler_proxy<typename Sched::job_type> >::type
     make_shared_scheduler_proxy(Args && ... args);
 };
 
@@ -508,7 +508,7 @@ boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type> create_sha
  * \return any_shared_scheduler_proxy<job>, job type being given by the queue, default BOOST_ASYNCHRONOUS_DEFAULT_JOB (any_callable by default)
  */
 template< class S, class... Args >
-typename boost::disable_if<boost::asynchronous::has_self_proxy_creation<S>,
+typename std::enable_if<!boost::asynchronous::has_self_proxy_creation<S>::value,
                            boost::asynchronous::any_shared_scheduler_proxy<typename S::job_type> >::type
 make_shared_scheduler_proxy(Args && ... args)
 {

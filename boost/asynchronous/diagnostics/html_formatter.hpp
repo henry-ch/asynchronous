@@ -14,8 +14,6 @@
 #include <type_traits>
 #include <vector>
 
-#include <boost/core/enable_if.hpp>
-
 #include <boost/asynchronous/scheduler_diagnostics.hpp>
 #include <boost/asynchronous/diagnostics/basic_formatter.hpp>
 #include <boost/asynchronous/diagnostics/scheduler_interface.hpp>
