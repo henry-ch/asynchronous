@@ -94,7 +94,7 @@ BOOST_AUTO_TEST_CASE( test_post_self )
                                                                             boost::asynchronous::lockfree_queue<>>>();
 
         std::shared_ptr<boost::promise<void> > done(new boost::promise<void>);
-        boost::shared_future<void> end=done->get_future();
+        boost::future<void> end=done->get_future();
         {
             ServantProxy proxy(scheduler);
             proxy.start_posting(done);

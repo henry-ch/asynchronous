@@ -70,14 +70,14 @@ struct Servant : boost::asynchronous::trackable_servant<>
         servant_dtor = true;
     }
 
-    boost::shared_future<void> test_parallel_partial_sort_it_small()
+    boost::future<void> test_parallel_partial_sort_it_small()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant async work not posted.");
         generate(m_data1,100000,90000);
         auto data_copy = m_data1;
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
 
@@ -117,14 +117,14 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
-    boost::shared_future<void> test_parallel_partial_sort_it_big()
+    boost::future<void> test_parallel_partial_sort_it_big()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant async work not posted.");
         generate(m_data1,100000,90000);
         auto data_copy = m_data1;
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
 
@@ -164,14 +164,14 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
-    boost::shared_future<void> test_parallel_partial_sort_it_dense()
+    boost::future<void> test_parallel_partial_sort_it_dense()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant async work not posted.");
         generate(m_data1,100000,20000);
         auto data_copy = m_data1;
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
 
@@ -237,10 +237,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_partial_sort_it_small)
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.test_parallel_partial_sort_it_small();
+        boost::future<boost::future<void> > fuv = proxy.test_parallel_partial_sort_it_small();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -259,10 +259,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_partial_sort_it_big)
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.test_parallel_partial_sort_it_big();
+        boost::future<boost::future<void> > fuv = proxy.test_parallel_partial_sort_it_big();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -281,10 +281,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_partial_sort_it_dense)
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.test_parallel_partial_sort_it_dense();
+        boost::future<boost::future<void> > fuv = proxy.test_parallel_partial_sort_it_dense();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)

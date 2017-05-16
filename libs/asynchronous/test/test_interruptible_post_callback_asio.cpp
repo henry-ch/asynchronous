@@ -7,6 +7,8 @@
 //
 // For more information, see http://www.boost.org
 
+#include <future>
+
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
@@ -29,16 +31,16 @@ struct Servant : boost::asynchronous::trackable_servant<>
         : boost::asynchronous::trackable_servant<>(scheduler,
                                                boost::asynchronous::make_shared_scheduler_proxy<
                                                    boost::asynchronous::asio_scheduler<>>(1))
-        , m_ready(new boost::promise<void>)
+        , m_ready(new std::promise<void>)
     {
     }
     ~Servant(){BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant dtor not posted.");}
 
-    boost::shared_future<boost::asynchronous::any_interruptible> start_async_work(std::shared_ptr<boost::promise<void> > p)
+    std::future<boost::asynchronous::any_interruptible> start_async_work(std::shared_ptr<std::promise<void> > p)
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work not posted.");
-        boost::promise<boost::asynchronous::any_interruptible> apromise;
-        boost::shared_future<boost::asynchronous::any_interruptible> fu = apromise.get_future();
+        std::promise<boost::asynchronous::any_interruptible> apromise;
+        std::future<boost::asynchronous::any_interruptible> fu = apromise.get_future();
         // start long tasks
         boost::asynchronous::any_interruptible interruptible =
         interruptible_post_callback(
@@ -49,20 +51,20 @@ struct Servant : boost::asynchronous::trackable_servant<>
         return fu;
     }
     std::pair<
-       std::shared_ptr<boost::promise<void> >,
-       boost::shared_future<boost::asynchronous::any_interruptible>
+       std::shared_ptr<std::promise<void> >,
+       std::future<boost::asynchronous::any_interruptible>
     >
     start_async_work2()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work2 not posted.");
         
         // post blocking funtion, until dtor done
-        boost::shared_future<void> fu=m_ready->get_future();
+        std::shared_future<void> fu=m_ready->get_future();
         auto blocking = [fu]() mutable {fu.get();};
         get_worker().post(blocking);
         
-        boost::promise<boost::asynchronous::any_interruptible> apromise;
-        boost::shared_future<boost::asynchronous::any_interruptible> fu2 = apromise.get_future();
+        std::promise<boost::asynchronous::any_interruptible> apromise;
+        std::future<boost::asynchronous::any_interruptible> fu2 = apromise.get_future();
         // start long tasks
         boost::asynchronous::any_interruptible interruptible =
         interruptible_post_callback(
@@ -70,11 +72,11 @@ struct Servant : boost::asynchronous::trackable_servant<>
            [](boost::asynchronous::expected<void> ){BOOST_ERROR( "unexpected call of callback" );}// should not be called
         );
         apromise.set_value(interruptible);
-        return std::make_pair(m_ready,fu2);
+        return std::make_pair(m_ready,std::move(fu2));
     }
 
 private:
-    std::shared_ptr<boost::promise<void> > m_ready;
+    std::shared_ptr<std::promise<void> > m_ready;
 };
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>
 {
@@ -94,12 +96,12 @@ BOOST_AUTO_TEST_CASE( test_interrupt_running_task_asio )
     {
         auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
                                                                             boost::asynchronous::lockfree_queue<>>>();
-        std::shared_ptr<boost::promise<void> > p(new boost::promise<void>);
-        boost::shared_future<void> end=p->get_future();
+        std::shared_ptr<std::promise<void> > p(new std::promise<void>);
+        std::future<void> end=p->get_future();
         {
             ServantProxy proxy(scheduler);
-            boost::shared_future<boost::shared_future<boost::asynchronous::any_interruptible> > fu = proxy.start_async_work(p);
-            boost::shared_future<boost::asynchronous::any_interruptible> resfu = fu.get();
+            boost::future<std::future<boost::asynchronous::any_interruptible> > fu = proxy.start_async_work(p);
+            std::future<boost::asynchronous::any_interruptible> resfu = fu.get();
             boost::asynchronous::any_interruptible res = resfu.get();
             end.get();
             res.interrupt();
@@ -115,12 +117,12 @@ BOOST_AUTO_TEST_CASE( test_interrupt_not_running_task_asio )
                                                                             boost::asynchronous::lockfree_queue<>>>();
         {
             typedef std::pair<
-                    std::shared_ptr<boost::promise<void> >,
-                    boost::shared_future<boost::asynchronous::any_interruptible>
+                    std::shared_ptr<std::promise<void> >,
+                    std::future<boost::asynchronous::any_interruptible>
                  > res_type;
             
             ServantProxy proxy(scheduler);
-            boost::shared_future<res_type> fu = proxy.start_async_work2();
+            boost::future<res_type> fu = proxy.start_async_work2();
             res_type res = fu.get();
             boost::asynchronous::any_interruptible i = res.second.get();
             // provoke interrupt before job starts

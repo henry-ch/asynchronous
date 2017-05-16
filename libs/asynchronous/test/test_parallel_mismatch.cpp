@@ -59,12 +59,12 @@ struct Servant : boost::asynchronous::trackable_servant<>
         servant_dtor = true;
     }
 
-    boost::shared_future<void> start_parallel_mismatch_none()
+    boost::future<void> start_parallel_mismatch_none()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"start_parallel_mismatch_none not posted.");
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         m_data2 = m_data;
@@ -89,7 +89,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
-    boost::shared_future<void> start_parallel_mismatch_normal()
+    boost::future<void> start_parallel_mismatch_normal()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"start_parallel_mismatch_normal not posted.");
         m_data2=m_data;
@@ -97,7 +97,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         std::random_shuffle(m_data.begin(),m_data.end());
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -125,12 +125,12 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
-    boost::shared_future<void> start_parallel_mismatch2_none()
+    boost::future<void> start_parallel_mismatch2_none()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"start_parallel_mismatch2_none not posted.");
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         m_data2 = m_data;
@@ -155,7 +155,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
-    boost::shared_future<void> start_parallel_mismatch2_normal()
+    boost::future<void> start_parallel_mismatch2_normal()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"start_parallel_mismatch2_normal not posted.");
         m_data2=m_data;
@@ -163,7 +163,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         std::random_shuffle(m_data.begin(),m_data.end());
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -221,10 +221,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_mismatch_none )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_parallel_mismatch_none();
+        boost::future<boost::future<void> > fuv = proxy.start_parallel_mismatch_none();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -243,10 +243,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_mismatch_normal )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_parallel_mismatch_normal();
+        boost::future<boost::future<void> > fuv = proxy.start_parallel_mismatch_normal();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -264,10 +264,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_mismatch_normal )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_parallel_mismatch2_none();
+        boost::future<boost::future<void> > fuv = proxy.start_parallel_mismatch2_none();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -286,10 +286,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_mismatch2_normal )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_parallel_mismatch2_normal();
+        boost::future<boost::future<void> > fuv = proxy.start_parallel_mismatch2_normal();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)

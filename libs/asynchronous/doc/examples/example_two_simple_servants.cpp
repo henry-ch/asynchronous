@@ -47,11 +47,11 @@ struct Servant2 : public boost::asynchronous::trackable_servant<>
         :boost::asynchronous::trackable_servant<>(scheduler)
         ,m_worker(worker)
     {}
-    boost::shared_future<void> doIt()
+    boost::future<void> doIt()
     {
         // we return a future so that the caller knows when we're done.
         std::shared_ptr<boost::promise<void> > p (new boost::promise<void>);
-        boost::shared_future<void> fu = p->get_future();
+        auto fu = p->get_future();
         call_callback(m_worker.get_proxy(),
                       m_worker.foo(),
                       // callback functor.
@@ -98,8 +98,8 @@ void example_two_simple_servants()
         {
             ServantProxy proxy(scheduler,42);
             ServantProxy2 proxy2(scheduler2,proxy);
-            boost::shared_future<boost::shared_future<void> > fu = proxy2.doIt();
-            boost::shared_future<void> fu2 = fu.get();
+            auto fu = proxy2.doIt();
+            auto fu2 = fu.get();
             fu2.get();
         }
     }

@@ -84,7 +84,7 @@ BOOST_AUTO_TEST_CASE( test_post_self_interrupt )
 
         std::shared_ptr<boost::promise<void> > done(new boost::promise<void>);
         std::shared_ptr<boost::promise<void> > ready(new boost::promise<void>);
-        boost::shared_future<void> end=ready->get_future();
+        boost::future<void> end=ready->get_future();
         {
             ServantProxy proxy(scheduler);
             boost::future<std::tuple<boost::future<void>,boost::asynchronous::any_interruptible> > res = proxy.start_posting(done,ready);

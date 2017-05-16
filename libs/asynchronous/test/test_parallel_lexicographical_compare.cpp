@@ -59,12 +59,12 @@ struct Servant : boost::asynchronous::trackable_servant<>
         servant_dtor = true;
     }
 
-    boost::shared_future<void> start_parallel_lexicographical_compare_equal()
+    boost::future<void> start_parallel_lexicographical_compare_equal()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"start_parallel_lexicographical_compare_equal not posted.");
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         m_data2 = m_data;
@@ -89,12 +89,12 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
-    boost::shared_future<void> start_parallel_lexicographical_compare_less()
+    boost::future<void> start_parallel_lexicographical_compare_less()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"start_parallel_lexicographical_compare_less not posted.");
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         m_data2 = m_data;
@@ -120,12 +120,12 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
-    boost::shared_future<void> start_parallel_lexicographical_compare_greater()
+    boost::future<void> start_parallel_lexicographical_compare_greater()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"start_parallel_lexicographical_compare_greater not posted.");
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         m_data2 = m_data;
@@ -151,12 +151,12 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
-    boost::shared_future<void> start_parallel_lexicographical_compare_equal2()
+    boost::future<void> start_parallel_lexicographical_compare_equal2()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"start_parallel_lexicographical_compare_equal2 not posted.");
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         m_data2 = m_data;
@@ -181,12 +181,12 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
-    boost::shared_future<void> start_parallel_lexicographical_compare_less2()
+    boost::future<void> start_parallel_lexicographical_compare_less2()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"start_parallel_lexicographical_compare_less2 not posted.");
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         m_data2 = m_data;
@@ -212,12 +212,12 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
-    boost::shared_future<void> start_parallel_lexicographical_compare_greater2()
+    boost::future<void> start_parallel_lexicographical_compare_greater2()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"start_parallel_lexicographical_compare_greater2 not posted.");
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         m_data2 = m_data;
@@ -274,10 +274,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_lexicographical_compare_equal )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_parallel_lexicographical_compare_equal();
+        boost::future<boost::future<void> > fuv = proxy.start_parallel_lexicographical_compare_equal();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -296,10 +296,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_lexicographical_compare_less )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_parallel_lexicographical_compare_less();
+        boost::future<boost::future<void> > fuv = proxy.start_parallel_lexicographical_compare_less();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -318,10 +318,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_lexicographical_compare_greater )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_parallel_lexicographical_compare_greater();
+        boost::future<boost::future<void> > fuv = proxy.start_parallel_lexicographical_compare_greater();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -340,10 +340,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_lexicographical_compare_equal2 )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_parallel_lexicographical_compare_equal2();
+        boost::future<boost::future<void> > fuv = proxy.start_parallel_lexicographical_compare_equal2();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -362,10 +362,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_lexicographical_compare_less2 )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_parallel_lexicographical_compare_less2();
+        boost::future<boost::future<void> > fuv = proxy.start_parallel_lexicographical_compare_less2();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -384,10 +384,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_lexicographical_compare_greater2 )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_parallel_lexicographical_compare_greater2();
+        boost::future<boost::future<void> > fuv = proxy.start_parallel_lexicographical_compare_greater2();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)

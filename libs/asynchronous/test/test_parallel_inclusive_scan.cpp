@@ -79,7 +79,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         servant_dtor = true;
     }
 
-    boost::shared_future<void> test_inclusive_scan()
+    boost::future<void> test_inclusive_scan()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant async work not posted.");
         generate(m_data1,1000,700);
@@ -88,7 +88,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         auto data_copy2 = m_data2;
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -112,7 +112,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
-    boost::shared_future<void> test_inclusive_scan_moved_ranges()
+    boost::future<void> test_inclusive_scan_moved_ranges()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant async work not posted.");
         generate(m_data1,1000,700);
@@ -121,7 +121,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         auto data_copy2 = m_data2;
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -148,7 +148,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
-    boost::shared_future<void> test_inclusive_scan_moved_range()
+    boost::future<void> test_inclusive_scan_moved_range()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant async work not posted.");
         generate(m_data1,1000,700);
@@ -157,7 +157,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         auto data_copy2 = m_data2;
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -183,7 +183,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
-    boost::shared_future<void> test_inclusive_scan_continuation()
+    boost::future<void> test_inclusive_scan_continuation()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant async work not posted.");
         generate(m_data1,1000,700);
@@ -196,7 +196,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         auto data_copy2 = m_data2;
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -254,10 +254,10 @@ BOOST_AUTO_TEST_CASE( test_inclusive_scan )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.test_inclusive_scan();
+        boost::future<boost::future<void> > fuv = proxy.test_inclusive_scan();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -277,10 +277,10 @@ BOOST_AUTO_TEST_CASE( test_inclusive_scan_moved_ranges )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.test_inclusive_scan_moved_ranges();
+        boost::future<boost::future<void> > fuv = proxy.test_inclusive_scan_moved_ranges();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -300,10 +300,10 @@ BOOST_AUTO_TEST_CASE( test_inclusive_scan_moved_range )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.test_inclusive_scan_moved_range();
+        boost::future<boost::future<void> > fuv = proxy.test_inclusive_scan_moved_range();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -323,10 +323,10 @@ BOOST_AUTO_TEST_CASE( test_inclusive_scan_continuation )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.test_inclusive_scan_continuation();
+        boost::future<boost::future<void> > fuv = proxy.test_inclusive_scan_continuation();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)

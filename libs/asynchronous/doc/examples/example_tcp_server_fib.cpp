@@ -45,10 +45,10 @@ struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any
         m_promise->set_value(res);
     }
     // call to this is posted and executes in our (safe) single-thread scheduler
-    boost::shared_future<long> calc_fibonacci(long n,long cutoff)
+    boost::future<long> calc_fibonacci(long n,long cutoff)
     {
         // for testing purpose
-        boost::shared_future<long> fu = m_promise->get_future();
+        auto fu = m_promise->get_future();
         // start long tasks in threadpool (first lambda) and callback in our thread
         post_callback(
                     tcp_example::serializable_fib_task(n,cutoff)
@@ -97,10 +97,8 @@ void example_post_tcp_fib(long fibo_val,long cutoff)
         {
             ServantProxy proxy(scheduler);
             start = std::chrono::high_resolution_clock::now();
-            // result of BOOST_ASYNC_FUTURE_MEMBER is a shared_future,
-            // so we have a shared_future of a shared_future(result of start_async_work)
-            boost::shared_future<boost::shared_future<long> > fu = proxy.calc_fibonacci(fibo_val,cutoff);
-            boost::shared_future<long> resfu = fu.get();
+            auto fu = proxy.calc_fibonacci(fibo_val,cutoff);
+            auto resfu = fu.get();
             long res = resfu.get();
             stop = std::chrono::high_resolution_clock::now();
             std::cout << "res= " << res << std::endl;

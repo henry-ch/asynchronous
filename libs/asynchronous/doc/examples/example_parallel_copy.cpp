@@ -1,5 +1,5 @@
 #include <iostream>
-
+#include <future>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
@@ -30,7 +30,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                    boost::asynchronous::threadpool_scheduler<
                                                            boost::asynchronous::lockfree_queue<>>>(6))
         // for testing purpose
-        , m_promise(new boost::promise<void>)
+        , m_promise(new std::promise<void>)
         , m_data(10000, TEST_VALUE - 2)
         , m_target(10000, -TEST_VALUE)
     {
@@ -61,10 +61,10 @@ struct Servant : boost::asynchronous::trackable_servant<>
         m_promise->set_value();
     }
     // call to this is posted and executes in our (safe) single-thread scheduler
-    boost::shared_future<void> start_async_work()
+    std::shared_future<void> start_async_work()
     {
         // for testing purpose
-        boost::shared_future<void> fu = m_promise->get_future();
+        std::shared_future<void> fu = m_promise->get_future();
         // start long tasks in threadpool (first lambda) and callback in our thread
         // we know the data will be alive until the end so we can use "this"
         post_callback(
@@ -89,7 +89,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     }
 private:
 // for testing
-std::shared_ptr<boost::promise<void> > m_promise;
+std::shared_ptr<std::promise<void> > m_promise;
 std::vector<int> m_data;
 std::vector<int> m_target;
 };
@@ -116,8 +116,8 @@ void example_copy()
                                      boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler);
-            boost::shared_future<boost::shared_future<void> > fu = proxy.start_async_work();
-            boost::shared_future<void> resfu = fu.get();
+            auto fu = proxy.start_async_work();
+            auto resfu = fu.get();
             resfu.get();
         }
     }

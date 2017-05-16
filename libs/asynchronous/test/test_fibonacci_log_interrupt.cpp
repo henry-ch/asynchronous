@@ -87,11 +87,11 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
     {
     }
     // call to this is posted and executes in our (safe) single-thread scheduler
-    std::pair<boost::shared_future<long>, boost::asynchronous::any_interruptible> calc_fibonacci(long n,long cutoff)
+    std::pair<boost::future<long>, boost::asynchronous::any_interruptible> calc_fibonacci(long n,long cutoff)
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant calc_fibonacci not posted.");
         // for testing purpose
-        boost::shared_future<long> fu = m_promise->get_future();
+        auto fu = m_promise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<servant_job> tp =get_worker();
         tpids = tp.thread_ids();
         // start long tasks in threadpool (first lambda) and callback in our thread
@@ -119,7 +119,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
                },// callback functor.
                "calc_fibonacci"
         );
-        return std::make_pair(fu,interruptible);
+        return std::make_pair(std::move(fu),interruptible);
     }
     // threadpool diagnostics
     diag_type get_diagnostics() const
@@ -162,15 +162,15 @@ BOOST_AUTO_TEST_CASE( test_fibonacci_100_100_log_interrupt )
 
         {
             ServantProxy proxy(scheduler);
-            boost::shared_future<std::pair<boost::shared_future<long>, boost::asynchronous::any_interruptible>  > fu = proxy.calc_fibonacci(fibo_val,cutoff);
-            std::pair<boost::shared_future<long>, boost::asynchronous::any_interruptible>  resfu = fu.get();
+            boost::future<std::pair<boost::future<long>, boost::asynchronous::any_interruptible>  > fu = proxy.calc_fibonacci(fibo_val,cutoff);
+            std::pair<boost::future<long>, boost::asynchronous::any_interruptible>  resfu = fu.get();
             // ok we decide it takes too long, interrupt
             boost::this_thread::sleep(boost::posix_time::milliseconds(100));
             resfu.second.interrupt();
             boost::this_thread::sleep(boost::posix_time::milliseconds(300));
             BOOST_CHECK_MESSAGE(!resfu.first.has_value(),"fibonacci should not be ready");
             //check if we found our 2 interrupted fibonacci tasks
-            boost::shared_future<diag_type> fu_diag = proxy.get_diagnostics();
+            auto fu_diag = proxy.get_diagnostics();
             diag_type diag = fu_diag.get();
             bool fib_99_called=false;
             bool fib_98_called=false;

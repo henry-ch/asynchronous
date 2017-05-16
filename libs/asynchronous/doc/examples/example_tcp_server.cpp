@@ -55,11 +55,11 @@ struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any
         }
     }
     // call to this is posted and executes in our (safe) single-thread scheduler
-    boost::shared_future<int> start_async_work()
+    boost::future<int> start_async_work()
     {
         std::cout << "start_async_work()" << std::endl;
         // for testing purpose
-        boost::shared_future<int> fu = m_promise->get_future();
+        auto fu = m_promise->get_future();
         // start long tasks in threadpool (first lambda) and callback in our thread
         for (int i =0 ;i < 10 ; ++i)
         {
@@ -110,10 +110,8 @@ void example_post_tcp()
                                      boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler);
-            // result of BOOST_ASYNC_FUTURE_MEMBER is a shared_future,
-            // so we have a shared_future of a shared_future(result of start_async_work)
-            boost::shared_future<boost::shared_future<int> > fu = proxy.start_async_work();
-            boost::shared_future<int> resfu = fu.get();
+            auto fu = proxy.start_async_work();
+            auto resfu = fu.get();
             int res = resfu.get();
             std::cout << "res==45? " << std::boolalpha << (res == 45) << std::endl;// 1+2..9.
         }
@@ -132,7 +130,7 @@ void example_tcp_post_future()
                     boost::asynchronous::tcp_server_scheduler<
                             boost::asynchronous::lockfree_queue<boost::asynchronous::any_serializable>>>
                                 (workers,"localhost",12345);
-        boost::shared_future<int> fui = boost::asynchronous::post_future(pool, dummy_tcp_task(42));
+        auto fui = boost::asynchronous::post_future(pool, dummy_tcp_task(42));
         int res = fui.get();
         std::cout << "res==42? " << std::boolalpha << (res == 42) << std::endl;// of course 42.
     }

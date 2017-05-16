@@ -10,6 +10,7 @@
 
 #include <vector>
 #include <set>
+#include <future>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
@@ -51,23 +52,23 @@ struct Servant : boost::asynchronous::trackable_servant<>
         if (!!m_dtor_done)
             m_dtor_done->set_value();
     }
-    boost::shared_future<void> start_async_work(size_t cpt)
+    std::future<void> start_async_work(size_t cpt)
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work not posted.");
         m_counter = cpt;
         m_current=0;
         m_worker_ids.clear();
-        std::shared_ptr<boost::promise<void> > apromise(new boost::promise<void>);
-        boost::promise<void> block_promise;
-        boost::shared_future<void> fub = block_promise.get_future();
-        std::vector<boost::shared_future<void> > first_tasks;
+        std::shared_ptr<std::promise<void> > apromise(new std::promise<void>);
+        std::promise<void> block_promise;
+        std::shared_future<void> fub = block_promise.get_future();
+        std::vector<std::shared_future<void> > first_tasks;
         // start long tasks
         for (size_t i = 0; i< m_counter ; ++i)
         {
-            std::shared_ptr<boost::promise<void> > bpromise(new boost::promise<void>);
+            std::shared_ptr<std::promise<void> > bpromise(new std::promise<void>);
             if (i<4)
             {
-                boost::shared_future<void> fubp = bpromise->get_future();
+                std::shared_future<void> fubp = bpromise->get_future();
                 first_tasks.push_back(fubp);
             }
             post_callback(
@@ -94,16 +95,16 @@ struct Servant : boost::asynchronous::trackable_servant<>
         return apromise->get_future();
     }
 
-    boost::shared_future<void> test_many_tasks(size_t cpt)
+    std::future<void> test_many_tasks(size_t cpt)
     {
         this->set_worker(boost::asynchronous::make_shared_scheduler_proxy<
                          boost::asynchronous::io_threadpool_scheduler<
                                  boost::asynchronous::lockfree_queue<>>>(8,16));
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant test_many_tasks not posted.");
         m_current=0;
-        std::shared_ptr<boost::promise<void> > apromise(new boost::promise<void>);
-        boost::promise<void> block_promise;
-        boost::shared_future<void> fub = block_promise.get_future();
+        std::shared_ptr<std::promise<void> > apromise(new std::promise<void>);
+        std::promise<void> block_promise;
+        auto fub = block_promise.get_future();
         // start long tasks
         for (size_t i = 0; i< cpt ; ++i)
         {
@@ -151,9 +152,9 @@ BOOST_AUTO_TEST_CASE( test_io_threadpool_scheduler_2 )
 
        {
            ServantProxy proxy(scheduler);
-           boost::shared_future<boost::shared_future<void> > fuv = proxy.start_async_work(2);
+           auto fuv = proxy.start_async_work(2);
            // wait for task to start
-           boost::shared_future<void> fud = fuv.get();
+           auto fud = fuv.get();
            fud.get();
        }
     }
@@ -170,9 +171,9 @@ BOOST_AUTO_TEST_CASE( test_io_threadpool_scheduler_5 )
 
        {
            ServantProxy proxy(scheduler);
-           boost::shared_future<boost::shared_future<void> > fuv = proxy.start_async_work(5);
+           auto fuv = proxy.start_async_work(5);
            // wait for task to start
-           boost::shared_future<void> fud = fuv.get();
+           auto fud = fuv.get();
            fud.get();
        }
     }
@@ -189,9 +190,9 @@ BOOST_AUTO_TEST_CASE( test_io_threadpool_scheduler_9 )
 
        {
            ServantProxy proxy(scheduler);
-           boost::shared_future<boost::shared_future<void> > fuv = proxy.start_async_work(9);
+           auto fuv = proxy.start_async_work(9);
            // wait for task to start
-           boost::shared_future<void> fud = fuv.get();
+           auto fud = fuv.get();
            fud.get();
        }
     }
@@ -208,9 +209,9 @@ BOOST_AUTO_TEST_CASE( test_io_threadpool_scheduler_5_2 )
 
        {
            ServantProxy proxy(scheduler);
-           boost::shared_future<boost::shared_future<void> > fuv = proxy.start_async_work(5);
+           auto fuv = proxy.start_async_work(5);
            // wait for task to start
-           boost::shared_future<void> fud = fuv.get();
+           auto fud = fuv.get();
            fud.get();
 
            fuv = proxy.start_async_work(2);
@@ -232,9 +233,9 @@ BOOST_AUTO_TEST_CASE( test_io_threadpool_many_tasks )
 
        {
            ServantProxy proxy(scheduler);
-           boost::shared_future<boost::shared_future<void> > fuv = proxy.test_many_tasks(1000);
+           auto fuv = proxy.test_many_tasks(1000);
            // wait for task to start
-           boost::shared_future<void> fud = fuv.get();
+           auto fud = fuv.get();
            fud.get();
            //std::cout << "before dtor" << std::endl;
        }

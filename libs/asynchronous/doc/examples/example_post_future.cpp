@@ -29,10 +29,10 @@ void example_post_future()
                                 boost::asynchronous::threadpool_scheduler<
                                      boost::asynchronous::lockfree_queue<>>>(3);
 
-        boost::shared_future<void> fuv = boost::asynchronous::post_future(scheduler, void_task());
+        auto fuv = boost::asynchronous::post_future(scheduler, void_task());
         fuv.get();
 
-        boost::shared_future<int> fui = boost::asynchronous::post_future(scheduler, int_task());
+        auto fui = boost::asynchronous::post_future(scheduler, int_task());
         int res = fui.get();
         std::cout << "future set with res:" << res << std::endl;
     }
@@ -45,12 +45,10 @@ void example_post_future_lambda()
                                 boost::asynchronous::threadpool_scheduler<
                                      boost::asynchronous::lockfree_queue<>>>(3);
 
-        boost::shared_future<void> fuv =
-                boost::asynchronous::post_future(scheduler, [](){std::cout << "void lambda" << std::endl;});
+        auto fuv = boost::asynchronous::post_future(scheduler, [](){std::cout << "void lambda" << std::endl;});
         fuv.get();
 
-        boost::shared_future<int> fui =
-                boost::asynchronous::post_future(scheduler, [](){std::cout << "int lambda" << std::endl;return 42;});
+        auto fui = boost::asynchronous::post_future(scheduler, [](){std::cout << "int lambda" << std::endl;return 42;});
         int res = fui.get();
         std::cout << "future set with res:" << res << std::endl;
     }

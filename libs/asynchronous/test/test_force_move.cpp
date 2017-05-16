@@ -8,6 +8,7 @@
 // For more information, see http://www.boost.org
 
 #include <functional>
+#include <future>
 
 #include <boost/asynchronous/helpers.hpp>
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
@@ -34,11 +35,11 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                            boost::asynchronous::lockfree_queue<>>>(3))
     {
     }
-    boost::future<int> start_async_work()
+    std::future<int> start_async_work()
     {
         // we need a promise to inform caller when we're done
-        std::shared_ptr<boost::promise<int> > aPromise(new boost::promise<int>);
-        boost::future<int> fu = aPromise->get_future();
+        std::shared_ptr<std::promise<int> > aPromise(new std::promise<int>);
+        std::future<int> fu = aPromise->get_future();
         auto cb = make_safe_callback(
                     [aPromise](int,boost::future<int> fu)mutable
                     {
@@ -97,10 +98,10 @@ BOOST_AUTO_TEST_CASE( test_force_move_safe_callback )
                                                                             boost::asynchronous::lockfree_queue<>>>();
 
         ServantProxy proxy(scheduler);
-        boost::future<boost::future<int> > fuv = proxy.start_async_work();
+        auto fuv = proxy.start_async_work();
         try
         {
-            boost::future<int> resfuv = fuv.get();
+            auto resfuv = fuv.get();
             int i = resfuv.get();
             BOOST_CHECK_MESSAGE(i==42,"result should be 42.");
         }

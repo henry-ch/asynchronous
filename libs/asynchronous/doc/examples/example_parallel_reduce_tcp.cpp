@@ -58,11 +58,11 @@ struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any
         m_promise->set_value();
     }
     // call to this is posted and executes in our (safe) single-thread scheduler
-    boost::shared_future<void> start_async_work()
+    boost::future<void> start_async_work()
     {
         std::cout << "start_async_work()" << std::endl;
         // for testing purpose
-        boost::shared_future<void> fu = m_promise->get_future();
+        auto fu = m_promise->get_future();
         post_callback(
                     dummy_parallel_reduce_task(),
                    // the lambda calls Servant, just to show that all is safe, Servant is alive if this is called
@@ -110,10 +110,8 @@ void example_parallel_reduce_tcp()
                                      boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler);
-            // result of BOOST_ASYNC_FUTURE_MEMBER is a shared_future,
-            // so we have a shared_future of a shared_future(result of start_async_work)
-            boost::shared_future<boost::shared_future<void> > fu = proxy.start_async_work();
-            boost::shared_future<void> resfu = fu.get();
+            auto fu = proxy.start_async_work();
+            auto resfu = fu.get();
             resfu.get();
         }
     }

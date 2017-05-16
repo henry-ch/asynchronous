@@ -3,6 +3,7 @@
 #include <iostream>
 #include <tuple>
 #include <utility>
+#include <future>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
@@ -55,7 +56,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                    boost::asynchronous::multiqueue_threadpool_scheduler<
                                                            boost::asynchronous::lockfree_queue<>>>(6))
         // for testing purpose
-        , m_promise(new boost::promise<long>)
+        , m_promise(new std::promise<long>)
     {
     }
     // called when task done, in our thread
@@ -65,17 +66,17 @@ struct Servant : boost::asynchronous::trackable_servant<>
         m_promise->set_value(res);
     }
     // call to this is posted and executes in our (safe) single-thread scheduler
-    boost::shared_future<long> calc_algo()
+    std::future<long> calc_algo()
     {
         //std::cout << "main_task in thread:" << boost::this_thread::get_id() << std::endl;
         // for testing purpose
-        boost::shared_future<long> fu = m_promise->get_future();
+        auto fu = m_promise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         tpids = tp.thread_ids();
         // start long tasks in threadpool
-        boost::future<int> fu1 = boost::asynchronous::post_future(get_worker(),sub_task(100));
-        boost::future<int> fu2 = boost::asynchronous::post_future(get_worker(),sub_task(2000));
-        boost::future<int> fu3 = boost::asynchronous::post_future(get_worker(),sub_task(2000));
+        auto fu1 = boost::asynchronous::post_future(get_worker(),sub_task(100));
+        auto fu2 = boost::asynchronous::post_future(get_worker(),sub_task(2000));
+        auto fu3 = boost::asynchronous::post_future(get_worker(),sub_task(2000));
 
         boost::asynchronous::create_continuation_timeout(
                     // called when subtasks are done, set our result
@@ -108,7 +109,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     }
 private:
 // for testing
-std::shared_ptr<boost::promise<long> > m_promise;
+std::shared_ptr<std::promise<long> > m_promise;
 };
 // we give 4s for destruction timeout as we're going to wait 2s for tasks to complete
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant,boost::asynchronous::any_callable,4000>
@@ -136,8 +137,8 @@ BOOST_AUTO_TEST_CASE( test_continuation_algo_timeout )
                                                                             boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler);
-            boost::shared_future<boost::shared_future<long> > fu = proxy.calc_algo();
-            boost::shared_future<long> resfu = fu.get();
+            auto fu = proxy.calc_algo();
+            auto resfu = fu.get();
             long res = resfu.get();
             BOOST_CHECK_MESSAGE(1 == res,"we didn't get the expected number of subtasks");
         }

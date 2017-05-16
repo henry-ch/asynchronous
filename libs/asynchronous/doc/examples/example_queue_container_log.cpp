@@ -32,10 +32,10 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
     {
     }
 
-    boost::shared_future<int> start_async_work()
+    boost::future<int> start_async_work()
     {
         // for demonstration purpose
-        boost::shared_future<int> fu = m_promise->get_future();
+        auto fu = m_promise->get_future();
         // start long tasks
         post_callback(
                [](){return 42;}// work
@@ -94,15 +94,15 @@ void example_queue_container_log()
         {
             ServantProxy proxy(scheduler);
 
-            boost::shared_future<boost::shared_future<int> > fu = proxy.start_async_work();
-            boost::shared_future<int> resfu = fu.get();
+            auto fu = proxy.start_async_work();
+            auto resfu = fu.get();
             int res = resfu.get();
             std::cout << "res==42? " << std::boolalpha << (res == 42) << std::endl;
 
             // wait a bit for tasks to be finished
             boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
 
-            boost::shared_future<diag_type> fu_diag = proxy.get_diagnostics();
+            auto fu_diag = proxy.get_diagnostics();
             diag_type diag = fu_diag.get();
             std::cout << "Display of worker jobs" << std::endl;
             for (auto mit = diag.begin(); mit != diag.end() ; ++mit)

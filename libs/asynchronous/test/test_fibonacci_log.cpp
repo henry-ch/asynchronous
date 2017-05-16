@@ -2,6 +2,8 @@
 #include <tuple>
 #include <utility>
 #include <map>
+#include <future>
+
 #include <boost/lexical_cast.hpp>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
@@ -79,7 +81,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
                                                    boost::asynchronous::multiqueue_threadpool_scheduler<
                                                            boost::asynchronous::lockfree_queue<servant_job>>>(4))
         // for testing purpose
-        , m_promise(new boost::promise<long>)
+        , m_promise(new std::promise<long>)
     {
     }
     // called when task done, in our thread
@@ -89,11 +91,11 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
         m_promise->set_value(res);
     }
     // call to this is posted and executes in our (safe) single-thread scheduler
-    boost::shared_future<long> calc_fibonacci(long n,long cutoff)
+    std::future<long> calc_fibonacci(long n,long cutoff)
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant calc_fibonacci not posted.");
         // for testing purpose
-        boost::shared_future<long> fu = m_promise->get_future();
+        auto fu = m_promise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<servant_job> tp =get_worker();
         tpids = tp.thread_ids();
         // start long tasks in threadpool (first lambda) and callback in our thread
@@ -122,7 +124,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
     }
 private:
 // for testing
-std::shared_ptr<boost::promise<long> > m_promise;
+std::shared_ptr<std::promise<long> > m_promise;
 };
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant,servant_job>
 {
@@ -156,12 +158,12 @@ BOOST_AUTO_TEST_CASE( test_fibonacci_log_30_18 )
                                      boost::asynchronous::lockfree_queue<servant_job>>>();
         {
             ServantProxy proxy(scheduler);
-            boost::shared_future<boost::shared_future<long> > fu = proxy.calc_fibonacci(fibo_val,cutoff);
-            boost::shared_future<long> resfu = fu.get();
+            auto fu = proxy.calc_fibonacci(fibo_val,cutoff);
+            auto resfu = fu.get();
             long res = resfu.get();
             BOOST_CHECK_MESSAGE(sres == res,"fibonacci parallel and serial version found different results");
             // check if we found all tasks and just these ones (30..16 must be found)
-            boost::shared_future<diag_type> fu_diag = proxy.get_diagnostics();
+            auto fu_diag = proxy.get_diagnostics();
             diag_type diag = fu_diag.get();
             std::map<int,bool> tasks;
             for (int i=16; i<31;++i)

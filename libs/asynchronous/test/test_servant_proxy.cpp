@@ -127,7 +127,7 @@ BOOST_AUTO_TEST_CASE( test_posted_ctor )
     
     main_thread_id = boost::this_thread::get_id();   
     ServantProxy2 proxy(scheduler);
-    boost::shared_future<void> fu = proxy.wait_end_test();
+    boost::future<void> fu = proxy.wait_end_test();
     fu.get();
 }
 
@@ -138,7 +138,7 @@ BOOST_AUTO_TEST_CASE( test_exception_member )
     
     main_thread_id = boost::this_thread::get_id();   
     ServantProxy2 proxy(scheduler);
-    boost::shared_future<void> fu = proxy.generate_exception();
+    boost::future<void> fu = proxy.generate_exception();
     bool got_exception=false;
     try
     {
@@ -166,12 +166,12 @@ BOOST_AUTO_TEST_CASE( test_servant_proxy_members )
     proxy.foobar(1,'a');
     
     int something = 3;
-    boost::shared_future<void> res = proxy.foo(boost::ref(something));
+    boost::future<void> res = proxy.foo(boost::ref(something));
     res.get();
     // references ought to be ignored
     BOOST_CHECK_MESSAGE(something==100,"servant did not manage to modify data. something=" << something);
     
-    boost::shared_future<int> fu = proxy.doIt();
+    boost::future<int> fu = proxy.doIt();
     BOOST_CHECK_MESSAGE(fu.get()==5,"servant returned incorrect data. Expected 5."); 
 }
 

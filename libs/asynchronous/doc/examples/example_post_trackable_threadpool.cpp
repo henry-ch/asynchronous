@@ -36,10 +36,10 @@ struct Servant : boost::asynchronous::trackable_servant<>
         m_promise->set_value(res);
     }
     // call to this is posted and executes in our (safe) single-thread scheduler
-    boost::shared_future<int> start_async_work()
+    boost::future<int> start_async_work()
     {
         // for testing purpose
-        boost::shared_future<int> fu = m_promise->get_future();
+        auto fu = m_promise->get_future();
         // start long tasks in threadpool (first lambda) and callback in our thread
         post_callback(
                [](){
@@ -82,10 +82,8 @@ void example_post_trackable_alive()
                                      boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler);
-            // result of BOOST_ASYNC_FUTURE_MEMBER is a shared_future,
-            // so we have a shared_future of a shared_future(result of start_async_work)
-            boost::shared_future<boost::shared_future<int> > fu = proxy.start_async_work();
-            boost::shared_future<int> resfu = fu.get();
+            auto fu = proxy.start_async_work();
+            auto resfu = fu.get();
             int res = resfu.get();
             std::cout << "res==42? " << std::boolalpha << (res == 42) << std::endl;// of course 42.
         }
@@ -104,7 +102,7 @@ void example_post_trackable_not_alive()
         {
             ServantProxy proxy(scheduler);
             // call task but not callback, should not crash...
-            boost::shared_future<boost::shared_future<int> > fu = proxy.start_async_work();
+            auto fu = proxy.start_async_work();
             // call was posted, let's destroy servant before callback
             // Actually we don't know if callback will be called before destruction, it's luck
             // but in any case, we don't want the callback to be called if Servant has been destroyed.

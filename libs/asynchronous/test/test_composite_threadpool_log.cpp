@@ -10,6 +10,7 @@
 
 #include <vector>
 #include <set>
+#include <future>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
@@ -41,7 +42,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
     Servant(boost::asynchronous::any_weak_scheduler<servant_job> scheduler)
         : boost::asynchronous::trackable_servant<servant_job,servant_job>(scheduler)
         // for testing purpose
-        , m_promise(new boost::promise<int>)
+        , m_promise(new std::promise<int>)
     {
         // create a composite threadpool made of:
         // a multiqueue_threadpool_scheduler, 0 thread
@@ -74,11 +75,11 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
         m_promise->set_value(res);
     }
     // call to this is posted and executes in our (safe) single-thread scheduler
-    boost::future<int> start_async_work()
+    std::future<int> start_async_work()
     {
         boost::thread::id ao_id = boost::this_thread::get_id();
         // for testing purpose
-        boost::future<int> fu = m_promise->get_future();
+        std::future<int> fu = m_promise->get_future();
         // start long tasks in threadpool (first lambda) and callback in our thread
         post_callback(
                [this](){
@@ -101,7 +102,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
     }
 private:
 // for testing
-std::shared_ptr<boost::promise<int> > m_promise;
+std::shared_ptr<std::promise<int> > m_promise;
 std::vector<boost::thread::id> m_tp3_ids;
 };
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant,servant_job>
@@ -130,13 +131,13 @@ BOOST_AUTO_TEST_CASE( test_composite_io_log )
 
     main_thread_id = boost::this_thread::get_id();
     ServantProxy proxy(scheduler);
-    boost::future<boost::future<int> > fuv = proxy.start_async_work();
+    auto fuv = proxy.start_async_work();
     try
     {
-        boost::future<int> resfuv = fuv.get();
+        auto resfuv = fuv.get();
         BOOST_CHECK_MESSAGE(resfuv.get()==42,"servant work return wrong result.");
 
-        boost::shared_future<diag_type> fu_diag = proxy.get_diagnostics();
+        auto fu_diag = proxy.get_diagnostics();
         diag_type diag = fu_diag.get();
         bool io_pool_task_called=false;
         for (auto mit = diag.begin(); mit != diag.end() ; ++mit)

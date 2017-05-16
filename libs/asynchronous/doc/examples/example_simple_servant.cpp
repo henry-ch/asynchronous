@@ -66,7 +66,7 @@ void exercise_simple_servant()
             // post a call to foo. To avoid races, "something" is moved.
             proxy.foo(std::move(something));
             // post and get a future because we're interested in the result.
-            boost::shared_future<int> fu = proxy.doIt();
+            auto fu = proxy.doIt();
             std::cout<< "future:" << fu.get() << std::endl;
         }// here, Servant's destructor is posted
     }// scheduler is gone, its thread has been joined

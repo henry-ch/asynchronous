@@ -58,14 +58,14 @@ struct Servant : boost::asynchronous::trackable_servant<>
         servant_dtor = true;
     }
 
-    boost::shared_future<void> parallel_remove_copy_if()
+    boost::future<void> parallel_remove_copy_if()
     {
         generate(m_data);
 
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant parallel_remove_copy_if not posted.");
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -104,14 +104,14 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
-    boost::shared_future<void> parallel_remove_copy()
+    boost::future<void> parallel_remove_copy()
     {
         generate(m_data);
 
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant parallel_remove_copy not posted.");
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -176,10 +176,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_remove_copy_if )
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
 
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.parallel_remove_copy_if();
+        boost::future<boost::future<void> > fuv = proxy.parallel_remove_copy_if();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -199,10 +199,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_remove_copy )
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
 
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.parallel_remove_copy();
+        boost::future<boost::future<void> > fuv = proxy.parallel_remove_copy();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)

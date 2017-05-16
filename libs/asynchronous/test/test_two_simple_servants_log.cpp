@@ -82,10 +82,10 @@ struct Servant2 : boost::asynchronous::trackable_servant<servant_job,servant_job
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant2 dtor not posted.");
     }
-    boost::shared_future<void> doIt()
+    boost::future<void> doIt()
     {
         std::shared_ptr<boost::promise<void> > p (new boost::promise<void>);
-        boost::shared_future<void> fu = p->get_future();
+        boost::future<void> fu = p->get_future();
         boost::thread::id this_thread_id = boost::this_thread::get_id();
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant2 doIt not posted.");
         call_callback(m_worker.get_proxy(),
@@ -145,8 +145,8 @@ BOOST_AUTO_TEST_CASE( test_two_servants_log )
         {
             ServantProxy proxy(scheduler,42);
             ServantProxy2 proxy2(scheduler2,proxy);
-            boost::shared_future<boost::shared_future<void> > fu = proxy2.doIt();
-            boost::shared_future<void> fu2 = fu.get();
+            boost::future<boost::future<void> > fu = proxy2.doIt();
+            boost::future<void> fu2 = fu.get();
             fu2.get();
         }
         {

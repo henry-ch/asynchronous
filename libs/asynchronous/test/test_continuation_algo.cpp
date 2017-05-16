@@ -58,15 +58,15 @@ struct main_task : public boost::asynchronous::continuation_task<long>
         // simulate algo work
         boost::this_thread::sleep(boost::posix_time::milliseconds(100));
         // let's say we just found a subtask
-        boost::future<int> fu1 = boost::asynchronous::post_future(locked_scheduler,sub_task());
+        auto fu1 = boost::asynchronous::post_future(locked_scheduler,sub_task());
         // simulate more algo work
         boost::this_thread::sleep(boost::posix_time::milliseconds(100));
         // let's say we just found a subtask
-        boost::future<int> fu2 = boost::asynchronous::post_future(locked_scheduler,sub_task());
+        auto fu2 = boost::asynchronous::post_future(locked_scheduler,sub_task());
         // simulate algo work
         boost::this_thread::sleep(boost::posix_time::milliseconds(100));
         // let's say we just found a subtask
-        boost::future<int> fu3 = boost::asynchronous::post_future(locked_scheduler,sub_task());
+        auto fu3 = boost::asynchronous::post_future(locked_scheduler,sub_task());
 
         // our algo is now done, wrap all and return
         boost::asynchronous::create_continuation(
@@ -102,10 +102,10 @@ struct Servant : boost::asynchronous::trackable_servant<>
         m_promise->set_value(res);
     }
     // call to this is posted and executes in our (safe) single-thread scheduler
-    boost::shared_future<long> calc_algo()
+    boost::future<long> calc_algo()
     {
         // for testing purpose
-        boost::shared_future<long> fu = m_promise->get_future();
+        auto fu = m_promise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         tpids = tp.thread_ids();
         // start long tasks in threadpool (first lambda) and callback in our thread
@@ -156,8 +156,8 @@ BOOST_AUTO_TEST_CASE( test_continuation_algo )
                                                                             boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler);
-            boost::shared_future<boost::shared_future<long> > fu = proxy.calc_algo();
-            boost::shared_future<long> resfu = fu.get();
+            auto fu = proxy.calc_algo();
+            auto resfu = fu.get();
             long res = resfu.get();
             BOOST_CHECK_MESSAGE(3 == res,"we didn't get the expected number of subtasks");
         }

@@ -87,11 +87,11 @@ struct Servant : boost::asynchronous::trackable_servant<log_servant_job,log_serv
         }
     }
     // call to this is posted and executes in our (safe) single-thread scheduler
-    boost::shared_future<int> start_async_work()
+    boost::future<int> start_async_work()
     {
         std::cout << "start_async_work()" << std::endl;
         // for testing purpose
-        boost::shared_future<int> fu = m_promise->get_future();
+        auto fu = m_promise->get_future();
         // start long tasks in threadpool (first lambda) and callback in our thread
         for (int i =0 ;i < 10 ; ++i)
         {
@@ -159,15 +159,13 @@ void example_post_tcp_log()
                                      boost::asynchronous::lockfree_queue<log_servant_job>>>(10);
         {
             ServantProxy proxy(scheduler);
-            // result of BOOST_ASYNC_FUTURE_MEMBER is a shared_future,
-            // so we have a shared_future of a shared_future(result of start_async_work)
-            boost::shared_future<boost::shared_future<int> > fu = proxy.start_async_work();
-            boost::shared_future<int> resfu = fu.get();
+            auto fu = proxy.start_async_work();
+            auto resfu = fu.get();
             int res = resfu.get();
             std::cout << "res==45? " << std::boolalpha << (res == 45) << std::endl;// 1+2..9.
 
             // logs
-            boost::shared_future<diag_type> fu_diag = proxy.get_diagnostics();
+            auto fu_diag = proxy.get_diagnostics();
             diag_type diag = fu_diag.get();
             std::cout << "Display of worker jobs" << std::endl;
             for (auto mit = diag.begin(); mit != diag.end() ; ++mit)

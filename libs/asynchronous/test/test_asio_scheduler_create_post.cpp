@@ -8,6 +8,7 @@
 // For more information, see http://www.boost.org
 
 #include <iostream>
+#include <future>
 
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/extensions/asio/asio_scheduler.hpp>
@@ -21,7 +22,7 @@ namespace
 {
 struct DummyJob
 {
-    DummyJob(std::shared_ptr<boost::promise<boost::thread::id> > p):m_done(p){}
+    DummyJob(std::shared_ptr<std::promise<boost::thread::id> > p):m_done(p){}
     void operator()()const
     {
         //std::cout << "DummyJob called in thread:" << boost::this_thread::get_id() << std::endl;
@@ -29,7 +30,7 @@ struct DummyJob
         m_done->set_value(boost::this_thread::get_id());
     }
     // to check we ran in a correct thread
-    std::shared_ptr<boost::promise<boost::thread::id> > m_done;
+    std::shared_ptr<std::promise<boost::thread::id> > m_done;
 };
 
 }  
@@ -49,16 +50,16 @@ BOOST_AUTO_TEST_CASE( default_post_asio_scheduler )
         std::vector<boost::thread::id> sids = scheduler.thread_ids();
         
         BOOST_CHECK_MESSAGE(number_of_threads(sids.begin(),sids.end())==3,"scheduler has wrong number of threads");
-        std::vector<boost::shared_future<boost::thread::id> > fus;
+        std::vector<std::future<boost::thread::id> > fus;
         for (int i = 1 ; i< 4 ; ++i)
         {
-            std::shared_ptr<boost::promise<boost::thread::id> > p = std::make_shared<boost::promise<boost::thread::id> >();
+            std::shared_ptr<std::promise<boost::thread::id> > p = std::make_shared<std::promise<boost::thread::id> >();
             fus.push_back(p->get_future());
             scheduler.post(boost::asynchronous::any_callable(DummyJob(p)),i);
         }
         boost::wait_for_all(fus.begin(), fus.end());
         std::set<boost::thread::id> ids;
-        for (std::vector<boost::shared_future<boost::thread::id> >::iterator it = fus.begin(); it != fus.end() ; ++it)
+        for (std::vector<std::future<boost::thread::id> >::iterator it = fus.begin(); it != fus.end() ; ++it)
         {
             boost::thread::id tid = (*it).get();
             BOOST_CHECK_MESSAGE(contains_id(sids.begin(),sids.end(),tid),"task executed in the wrong thread");

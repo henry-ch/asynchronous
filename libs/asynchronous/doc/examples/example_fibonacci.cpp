@@ -1,4 +1,5 @@
 #include <iostream>
+#include <future>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_stack.hpp>
@@ -65,7 +66,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                    boost::asynchronous::multiqueue_threadpool_scheduler<
                                                            boost::asynchronous::lockfree_queue<>>>(threads))
         // for testing purpose
-        , m_promise(new boost::promise<long>)
+        , m_promise(new std::promise<long>)
     {
     }
     // called when task done, in our thread
@@ -75,10 +76,10 @@ struct Servant : boost::asynchronous::trackable_servant<>
         m_promise->set_value(res);
     }
     // call to this is posted and executes in our (safe) single-thread scheduler
-    boost::shared_future<long> calc_fibonacci(long n,long cutoff)
+    std::shared_future<long> calc_fibonacci(long n,long cutoff)
     {
         // for testing purpose
-        boost::shared_future<long> fu = m_promise->get_future();
+        std::shared_future<long> fu = m_promise->get_future();
         // start long tasks in threadpool (first lambda) and callback in our thread
         post_callback(
                 [n,cutoff]()
@@ -97,7 +98,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     }
 private:
 // for testing
-std::shared_ptr<boost::promise<long> > m_promise;
+std::shared_ptr<std::promise<long> > m_promise;
 };
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>
 {
@@ -133,8 +134,8 @@ void example_fibonacci(long fibo_val,long cutoff, int threads)
         {
             ServantProxy proxy(scheduler,threads);
             start = std::chrono::high_resolution_clock::now();
-            boost::shared_future<boost::shared_future<long> > fu = proxy.calc_fibonacci(fibo_val,cutoff);
-            boost::shared_future<long> resfu = fu.get();
+            auto fu = proxy.calc_fibonacci(fibo_val,cutoff);
+            auto resfu = fu.get();
             long res = resfu.get();
             stop = std::chrono::high_resolution_clock::now();
             std::cout << "res= " << res << std::endl;

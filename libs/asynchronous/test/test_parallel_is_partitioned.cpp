@@ -67,14 +67,14 @@ struct Servant : boost::asynchronous::trackable_servant<>
         servant_dtor = true;
     }
 
-    boost::shared_future<void> test_is_partitioned_true()
+    boost::future<void> test_is_partitioned_true()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant async work not posted.");
         generate(m_data1,1000,700);
         std::partition(m_data1.begin(),m_data1.end(),[](int i){return i < 300;});
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
 
@@ -98,13 +98,13 @@ struct Servant : boost::asynchronous::trackable_servant<>
         return fu;
     }
 
-    boost::shared_future<void> test_is_partitioned_false()
+    boost::future<void> test_is_partitioned_false()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant async work not posted.");
         generate(m_data1,1000,700);
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -150,10 +150,10 @@ BOOST_AUTO_TEST_CASE( test_is_partitioned_true )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.test_is_partitioned_true();
+        boost::future<boost::future<void> > fuv = proxy.test_is_partitioned_true();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -172,10 +172,10 @@ BOOST_AUTO_TEST_CASE( test_is_partitioned_false )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.test_is_partitioned_false();
+        boost::future<boost::future<void> > fuv = proxy.test_is_partitioned_false();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)

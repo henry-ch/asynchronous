@@ -1,6 +1,7 @@
 #include <iostream>
 #include <tuple>
 #include <utility>
+#include <future>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
@@ -73,7 +74,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                    boost::asynchronous::multiqueue_threadpool_scheduler<
                                                            boost::asynchronous::lockfree_queue<>>>(4))
         // for testing purpose
-        , m_promise(new boost::promise<long>)
+        , m_promise(new std::promise<long>)
     {
     }
     // called when task done, in our thread
@@ -84,11 +85,11 @@ struct Servant : boost::asynchronous::trackable_servant<>
         m_promise->set_value(res);
     }
     // call to this is posted and executes in our (safe) single-thread scheduler
-    boost::shared_future<long> calc_fibonacci(long n,long cutoff)
+    std::future<long> calc_fibonacci(long n,long cutoff)
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant calc_fibonacci not posted.");
         // for testing purpose
-        boost::shared_future<long> fu = m_promise->get_future();
+        auto fu = m_promise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         tpids = tp.thread_ids();
         // start long tasks in threadpool (first lambda) and callback in our thread
@@ -111,7 +112,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     }
 private:
 // for testing
-std::shared_ptr<boost::promise<long> > m_promise;
+std::shared_ptr<std::promise<long> > m_promise;
 };
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>
 {
@@ -142,8 +143,8 @@ BOOST_AUTO_TEST_CASE( test_fibonacci_30_18 )
                                                                             boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler);
-            boost::shared_future<boost::shared_future<long> > fu = proxy.calc_fibonacci(fibo_val,cutoff);
-            boost::shared_future<long> resfu = fu.get();
+            auto fu = proxy.calc_fibonacci(fibo_val,cutoff);
+            auto resfu = fu.get();
             long res = resfu.get();
             BOOST_CHECK_MESSAGE(sres == res,"fibonacci parallel and serial version found different results");
         }

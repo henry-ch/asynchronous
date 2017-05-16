@@ -113,8 +113,8 @@ void example_composite_threadpool()
                                      boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler);
-            // result of BOOST_ASYNC_FUTURE_MEMBER is a shared_future,
-            // so we have a shared_future of a shared_future(result of start_async_work)
+            // result of BOOST_ASYNC_FUTURE_MEMBER is a future,
+            // so we have a future holding a future(result of start_async_work)
             boost::future<boost::future<int> > fu = proxy.start_async_work();
             boost::future<int> resfu = fu.get();
             int res = resfu.get();

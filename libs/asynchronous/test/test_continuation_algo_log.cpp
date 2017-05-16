@@ -2,6 +2,7 @@
 #include <iostream>
 #include <tuple>
 #include <utility>
+#include <future>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
@@ -62,15 +63,15 @@ struct main_task : public boost::asynchronous::continuation_task<long>
         // simulate algo work
         boost::this_thread::sleep(boost::posix_time::milliseconds(100));
         // let's say we just found a subtask
-        boost::future<int> fu1 = boost::asynchronous::post_future(locked_scheduler,sub_task(),"sub_task_1");
+        auto fu1 = boost::asynchronous::post_future(locked_scheduler,sub_task(),"sub_task_1");
         // simulate more algo work
         boost::this_thread::sleep(boost::posix_time::milliseconds(100));
         // let's say we just found a subtask
-        boost::future<int> fu2 = boost::asynchronous::post_future(locked_scheduler,sub_task(),"sub_task_2");
+        auto fu2 = boost::asynchronous::post_future(locked_scheduler,sub_task(),"sub_task_2");
         // simulate algo work
         boost::this_thread::sleep(boost::posix_time::milliseconds(100));
         // let's say we just found a subtask
-        boost::future<int> fu3 = boost::asynchronous::post_future(locked_scheduler,sub_task(),"sub_task_3");
+        auto fu3 = boost::asynchronous::post_future(locked_scheduler,sub_task(),"sub_task_3");
 
         // our algo is now done, wrap all and return
         boost::asynchronous::create_continuation_job<servant_job>(
@@ -96,7 +97,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
                                                    boost::asynchronous::multiqueue_threadpool_scheduler<
                                                            boost::asynchronous::lockfree_queue<servant_job>>>(6))
         // for testing purpose
-        , m_promise(new boost::promise<long>)
+        , m_promise(new std::promise<long>)
     {
     }
     // called when task done, in our thread
@@ -106,10 +107,10 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
         m_promise->set_value(res);
     }
     // call to this is posted and executes in our (safe) single-thread scheduler
-    boost::shared_future<long> calc_algo()
+    std::future<long> calc_algo()
     {
         // for testing purpose
-        boost::shared_future<long> fu = m_promise->get_future();
+        auto fu = m_promise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<servant_job> tp =get_worker();
         tpids = tp.thread_ids();
         // start long tasks in threadpool (first lambda) and callback in our thread
@@ -139,7 +140,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
     }
 private:
 // for testing
-std::shared_ptr<boost::promise<long> > m_promise;
+std::shared_ptr<std::promise<long> > m_promise;
 };
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant,servant_job>
 {
@@ -169,13 +170,13 @@ BOOST_AUTO_TEST_CASE( test_continuation_algo_log )
 
         {
             ServantProxy proxy(scheduler);
-            boost::shared_future<boost::shared_future<long> > fu = proxy.calc_algo();
-            boost::shared_future<long> resfu = fu.get();
+            auto fu = proxy.calc_algo();
+            auto resfu = fu.get();
             long res = resfu.get();
             BOOST_CHECK_MESSAGE(3 == res,"we didn't get the expected number of subtasks");
 
             // check if we found all tasks
-            boost::shared_future<diag_type> fu_diag = proxy.get_diagnostics();
+            auto fu_diag = proxy.get_diagnostics();
             diag_type diag = fu_diag.get();
 
             bool found_calc_algo=false;

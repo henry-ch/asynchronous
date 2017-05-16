@@ -1,4 +1,5 @@
 #include <iostream>
+#include <future>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
@@ -125,7 +126,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                    boost::asynchronous::multiqueue_threadpool_scheduler<
                                                            boost::asynchronous::lockfree_queue<>>>(6))
         // for testing purpose
-        , m_promise(new boost::promise<long>)
+        , m_promise(new std::promise<long>)
     {
     }
     // called when task done, in our thread
@@ -135,10 +136,10 @@ struct Servant : boost::asynchronous::trackable_servant<>
         m_promise->set_value(res);
     }
     // call to this is posted and executes in our (safe) single-thread scheduler
-    boost::shared_future<long> calc_algo()
+    std::shared_future<long> calc_algo()
     {
         // for testing purpose
-        boost::shared_future<long> fu = m_promise->get_future();
+        std::shared_future<long> fu = m_promise->get_future();
         // start long tasks in threadpool (first lambda) and callback in our thread
         post_callback(
                 []()
@@ -165,7 +166,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     }
 private:
 // for testing
-std::shared_ptr<boost::promise<long> > m_promise;
+std::shared_ptr<std::promise<long> > m_promise;
 };
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>
 {
@@ -190,8 +191,8 @@ void example_continuation_algo3()
                                      boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler);
-            boost::shared_future<boost::shared_future<long> > fu = proxy.calc_algo();
-            boost::shared_future<long> resfu = fu.get();
+            auto fu = proxy.calc_algo();
+            auto resfu = fu.get();
             long res = resfu.get();
             std::cout << "res= " << res << std::endl; //expect 6 (6 subtasks)
         }

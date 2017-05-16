@@ -10,6 +10,7 @@
 
 #include <vector>
 #include <set>
+#include <future>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/scheduler/threadpool_scheduler.hpp>
@@ -38,7 +39,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                                 boost::asynchronous::lockfree_queue<>>>(3))
     {
     }
-    void start_async_work(std::shared_ptr<boost::promise<void> > res)
+    void start_async_work(std::shared_ptr<std::promise<void> > res)
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work not posted.");
         BOOST_CHECK_MESSAGE(cpt==0,"start_async_work should have been called first.");
@@ -87,15 +88,15 @@ BOOST_AUTO_TEST_CASE( test_queue_container_prio_single_scheduler )
     ServantProxy proxy(scheduler);
     
     // create blocker to get us time
-    boost::promise<void> p;
-    boost::shared_future<void> fu=p.get_future();
+    std::promise<void> p;
+    std::shared_future<void> fu=p.get_future();
     auto blocking = [fu]() mutable {fu.get();};
     scheduler.post(blocking);
     
-    std::shared_ptr<boost::promise<void> > res_p(new boost::promise<void>);
-    boost::shared_future<void> fudone = res_p->get_future();
-    boost::shared_future<void> fuv = proxy.start_async_work(res_p);
-    boost::shared_future<void> fuv2 = proxy.start_async_work2();
+    std::shared_ptr<std::promise<void> > res_p(new std::promise<void>);
+    auto fudone = res_p->get_future();
+    auto fuv = proxy.start_async_work(res_p);
+    auto fuv2 = proxy.start_async_work2();
     
     // let's start!
     p.set_value();

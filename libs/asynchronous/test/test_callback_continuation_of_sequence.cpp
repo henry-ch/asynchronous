@@ -1,6 +1,7 @@
 #include <iostream>
 #include <tuple>
 #include <utility>
+#include <future>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
@@ -157,7 +158,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                    boost::asynchronous::multiqueue_threadpool_scheduler<
                                                            boost::asynchronous::lockfree_queue<>>>(4))
         // for testing purpose
-        , m_promise(new boost::promise<long>)
+        , m_promise(new std::promise<long>)
     {
     }
     // called when task done, in our thread
@@ -167,11 +168,11 @@ struct Servant : boost::asynchronous::trackable_servant<>
         m_promise->set_value(res);
     }
     // call to this is posted and executes in our (safe) single-thread scheduler
-    boost::future<long> do_it()
+    std::future<long> do_it()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant do_it not posted.");
         // for testing purpose
-        boost::future<long> fu = m_promise->get_future();
+        std::future<long> fu = m_promise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         tpids = tp.thread_ids();
         // start long tasks in threadpool (first lambda) and callback in our thread
@@ -192,11 +193,11 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
-    boost::future<long> do_it2()
+    std::future<long> do_it2()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant do_it not posted.");
         // for testing purpose
-        boost::future<long> fu = m_promise->get_future();
+        std::future<long> fu = m_promise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         tpids = tp.thread_ids();
         // start long tasks in threadpool (first lambda) and callback in our thread
@@ -217,11 +218,11 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
-    boost::future<long> do_it3()
+    std::future<long> do_it3()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant do_it not posted.");
         // for testing purpose
-        boost::future<long> fu = m_promise->get_future();
+        std::future<long> fu = m_promise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         tpids = tp.thread_ids();
         // start long tasks in threadpool (first lambda) and callback in our thread
@@ -242,11 +243,11 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
-    boost::future<long> do_it4()
+    std::future<long> do_it4()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant do_it not posted.");
         // for testing purpose
-        boost::future<long> fu = m_promise->get_future();
+        std::future<long> fu = m_promise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         tpids = tp.thread_ids();
         // start long tasks in threadpool (first lambda) and callback in our thread
@@ -267,11 +268,11 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
-    boost::future<long> do_it5()
+    std::future<long> do_it5()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant do_it not posted.");
         // for testing purpose
-        boost::future<long> fu = m_promise->get_future();
+        std::future<long> fu = m_promise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         tpids = tp.thread_ids();
         // start long tasks in threadpool (first lambda) and callback in our thread
@@ -306,7 +307,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     }
 private:
 // for testing
-std::shared_ptr<boost::promise<long> > m_promise;
+std::shared_ptr<std::promise<long> > m_promise;
 };
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>
 {
@@ -342,8 +343,8 @@ BOOST_AUTO_TEST_CASE( test_callback_continuation_of_sequence )
                                                                             boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler);
-            boost::future<boost::future<long> > fu = proxy.do_it();
-            boost::future<long> resfu = fu.get();
+            auto fu = proxy.do_it();
+            auto resfu = fu.get();
             long res = resfu.get();
             BOOST_CHECK_MESSAGE(res == 42,"test_callback_continuation_of_sequence has wrong value");
         }
@@ -360,8 +361,8 @@ BOOST_AUTO_TEST_CASE( test_callback_continuation_of_sequence_any_continuation_ta
                                                                             boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler);
-            boost::future<boost::future<long> > fu = proxy.do_it2();
-            boost::future<long> resfu = fu.get();
+            auto fu = proxy.do_it2();
+            auto resfu = fu.get();
             long res = resfu.get();
             BOOST_CHECK_MESSAGE(res == 42,"test_callback_continuation_of_sequence_any_continuation_task has wrong value");
         }
@@ -377,8 +378,8 @@ BOOST_AUTO_TEST_CASE( test_callback_continuation_of_sequence_continuation_task )
                                                                             boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler);
-            boost::future<boost::future<long> > fu = proxy.do_it3();
-            boost::future<long> resfu = fu.get();
+            auto fu = proxy.do_it3();
+            auto resfu = fu.get();
             long res = resfu.get();
             BOOST_CHECK_MESSAGE(res == 30000,"test_callback_continuation_of_sequence_continuation_task has wrong value");
         }
@@ -394,8 +395,8 @@ BOOST_AUTO_TEST_CASE( test_callback_continuation_of_sequence_any_continuation_ta
                                                                             boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler);
-            boost::future<boost::future<long> > fu = proxy.do_it4();
-            boost::future<long> resfu = fu.get();
+            auto fu = proxy.do_it4();
+            auto resfu = fu.get();
             long res = resfu.get();
             BOOST_CHECK_MESSAGE(res == 42,"test_callback_continuation_of_sequence_any_continuation_task_lambda has wrong value");
         }
@@ -411,8 +412,8 @@ BOOST_AUTO_TEST_CASE( test_callback_continuation_of_sequence_any_continuation_ta
                                                                             boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler);
-            boost::future<boost::future<long> > fu = proxy.do_it5();
-            boost::future<long> resfu = fu.get();
+            auto fu = proxy.do_it5();
+            auto resfu = fu.get();
             long res = resfu.get();
             BOOST_CHECK_MESSAGE(res == 42,"test_callback_continuation_of_sequence_any_continuation_task_lambda_top_level has wrong value");
         }

@@ -89,9 +89,9 @@ struct Servant : boost::asynchronous::trackable_servant<>
         servant_intern += (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - servant_time).count() / 1000000);
         m_promise->set_value();
     }
-    boost::shared_future<void> do_partition_vec(std::vector<SORTED_TYPE> a)
+    boost::future<void> do_partition_vec(std::vector<SORTED_TYPE> a)
     {
-        boost::shared_future<void> fu = m_promise->get_future();
+        auto fu = m_promise->get_future();
         long tasksize = NELEM / tasks;
         std::shared_ptr<std::vector<SORTED_TYPE>> vec = std::make_shared<std::vector<SORTED_TYPE>>(std::move(a));
         std::shared_ptr<std::vector<SORTED_TYPE>> vec_true = std::make_shared<std::vector<SORTED_TYPE>>(NELEM);
@@ -140,8 +140,8 @@ void ParallelAsyncPostCb(std::vector<SORTED_TYPE>& vec)
                                                                          boost::asynchronous::default_save_cpu_load<10,80000,1000>>>(tpsize);
     {
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fu = proxy.do_partition_vec(vec);
-        boost::shared_future<void> resfu = fu.get();
+        auto fu = proxy.do_partition_vec(vec);
+        auto resfu = fu.get();
         resfu.get();
     }
     {

@@ -106,8 +106,8 @@ BOOST_AUTO_TEST_CASE( test_asio_timer_cancelled )
     main_thread_id = boost::this_thread::get_id();   
     ServantProxy proxy(scheduler);
     std::shared_ptr<boost::promise<void> > p(new boost::promise<void>);
-    boost::shared_future<void> fu = p->get_future();
-    boost::shared_future<void> fuv = proxy.timer_cancelled(p);
+    auto fu = p->get_future();
+    auto fuv = proxy.timer_cancelled(p);
     fu.get();
     BOOST_CHECK_MESSAGE(timer_cancelled_count==1,"timer callback not called.");
 }

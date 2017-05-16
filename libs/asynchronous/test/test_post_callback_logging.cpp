@@ -10,6 +10,7 @@
 #include <vector>
 #include <set>
 #include <chrono>
+#include <future>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
@@ -55,12 +56,12 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
     {
         servant_dtor = true;
     }
-    boost::shared_future<void> start_void_async_work()
+    std::future<void> start_void_async_work()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_void_async_work not posted.");
         // we need a promise to inform caller when we're done
-        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        std::shared_ptr<std::promise<void> > aPromise(new std::promise<void>);
+        std::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<servant_job> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -79,12 +80,12 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
         return fu;
     }
 
-    boost::shared_future<int> start_async_work()
+    std::future<int> start_async_work()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work not posted.");
         // we need a promise to inform caller when we're done
-        std::shared_ptr<boost::promise<int> > aPromise(new boost::promise<int>);
-        boost::shared_future<int> fu = aPromise->get_future();
+        std::shared_ptr<std::promise<int> > aPromise(new std::promise<int>);
+        std::future<int> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<servant_job> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -105,12 +106,12 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
         );
         return fu;
     }
-    boost::shared_future<int> start_exception_async_work()
+    std::future<int> start_exception_async_work()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_exception_async_work not posted.");
         // we need a promise to inform caller when we're done
-        std::shared_ptr<boost::promise<int> > aPromise(new boost::promise<int>);
-        boost::shared_future<int> fu = aPromise->get_future();
+        std::shared_ptr<std::promise<int> > aPromise(new std::promise<int>);
+        std::future<int> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<servant_job> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -126,24 +127,24 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
                            BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
                            BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                            try{res.get();}
-                           catch(...){aPromise->set_exception(boost::current_exception());}
+                           catch(...){aPromise->set_exception(std::current_exception());}
                            },// callback functor.
                      "int_async_work"
           );
           return fu;
     }
-    boost::shared_future<void> test_current()
+    std::future<void> test_current()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant test_current not posted.");
         // we need a promise to inform caller when we're done
-        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        std::shared_ptr<std::promise<void> > aPromise(new std::promise<void>);
+        std::future<void> fu = aPromise->get_future();
 
-        std::shared_ptr<boost::promise<void> > blocking_promise(new boost::promise<void>);
-        boost::shared_future<void> block_fu = blocking_promise->get_future();
+        std::shared_ptr<std::promise<void> > blocking_promise(new std::promise<void>);
+        std::shared_future<void> block_fu = blocking_promise->get_future();
 
-        std::shared_ptr<boost::promise<void> > blocking_promise2(new boost::promise<void>);
-        boost::shared_future<void> block_fu2 = blocking_promise2->get_future();
+        std::shared_ptr<std::promise<void> > blocking_promise2(new std::promise<void>);
+        std::shared_future<void> block_fu2 = blocking_promise2->get_future();
 
         // start long tasks
         post_callback(
@@ -205,17 +206,17 @@ BOOST_AUTO_TEST_CASE( test_void_post_callback_logging )
         {
             main_thread_id = boost::this_thread::get_id();
             ServantProxy proxy(scheduler);
-            boost::shared_future<boost::shared_future<void> > fuv = proxy.start_void_async_work();
+            auto fuv = proxy.start_void_async_work();
             try
             {
-                boost::shared_future<void> resfuv = fuv.get();
+                auto resfuv = fuv.get();
                 resfuv.get();
             }
             catch(...)
             {
                 BOOST_FAIL( "unexpected exception" );
             }
-            boost::shared_future<diag_type> fu_diag = proxy.get_diagnostics();
+            boost::future<diag_type> fu_diag = proxy.get_diagnostics();
             diag_type diag = fu_diag.get();
             BOOST_CHECK_MESSAGE(diag.size()==1,"servant tp worker didn't log the number of works we expected.");// start_void_async_work's task
             for (auto mit = diag.begin(); mit != diag.end() ; ++mit)
@@ -248,17 +249,17 @@ BOOST_AUTO_TEST_CASE( test_void_post_callback_logging )
         BOOST_CHECK_MESSAGE(single_thread_sched_diag.empty(),"Diags should have been cleared.");
         {
             ServantProxy proxy(scheduler);
-            boost::shared_future<boost::shared_future<void> > fuv = proxy.start_void_async_work();
+            auto fuv = proxy.start_void_async_work();
             try
             {
-                boost::shared_future<void> resfuv = fuv.get();
+                auto resfuv = fuv.get();
                 resfuv.get();
             }
             catch(...)
             {
                 BOOST_FAIL( "unexpected exception" );
             }
-            boost::shared_future<diag_type> fu_diag = proxy.get_diagnostics();
+            auto fu_diag = proxy.get_diagnostics();
             diag_type diag = fu_diag.get();
             BOOST_CHECK_MESSAGE(diag.size()==1,"servant tp worker after clear_diagnostics didn't log the number of works we expected.");// start_void_async_work's task
         }
@@ -278,10 +279,10 @@ BOOST_AUTO_TEST_CASE( test_int_post_callback_logging )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<int> > fuv = proxy.start_async_work();
+        auto fuv = proxy.start_async_work();
         try
         {
-            boost::shared_future<int> resfuv = fuv.get();
+            auto resfuv = fuv.get();
             int res= resfuv.get();
             BOOST_CHECK_MESSAGE(res==42,"servant work return wrong result.");
         }
@@ -302,11 +303,11 @@ BOOST_AUTO_TEST_CASE( test_post_callback_logging_exception )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<int> > fuv = proxy.start_exception_async_work();
+        auto fuv = proxy.start_exception_async_work();
         bool got_exception=false;
         try
         {
-            boost::shared_future<int> resfuv = fuv.get();
+            auto resfuv = fuv.get();
             resfuv.get();
         }
         catch ( my_exception& e)
@@ -319,7 +320,7 @@ BOOST_AUTO_TEST_CASE( test_post_callback_logging_exception )
         }
         BOOST_CHECK_MESSAGE(got_exception,"servant didn't send an expected exception.");
 
-        boost::shared_future<diag_type> fu_diag = proxy.get_diagnostics();
+        boost::future<diag_type> fu_diag = proxy.get_diagnostics();
         diag_type diag = fu_diag.get();
         BOOST_CHECK_MESSAGE(diag.size()==1,"servant tp worker didn't log the number of works we expected.");// start_exception_async_work's task
         for (auto mit = diag.begin(); mit != diag.end() ; ++mit)
@@ -343,10 +344,10 @@ BOOST_AUTO_TEST_CASE( test_current )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.test_current();
+        auto fuv = proxy.test_current();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            auto resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)

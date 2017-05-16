@@ -89,11 +89,11 @@ struct Servant : boost::asynchronous::trackable_servant<>
     {
     }
     // call to this is posted and executes in our (safe) single-thread scheduler
-    std::pair<boost::shared_future<long>, boost::asynchronous::any_interruptible> calc_fibonacci(long n,long cutoff)
+    std::pair<boost::future<long>, boost::asynchronous::any_interruptible> calc_fibonacci(long n,long cutoff)
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant calc_fibonacci not posted.");
         // for testing purpose
-        boost::shared_future<long> fu = m_promise->get_future();
+        auto fu = m_promise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         tpids = tp.thread_ids();
         // start long tasks in threadpool (first lambda) and callback in our thread
@@ -120,7 +120,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                             BOOST_CHECK_MESSAGE(has_abort_exception,"callback got a wrong exception.");
                }// callback functor.
         );
-        return std::make_pair(fu,interruptible);
+        return std::make_pair(std::move(fu),interruptible);
     }
 private:
 // for testing
@@ -154,8 +154,8 @@ BOOST_AUTO_TEST_CASE( test_fibonacci_100_100_interrupt )
                                                                             boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler);
-            boost::shared_future<std::pair<boost::shared_future<long>, boost::asynchronous::any_interruptible>  > fu = proxy.calc_fibonacci(fibo_val,cutoff);
-            std::pair<boost::shared_future<long>, boost::asynchronous::any_interruptible>  resfu = fu.get();
+            boost::future<std::pair<boost::future<long>, boost::asynchronous::any_interruptible>  > fu = proxy.calc_fibonacci(fibo_val,cutoff);
+            std::pair<boost::future<long>, boost::asynchronous::any_interruptible>  resfu = fu.get();
             // ok we decide it takes too long, interrupt
             boost::this_thread::sleep(boost::posix_time::milliseconds(30));
             resfu.second.interrupt();

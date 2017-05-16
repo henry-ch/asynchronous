@@ -6,6 +6,7 @@
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 // For more information, see http://www.boost.org
+#include <future>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
@@ -31,17 +32,17 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                boost::asynchronous::make_shared_scheduler_proxy<
                                                    boost::asynchronous::threadpool_scheduler<
                                                     boost::asynchronous::lockfree_queue<>>>(1))
-        , m_ready(new boost::promise<void>)
+        , m_ready(new std::promise<void>)
         , m_posted(0)
     {
     }
     ~Servant(){BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant dtor not posted.");}
 
-    boost::shared_future<boost::asynchronous::any_interruptible> start_async_work(std::shared_ptr<boost::promise<void> > p)
+    boost::future<boost::asynchronous::any_interruptible> start_async_work(std::shared_ptr<std::promise<void> > p)
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work not posted.");
         boost::promise<boost::asynchronous::any_interruptible> apromise;
-        boost::shared_future<boost::asynchronous::any_interruptible> fu = apromise.get_future();
+        boost::future<boost::asynchronous::any_interruptible> fu = apromise.get_future();
         // start long tasks
         boost::asynchronous::any_interruptible interruptible =
         interruptible_post_callback(
@@ -52,20 +53,20 @@ struct Servant : boost::asynchronous::trackable_servant<>
         return fu;
     }
     std::pair<
-       std::shared_ptr<boost::promise<void> >,
-       boost::shared_future<boost::asynchronous::any_interruptible>
+       std::shared_ptr<std::promise<void> >,
+       boost::future<boost::asynchronous::any_interruptible>
     >
     start_async_work2()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work2 not posted.");
         
         // post blocking funtion, until dtor done
-        boost::shared_future<void> fu=m_ready->get_future();
+        std::shared_future<void> fu=m_ready->get_future();
         auto blocking = [fu]() mutable {fu.get();};
         get_worker().post(blocking);
         
         boost::promise<boost::asynchronous::any_interruptible> apromise;
-        boost::shared_future<boost::asynchronous::any_interruptible> fu2 = apromise.get_future();
+        boost::future<boost::asynchronous::any_interruptible> fu2 = apromise.get_future();
         // start long tasks
         boost::asynchronous::any_interruptible interruptible =
         interruptible_post_callback(
@@ -73,14 +74,14 @@ struct Servant : boost::asynchronous::trackable_servant<>
            [](boost::asynchronous::expected<void> ){BOOST_ERROR( "unexpected call of callback" );}// should not be called
         );
         apromise.set_value(interruptible);
-        return std::make_pair(m_ready,fu2);
+        return std::make_pair(m_ready,std::move(fu2));
     }
-    boost::shared_future<int> test_no_interrupt(int runs, int disturbances)
+    boost::future<int> test_no_interrupt(int runs, int disturbances)
     {
         /*this->set_worker(boost::asynchronous::make_shared_scheduler_proxy<
                          boost::asynchronous::threadpool_scheduler<
                           boost::asynchronous::lockfree_queue<>>>(10));*/
-        boost::shared_future<int> fu = m_promise.get_future();
+        boost::future<int> fu = m_promise.get_future();
         for (int i = 0; i < disturbances ;++i)
         {
             m_interruptibles.push_back(interruptible_post_callback(
@@ -122,13 +123,13 @@ struct Servant : boost::asynchronous::trackable_servant<>
         }
         return fu;
     }
-    boost::shared_future<int> test_no_interrupt_continuation(int runs, int disturbances, bool short_continuation)
+    boost::future<int> test_no_interrupt_continuation(int runs, int disturbances, bool short_continuation)
     {
         this->set_worker(boost::asynchronous::make_shared_scheduler_proxy<
                          boost::asynchronous::threadpool_scheduler<
                           boost::asynchronous::lockfree_queue<>>>(10));
         m_data = std::vector<int>(short_continuation?1:10000,1);
-        boost::shared_future<int> fu = m_promise.get_future();
+        boost::future<int> fu = m_promise.get_future();
         for (int i = 0; i < disturbances ;++i)
         {
             m_interruptibles.push_back(interruptible_post_callback(
@@ -193,7 +194,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     }
 
 private:
-    std::shared_ptr<boost::promise<void> > m_ready;
+    std::shared_ptr<std::promise<void> > m_ready;
     boost::promise<int> m_promise;
     std::atomic<int> m_posted;
     int m_cb=0;
@@ -227,12 +228,12 @@ BOOST_AUTO_TEST_CASE( test_interrupt_running_task )
     {
         auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
                                                                             boost::asynchronous::lockfree_queue<>>>();
-        std::shared_ptr<boost::promise<void> > p(new boost::promise<void>);
-        boost::shared_future<void> end=p->get_future();
+        std::shared_ptr<std::promise<void> > p(new std::promise<void>);
+        std::future<void> end=p->get_future();
         {
             ServantProxy proxy(scheduler);
-            boost::shared_future<boost::shared_future<boost::asynchronous::any_interruptible> > fu = proxy.start_async_work(p);
-            boost::shared_future<boost::asynchronous::any_interruptible> resfu = fu.get();
+            boost::future<boost::future<boost::asynchronous::any_interruptible> > fu = proxy.start_async_work(p);
+            boost::future<boost::asynchronous::any_interruptible> resfu = fu.get();
             boost::asynchronous::any_interruptible res = resfu.get();
             end.get();
             res.interrupt();
@@ -248,12 +249,12 @@ BOOST_AUTO_TEST_CASE( test_interrupt_not_running_task )
                                                                             boost::asynchronous::lockfree_queue<>>>();
         {
             typedef std::pair<
-                    std::shared_ptr<boost::promise<void> >,
-                    boost::shared_future<boost::asynchronous::any_interruptible>
+                    std::shared_ptr<std::promise<void> >,
+                    boost::future<boost::asynchronous::any_interruptible>
                  > res_type;
             
             ServantProxy proxy(scheduler);
-            boost::shared_future<res_type> fu = proxy.start_async_work2();
+            boost::future<res_type> fu = proxy.start_async_work2();
             res_type res = fu.get();
             boost::asynchronous::any_interruptible i = res.second.get();
             // provoke interrupt before job starts
@@ -272,10 +273,10 @@ BOOST_AUTO_TEST_CASE( test_no_interrupt )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<int> > fuv = proxy.test_no_interrupt(1000,10);
+        boost::future<boost::future<int> > fuv = proxy.test_no_interrupt(1000,10);
         try
         {
-            boost::shared_future<int> resfuv = fuv.get();
+            boost::future<int> resfuv = fuv.get();
             int res = resfuv.get();
             BOOST_CHECK_MESSAGE(res==2000,"not matching number of callbacks: " << res);
         }
@@ -294,10 +295,10 @@ BOOST_AUTO_TEST_CASE( test_no_interrupt_continuation )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<int> > fuv = proxy.test_no_interrupt_continuation(10000,100,false);
+        boost::future<boost::future<int> > fuv = proxy.test_no_interrupt_continuation(10000,100,false);
         try
         {
-            boost::shared_future<int> resfuv = fuv.get();
+            boost::future<int> resfuv = fuv.get();
             int res = resfuv.get();
             BOOST_CHECK_MESSAGE(res==2*10000,"not matching number of callbacks: " << res);
             boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
@@ -317,10 +318,10 @@ BOOST_AUTO_TEST_CASE( test_no_interrupt_continuation_short )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<int> > fuv = proxy.test_no_interrupt_continuation(10000,100,true);
+        boost::future<boost::future<int> > fuv = proxy.test_no_interrupt_continuation(10000,100,true);
         try
         {
-            boost::shared_future<int> resfuv = fuv.get();
+            boost::future<int> resfuv = fuv.get();
             int res = resfuv.get();
             BOOST_CHECK_MESSAGE(res==2*10000,"not matching number of callbacks: " << res);
             boost::this_thread::sleep(boost::posix_time::milliseconds(1000));

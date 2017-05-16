@@ -66,13 +66,13 @@ struct Servant : boost::asynchronous::trackable_servant<>
         servant_dtor = true;
     }
 
-    boost::shared_future<void> start_parallel_transform()
+    boost::future<void> start_parallel_transform()
     {
         BOOST_CHECK_MESSAGE(main_thread_id != boost::this_thread::get_id(), "servant async work not posted.");
 
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp = get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         auto data_copy = m_data;
@@ -103,13 +103,13 @@ struct Servant : boost::asynchronous::trackable_servant<>
         return fu;
     }
 
-    boost::shared_future<void> start_parallel_transform2()
+    boost::future<void> start_parallel_transform2()
     {
         BOOST_CHECK_MESSAGE(main_thread_id != boost::this_thread::get_id(), "servant async work not posted.");
 
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         std::vector<boost::thread::id> ids = get_worker().thread_ids();
         auto data_copy = m_data;
         auto data2_copy = m_data;
@@ -140,13 +140,13 @@ struct Servant : boost::asynchronous::trackable_servant<>
         return fu;
     }
 #ifndef __INTEL_COMPILER
-    boost::shared_future<void> start_parallel_transform_any_iterators()
+    boost::future<void> start_parallel_transform_any_iterators()
     {
         BOOST_CHECK_MESSAGE(main_thread_id != boost::this_thread::get_id(), "servant async work not posted.");
 
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         std::vector<boost::thread::id> ids = get_worker().thread_ids();
         auto data_copy = m_data;
         auto data2_copy = m_data2;
@@ -194,13 +194,13 @@ struct Servant : boost::asynchronous::trackable_servant<>
         return fu;
     }
 #endif
-    boost::shared_future<void> start_parallel_transform_range()
+    boost::future<void> start_parallel_transform_range()
     {
         BOOST_CHECK_MESSAGE(main_thread_id != boost::this_thread::get_id(), "servant async work not posted.");
 
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp = get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         auto data_copy = m_data;
@@ -231,13 +231,13 @@ struct Servant : boost::asynchronous::trackable_servant<>
         return fu;
     }
 
-    boost::shared_future<void> start_parallel_transform2_range()
+    boost::future<void> start_parallel_transform2_range()
     {
         BOOST_CHECK_MESSAGE(main_thread_id != boost::this_thread::get_id(), "servant async work not posted.");
 
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp = get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         auto data_copy = m_data;
@@ -269,13 +269,13 @@ struct Servant : boost::asynchronous::trackable_servant<>
         return fu;
     }
 #ifndef __INTEL_COMPILER
-    boost::shared_future<void> start_parallel_transform_any_range()
+    boost::future<void> start_parallel_transform_any_range()
     {
         BOOST_CHECK_MESSAGE(main_thread_id != boost::this_thread::get_id(), "servant async work not posted.");
 
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp = get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         auto data_copy = m_data;
@@ -369,10 +369,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_transform )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_parallel_transform();
+        boost::future<boost::future<void> > fuv = proxy.start_parallel_transform();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -392,10 +392,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_transform2 )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_parallel_transform2();
+        boost::future<boost::future<void> > fuv = proxy.start_parallel_transform2();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -415,10 +415,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_transform_range )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_parallel_transform_range();
+        boost::future<boost::future<void> > fuv = proxy.start_parallel_transform_range();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -438,10 +438,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_transform2_range )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_parallel_transform2_range();
+        boost::future<boost::future<void> > fuv = proxy.start_parallel_transform2_range();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -461,10 +461,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_transform_any_iterators )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_parallel_transform_any_iterators();
+        boost::future<boost::future<void> > fuv = proxy.start_parallel_transform_any_iterators();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -484,10 +484,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_transform_any_range )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_parallel_transform_any_range();
+        boost::future<boost::future<void> > fuv = proxy.start_parallel_transform_any_range();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)

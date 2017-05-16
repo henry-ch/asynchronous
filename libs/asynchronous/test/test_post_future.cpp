@@ -88,7 +88,7 @@ BOOST_AUTO_TEST_CASE( test_void_post_future )
 {
     auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<
                                                                         boost::asynchronous::lockfree_queue<>>>(1);
-    boost::shared_future<void> fuv = boost::asynchronous::post_future(scheduler, void_task());
+    boost::future<void> fuv = boost::asynchronous::post_future(scheduler, void_task());
     fuv.get();
     BOOST_CHECK_MESSAGE(called,"post_future<void> didn't call task.");
 }
@@ -97,7 +97,7 @@ BOOST_AUTO_TEST_CASE( test_int_post_future )
 {
     auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<
                                                                         boost::asynchronous::lockfree_queue<>>>(1);
-    boost::shared_future<int> fui = boost::asynchronous::post_future(scheduler, int_task());
+    boost::future<int> fui = boost::asynchronous::post_future(scheduler, int_task());
     int res = fui.get();
     BOOST_CHECK_MESSAGE(42 == res,"post_future<int> returned wrong value.");
 }
@@ -108,7 +108,7 @@ BOOST_AUTO_TEST_CASE( test_interruptible_void_post_future )
                                                                         boost::asynchronous::lockfree_queue<>>>(1);
 
 
-    std::tuple<boost::shared_future<void>,boost::asynchronous::any_interruptible> res = boost::asynchronous::interruptible_post_future(scheduler, blocking_void_task());
+    std::tuple<boost::future<void>,boost::asynchronous::any_interruptible> res = boost::asynchronous::interruptible_post_future(scheduler, blocking_void_task());
     // we let the task start
     boost::this_thread::sleep(boost::posix_time::milliseconds(200));
     std::get<1>(res).interrupt();
@@ -133,7 +133,7 @@ BOOST_AUTO_TEST_CASE( test_interruptible_int_post_future )
                                                                         boost::asynchronous::lockfree_queue<>>>(1);
 
 
-    std::tuple<boost::shared_future<int>,boost::asynchronous::any_interruptible> res = boost::asynchronous::interruptible_post_future(scheduler, blocking_int_task());
+    std::tuple<boost::future<int>,boost::asynchronous::any_interruptible> res = boost::asynchronous::interruptible_post_future(scheduler, blocking_int_task());
     int task_res=0;
     // we let the task start
     boost::this_thread::sleep(boost::posix_time::milliseconds(200));
@@ -157,7 +157,7 @@ BOOST_AUTO_TEST_CASE( test_throw_int_post_future )
 {
     auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<
                                                                         boost::asynchronous::lockfree_queue<servant_job>>>(1);
-    boost::shared_future<int> fui = boost::asynchronous::post_future(scheduler, throwing_int_task(),"throwing_int_task",0);
+    boost::future<int> fui = boost::asynchronous::post_future(scheduler, throwing_int_task(),"throwing_int_task",0);
     bool future_with_exception = false;
     try
     {

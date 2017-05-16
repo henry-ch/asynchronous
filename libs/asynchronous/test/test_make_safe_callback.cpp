@@ -55,12 +55,12 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant dtor not posted.");
         servant_dtor = true;
     }
-    boost::shared_future<void> start_async_work()
+    boost::future<void> start_async_work()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work not posted.");
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<servant_job> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
 
@@ -85,12 +85,12 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
         return fu;
     }
 
-    boost::shared_future<void> start_async_work_failed()
+    boost::future<void> start_async_work_failed()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work not posted.");
         // we need a promise to inform caller when we're done
         std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<servant_job> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
 
@@ -144,10 +144,10 @@ BOOST_AUTO_TEST_CASE( test_make_safe_callback )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_async_work();
+        boost::future<boost::future<void> > fuv = proxy.start_async_work();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(std::exception& e)
@@ -186,10 +186,10 @@ BOOST_AUTO_TEST_CASE( test_make_safe_callback_failed )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.start_async_work_failed();
+        boost::future<boost::future<void> > fuv = proxy.start_async_work_failed();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            boost::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(std::exception& e)

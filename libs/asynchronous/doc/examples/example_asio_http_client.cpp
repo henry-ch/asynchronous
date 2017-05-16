@@ -1,6 +1,7 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
+#include <future>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/scheduler/multiqueue_threadpool_scheduler.hpp>
@@ -80,7 +81,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     // 2. at each callback, check if we got all callbacks
     // 3. if yes, post some work to threadpool, compare the returned strings (should be all the same)
     // 4. if all strings equal as they should be, cout the page
-    boost::shared_future<void> get_data()
+    std::shared_future<void> get_data()
     {
         // provide this callback (executing in our thread) to all asio servants as task result. A string will contain the page
         std::function<void(std::string)> f =
@@ -124,7 +125,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         m_asio_comm[0].test(make_safe_callback(f));
         m_asio_comm[1].test(make_safe_callback(f));
         m_asio_comm[2].test(make_safe_callback(f));
-        boost::shared_future<void> fu = m_done_promise.get_future();
+        std::shared_future<void> fu = m_done_promise.get_future();
         return fu;
     }
 private:
@@ -133,7 +134,7 @@ private:
     std::vector<AsioCommunicationServantProxy> m_asio_comm;
     std::vector<std::string> m_requested_data;// pages returned from tcp communication
     unsigned m_check_string_count;//has to be 2 when done (2 string compares)
-    boost::promise<void> m_done_promise;
+    std::promise<void> m_done_promise;
 };
 // manager (Servant) proxy, for use in main thread
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>
@@ -159,8 +160,8 @@ void example_asio_http_client()
         {
             ServantProxy proxy(scheduler,"boost.org","/development/index.html");
             // call member, as if it was from Servant
-            boost::shared_future<boost::shared_future<void> > called_fu = proxy.get_data();
-            boost::shared_future<void> fu_done = called_fu.get();
+            auto called_fu = proxy.get_data();
+            auto fu_done = called_fu.get();
             // when the next line returns, we got the response from the server, we are done
             fu_done.get();
         }

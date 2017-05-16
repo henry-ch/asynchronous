@@ -10,6 +10,7 @@
 
 #include <vector>
 #include <set>
+#include <future>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
@@ -40,7 +41,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                boost::asynchronous::make_shared_scheduler_proxy<
                                                    boost::asynchronous::threadpool_scheduler<
                                                            boost::asynchronous::lockfree_queue<>>>(1))
-        , m_dtor_done(new boost::promise<void>)
+        , m_dtor_done(new std::promise<void>)
     {
     }
     ~Servant()
@@ -51,7 +52,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         if (!!m_dtor_done)
             m_dtor_done->set_value();
     }
-    void start_endless_async_work(std::shared_ptr<boost::promise<void> > startp,boost::shared_future<void> end)
+    void start_endless_async_work(std::shared_ptr<std::promise<void> > startp,std::shared_future<void> end)
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_endless_async_work not posted.");
         // start long tasks
@@ -61,7 +62,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     }
 
 // for start_endless_async_work2
-std::shared_ptr<boost::promise<void> > m_dtor_done;
+std::shared_ptr<std::promise<void> > m_dtor_done;
 };
 
 //make template just to try it out
@@ -93,13 +94,13 @@ BOOST_AUTO_TEST_CASE( test_trackable_servant_post )
         auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
                                                                             boost::asynchronous::lockfree_queue<>>>();
 
-        boost::promise<void> p;
-        boost::shared_future<void> end=p.get_future();
-        std::shared_ptr<boost::promise<void> > startp(new boost::promise<void>);
-        boost::shared_future<void> start=startp->get_future();
+        std::promise<void> p;
+        std::shared_future<void> end=p.get_future();
+        std::shared_ptr<std::promise<void> > startp(new std::promise<void>);
+        std::future<void> start=startp->get_future();
         {
             ServantProxy<int> proxy(scheduler);
-            boost::shared_future<void> fuv = proxy.start_endless_async_work(startp,end);
+            auto fuv = proxy.start_endless_async_work(startp,std::move(end));
             // wait for task to start
             start.get();
         }
