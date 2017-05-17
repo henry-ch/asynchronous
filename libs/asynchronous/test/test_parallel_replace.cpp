@@ -9,6 +9,7 @@
 
 #include <vector>
 #include <set>
+#include <future>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
@@ -47,7 +48,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         servant_dtor = true;
     }
 
-    boost::future<void> parallel_replace_if_iterators()
+    std::future<void> parallel_replace_if_iterators()
     {
         m_data = std::vector<int>(10000,1);
         std::vector<int> more(5000,2);
@@ -56,8 +57,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
 
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant parallel_replace not posted.");
         // we need a promise to inform caller when we're done
-        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::future<void> fu = aPromise->get_future();
+        std::shared_ptr<std::promise<void> > aPromise(new std::promise<void>);
+        std::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -90,7 +91,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         return fu;
     }
 
-    boost::future<void> parallel_replace_iterators()
+    std::future<void> parallel_replace_iterators()
     {
         m_data = std::vector<int>(10000,1);
         std::vector<int> more(5000,2);
@@ -99,8 +100,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
 
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant parallel_replace not posted.");
         // we need a promise to inform caller when we're done
-        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::future<void> fu = aPromise->get_future();
+        std::shared_ptr<std::promise<void> > aPromise(new std::promise<void>);
+        std::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -130,7 +131,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         return fu;
     }
 
-    boost::future<void> parallel_replace_if_moved_range()
+    std::future<void> parallel_replace_if_moved_range()
     {
         m_data = std::vector<int>(10000,1);
         std::vector<int> more(5000,2);
@@ -139,8 +140,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
 
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant parallel_replace not posted.");
         // we need a promise to inform caller when we're done
-        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::future<void> fu = aPromise->get_future();
+        std::shared_ptr<std::promise<void> > aPromise(new std::promise<void>);
+        std::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -173,7 +174,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         return fu;
     }
 
-    boost::future<void> parallel_replace_moved_range()
+    std::future<void> parallel_replace_moved_range()
     {
         m_data = std::vector<int>(10000,1);
         std::vector<int> more(5000,2);
@@ -182,8 +183,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
 
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant parallel_replace not posted.");
         // we need a promise to inform caller when we're done
-        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::future<void> fu = aPromise->get_future();
+        std::shared_ptr<std::promise<void> > aPromise(new std::promise<void>);
+        std::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -213,7 +214,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         return fu;
     }
 
-    boost::future<void> parallel_replace_if_continuation()
+    std::future<void> parallel_replace_if_continuation()
     {
         m_data = std::vector<int>(10000,1);
         std::vector<int> more(5000,2);
@@ -223,8 +224,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
 
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant parallel_replace not posted.");
         // we need a promise to inform caller when we're done
-        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::future<void> fu = aPromise->get_future();
+        std::shared_ptr<std::promise<void> > aPromise(new std::promise<void>);
+        std::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -262,7 +263,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         return fu;
     }
 
-    boost::future<void> parallel_replace_continuation()
+    std::future<void> parallel_replace_continuation()
     {
         m_data = std::vector<int>(10000,1);
         std::vector<int> more(5000,2);
@@ -272,8 +273,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
 
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant parallel_replace not posted.");
         // we need a promise to inform caller when we're done
-        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::future<void> fu = aPromise->get_future();
+        std::shared_ptr<std::promise<void> > aPromise(new std::promise<void>);
+        std::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -337,10 +338,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_replace_if )
                                                                             boost::asynchronous::lockfree_queue<>>>();
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::future<boost::future<void> > fuv = proxy.parallel_replace_if_iterators();
+        auto fuv = proxy.parallel_replace_if_iterators();
         try
         {
-            boost::future<void> resfuv = fuv.get();
+            auto resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -359,10 +360,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_replace )
                                                                             boost::asynchronous::lockfree_queue<>>>();
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::future<boost::future<void> > fuv = proxy.parallel_replace_iterators();
+        auto fuv = proxy.parallel_replace_iterators();
         try
         {
-            boost::future<void> resfuv = fuv.get();
+            auto resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -381,10 +382,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_replace_if_moved_range )
                                                                             boost::asynchronous::lockfree_queue<>>>();
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::future<boost::future<void> > fuv = proxy.parallel_replace_if_moved_range();
+        auto fuv = proxy.parallel_replace_if_moved_range();
         try
         {
-            boost::future<void> resfuv = fuv.get();
+            auto resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -403,10 +404,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_replace_moved_range )
                                                                             boost::asynchronous::lockfree_queue<>>>();
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::future<boost::future<void> > fuv = proxy.parallel_replace_moved_range();
+        auto fuv = proxy.parallel_replace_moved_range();
         try
         {
-            boost::future<void> resfuv = fuv.get();
+            auto resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -425,10 +426,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_replace_if_continuation )
                                                                             boost::asynchronous::lockfree_queue<>>>();
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::future<boost::future<void> > fuv = proxy.parallel_replace_if_continuation();
+        auto fuv = proxy.parallel_replace_if_continuation();
         try
         {
-            boost::future<void> resfuv = fuv.get();
+            auto resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -447,10 +448,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_replace_continuation )
                                                                             boost::asynchronous::lockfree_queue<>>>();
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::future<boost::future<void> > fuv = proxy.parallel_replace_continuation();
+        auto fuv = proxy.parallel_replace_continuation();
         try
         {
-            boost::future<void> resfuv = fuv.get();
+            auto resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)

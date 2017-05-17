@@ -12,6 +12,7 @@
 #include <vector>
 #include <set>
 #include <random>
+#include <future>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
@@ -59,7 +60,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         servant_dtor = true;
     }
 
-    boost::future<void> start_async_work_ok()
+    std::future<void> start_async_work_ok()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work_ok not posted.");
         m_data2.clear();
@@ -67,8 +68,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
         m_data2.push_back(m_data[3101]);
         m_data2.push_back(m_data[3102]);
         // we need a promise to inform caller when we're done
-        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::future<void> fu = aPromise->get_future();
+        std::shared_ptr<std::promise<void> > aPromise(new std::promise<void>);
+        std::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -99,7 +100,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         return fu;
     }
 
-    boost::future<void> start_async_work_ok2()
+    std::future<void> start_async_work_ok2()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work_ok not posted.");
         m_data2.clear();
@@ -107,8 +108,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
         m_data2.push_back(m_data[3000]);
         m_data2.push_back(m_data[3001]);
         // we need a promise to inform caller when we're done
-        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::future<void> fu = aPromise->get_future();
+        std::shared_ptr<std::promise<void> > aPromise(new std::promise<void>);
+        std::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -139,7 +140,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         return fu;
     }
 
-    boost::future<void> start_async_work_ok_no_fct()
+    std::future<void> start_async_work_ok_no_fct()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work_ok not posted.");
         m_data2.clear();
@@ -147,8 +148,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
         m_data2.push_back(m_data[3101]);
         m_data2.push_back(m_data[3102]);
         // we need a promise to inform caller when we're done
-        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::future<void> fu = aPromise->get_future();
+        std::shared_ptr<std::promise<void> > aPromise(new std::promise<void>);
+        std::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -176,7 +177,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
-    boost::future<void> start_async_work_nok()
+    std::future<void> start_async_work_nok()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work_nok not posted.");
         m_data2.clear();
@@ -184,8 +185,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
         m_data2.push_back(-2);
         m_data2.push_back(-3);
         // we need a promise to inform caller when we're done
-        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::future<void> fu = aPromise->get_future();
+        std::shared_ptr<std::promise<void> > aPromise(new std::promise<void>);
+        std::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -215,7 +216,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
-    boost::future<void> start_async_work_continuation()
+    std::future<void> start_async_work_continuation()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work_ok not posted.");
         m_data2.clear();
@@ -228,8 +229,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
             i += 2;
         }
         // we need a promise to inform caller when we're done
-        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::future<void> fu = aPromise->get_future();
+        std::shared_ptr<std::promise<void> > aPromise(new std::promise<void>);
+        std::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -294,10 +295,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_find_end_ok )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::future<boost::future<void> > fuv = proxy.start_async_work_ok();
+        auto fuv = proxy.start_async_work_ok();
         try
         {
-            boost::future<void> resfuv = fuv.get();
+            auto resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -317,10 +318,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_find_end_ok2 )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::future<boost::future<void> > fuv = proxy.start_async_work_ok2();
+        auto fuv = proxy.start_async_work_ok2();
         try
         {
-            boost::future<void> resfuv = fuv.get();
+            auto resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -340,10 +341,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_find_end_nok )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::future<boost::future<void> > fuv = proxy.start_async_work_nok();
+        auto fuv = proxy.start_async_work_nok();
         try
         {
-            boost::future<void> resfuv = fuv.get();
+            auto resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -362,10 +363,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_find_end_ok_no_fct )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::future<boost::future<void> > fuv = proxy.start_async_work_ok_no_fct();
+        auto fuv = proxy.start_async_work_ok_no_fct();
         try
         {
-            boost::future<void> resfuv = fuv.get();
+            auto resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -385,10 +386,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_find_end_continuation )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::future<boost::future<void> > fuv = proxy.start_async_work_continuation();
+        auto fuv = proxy.start_async_work_continuation();
         try
         {
-            boost::future<void> resfuv = fuv.get();
+            auto resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)

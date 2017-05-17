@@ -11,6 +11,8 @@
 #include <set>
 #include <functional>
 #include <random>
+#include <future>
+
 #include <boost/lexical_cast.hpp>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
@@ -68,14 +70,14 @@ struct Servant : boost::asynchronous::trackable_servant<>
         servant_dtor = true;
     }
 
-    boost::future<void> test_reverse_even()
+    std::future<void> test_reverse_even()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant async work not posted.");
         generate(m_data1,1000,700);
         auto data_copy = m_data1;
         // we need a promise to inform caller when we're done
-        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::future<void> fu = aPromise->get_future();
+        std::shared_ptr<std::promise<void> > aPromise(new std::promise<void>);
+        std::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -98,14 +100,14 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
-    boost::future<void> test_reverse_odd()
+    std::future<void> test_reverse_odd()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant async work not posted.");
         generate(m_data1,1001,700);
         auto data_copy = m_data1;
         // we need a promise to inform caller when we're done
-        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::future<void> fu = aPromise->get_future();
+        std::shared_ptr<std::promise<void> > aPromise(new std::promise<void>);
+        std::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -128,14 +130,14 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
-    boost::future<void> test_reverse_move()
+    std::future<void> test_reverse_move()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant async work not posted.");
         generate(m_data1,1000,700);
         auto data_copy = m_data1;
         // we need a promise to inform caller when we're done
-        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::future<void> fu = aPromise->get_future();
+        std::shared_ptr<std::promise<void> > aPromise(new std::promise<void>);
+        std::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -159,12 +161,12 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
-    boost::future<void> test_reverse_continuation()
+    std::future<void> test_reverse_continuation()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant async work not posted.");
         // we need a promise to inform caller when we're done
-        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::future<void> fu = aPromise->get_future();
+        std::shared_ptr<std::promise<void> > aPromise(new std::promise<void>);
+        std::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         generate(m_data1,1000,700);
@@ -219,10 +221,10 @@ BOOST_AUTO_TEST_CASE( test_reverse_even )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::future<boost::future<void> > fuv = proxy.test_reverse_even();
+        auto fuv = proxy.test_reverse_even();
         try
         {
-            boost::future<void> resfuv = fuv.get();
+            auto resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -241,10 +243,10 @@ BOOST_AUTO_TEST_CASE( test_reverse_odd )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::future<boost::future<void> > fuv = proxy.test_reverse_odd();
+        auto fuv = proxy.test_reverse_odd();
         try
         {
-            boost::future<void> resfuv = fuv.get();
+            auto resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -263,10 +265,10 @@ BOOST_AUTO_TEST_CASE( test_reverse_move )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::future<boost::future<void> > fuv = proxy.test_reverse_move();
+        auto fuv = proxy.test_reverse_move();
         try
         {
-            boost::future<void> resfuv = fuv.get();
+            auto resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
@@ -285,10 +287,10 @@ BOOST_AUTO_TEST_CASE( test_reverse_continuation )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::future<boost::future<void> > fuv = proxy.test_reverse_continuation();
+        auto fuv = proxy.test_reverse_continuation();
         try
         {
-            boost::future<void> resfuv = fuv.get();
+            auto resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)

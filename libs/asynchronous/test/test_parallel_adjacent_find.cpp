@@ -11,6 +11,7 @@
 #include <vector>
 #include <set>
 #include <random>
+#include <future>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
@@ -59,14 +60,14 @@ struct Servant : boost::asynchronous::trackable_servant<>
         servant_dtor = true;
     }
 
-    boost::future<void> parallel_adjacent_find()
+    std::future<void> parallel_adjacent_find()
     {
         generate(m_data);
 
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant parallel_replace not posted.");
         // we need a promise to inform caller when we're done
-        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::future<void> fu = aPromise->get_future();
+        std::shared_ptr<std::promise<void> > aPromise(new std::promise<void>);
+        std::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -96,14 +97,14 @@ struct Servant : boost::asynchronous::trackable_servant<>
         );
         return fu;
     }
-    boost::future<void> parallel_adjacent_find_if()
+    std::future<void> parallel_adjacent_find_if()
     {
         generate(m_data);
 
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant parallel_replace not posted.");
         // we need a promise to inform caller when we're done
-        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::future<void> fu = aPromise->get_future();
+        std::shared_ptr<std::promise<void> > aPromise(new std::promise<void>);
+        std::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -173,10 +174,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_adjacent_find )
         ServantProxy proxy(scheduler);
         for (int i = 0; i < 30 ; ++i)
         {
-            boost::future<boost::future<void> > fuv = proxy.parallel_adjacent_find();
+            auto fuv = proxy.parallel_adjacent_find();
             try
             {
-                boost::future<void> resfuv = fuv.get();
+                auto resfuv = fuv.get();
                 resfuv.get();
             }
             catch(...)
@@ -198,10 +199,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_adjacent_find_if )
         ServantProxy proxy(scheduler);
         for (int i = 0; i < 30 ; ++i)
         {
-            boost::future<boost::future<void> > fuv = proxy.parallel_adjacent_find_if();
+            auto fuv = proxy.parallel_adjacent_find_if();
             try
             {
-                boost::future<void> resfuv = fuv.get();
+                auto resfuv = fuv.get();
                 resfuv.get();
             }
             catch(...)

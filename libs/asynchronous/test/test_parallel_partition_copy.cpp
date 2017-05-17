@@ -11,6 +11,8 @@
 #include <set>
 #include <functional>
 #include <random>
+#include <future>
+
 #include <boost/lexical_cast.hpp>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
@@ -70,15 +72,15 @@ struct Servant : boost::asynchronous::trackable_servant<>
         servant_dtor = true;
     }
 
-    boost::future<void> test_parallel_partition_copy_iterators()
+    std::future<void> test_parallel_partition_copy_iterators()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant async work not posted.");
         generate(m_data1,10000,7000);
         m_data_true = std::vector<int>(10000,0);
         m_data_false = std::vector<int>(10000,0);
         // we need a promise to inform caller when we're done
-        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::future<void> fu = aPromise->get_future();
+        std::shared_ptr<std::promise<void> > aPromise(new std::promise<void>);
+        std::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -159,10 +161,10 @@ BOOST_AUTO_TEST_CASE( test_parallel_partition_copy_iterators )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::future<boost::future<void> > fuv = proxy.test_parallel_partition_copy_iterators();
+        auto fuv = proxy.test_parallel_partition_copy_iterators();
         try
         {
-            boost::future<void> resfuv = fuv.get();
+            auto resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)

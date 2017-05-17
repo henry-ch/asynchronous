@@ -10,6 +10,7 @@
 #ifndef BOOST_THREAD_PROVIDES_FUTURE
 #define BOOST_THREAD_PROVIDES_FUTURE
 #endif
+#include <future>
 #include <boost/thread.hpp>
 #include <boost/thread/future.hpp>
 #include <boost/asynchronous/detail/move_bind.hpp>
@@ -32,13 +33,13 @@ BOOST_AUTO_TEST_CASE( test_move_bind )
 
 BOOST_AUTO_TEST_CASE( test_move_bind_moveable_data )
 {
-    boost::promise<int> p1;
-    boost::future<int> fu1 = p1.get_future();
+    std::promise<int> p1;
+    std::future<int> fu1 = p1.get_future();
     p1.set_value(17);
-    boost::promise<int> p2;
-    boost::future<int> fu2 = p2.get_future();
+    std::promise<int> p2;
+    std::future<int> fu2 = p2.get_future();
     p2.set_value(18);
-    auto f2 = boost::asynchronous::move_bind([](boost::future<int> fu1,boost::future<int> fu2)
+    auto f2 = boost::asynchronous::move_bind([](std::future<int> fu1,std::future<int> fu2)
                                              {return fu1.get()+fu2.get();},std::move(fu1));
     int res = f2(std::move(fu2));
     BOOST_CHECK_MESSAGE(res==35,"res should be 35.");

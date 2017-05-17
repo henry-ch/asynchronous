@@ -10,6 +10,7 @@
 
 #include <vector>
 #include <set>
+#include <future>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
@@ -55,12 +56,12 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant dtor not posted.");
         servant_dtor = true;
     }
-    boost::future<void> start_async_work()
+    std::future<void> start_async_work()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work not posted.");
         // we need a promise to inform caller when we're done
-        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::future<void> fu = aPromise->get_future();
+        std::shared_ptr<std::promise<void> > aPromise(new std::promise<void>);
+        std::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<servant_job> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
 
@@ -85,12 +86,12 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
         return fu;
     }
 
-    boost::future<void> start_async_work_failed()
+    std::future<void> start_async_work_failed()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work not posted.");
         // we need a promise to inform caller when we're done
-        std::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::future<void> fu = aPromise->get_future();
+        std::shared_ptr<std::promise<void> > aPromise(new std::promise<void>);
+        std::future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<servant_job> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
 
@@ -144,10 +145,10 @@ BOOST_AUTO_TEST_CASE( test_make_safe_callback )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::future<boost::future<void> > fuv = proxy.start_async_work();
+        boost::future<std::future<void> > fuv = proxy.start_async_work();
         try
         {
-            boost::future<void> resfuv = fuv.get();
+            std::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(std::exception& e)
@@ -186,10 +187,10 @@ BOOST_AUTO_TEST_CASE( test_make_safe_callback_failed )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::future<boost::future<void> > fuv = proxy.start_async_work_failed();
+        boost::future<std::future<void> > fuv = proxy.start_async_work_failed();
         try
         {
-            boost::future<void> resfuv = fuv.get();
+            std::future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(std::exception& e)
