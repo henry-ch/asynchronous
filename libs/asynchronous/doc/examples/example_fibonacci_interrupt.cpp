@@ -1,4 +1,5 @@
 #include <iostream>
+#include <future>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
@@ -13,6 +14,10 @@ using namespace std;
 
 namespace
 {
+template<typename R>
+bool is_ready(std::future<R> const& f)
+{ return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready; }
+
 // a simnple, single-threaded fibonacci function used for cutoff
 long serial_fib( long n ) {
 
@@ -79,7 +84,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                    boost::asynchronous::multiqueue_threadpool_scheduler<
                                                            boost::asynchronous::lockfree_queue<>>>(threads))
         // for testing purpose
-        , m_promise(new boost::promise<long>)
+        , m_promise(new std::promise<long>)
     {
     }
     // called when task done, in our thread
@@ -90,10 +95,10 @@ struct Servant : boost::asynchronous::trackable_servant<>
         m_promise->set_value(res);
     }
     // call to this is posted and executes in our (safe) single-thread scheduler
-    std::pair<boost::shared_future<long>, boost::asynchronous::any_interruptible> calc_fibonacci(long n,long cutoff)
+    std::tuple<std::future<long>, boost::asynchronous::any_interruptible> calc_fibonacci(long n,long cutoff)
     {
         // for testing purpose
-        boost::shared_future<long> fu = m_promise->get_future();
+        std::future<long> fu = m_promise->get_future();
         // start long tasks in threadpool (first lambda) and callback in our thread
         boost::asynchronous::any_interruptible interruptible =
         interruptible_post_callback(
@@ -120,11 +125,11 @@ struct Servant : boost::asynchronous::trackable_servant<>
                             }
                }// callback functor.
         );
-        return std::make_pair(fu,interruptible);
+        return std::make_tuple(std::move(fu),interruptible);
     }
 private:
 // for testing
-std::shared_ptr<boost::promise<long> > m_promise;
+std::shared_ptr<std::promise<long> > m_promise;
 };
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>
 {
@@ -149,18 +154,18 @@ void example_fibonacci_interrupt(long fibo_val,long cutoff, int threads)
                                      boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler,threads);
-            boost::shared_future<std::pair<boost::shared_future<long>, boost::asynchronous::any_interruptible>  > fu = proxy.calc_fibonacci(fibo_val,cutoff);
-            std::pair<boost::shared_future<long>, boost::asynchronous::any_interruptible>  resfu = fu.get();
+            boost::future<std::tuple<std::future<long>, boost::asynchronous::any_interruptible>  > fu = proxy.calc_fibonacci(fibo_val,cutoff);
+            std::tuple<std::future<long>, boost::asynchronous::any_interruptible>  resfu = std::move(fu.get());
             // ok we decide it takes too long, interrupt
             boost::this_thread::sleep(boost::posix_time::milliseconds(30));
-            resfu.second.interrupt();
+            std::get<1>(resfu).interrupt();
             boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
             // as we interrupt we might have no result
-            bool has_value = resfu.first.has_value();
+            bool has_value = is_ready(std::get<0>(resfu));
             std::cout << "do we have a value? " << std::boolalpha << has_value << std::endl;
             if (has_value)
             {
-                std::cout << "value: " << resfu.first.get() << std::endl;
+                std::cout << "value: " << std::get<0>(resfu).get() << std::endl;
             }
         }
     }
