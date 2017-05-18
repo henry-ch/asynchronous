@@ -10,6 +10,7 @@
 
 #include <vector>
 #include <set>
+#include <future>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
@@ -28,10 +29,10 @@ boost::thread::id s1_thread_id;
 boost::thread::id s2_thread_id;
 
 
-boost::promise<void> callback_called;
-boost::future<void> callback_called_fu=callback_called.get_future();
-boost::promise<void> callback_called2;
-boost::future<void> callback_called_fu2=callback_called2.get_future();
+std::promise<void> callback_called;
+std::future<void> callback_called_fu=callback_called.get_future();
+std::promise<void> callback_called2;
+std::future<void> callback_called_fu2=callback_called2.get_future();
 
 struct Servant1 : boost::asynchronous::trackable_servant<>
 {

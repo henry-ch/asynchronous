@@ -216,7 +216,7 @@ BOOST_AUTO_TEST_CASE( test_void_post_callback_logging )
             {
                 BOOST_FAIL( "unexpected exception" );
             }
-            boost::future<diag_type> fu_diag = proxy.get_diagnostics();
+            auto fu_diag = proxy.get_diagnostics();
             diag_type diag = fu_diag.get();
             BOOST_CHECK_MESSAGE(diag.size()==1,"servant tp worker didn't log the number of works we expected.");// start_void_async_work's task
             for (auto mit = diag.begin(); mit != diag.end() ; ++mit)
@@ -320,7 +320,7 @@ BOOST_AUTO_TEST_CASE( test_post_callback_logging_exception )
         }
         BOOST_CHECK_MESSAGE(got_exception,"servant didn't send an expected exception.");
 
-        boost::future<diag_type> fu_diag = proxy.get_diagnostics();
+        auto fu_diag = proxy.get_diagnostics();
         diag_type diag = fu_diag.get();
         BOOST_CHECK_MESSAGE(diag.size()==1,"servant tp worker didn't log the number of works we expected.");// start_exception_async_work's task
         for (auto mit = diag.begin(); mit != diag.end() ; ++mit)

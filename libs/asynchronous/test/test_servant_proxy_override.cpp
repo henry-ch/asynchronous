@@ -72,7 +72,7 @@ BOOST_AUTO_TEST_CASE( test_trackable_servant_proxy_override_future )
                                                                             boost::asynchronous::lockfree_queue<>>>();
 
     std::shared_ptr<ServantProxy> proxy = std::make_shared<ServantProxy>(scheduler);
-    boost::future<void> fuv = proxy->foo_(42);
+    auto fuv = proxy->foo_(42);
     fuv.get();
 }
 

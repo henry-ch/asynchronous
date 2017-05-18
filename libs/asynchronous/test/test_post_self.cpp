@@ -10,6 +10,7 @@
 
 #include <vector>
 #include <set>
+#include <future>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
@@ -43,7 +44,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         dtor_called=true;
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant dtor not posted.");
     }
-    void start_posting(std::shared_ptr<boost::promise<void> > done)
+    void start_posting(std::shared_ptr<std::promise<void> > done)
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_posting not posted.");
         auto fct_alive = make_check_alive_functor();
@@ -93,8 +94,8 @@ BOOST_AUTO_TEST_CASE( test_post_self )
         auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
                                                                             boost::asynchronous::lockfree_queue<>>>();
 
-        std::shared_ptr<boost::promise<void> > done(new boost::promise<void>);
-        boost::future<void> end=done->get_future();
+        std::shared_ptr<std::promise<void> > done(new std::promise<void>);
+        std::future<void> end=done->get_future();
         {
             ServantProxy proxy(scheduler);
             proxy.start_posting(done);
@@ -115,7 +116,7 @@ BOOST_AUTO_TEST_CASE( test_post_self_int )
 
         {
             ServantProxy proxy(scheduler);
-            boost::future<boost::future<int>> fu = proxy.start_posting2();
+            auto fu = proxy.start_posting2();
             // wait for task to complete
             int res = fu.get().get();
             BOOST_CHECK_MESSAGE(res==42,"post_self returned wrong result.");

@@ -98,7 +98,7 @@ BOOST_AUTO_TEST_CASE( test_returned_servant )
         {
             ServantProxy2 proxy2(scheduler);
             ServantProxy proxy( scheduler,std::move(proxy2.get_servant2()));
-            boost::future<int> fu = proxy.foo();
+            auto fu = proxy.foo();
             int res = fu.get();
             BOOST_CHECK_MESSAGE(res==5,"servant returned incorrect data. Expected 5.");
         }

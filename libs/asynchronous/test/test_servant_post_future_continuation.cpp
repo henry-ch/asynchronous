@@ -104,7 +104,7 @@ BOOST_AUTO_TEST_CASE( test_servant_post_future_continuation )
                                                                             boost::asynchronous::lockfree_queue<>>>();
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::future<void> fuv = proxy.start_async_work();
+        auto fuv = proxy.start_async_work();
         try
         {
             fuv.get();

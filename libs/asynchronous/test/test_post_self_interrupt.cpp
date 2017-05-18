@@ -10,6 +10,7 @@
 
 #include <vector>
 #include <set>
+#include <future>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
@@ -45,7 +46,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant dtor not posted.");
     }
     std::tuple<boost::future<void>,boost::asynchronous::any_interruptible>
-    start_posting(std::shared_ptr<boost::promise<void> > done, std::shared_ptr<boost::promise<void> > ready)
+    start_posting(std::shared_ptr<boost::promise<void> > done, std::shared_ptr<std::promise<void> > ready)
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_posting not posted.");
         // post task to self
@@ -83,8 +84,8 @@ BOOST_AUTO_TEST_CASE( test_post_self_interrupt )
                                                                             boost::asynchronous::lockfree_queue<>>>();
 
         std::shared_ptr<boost::promise<void> > done(new boost::promise<void>);
-        std::shared_ptr<boost::promise<void> > ready(new boost::promise<void>);
-        boost::future<void> end=ready->get_future();
+        std::shared_ptr<std::promise<void> > ready(new std::promise<void>);
+        auto end=ready->get_future();
         {
             ServantProxy proxy(scheduler);
             boost::future<std::tuple<boost::future<void>,boost::asynchronous::any_interruptible> > res = proxy.start_posting(done,ready);

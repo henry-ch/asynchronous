@@ -8,6 +8,7 @@
 // For more information, see http://www.boost.org
 
 #include <iostream>
+#include <future>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/scheduler/threadpool_scheduler.hpp>
@@ -100,14 +101,14 @@ struct Servant2 : boost::asynchronous::trackable_servant<>
         m_sub->fire();
     }
 
-    boost::future<int> get_data()
+    std::future<int> get_data()
     {
         return m_future_value.get_future();
     }
 
 private:
     int m_data;
-    boost::promise<int> m_future_value;
+    std::promise<int> m_future_value;
     std::shared_ptr<ServantProxy> m_sub;
 };
 

@@ -9,6 +9,7 @@
 
 #include <vector>
 #include <set>
+#include <future>
 
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
@@ -37,14 +38,14 @@ std::vector<boost::thread::id> sched_ids;
 
 struct DummyJob
 {
-    DummyJob(std::shared_ptr<boost::promise<void> > done,std::string const& name=""):m_done(done),m_name(name){}
+    DummyJob(std::shared_ptr<std::promise<void> > done,std::string const& name=""):m_done(done),m_name(name){}
     void operator()()const
     {
         BOOST_CHECK_MESSAGE(contains_id(sched_ids.begin(),sched_ids.end(),boost::this_thread::get_id()),"2nd work called in wrong thread.");
         BOOST_CHECK_MESSAGE(boost::this_thread::get_id()!=main_thread_id,"2nd work called in main thread.");
         m_done->set_value();
     }
-    std::shared_ptr<boost::promise<void> > m_done;
+    std::shared_ptr<std::promise<void> > m_done;
     // for logging test cases
     std::string m_name;
     void set_name(std::string const& name)
@@ -83,7 +84,7 @@ typedef boost::asynchronous::any_loggable servant_job;
 typedef std::map<std::string,std::list<boost::asynchronous::diagnostic_item> > diag_type;
 struct PostJob
 {
-    PostJob(std::shared_ptr<boost::promise<void> > done,std::string const& name=""):m_done(done),m_name(name){}
+    PostJob(std::shared_ptr<std::promise<void> > done,std::string const& name=""):m_done(done),m_name(name){}
     void operator()()const
     {
         BOOST_CHECK_MESSAGE(contains_id(sched_ids.begin(),sched_ids.end(),boost::this_thread::get_id()),"1st work called in wrong thread.");
@@ -95,7 +96,7 @@ struct PostJob
             locked_scheduler.post(DummyJob(m_done,"DummyJob"));
         }
     }
-    std::shared_ptr<boost::promise<void> > m_done;
+    std::shared_ptr<std::promise<void> > m_done;
     std::string m_name;
     void set_name(std::string const& name)
     {
@@ -140,8 +141,8 @@ BOOST_AUTO_TEST_CASE( self_posting_job_threadpool_scheduler)
                                                                         boost::asynchronous::lockfree_queue<>>>(4);
 
     sched_ids = scheduler.thread_ids();
-    std::shared_ptr<boost::promise<void> > done (new boost::promise<void>);
-    boost::future<void> fu = done->get_future();
+    std::shared_ptr<std::promise<void> > done (new std::promise<void>);
+    std::future<void> fu = done->get_future();
 
     scheduler.post([done]()
         {
@@ -168,8 +169,8 @@ BOOST_AUTO_TEST_CASE( self_posting_job_stealing_multiqueue_threadpool_scheduler)
                                                       boost::asynchronous::no_cpu_load_saving,true >>(4);
 
     sched_ids = scheduler.thread_ids();
-    std::shared_ptr<boost::promise<void> > done (new boost::promise<void>);
-    boost::future<void> fu = done->get_future();
+    std::shared_ptr<std::promise<void> > done (new std::promise<void>);
+    std::future<void> fu = done->get_future();
 
     scheduler.post([done]()
         {
@@ -194,8 +195,8 @@ BOOST_AUTO_TEST_CASE( self_posting_job_stealing_threadpool_scheduler)
                                                                         boost::asynchronous::no_cpu_load_saving,true>>(4);
 
     sched_ids = scheduler.thread_ids();
-    std::shared_ptr<boost::promise<void> > done (new boost::promise<void>);
-    boost::future<void> fu = done->get_future();
+    std::shared_ptr<std::promise<void> > done (new std::promise<void>);
+    std::future<void> fu = done->get_future();
 
     scheduler.post([done]()
         {
@@ -219,8 +220,8 @@ BOOST_AUTO_TEST_CASE( self_posting_job_multiqueue_threadpool_scheduler)
                                                                         boost::asynchronous::lockfree_queue<>>>(4);
 
     sched_ids = scheduler.thread_ids();
-    std::shared_ptr<boost::promise<void> > done (new boost::promise<void>);
-    boost::future<void> fu = done->get_future();
+    std::shared_ptr<std::promise<void> > done (new std::promise<void>);
+    std::future<void> fu = done->get_future();
 
     scheduler.post([done]()
         {
@@ -243,8 +244,8 @@ BOOST_AUTO_TEST_CASE( self_posting_job_single_thread_scheduler)
     auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<boost::asynchronous::lockfree_queue<>>>();
 
     sched_ids = scheduler.thread_ids();
-    std::shared_ptr<boost::promise<void> > done (new boost::promise<void>);
-    boost::future<void> fu = done->get_future();
+    std::shared_ptr<std::promise<void> > done (new std::promise<void>);
+    std::future<void> fu = done->get_future();
 
    scheduler.post([done]()
         {
@@ -274,8 +275,8 @@ BOOST_AUTO_TEST_CASE( self_posting_job_composite_threadpool_scheduler)
 
 
     sched_ids = scheduler.thread_ids();
-    std::shared_ptr<boost::promise<void> > done (new boost::promise<void>);
-    boost::future<void> fu = done->get_future();
+    std::shared_ptr<std::promise<void> > done (new std::promise<void>);
+    std::future<void> fu = done->get_future();
 
    scheduler.post([done]()
         {
@@ -298,8 +299,8 @@ BOOST_AUTO_TEST_CASE( self_posting_job_asio_scheduler)
     auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::asio_scheduler<>>(1);
 
     sched_ids = scheduler.thread_ids();
-    std::shared_ptr<boost::promise<void> > done (new boost::promise<void>);
-    boost::future<void> fu = done->get_future();
+    std::shared_ptr<std::promise<void> > done (new std::promise<void>);
+    std::future<void> fu = done->get_future();
 
    scheduler.post([done]()
         {
@@ -323,8 +324,8 @@ BOOST_AUTO_TEST_CASE( self_posting_job_threadpool_scheduler_log)
                                                                         boost::asynchronous::lockfree_queue<servant_job>>>(4);
 
     sched_ids = scheduler.thread_ids();
-    std::shared_ptr<boost::promise<void> > done (new boost::promise<void>);
-    boost::future<void> fu = done->get_future();
+    std::shared_ptr<std::promise<void> > done (new std::promise<void>);
+    std::future<void> fu = done->get_future();
 
     scheduler.post(PostJob(done,"PostJob"));
     fu.get();
