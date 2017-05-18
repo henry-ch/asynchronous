@@ -15,6 +15,7 @@
 #include <fstream>
 #include <memory>
 #include <functional>
+#include <future>
 
 #include <boost/thread/thread.hpp>
 #include <boost/thread/tss.hpp>
@@ -101,8 +102,8 @@ public:
     void init(std::vector<boost::asynchronous::any_queue_ptr<job_type> > const& others)
     {
         m_diagnostics = std::make_shared<diag_type>(1);
-        boost::promise<boost::thread*> new_thread_promise;
-        boost::shared_future<boost::thread*> fu = new_thread_promise.get_future();
+        std::promise<boost::thread*> new_thread_promise;
+        std::shared_future<boost::thread*> fu = new_thread_promise.get_future();
         boost::thread* new_thread =
                 new boost::thread(std::bind(&tcp_server_scheduler::run,this->m_queue,m_diagnostics,m_private_queue,
                                               others,fu,m_weak_self,m_worker_pool,m_address,m_port));
@@ -174,14 +175,14 @@ public:
     {
 //        std::shared_ptr<boost::asynchronous::detail::interrupt_state>
 //                state = std::make_shared<boost::asynchronous::detail::interrupt_state>();
-//        std::shared_ptr<boost::promise<boost::thread*> > wpromise = std::make_shared<boost::promise<boost::thread*> >();
+//        std::shared_ptr<std::promise<boost::thread*> > wpromise = std::make_shared<std::promise<boost::thread*> >();
 //        boost::asynchronous::job_traits<typename queue_type::job_type>::set_posted_time(job);
 //        boost::asynchronous::interruptible_job<typename queue_type::job_type,this_type>
 //                ijob(std::forward<typename queue_type::job_type>(job),wpromise,state);
 
 //        this->m_queue->push(std::forward<typename queue_type::job_type>(ijob),prio);
 
-//        boost::future<boost::thread*> fu = wpromise->get_future();
+//        std::future<boost::thread*> fu = wpromise->get_future();
 //        boost::asynchronous::interrupt_helper interruptible(std::move(fu),state);
 
 //        return boost::asynchronous::any_interruptible(interruptible);
@@ -247,7 +248,7 @@ public:
     static void run(std::shared_ptr<queue_type> queue,std::shared_ptr<diag_type> diagnostics,
                     std::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > private_queue,
                     std::vector<boost::asynchronous::any_queue_ptr<job_type> > other_queues,
-                    boost::shared_future<boost::thread*> self,
+                    std::shared_future<boost::thread*> self,
                     std::weak_ptr<this_type> this_,
                     boost::asynchronous::any_shared_scheduler_proxy<pool_job_type> worker_pool,
                     std::string const& address,

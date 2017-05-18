@@ -14,6 +14,7 @@
 #include <cstddef>
 #include <memory>
 #include <functional>
+#include <future>
 
 #include <boost/thread/thread.hpp>
 #include <boost/thread/tss.hpp>
@@ -74,8 +75,8 @@ public:
     void constructor_done(std::weak_ptr<this_type> weak_self)
     {
         m_diagnostics = std::make_shared<diag_type>(1);
-        boost::promise<boost::thread*> new_thread_promise;
-        boost::shared_future<boost::thread*> fu = new_thread_promise.get_future();
+        std::promise<boost::thread*> new_thread_promise;
+        std::shared_future<boost::thread*> fu = new_thread_promise.get_future();
         boost::thread* new_thread =
                 new boost::thread(std::bind(&single_thread_scheduler::run,this->m_queue,m_diagnostics,m_private_queue,fu,weak_self));
         new_thread_promise.set_value(new_thread);
@@ -229,7 +230,7 @@ public:
 
     static void run(std::shared_ptr<queue_type> const& queue,std::shared_ptr<diag_type> diagnostics,
                     std::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > const& private_queue,
-                    boost::shared_future<boost::thread*> self,
+                    std::shared_future<boost::thread*> self,
                     std::weak_ptr<this_type> this_)
     {
         boost::thread* t = self.get();

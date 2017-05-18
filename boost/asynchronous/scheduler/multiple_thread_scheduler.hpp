@@ -16,16 +16,11 @@
 #include <tuple>
 #include <atomic>
 #include <numeric>
-
-#ifndef BOOST_THREAD_PROVIDES_FUTURE
-#define BOOST_THREAD_PROVIDES_FUTURE
-#endif
-
+#include <future>
 #include <memory>
+#include <functional>
 
 #include <boost/thread/thread.hpp>
-#include <functional>
-#include <boost/thread/future.hpp>
 #include <boost/thread/tss.hpp>
 
 #include <boost/asynchronous/queue/any_queue.hpp>
@@ -121,8 +116,8 @@ public:
         m_group.reset(new boost::thread_group);
         for (size_t i = 0; i< m_number_of_workers;++i)
         {
-            boost::promise<boost::thread*> new_thread_promise;
-            boost::shared_future<boost::thread*> fu = new_thread_promise.get_future();
+            std::promise<boost::thread*> new_thread_promise;
+            std::shared_future<boost::thread*> fu = new_thread_promise.get_future();
             boost::thread* new_thread =
                     m_group->create_thread(std::bind(&multiple_thread_scheduler::run,this->m_queues,
                                                        m_private_queues[i],m_diagnostics,fu,weak_self,i));
@@ -275,7 +270,7 @@ public:
     {
         std::shared_ptr<boost::asynchronous::detail::interrupt_state>
                 state = std::make_shared<boost::asynchronous::detail::interrupt_state>();
-        std::shared_ptr<boost::promise<boost::thread*> > wpromise = std::make_shared<boost::promise<boost::thread*> >();
+        std::shared_ptr<std::promise<boost::thread*> > wpromise = std::make_shared<std::promise<boost::thread*> >();
         boost::asynchronous::job_traits<typename queue_type::job_type>::set_posted_time(job);
         boost::asynchronous::interruptible_job<typename queue_type::job_type,this_type>
                 ijob(std::move(job),wpromise,state);
@@ -286,7 +281,7 @@ public:
         }
         (*m_queues)[prio].m_queues->push(std::move(ijob),prio);
 
-        boost::future<boost::thread*> fu = wpromise->get_future();
+        std::future<boost::thread*> fu = wpromise->get_future();
         boost::asynchronous::interrupt_helper interruptible(std::move(fu),state);
 
         return boost::asynchronous::any_interruptible(interruptible);
@@ -403,7 +398,7 @@ public:
     static void run(std::shared_ptr<std::vector<job_queues>> queues,
                     std::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > const& private_queue,
                     std::shared_ptr<diag_type> diagnostics,
-                    boost::shared_future<boost::thread*> self,
+                    std::shared_future<boost::thread*> self,
                     std::weak_ptr<this_type> this_,
                     size_t index)
     {

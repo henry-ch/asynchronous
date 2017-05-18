@@ -14,15 +14,10 @@
 #include <vector>
 #include <cstddef>
 #include <functional>
-
-#ifndef BOOST_THREAD_PROVIDES_FUTURE
-#define BOOST_THREAD_PROVIDES_FUTURE
-#endif
-
+#include <future>
 #include <memory>
 
 #include <boost/thread/thread.hpp>
-#include <boost/thread/future.hpp>
 
 #include <boost/asynchronous/scheduler/detail/scheduler_helpers.hpp>
 #include <boost/asynchronous/scheduler/detail/exceptions.hpp>
@@ -89,8 +84,8 @@ public:
         m_group.reset(new boost::thread_group);
         for (size_t i = 0; i< m_number_of_workers;++i)
         {
-            boost::promise<boost::thread*> new_thread_promise;
-            boost::shared_future<boost::thread*> fu = new_thread_promise.get_future();
+            std::promise<boost::thread*> new_thread_promise;
+            std::shared_future<boost::thread*> fu = new_thread_promise.get_future();
             boost::thread* new_thread =
                     m_group->create_thread(std::bind(&threadpool_scheduler::run,this->m_queue,
                                                        m_private_queues[i],m_diagnostics,fu,weak_self,i));
@@ -243,7 +238,7 @@ public:
     static void run(std::shared_ptr<queue_type> const& queue,
                     std::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > const& private_queue,
                     std::shared_ptr<diag_type> diagnostics,
-                    boost::shared_future<boost::thread*> self,
+                    std::shared_future<boost::thread*> self,
                     std::weak_ptr<this_type> this_,
                     size_t index)
     {

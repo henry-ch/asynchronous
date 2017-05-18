@@ -1,9 +1,9 @@
 #ifndef BOOST_ASYNCHRONOUS_SCHEDULER_INTERRUPT_STATE_HPP
 #define BOOST_ASYNCHRONOUS_SCHEDULER_INTERRUPT_STATE_HPP
 
+#include <future>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/thread.hpp>
-#include <boost/thread/future.hpp>
 #include <boost/asynchronous/detail/any_interruptible.hpp>
 
 namespace boost { namespace asynchronous { namespace detail
@@ -26,7 +26,7 @@ struct interrupt_state
         boost::mutex::scoped_lock lock(m_mutex);
         return (m_state == 3);
     }
-    void interrupt(boost::shared_future<boost::thread*> fworker)
+    void interrupt(std::shared_future<boost::thread*> fworker)
     {
         boost::mutex::scoped_lock lock(m_mutex);
         // if task is already interrupted, no nothing

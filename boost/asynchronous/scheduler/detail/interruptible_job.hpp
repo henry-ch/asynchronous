@@ -14,9 +14,10 @@
 #define BOOST_THREAD_PROVIDES_FUTURE
 #endif
 
-#include <boost/thread/future.hpp>
 #include <memory>
+#include <future>
 
+#include <boost/thread/future.hpp>
 #include <boost/asynchronous/scheduler/detail/interrupt_state.hpp>
 #include <boost/asynchronous/job_traits.hpp>
 #include <boost/asynchronous/scheduler/tss_scheduler.hpp>
@@ -32,7 +33,7 @@ struct thread_ptr_wrapper
 
 struct interrupt_helper
 {
-    interrupt_helper(boost::future<boost::thread*>&& worker,
+    interrupt_helper(std::future<boost::thread*>&& worker,
                      std::shared_ptr<boost::asynchronous::detail::interrupt_state> state)
         : m_worker(worker.share())
         , m_state(state)
@@ -42,7 +43,7 @@ struct interrupt_helper
         m_state->interrupt(m_worker);
     }
 private:
-    boost::shared_future<boost::thread*>  m_worker;
+    std::shared_future<boost::thread*>  m_worker;
     std::shared_ptr<boost::asynchronous::detail::interrupt_state>    m_state;
 };
 template <class Job,class Scheduler>
@@ -58,7 +59,7 @@ struct interruptible_job : public boost::asynchronous::job_traits<Job>::diagnost
 #else
     interruptible_job(Job job,
 #endif
-                      std::shared_ptr<boost::promise<boost::thread*> > worker_promise,
+                      std::shared_ptr<std::promise<boost::thread*> > worker_promise,
                       std::shared_ptr<boost::asynchronous::detail::interrupt_state> state)
         : m_worker(worker_promise)
         , m_state(state)
@@ -128,9 +129,9 @@ struct interruptible_job : public boost::asynchronous::job_traits<Job>::diagnost
         return "";
     }
 
-    std::shared_ptr<boost::promise<boost::thread*> >                  m_worker;
+    std::shared_ptr<std::promise<boost::thread*> >                    m_worker;
     std::shared_ptr<boost::asynchronous::detail::interrupt_state>     m_state;
-    Job                                                                 m_job;
+    Job                                                               m_job;
 };
 
 }}

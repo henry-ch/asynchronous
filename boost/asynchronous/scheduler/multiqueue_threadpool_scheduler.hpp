@@ -15,13 +15,9 @@
 #include <cstddef>
 #include <memory>
 #include <functional>
-
-#ifndef BOOST_THREAD_PROVIDES_FUTURE
-#define BOOST_THREAD_PROVIDES_FUTURE
-#endif
+#include <future>
 
 #include <boost/thread/thread.hpp>
-#include <boost/thread/future.hpp>
 #include <boost/thread/tss.hpp>
 
 
@@ -98,8 +94,8 @@ public:
         m_group.reset(new boost::thread_group);
         for (size_t i = 0; i< m_number_of_workers;++i)
         {
-            boost::promise<boost::thread*> new_thread_promise;
-            boost::shared_future<boost::thread*> fu = new_thread_promise.get_future();
+            std::promise<boost::thread*> new_thread_promise;
+            std::shared_future<boost::thread*> fu = new_thread_promise.get_future();
             boost::thread* new_thread =
                     m_group->create_thread(std::bind(&multiqueue_threadpool_scheduler::run,this->m_queues,
                                                        m_private_queues[i],i,m_diagnostics,fu,weak_self));
@@ -271,7 +267,7 @@ public:
     static void run(std::vector<std::shared_ptr<queue_type> > const& queues,
                     std::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > const& private_queue,
                     size_t index,std::shared_ptr<diag_type> diagnostics,
-                    boost::shared_future<boost::thread*> self,
+                    std::shared_future<boost::thread*> self,
                     std::weak_ptr<this_type> this_)
     {
         boost::thread* t = self.get();

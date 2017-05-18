@@ -12,6 +12,8 @@
 
 #include <vector>
 #include <memory>
+#include <future>
+
 #include <boost/thread/thread.hpp>
 #include <boost/thread/tss.hpp>
 
@@ -63,14 +65,14 @@ public:
     {
         std::shared_ptr<boost::asynchronous::detail::interrupt_state>
                 state = std::make_shared<boost::asynchronous::detail::interrupt_state>();
-        std::shared_ptr<boost::promise<boost::thread*> > wpromise = std::make_shared<boost::promise<boost::thread*> >();
+        std::shared_ptr<std::promise<boost::thread*> > wpromise = std::make_shared<std::promise<boost::thread*> >();
         boost::asynchronous::job_traits<typename queue_type::job_type>::set_posted_time(job);
         boost::asynchronous::interruptible_job<typename queue_type::job_type,this_type>
                 ijob(std::move(job),wpromise,state);
 
         m_queue->push(std::move(ijob),prio);
 
-        boost::future<boost::thread*> fu = wpromise->get_future();
+        std::future<boost::thread*> fu = wpromise->get_future();
         boost::asynchronous::interrupt_helper interruptible(std::move(fu),state);
 
         return boost::asynchronous::any_interruptible(interruptible);
@@ -89,13 +91,13 @@ public:
     {
         std::shared_ptr<boost::asynchronous::detail::interrupt_state>
                 state = std::make_shared<boost::asynchronous::detail::interrupt_state>();
-        std::shared_ptr<boost::promise<boost::thread*> > wpromise = std::make_shared<boost::promise<boost::thread*> >();
+        std::shared_ptr<std::promise<boost::thread*> > wpromise = std::make_shared<std::promise<boost::thread*> >();
         boost::asynchronous::job_traits<typename queue_type::job_type>::set_posted_time(job);
         boost::asynchronous::interruptible_job<typename queue_type::job_type,this_type> ijob(job,wpromise,state);
 
         m_queue->push(ijob,prio);
 
-        boost::shared_future<boost::thread*> fu = wpromise->get_future();
+        std::shared_future<boost::thread*> fu = wpromise->get_future();
         boost::asynchronous::interrupt_helper interruptible(fu,state);
 
         return boost::asynchronous::any_interruptible(interruptible);
