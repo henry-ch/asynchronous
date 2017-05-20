@@ -39,13 +39,12 @@ namespace boost { namespace asynchronous {
 
 /*! \fn void create_continuation(OnDone&& on_done, Args&&... args)
     \brief Create a future-based continuation as sub-task of a top-level continuation.
-    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost::future<T>...>) where T is the return type of the sub-tasks.
+    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost/std::future<T>...>) where T is the return type of the sub-tasks.
     \param args a variadic sequence of sub-tasks. All are posted except the last, which is immediately executed from within the caller context.
 */
 template <class OnDone, typename... Args>
-typename std::enable_if< !(boost::asynchronous::detail::has_future_args<Args...>::value ||
-                           boost::asynchronous::detail::has_iterator_args<Args...>::value)
-                          ,void >::type
+typename std::enable_if< !(boost::asynchronous::detail::is_future<Args...>::value ||
+                           boost::asynchronous::detail::has_iterator_args<Args...>::value) ,void >::type
 create_continuation(OnDone&& on_done, Args&&... args)
 {
     std::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
@@ -57,41 +56,20 @@ create_continuation(OnDone&& on_done, Args&&... args)
     boost::asynchronous::get_continuations().emplace_front(std::move(a));
 }
 
-/*! \fn void create_continuation(OnDone&& on_done, boost::future<Args>&&... args)
+/*! \fn void create_continuation(OnDone&& on_done, boost/std::future<Args>&&... args)
     \brief Create a future-based continuation as sub-task of a top-level continuation using already created futures.
     \brief This makes it easier to interface with future-based libraries.
-    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost::future<T>...>) where T is the return type of the sub-tasks.
+    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost/std::future<T>...>) where T is the return type of the sub-tasks.
     \param args a variadic sequence of futures.
 */
 template <class OnDone, typename... Args>
-typename std::enable_if< boost::asynchronous::detail::has_future_args<boost::future<Args>...>::value ,void >::type
-create_continuation(OnDone&& on_done, boost::future<Args>&&... args)
+typename std::enable_if< boost::asynchronous::detail::is_future<Args...>::value, void>::type
+create_continuation(OnDone&& on_done, Args&&... args)
 {
     std::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
 
-    typedef decltype(std::make_tuple(std::forward<boost::future<Args> >(args)...)) future_type;
-    future_type sp(std::make_tuple( std::forward<boost::future<Args> >(args)...));
-
-    boost::asynchronous::detail::continuation<void,BOOST_ASYNCHRONOUS_DEFAULT_JOB,future_type> c (state,std::move(sp), std::chrono::milliseconds(0));
-    c.on_done(std::forward<OnDone>(on_done));
-    boost::asynchronous::any_continuation a(std::move(c));
-    boost::asynchronous::get_continuations().emplace_front(std::move(a));
-}
-
-/*! \fn void create_continuation(OnDone&& on_done, boost::shared_future<Args>&&... args)
-    \brief Create a future-based continuation as sub-task of a top-level continuation using already created futures.
-    \brief This makes it easier to interface with shared_future-based libraries.
-    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost::future<T>...>) where T is the return type of the sub-tasks.
-    \param args a variadic sequence of futures.
-*/
-template <class OnDone, typename... Args>
-typename std::enable_if< boost::asynchronous::detail::has_future_args<boost::shared_future<Args>...>::value ,void >::type
-create_continuation(OnDone&& on_done, boost::shared_future<Args>&&... args)
-{
-    std::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
-
-    typedef decltype(std::make_tuple(std::forward<boost::shared_future<Args> >(args)...)) future_type;
-    future_type sp(std::make_tuple( std::forward<boost::shared_future<Args> >(args)...));
+    typedef decltype(std::make_tuple(std::forward<Args >(args)...)) future_type;
+    future_type sp(std::make_tuple( std::forward<Args >(args)...));
 
     boost::asynchronous::detail::continuation<void,BOOST_ASYNCHRONOUS_DEFAULT_JOB,future_type> c (state,std::move(sp), std::chrono::milliseconds(0));
     c.on_done(std::forward<OnDone>(on_done));
@@ -102,7 +80,7 @@ create_continuation(OnDone&& on_done, boost::shared_future<Args>&&... args)
 /*! \fn void create_continuation(OnDone&& on_done, Seq&& seq)
     \brief Create a future-based continuation as sub-task of a top-level continuation using a sequence of already created futures.
     \brief This makes it easier to interface with future-based libraries.
-    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost::future<T>...>) where T is the return type of the sub-tasks.
+    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost/std::future<T>...>) where T is the return type of the sub-tasks.
     \param seq a sequence of futures.
 */
 template <class OnDone, typename Seq>
@@ -120,12 +98,12 @@ create_continuation(OnDone&& on_done, Seq&& seq)
 /*! \fn void create_continuation_timeout(OnDone&& on_done, Duration const& d, Args&&... args)
     \brief Create a future-based continuation as sub-task of a top-level continuation.
     \brief A timeout for execution of sub-tasks is also provided.
-    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost::future<T>...>) where T is the return type of the sub-tasks.
+    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost/std::future<T>...>) where T is the return type of the sub-tasks.
     \param d a std::chrono based duration
     \param args a variadic sequence of sub-tasks. All are posted except the last, which is immediately executed from within the caller context.
 */
 template <class OnDone, class Duration, typename... Args>
-typename std::enable_if< !( boost::asynchronous::detail::has_future_args<Args...>::value ||
+typename std::enable_if< !( boost::asynchronous::detail::is_future<Args...>::value ||
                             boost::asynchronous::detail::has_iterator_args<Args...>::value)
                           ,void >::type
 create_continuation_timeout(OnDone&& on_done, Duration const& d, Args&&... args)
@@ -139,22 +117,22 @@ create_continuation_timeout(OnDone&& on_done, Duration const& d, Args&&... args)
     boost::asynchronous::get_continuations().emplace_front(std::move(a));
 }
 
-/*! \fn void create_continuation_timeout(OnDone&& on_done, Duration const& d, boost::future<Args>&&... args)
+/*! \fn void create_continuation_timeout(OnDone&& on_done, Duration const& d, boost/std::future<Args>&&... args)
     \brief Create a future-based continuation as sub-task of a top-level continuation using already created futures.
     \brief A timeout for execution of sub-tasks is also provided.
     \brief This makes it easier to interface with future-based libraries.
-    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost::future<T>...>) where T is the return type of the sub-tasks.
+    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost/std::future<T>...>) where T is the return type of the sub-tasks.
     \param d a std::chrono based duration
     \param args a variadic sequence of futures.
 */
 template <class OnDone, class Duration, typename... Args>
-typename std::enable_if< boost::asynchronous::detail::has_future_args<boost::future<Args>...>::value ,void >::type
-create_continuation_timeout(OnDone&& on_done, Duration const& d, boost::future<Args>&&... args)
+typename std::enable_if< boost::asynchronous::detail::is_future<Args...>::value ,void >::type
+create_continuation_timeout(OnDone&& on_done, Duration const& d, Args&&... args)
 {
     std::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
 
-    typedef decltype(std::make_tuple(std::forward<boost::future<Args> >(args)...)) future_type;
-    future_type sp(std::make_tuple( std::forward<boost::future<Args> >(args)...));
+    typedef decltype(std::make_tuple(std::forward<Args>(args)...)) future_type;
+    future_type sp(std::make_tuple( std::forward<Args >(args)...));
 
     boost::asynchronous::detail::continuation<void,BOOST_ASYNCHRONOUS_DEFAULT_JOB,future_type,Duration> c (state,std::move(sp),d);
     c.on_done(std::forward<OnDone>(on_done));
@@ -165,7 +143,7 @@ create_continuation_timeout(OnDone&& on_done, Duration const& d, boost::future<A
     \brief Create a future-based continuation as sub-task of a top-level continuation using a sequence of already created futures.
     \brief This makes it easier to interface with future-based libraries.
     \brief A timeout for execution of sub-tasks is also provided.
-    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost::future<T>...>) where T is the return type of the sub-tasks.
+    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost/std::future<T>...>) where T is the return type of the sub-tasks.
     \param seq a sequence of futures.
 */
 template <class OnDone, class Duration, typename Seq>
@@ -180,21 +158,21 @@ create_continuation_timeout(OnDone&& on_done, Duration const& d, Seq&& seq)
     boost::asynchronous::get_continuations().emplace_front(std::move(a));
 }
 
-/*! \fn void create_continuation_job(OnDone&& on_done, boost::future<Args>&&... args)
+/*! \fn void create_continuation_job(OnDone&& on_done, boost/std::future<Args>&&... args)
     \brief Create a future-based continuation as sub-task of a top-level continuation using already created futures.
     \brief This makes it easier to interface with future-based libraries.
     \brief A Job type can be given as argument. This version must be used for loggable or serializable jobs.
-    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost::future<T>...>) where T is the return type of the sub-tasks.
+    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost/std::future<T>...>) where T is the return type of the sub-tasks.
     \param args a variadic sequence of futures.
 */
 template <typename Job, class OnDone, typename... Args>
-typename std::enable_if< boost::asynchronous::detail::has_future_args<boost::future<Args>...>::value ,void >::type
-create_continuation_job(OnDone&& on_done, boost::future<Args>&&... args)
+typename std::enable_if< boost::asynchronous::detail::is_future<Args...>::value ,void >::type
+create_continuation_job(OnDone&& on_done, Args&&... args)
 {
     std::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
 
-    typedef decltype(std::make_tuple(std::forward<boost::future<Args> >(args)...)) future_type;
-    future_type sp (std::make_tuple( std::forward<boost::future<Args> >(args)...));
+    typedef decltype(std::make_tuple(std::forward<Args>(args)...)) future_type;
+    future_type sp (std::make_tuple( std::forward<Args>(args)...));
 
     boost::asynchronous::detail::continuation<void,Job,future_type> c (state,std::move(sp), std::chrono::milliseconds(0));
     c.on_done(std::forward<OnDone>(on_done));
@@ -209,7 +187,7 @@ create_continuation_job(OnDone&& on_done, boost::future<Args>&&... args)
     \param args a variadic sequence of sub-tasks. All are posted except the last, which is immediately executed from within the caller context.
 */
 template <typename Job, class OnDone, typename... Args>
-typename std::enable_if< !(boost::asynchronous::detail::has_future_args<Args...>::value ||
+typename std::enable_if< !(boost::asynchronous::detail::is_future<Args...>::value ||
                            boost::asynchronous::detail::has_iterator_args<Args...>::value)
                           ,void >::type
 create_continuation_job(OnDone&& on_done, Args&&... args)
@@ -228,7 +206,7 @@ create_continuation_job(OnDone&& on_done, Args&&... args)
     \brief Create a future-based continuation as sub-task of a top-level continuation using a sequence of already created futures.
     \brief This makes it easier to interface with future-based libraries.
     \brief A Job type can be given as argument. This version must be used for loggable or serializable jobs.
-    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost::future<T>...>) where T is the return type of the sub-tasks.
+    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost/std::future<T>...>) where T is the return type of the sub-tasks.
     \param seq a sequence of futures.
 */
 template <typename Job, class OnDone, typename Seq>
@@ -243,23 +221,23 @@ create_continuation_job(OnDone&& on_done, Seq&& seq)
     boost::asynchronous::get_continuations().emplace_front(std::move(a));
 }
 
-/*! \fn void create_continuation_job_timeout(OnDone&& on_done, Duration const& d, boost::future<Args>&&... args)
+/*! \fn void create_continuation_job_timeout(OnDone&& on_done, Duration const& d, boost/std::future<Args>&&... args)
     \brief Create a future-based continuation as sub-task of a top-level continuation using already created futures.
     \brief A timeout for execution of sub-tasks is also provided.
     \brief A Job type can be given as argument. This version must be used for loggable or serializable jobs.
     \brief This makes it easier to interface with future-based libraries.
-    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost::future<T>...>) where T is the return type of the sub-tasks.
+    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost/std::future<T>...>) where T is the return type of the sub-tasks.
     \param d a std::chrono based duration
     \param args a variadic sequence of futures.
 */
 template <typename Job, class OnDone, class Duration, typename... Args>
-typename std::enable_if< boost::asynchronous::detail::has_future_args<boost::future<Args>...>::value ,void >::type
-create_continuation_job_timeout(OnDone&& on_done, Duration const& d, boost::future<Args>&&... args)
+typename std::enable_if< boost::asynchronous::detail::is_future<Args...>::value ,void >::type
+create_continuation_job_timeout(OnDone&& on_done, Duration const& d, Args&&... args)
 {
     std::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
 
-    typedef decltype(std::make_tuple(std::forward<boost::future<Args> >(args)...)) future_type;
-    future_type sp (std::make_tuple( std::forward<boost::future<Args> >(args)...));
+    typedef decltype(std::make_tuple(std::forward<Args>(args)...)) future_type;
+    future_type sp (std::make_tuple( std::forward<Args>(args)...));
 
     boost::asynchronous::detail::continuation<void,Job,future_type> c (state,std::move(sp), d);
     c.on_done(std::forward<OnDone>(on_done));
@@ -271,12 +249,12 @@ create_continuation_job_timeout(OnDone&& on_done, Duration const& d, boost::futu
     \brief Create a future-based continuation as sub-task of a top-level continuation.
     \brief A timeout for execution of sub-tasks is also provided.
     \brief A Job type can be given as argument. This version must be used for loggable or serializable jobs.
-    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost::future<T>...>) where T is the return type of the sub-tasks.
+    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost/std::future<T>...>) where T is the return type of the sub-tasks.
     \param d a std::chrono based duration
     \param args a variadic sequence of sub-tasks. All are posted except the last, which is immediately executed from within the caller context.
 */
 template <typename Job, class OnDone, class Duration, typename... Args>
-typename std::enable_if<!(boost::asynchronous::detail::has_future_args<Args...>::value ||
+typename std::enable_if<!(boost::asynchronous::detail::is_future<Args...>::value ||
                         boost::asynchronous::detail::has_iterator_args<Args...>::value)
                         ,void >::type
 create_continuation_job_timeout(OnDone&& on_done, Duration const& d, Args&&... args)
@@ -296,7 +274,7 @@ create_continuation_job_timeout(OnDone&& on_done, Duration const& d, Args&&... a
     \brief This makes it easier to interface with future-based libraries.
     \brief A timeout for execution of sub-tasks is also provided.
     \brief A Job type can be given as argument. This version must be used for loggable or serializable jobs.
-    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost::future<T>...>) where T is the return type of the sub-tasks.
+    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost/std::future<T>...>) where T is the return type of the sub-tasks.
     \param seq a sequence of futures.
 */
 template <typename Job, class OnDone, class Duration, typename Seq>
@@ -344,7 +322,7 @@ boost::asynchronous::detail::continuation<Return,Job> top_level_continuation_job
 
 /*! \fn void create_callback_continuation(OnDone&& on_done, Args&&... args)
     \brief Create a callback-based continuation as sub-task of a top-level continuation.
-    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost::future<T>...>) where T is the return type of the sub-tasks.
+    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost::expected<T>...>) where T is the return type of the sub-tasks.
     \param args a variadic sequence of sub-tasks. All are posted except the last, which is immediately executed from within the caller context.
 */
 template <class OnDone, typename... Args>
@@ -369,7 +347,7 @@ void create_callback_continuation(OnDone on_done, FutureType expected_tuple, std
 
 /*! \fn void create_callback_continuation(OnDone&& on_done, std::vector<Args> args)
     \brief Create a callback-based continuation as sub-task of a top-level continuation.
-    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost::future<T>...>) where T is the return type of the sub-tasks.
+    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost::expected<T>...>) where T is the return type of the sub-tasks.
     \param args a vector of sub-tasks. All are posted except the last, which is immediately executed from within the caller context.
 */
 template <class OnDone, typename Args>
@@ -385,7 +363,7 @@ void create_callback_continuation(OnDone on_done, std::vector<Args> args)
 /*! \fn void create_callback_continuation_job(OnDone&& on_done, Args&&... args)
     \brief Create a callback-based continuation as sub-task of a top-level continuation.
     \brief A Job type can be given as argument. This version must be used for loggable or serializable jobs.
-    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost::future<T>...>) where T is the return type of the sub-tasks.
+    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost::expected<T>...>) where T is the return type of the sub-tasks.
     \param args a variadic sequence of sub-tasks. All are posted except the last, which is immediately executed from within the caller context.
 */
 template <typename Job, class OnDone, typename... Args>
@@ -412,7 +390,7 @@ void create_callback_continuation_job(OnDone on_done, FutureType expected_tuple,
 /*! \fn void create_callback_continuation_job(OnDone&& on_done, std::vector<Args> args)
     \brief Create a callback-based continuation as sub-task of a top-level continuation.
     \brief A Job type can be given as argument. This version must be used for loggable or serializable jobs.
-    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost::future<T>...>) where T is the return type of the sub-tasks.
+    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost::expected<T>...>) where T is the return type of the sub-tasks.
     \param args a vector of sub-tasks. All are posted except the last, which is immediately executed from within the caller context.
 */
 template <typename Job,class OnDone, typename Args>
@@ -429,7 +407,7 @@ void create_callback_continuation_job(OnDone on_done, std::vector<Args> args)
     \brief Create a callback-based continuation as sub-task of a top-level continuation.
     \brief A timeout for execution of sub-tasks is also provided.
     \brief A Job type can be given as argument. This version must be used for loggable or serializable jobs.
-    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost::future<T>...>) where T is the return type of the sub-tasks.
+    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost::expected<T>...>) where T is the return type of the sub-tasks.
     \param d a std::chrono based duration
     \param args a variadic sequence of sub-tasks. All are posted except the last, which is immediately executed from within the caller context.
 */
@@ -459,7 +437,7 @@ void create_callback_continuation_job_timeout(OnDone on_done, Duration const& d,
     \brief Create a callback-based continuation as sub-task of a top-level continuation.
     \brief A timeout for execution of sub-tasks is also provided.
     \brief A Job type can be given as argument. This version must be used for loggable or serializable jobs.
-    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost::future<T>...>) where T is the return type of the sub-tasks.
+    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost::expected<T>...>) where T is the return type of the sub-tasks.
     \param d a std::chrono based duration
     \param args a vector of sub-tasks. All are posted except the last, which is immediately executed from within the caller context.
 */

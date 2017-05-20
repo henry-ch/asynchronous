@@ -1417,19 +1417,26 @@ auto make_expected_tuple(Args&... args) -> decltype(std::make_tuple(call_get_exp
     return std::make_tuple(call_get_expected(args)...);
 }
 
+
 template <typename Front,typename... Tail>
-struct has_future_args_helper
+class is_future_helper
 {
-    typedef typename boost::asynchronous::has_state<Front>::type type;
-    enum {value = type::value};
+    typedef char one;
+    typedef long two;
+
+    template <typename C> static one test( decltype(&C::get) ) ;
+    template <typename C> static two test(...);
+
+public:
+    enum { value = sizeof(test<Front>(0)) == sizeof(char) };
 };
 
 template <typename... Args>
-struct has_future_args
+struct is_future
 {
-    typedef typename has_future_args_helper<Args...>::type type;
-    enum {value = type::value};
+    enum {value = is_future_helper<Args...>::value};
 };
+
 
 template <typename Front,typename... Tail>
 struct has_iterator_args_helper
