@@ -54,9 +54,9 @@ struct fib_task : public boost::asynchronous::continuation_task<long>
             // n> cutoff, create 2 new tasks and when both are done, set our result (res(task1) + res(task2))
             boost::asynchronous::create_continuation(
                         // called when subtasks are done, set our result
-                        [task_res](std::tuple<boost::future<long>,boost::future<long> > res)
+                        [task_res](std::tuple<std::future<long>,std::future<long> > res)
                         {
-                            if (!std::get<0>(res).has_value() || !std::get<1>(res).has_value())
+                            if (!boost::asynchronous::is_ready(std::get<0>(res)) || !boost::asynchronous::is_ready(std::get<1>(res)))
                             {
                                 // oh we got interrupted and have no value, give up
                                 return;
@@ -154,7 +154,7 @@ void example_fibonacci_interrupt(long fibo_val,long cutoff, int threads)
                                      boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler,threads);
-            boost::future<std::tuple<std::future<long>, boost::asynchronous::any_interruptible>  > fu = proxy.calc_fibonacci(fibo_val,cutoff);
+            std::future<std::tuple<std::future<long>, boost::asynchronous::any_interruptible>  > fu = proxy.calc_fibonacci(fibo_val,cutoff);
             std::tuple<std::future<long>, boost::asynchronous::any_interruptible>  resfu = std::move(fu.get());
             // ok we decide it takes too long, interrupt
             boost::this_thread::sleep(boost::posix_time::milliseconds(30));

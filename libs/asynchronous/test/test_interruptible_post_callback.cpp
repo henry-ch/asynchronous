@@ -232,7 +232,7 @@ BOOST_AUTO_TEST_CASE( test_interrupt_running_task )
         std::future<void> end=p->get_future();
         {
             ServantProxy proxy(scheduler);
-            boost::future<std::future<boost::asynchronous::any_interruptible> > fu = proxy.start_async_work(p);
+            std::future<std::future<boost::asynchronous::any_interruptible> > fu = proxy.start_async_work(p);
             std::future<boost::asynchronous::any_interruptible> resfu = fu.get();
             boost::asynchronous::any_interruptible res = resfu.get();
             end.get();
@@ -254,7 +254,7 @@ BOOST_AUTO_TEST_CASE( test_interrupt_not_running_task )
                  > res_type;
             
             ServantProxy proxy(scheduler);
-            boost::future<res_type> fu = proxy.start_async_work2();
+            std::future<res_type> fu = proxy.start_async_work2();
             res_type res = fu.get();
             boost::asynchronous::any_interruptible i = res.second.get();
             // provoke interrupt before job starts
@@ -273,7 +273,7 @@ BOOST_AUTO_TEST_CASE( test_no_interrupt )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::future<std::future<int> > fuv = proxy.test_no_interrupt(1000,10);
+        std::future<std::future<int> > fuv = proxy.test_no_interrupt(1000,10);
         try
         {
             std::future<int> resfuv = fuv.get();
@@ -295,7 +295,7 @@ BOOST_AUTO_TEST_CASE( test_no_interrupt_continuation )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::future<std::future<int> > fuv = proxy.test_no_interrupt_continuation(10000,100,false);
+        std::future<std::future<int> > fuv = proxy.test_no_interrupt_continuation(10000,100,false);
         try
         {
             std::future<int> resfuv = fuv.get();
@@ -318,7 +318,7 @@ BOOST_AUTO_TEST_CASE( test_no_interrupt_continuation_short )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::future<std::future<int> > fuv = proxy.test_no_interrupt_continuation(10000,100,true);
+        std::future<std::future<int> > fuv = proxy.test_no_interrupt_continuation(10000,100,true);
         try
         {
             std::future<int> resfuv = fuv.get();

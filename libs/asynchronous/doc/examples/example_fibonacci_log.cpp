@@ -42,7 +42,7 @@ struct fib_task : public boost::asynchronous::continuation_task<long>
         else
         {
            boost::asynchronous::create_continuation_job<servant_job>(
-                        [task_res](std::tuple<boost::future<long>,boost::future<long> > res)
+                        [task_res](std::tuple<std::future<long>,std::future<long> > res)
                         {
                             long r = std::get<0>(res).get() + std::get<1>(res).get();
                             task_res.set_value(r);

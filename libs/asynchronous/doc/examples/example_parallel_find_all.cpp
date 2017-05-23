@@ -36,7 +36,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                    boost::asynchronous::threadpool_scheduler<
                                                            boost::asynchronous::lockfree_queue<>>>(6))
         // for testing purpose
-        , m_promise(new boost::promise<void>)
+        , m_promise(new std::promise<void>)
         , m_data(mkdata())
     {
     }
@@ -52,7 +52,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         m_promise->set_value();
     }
     // call to this is posted and executes in our (safe) single-thread scheduler
-    boost::future<void> start_async_work()
+    std::future<void> start_async_work()
     {
         // for testing purpose
         auto fu = m_promise->get_future();
@@ -76,7 +76,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     }
 private:
 // for testing
-std::shared_ptr<boost::promise<void> > m_promise;
+std::shared_ptr<std::promise<void> > m_promise;
 std::vector<int> m_data;
 };
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>

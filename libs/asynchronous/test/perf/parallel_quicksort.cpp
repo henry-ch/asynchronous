@@ -63,7 +63,7 @@ void ParallelAsyncPostCb(SORTED_TYPE a[], size_t n)
 {
     long tasksize = NELEM / tasks;
     servant_time = std::chrono::high_resolution_clock::now();
-    boost::future<void> fu = boost::asynchronous::post_future(pool,
+    std::future<void> fu = boost::asynchronous::post_future(pool,
     [a,n,tasksize]()
     {
         return boost::asynchronous::parallel_quicksort(a,a+n,std::less<SORTED_TYPE>(),tasksize,tpsize,"",0);
@@ -77,7 +77,7 @@ void ParallelAsyncPostCbSpreadsort(SORTED_TYPE a[], size_t n)
 {
     long tasksize = NELEM / tasks;
     servant_time = std::chrono::high_resolution_clock::now();
-    boost::future<void> fu = boost::asynchronous::post_future(pool,
+    std::future<void> fu = boost::asynchronous::post_future(pool,
     [a,n,tasksize]()
     {
         return boost::asynchronous::parallel_quick_spreadsort(a,a+n,std::less<SORTED_TYPE>(),tasksize,tpsize,"",0);

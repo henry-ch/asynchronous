@@ -80,26 +80,32 @@ struct Servant : boost::asynchronous::trackable_servant<>
 
         boost::asynchronous::create_continuation_timeout(
                     // called when subtasks are done, set our result
-                    [this](std::tuple<boost::future<int>,boost::future<int>,boost::future<int> > res)
+                    [this](std::tuple<std::future<int>,std::future<int>,std::future<int> > res)
                     {
                         BOOST_CHECK_MESSAGE(!contains_id(tpids.begin(),tpids.end(),boost::this_thread::get_id()),"algo callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
 
-                        BOOST_CHECK_MESSAGE(std::get<0>(res).has_value(),"first task should be finished");
-                        BOOST_CHECK_MESSAGE(!std::get<1>(res).has_value(),"second task should not be finished");
-                        BOOST_CHECK_MESSAGE(!std::get<2>(res).has_value(),"third task should not be finished");
-                        BOOST_CHECK_MESSAGE(!std::get<0>(res).has_exception(),"first task got exception");
-                        BOOST_CHECK_MESSAGE(!std::get<1>(res).has_exception(),"second task got exception");
-                        BOOST_CHECK_MESSAGE(!std::get<2>(res).has_exception(),"third task got exception");
+                        BOOST_CHECK_MESSAGE(boost::asynchronous::is_ready(std::get<0>(res)),"first task should be finished");
+                        BOOST_CHECK_MESSAGE(!boost::asynchronous::is_ready(std::get<1>(res)),"second task should not be finished");
+                        BOOST_CHECK_MESSAGE(!boost::asynchronous::is_ready(std::get<2>(res)),"third task should not be finished");
 
-                        long r = 0;
-                        if ( std::get<0>(res).has_value())
-                            r += std::get<0>(res).get();
-                        if ( std::get<1>(res).has_value())
-                            r += std::get<1>(res).get();
-                        if ( std::get<2>(res).has_value())
-                            r += std::get<2>(res).get();
-                        this->on_callback(r);
+                        // check for exceptions
+                        try
+                        {
+                            long r = 0;
+                            if ( boost::asynchronous::is_ready(std::get<0>(res)))
+                                r += std::get<0>(res).get();
+                            if ( boost::asynchronous::is_ready(std::get<1>(res)))
+                                r += std::get<1>(res).get();
+                            if ( boost::asynchronous::is_ready(std::get<2>(res)))
+                                r += std::get<2>(res).get();
+                            this->on_callback(r);
+                        }
+                        catch(...)
+                        {
+                            BOOST_CHECK_MESSAGE(false,"unexpected exception");
+                            this->on_callback(0);
+                        }
                     },
                     // timeout
                     std::chrono::milliseconds(1000),

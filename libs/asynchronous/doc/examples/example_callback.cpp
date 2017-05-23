@@ -58,11 +58,11 @@ struct Manager : boost::asynchronous::trackable_servant<>
     }
 
     // call to this is posted and executes in our (safe) single-thread scheduler
-    boost::future<void> start()
+    std::future<void> start()
     {
         cout << "post first task to threadpool" << endl;
         // to inform main  of shutdown
-        boost::future<void> fu = m_promise.get_future();
+        std::future<void> fu = m_promise.get_future();
         // start long tasks in threadpool (first lambda) and callback in our thread
         post_callback(
                 []()
@@ -91,7 +91,7 @@ struct Manager : boost::asynchronous::trackable_servant<>
     }
 private:
 // to signal that we shutdown
-boost::promise<void> m_promise;
+std::promise<void> m_promise;
 int needs_second_task=0;
 };
 class ManagerProxy : public boost::asynchronous::servant_proxy<ManagerProxy,Manager>
@@ -117,7 +117,7 @@ void example_callback()
                                 boost::asynchronous::single_thread_scheduler<
                                      boost::asynchronous::lockfree_queue<>>>();
         ManagerProxy proxy(scheduler,boost::thread::hardware_concurrency());
-        boost::future<boost::future<void> > fu = proxy.start();
+        std::future<std::future<void> > fu = proxy.start();
         // show that we have in our ManagerProxy a completely safe thread world which can be accessed by several threads
         // add more threads for fun if needed. An odd number of them will cause second task to be called.
         std::thread t1([proxy](){proxy.count();});

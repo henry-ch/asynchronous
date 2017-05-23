@@ -29,7 +29,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                    boost::asynchronous::multiqueue_threadpool_scheduler<
                                                            boost::asynchronous::lockfree_queue<>>>(6))
         // for testing purpose
-        , m_promise(new boost::promise<void>)
+        , m_promise(new std::promise<void>)
     {
     }
     // called when task done, in our thread
@@ -39,7 +39,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         m_promise->set_value();
     }
     // call to this is posted and executes in our (safe) single-thread scheduler
-    boost::future<void> start_async_work()
+    std::future<void> start_async_work()
     {
         std::cout << "start_async_work()" << std::endl;
         // for testing purpose
@@ -73,7 +73,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     }
 private:
 // for testing
-std::shared_ptr<boost::promise<void> > m_promise;
+std::shared_ptr<std::promise<void> > m_promise;
 // attribute to keep composite alive
 boost::asynchronous::any_shared_scheduler_proxy<boost::asynchronous::any_serializable> m_composite;
 

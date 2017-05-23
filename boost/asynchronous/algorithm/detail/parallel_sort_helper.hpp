@@ -105,7 +105,7 @@ struct parallel_sort_range_move_helper : public boost::asynchronous::continuatio
             }
             catch(std::exception& e)
             {
-                task_res.set_exception(boost::copy_exception(e));
+                task_res.set_exception(std::make_exception_ptr(e));
             }
         }
         );

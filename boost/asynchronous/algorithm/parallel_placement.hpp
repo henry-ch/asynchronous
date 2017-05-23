@@ -11,6 +11,7 @@
 #define BOOST_ASYNCHRONOUS_PARALLEL_PLACEMENT_HPP
 
 #include <new>
+#include <exception>
 #include <boost/utility/enable_if.hpp>
 #include <boost/shared_array.hpp>
 
@@ -30,7 +31,7 @@ enum class parallel_placement_helper_enum
     error_handled,
     error_not_handled
 };
-using parallel_placement_helper_result = std::pair<boost::asynchronous::detail::parallel_placement_helper_enum,boost::exception_ptr>;
+using parallel_placement_helper_result = std::pair<boost::asynchronous::detail::parallel_placement_helper_enum,std::exception_ptr>;
 
 template <class T,class Iterator>
 void serial_placement(Iterator beg, Iterator end,char* data)
@@ -153,7 +154,7 @@ struct parallel_placement_helper: public boost::asynchronous::continuation_task<
                         {
                             ((T*)(data_.get())+(j+beg_))->~T();
                         }
-                        task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,boost::copy_exception(e)));
+                        task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,std::make_exception_ptr(e)));
                     }
                     catch (...)
                     {
@@ -162,10 +163,10 @@ struct parallel_placement_helper: public boost::asynchronous::continuation_task<
                         {
                             ((T*)(data_.get())+(j+beg_))->~T();
                         }
-                        task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,boost::current_exception()));
+                        task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,std::current_exception()));
                     }
                 }
-                task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::success,boost::exception_ptr()));
+                task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::success,std::exception_ptr()));
             }
             else
             {
@@ -186,7 +187,7 @@ struct parallel_placement_helper: public boost::asynchronous::continuation_task<
                                     if (res1.first == boost::asynchronous::detail::parallel_placement_helper_enum::success &&
                                         res2.first == boost::asynchronous::detail::parallel_placement_helper_enum::success)
                                     {
-                                        task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::success,boost::exception_ptr()));
+                                        task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::success,std::exception_ptr()));
                                     }
                                     // if both have an error and error not handled (i.e propagated), keep any exception and proceed
                                     else if (res1.first == boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled &&
@@ -215,11 +216,11 @@ struct parallel_placement_helper: public boost::asynchronous::continuation_task<
                                 }
                                 catch(std::exception& e)
                                 {
-                                    task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,boost::copy_exception(e)));
+                                    task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,std::make_exception_ptr(e)));
                                 }
                                 catch (...)
                                 {
-                                    task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,boost::current_exception()));
+                                    task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,std::current_exception()));
                                 }
                             },
                             // recursive tasks
@@ -232,7 +233,7 @@ struct parallel_placement_helper: public boost::asynchronous::continuation_task<
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     std::size_t beg_;
@@ -290,7 +291,7 @@ struct parallel_placement_helper_raw: public boost::asynchronous::continuation_t
                         {
                             ((T*)(data_)+(j+beg_))->~T();
                         }
-                        task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,boost::copy_exception(e)));
+                        task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,std::make_exception_ptr(e)));
                     }
                     catch (...)
                     {
@@ -299,10 +300,10 @@ struct parallel_placement_helper_raw: public boost::asynchronous::continuation_t
                         {
                             ((T*)(data_)+(j+beg_))->~T();
                         }
-                        task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,boost::current_exception()));
+                        task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,std::current_exception()));
                     }
                 }
-                task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::success,boost::exception_ptr()));
+                task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::success,std::exception_ptr()));
             }
             else
             {
@@ -323,7 +324,7 @@ struct parallel_placement_helper_raw: public boost::asynchronous::continuation_t
                                     if (res1.first == boost::asynchronous::detail::parallel_placement_helper_enum::success &&
                                         res2.first == boost::asynchronous::detail::parallel_placement_helper_enum::success)
                                     {
-                                        task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::success,boost::exception_ptr()));
+                                        task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::success,std::exception_ptr()));
                                     }
                                     // if both have an error and error not handled (i.e propagated), keep any exception and proceed
                                     else if (res1.first == boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled &&
@@ -352,11 +353,11 @@ struct parallel_placement_helper_raw: public boost::asynchronous::continuation_t
                                 }
                                 catch(std::exception& e)
                                 {
-                                    task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,boost::copy_exception(e)));
+                                    task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,std::make_exception_ptr(e)));
                                 }
                                 catch (...)
                                 {
-                                    task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,boost::current_exception()));
+                                    task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,std::current_exception()));
                                 }
                             },
                             // recursive tasks
@@ -369,7 +370,7 @@ struct parallel_placement_helper_raw: public boost::asynchronous::continuation_t
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     std::size_t beg_;
@@ -429,7 +430,7 @@ struct parallel_placement_iterators_helper: public boost::asynchronous::continua
                         {
                             ((T*)(data_.get())+(j+beg_))->~T();
                         }
-                        task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,boost::copy_exception(e)));
+                        task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,std::make_exception_ptr(e)));
                     }
                     catch (...)
                     {
@@ -438,10 +439,10 @@ struct parallel_placement_iterators_helper: public boost::asynchronous::continua
                         {
                             ((T*)(data_.get())+(j+beg_))->~T();
                         }
-                        task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,boost::current_exception()));
+                        task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,std::current_exception()));
                     }
                 }
-                task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::success,boost::exception_ptr()));
+                task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::success,std::exception_ptr()));
             }
             else
             {
@@ -464,7 +465,7 @@ struct parallel_placement_iterators_helper: public boost::asynchronous::continua
                                     if (res1.first == boost::asynchronous::detail::parallel_placement_helper_enum::success &&
                                         res2.first == boost::asynchronous::detail::parallel_placement_helper_enum::success)
                                     {
-                                        task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::success,boost::exception_ptr()));
+                                        task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::success,std::exception_ptr()));
                                     }
                                     // if both have an error and error not handled (i.e propagated), keep any exception and proceed
                                     else if (res1.first == boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled &&
@@ -493,11 +494,11 @@ struct parallel_placement_iterators_helper: public boost::asynchronous::continua
                                 }
                                 catch(std::exception& e)
                                 {
-                                    task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,boost::copy_exception(e)));
+                                    task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,std::make_exception_ptr(e)));
                                 }
                                 catch (...)
                                 {
-                                    task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,boost::current_exception()));
+                                    task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,std::current_exception()));
                                 }
                             },
                             // recursive tasks
@@ -510,7 +511,7 @@ struct parallel_placement_iterators_helper: public boost::asynchronous::continua
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     std::size_t beg_;
@@ -576,7 +577,7 @@ struct parallel_placement_delete_helper: public boost::asynchronous::continuatio
                                 }
                                 catch(std::exception& e)
                                 {
-                                    task_res.set_exception(boost::copy_exception(e));
+                                    task_res.set_exception(std::make_exception_ptr(e));
                                 }
                             },
                             // recursive tasks
@@ -589,7 +590,7 @@ struct parallel_placement_delete_helper: public boost::asynchronous::continuatio
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     std::size_t beg_;

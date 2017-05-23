@@ -11,14 +11,53 @@
 #define BOOST_ASYNCHRON_EXCEPTIONS_HPP
 
 #include <exception>
-#include <boost/exception/all.hpp>
-
-// exception thrown by interruptible_post_callback.
+#include <typeindex>
+#include <boost/current_function.hpp>
 
 namespace boost { namespace asynchronous
 {
-struct task_aborted_exception : public virtual boost::exception, public virtual std::exception
+template<
+    class SomethingDerivedFromAsynchronousException>
+void asynchronous_throw(SomethingDerivedFromAsynchronousException ex, const char* currentFunction, const char* file, int line)
 {
+  ex.type = std::type_index(typeid(ex));
+  ex.what_ = ex.what();
+  ex.currentFunction = currentFunction;
+  ex.file = file;
+  ex.line = line;
+  throw ex;
+}
+}}
+#define ASYNCHRONOUS_THROW(SomethingDerivedFromAsynchronousException_) asynchronous_throw(SomethingDerivedFromAsynchronousException_, BOOST_CURRENT_FUNCTION, __FILE__, __LINE__)
+
+
+
+namespace boost { namespace asynchronous
+{
+
+struct asynchronous_exception: public std::exception
+{
+  virtual ~asynchronous_exception() throw () {}
+
+  virtual const char* what() const throw ()
+  {
+    return "asynchronous_exception";
+  }
+
+  std::type_index type = std::type_index(typeid(asynchronous_exception));
+  const char* what_ = "asynchronous_exception";
+  const char* currentFunction = nullptr;
+  const char* file = nullptr;
+  int line = -1;
+};
+
+// exception thrown by interruptible_post_callback.
+struct task_aborted_exception : std::exception
+{
+    virtual const char* what() const throw ()
+    {
+      return "task_aborted_exception";
+    }
 };
 }}
 #endif // BOOST_ASYNCHRON_EXCEPTIONS_HPP

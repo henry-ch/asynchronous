@@ -104,7 +104,7 @@ struct parallel_search_helper: public boost::asynchronous::continuation_task<Ite
                                 }
                                 catch(std::exception& e)
                                 {
-                                    task_res.set_exception(boost::copy_exception(e));
+                                    task_res.set_exception(std::make_exception_ptr(e));
                                 }
                             },
                             // recursive tasks
@@ -117,7 +117,7 @@ struct parallel_search_helper: public boost::asynchronous::continuation_task<Ite
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
 
@@ -207,13 +207,13 @@ struct parallel_search_range_helper: public boost::asynchronous::continuation_ta
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             });
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
 

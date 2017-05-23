@@ -74,7 +74,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         tpids = tp.thread_ids();
         // start long tasks in threadpool
-        std::vector<boost::future<int> > fus;
+        std::vector<std::future<int> > fus;
         auto fu1 = boost::asynchronous::post_future(get_worker(),sub_task(10));
         fus.emplace_back(std::move(fu1));
         auto fu2 = boost::asynchronous::post_future(get_worker(),sub_task(3000));
@@ -84,20 +84,20 @@ struct Servant : boost::asynchronous::trackable_servant<>
 
         boost::asynchronous::create_continuation_timeout(
                     // called when subtasks are done, set our result
-                    [this](std::vector<boost::future<int>> res)
+                    [this](std::vector<std::future<int>> res)
                     {
                         BOOST_CHECK_MESSAGE(!contains_id(tpids.begin(),tpids.end(),boost::this_thread::get_id()),"algo callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
 
-                        BOOST_CHECK_MESSAGE(res[0].has_value(),"first task should be finished");
-                        BOOST_CHECK_MESSAGE(!res[1].has_value(),"second task should not be finished");
-                        BOOST_CHECK_MESSAGE(!res[2].has_value(),"third task should not be finished");
+                        BOOST_CHECK_MESSAGE(boost::asynchronous::is_ready(res[0]),"first task should be finished");
+                        BOOST_CHECK_MESSAGE(!boost::asynchronous::is_ready(res[1]),"second task should not be finished");
+                        BOOST_CHECK_MESSAGE(!boost::asynchronous::is_ready(res[2]),"third task should not be finished");
                         long r = 0;
-                        if ( res[0].has_value())
+                        if ( boost::asynchronous::is_ready(res[0]))
                             r += res[0].get();
-                        if ( res[1].has_value())
+                        if ( boost::asynchronous::is_ready(res[1]))
                             r += res[1].get();
-                        if ( res[2].has_value())
+                        if ( boost::asynchronous::is_ready(res[2]))
                             r += res[2].get();
                         this->on_callback(r);
                     },

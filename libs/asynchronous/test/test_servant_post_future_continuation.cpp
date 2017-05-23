@@ -65,7 +65,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks and wait until done
-        boost::future<void> fu = this->post_future(
+        std::future<void> fu = this->post_future(
            [ids,this](){
                     BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");
 

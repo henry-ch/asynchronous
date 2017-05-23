@@ -121,7 +121,7 @@ struct parallel_stable_partition_part1_helper: public boost::asynchronous::conti
                                 }
                                 catch(std::exception& e)
                                 {
-                                    task_res.set_exception(boost::copy_exception(e));
+                                    task_res.set_exception(std::make_exception_ptr(e));
                                 }
                             },
                             // recursive tasks
@@ -134,7 +134,7 @@ struct parallel_stable_partition_part1_helper: public boost::asynchronous::conti
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Iterator beg_;
@@ -222,7 +222,7 @@ struct parallel_stable_partition_part2_helper: public boost::asynchronous::conti
                                 }
                                 catch(std::exception& e)
                                 {
-                                    task_res.set_exception(boost::copy_exception(e));
+                                    task_res.set_exception(std::make_exception_ptr(e));
                                 }
                             },
                             // recursive tasks
@@ -241,7 +241,7 @@ struct parallel_stable_partition_part2_helper: public boost::asynchronous::conti
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Iterator beg_;
@@ -347,20 +347,20 @@ struct parallel_stable_partition_helper: public boost::asynchronous::continuatio
                         }
                         catch(std::exception& e)
                         {
-                            task_res.set_exception(boost::copy_exception(e));
+                            task_res.set_exception(std::make_exception_ptr(e));
                         }
                     });
                 }
                 //exceptions are propagated
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             });
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Iterator beg_;
@@ -423,13 +423,13 @@ struct parallel_stable_partition_range_move_helper:
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             });
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     std::shared_ptr<Range> range_;
@@ -513,14 +513,14 @@ struct parallel_stable_partition_continuation_helper:
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             }
             );
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Continuation cont_;

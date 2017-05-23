@@ -139,7 +139,7 @@ void ParallelAsyncPostCb(boost::asynchronous::vector<SORTED_TYPE> a, size_t n)
     // we have to release scheduler as a scheduler cannot live into its own thread
     // (inside the pool, it doesn't need any anyway)
     a.release_scheduler();
-    boost::future<boost::asynchronous::vector<SORTED_TYPE>> fu = boost::asynchronous::post_future(pool,
+    std::future<boost::asynchronous::vector<SORTED_TYPE>> fu = boost::asynchronous::post_future(pool,
     [a=std::move(a),n,tasksize=tasksize]()mutable
     {
         return boost::asynchronous::parallel_sort2(std::move(a),SORT_FCT(),tasksize,"",0);
@@ -157,7 +157,7 @@ void ParallelAsyncPostCbSpreadsort(boost::asynchronous::vector<SORTED_TYPE> a, s
     // we have to release scheduler as a scheduler cannot live into its own thread
     // (inside the pool, it doesn't need any anyway)
     a.release_scheduler();
-    boost::future<boost::asynchronous::vector<SORTED_TYPE>> fu = boost::asynchronous::post_future(pool,
+    std::future<boost::asynchronous::vector<SORTED_TYPE>> fu = boost::asynchronous::post_future(pool,
     [a=std::move(a),n,tasksize=tasksize]()mutable
     {
         return boost::asynchronous::parallel_spreadsort2(std::move(a),SORT_FCT(),tasksize,"",0);

@@ -224,7 +224,7 @@ class parallel_partition_two_collections
                                     }
                                     catch(std::exception& e)
                                     {
-                                        task_res.set_exception(boost::copy_exception(e));
+                                        task_res.set_exception(std::make_exception_ptr(e));
                                     }
                                 },
                                 // recursive tasks
@@ -271,7 +271,7 @@ class parallel_partition_two_collections
                                     }
                                     catch(std::exception& e)
                                     {
-                                        task_res.set_exception(boost::copy_exception(e));
+                                        task_res.set_exception(std::make_exception_ptr(e));
                                     }
                                 },
                                 // recursive tasks
@@ -694,7 +694,7 @@ public :
                     }
                     catch(std::exception& e)
                     {
-                        task_res.set_exception(boost::copy_exception(e));
+                        task_res.set_exception(std::make_exception_ptr(e));
                     }
                 }
                 );*/
@@ -828,7 +828,7 @@ public :
                                 }
                                 catch(std::exception& e)
                                 {
-                                    task_res.set_exception(boost::copy_exception(e));
+                                    task_res.set_exception(std::make_exception_ptr(e));
                                 }
                             },
                             // recursive tasks
@@ -872,7 +872,7 @@ public :
                                                     }
                                                     catch(std::exception& e)
                                                     {
-                                                        task_res.set_exception(boost::copy_exception(e));
+                                                        task_res.set_exception(std::make_exception_ptr(e));
                                                     }
                                                 },
                                                 // recursive tasks
@@ -884,7 +884,7 @@ public :
                                 }
                                 catch(std::exception& e)
                                 {
-                                    task_res.set_exception(boost::copy_exception(e));
+                                    task_res.set_exception(std::make_exception_ptr(e));
                                 }
                             },
                             // recursive tasks

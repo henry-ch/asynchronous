@@ -127,7 +127,7 @@ void example_log()
             std::cout << "res==42? " << std::boolalpha << (res == 42) << std::endl;
 
             // post a task, and interrupt it immediately
-            boost::future<boost::asynchronous::any_interruptible> interruptible_fu =
+            std::future<boost::asynchronous::any_interruptible> interruptible_fu =
                     proxy.start_interruptible_async_work();
             boost::asynchronous::any_interruptible interruptible = interruptible_fu.get();
             interruptible.interrupt();

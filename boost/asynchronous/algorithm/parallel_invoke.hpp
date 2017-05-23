@@ -54,7 +54,7 @@ struct parallel_invoke_helper: public boost::asynchronous::continuation_task<Ret
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     template <class Archive>
@@ -91,7 +91,7 @@ struct parallel_invoke_helper_timeout: public boost::asynchronous::continuation_
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     template <class Archive>
@@ -116,7 +116,7 @@ struct continuation_task_wrapper : public boost::asynchronous::continuation_task
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     template <class Archive>
@@ -140,7 +140,7 @@ struct continuation_task_wrapper<void,Func> : public boost::asynchronous::contin
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     template <class Archive>

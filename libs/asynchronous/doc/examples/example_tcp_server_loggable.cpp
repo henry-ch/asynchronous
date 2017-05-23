@@ -31,7 +31,7 @@ struct Servant : boost::asynchronous::trackable_servant<log_servant_job,log_serv
     Servant(boost::asynchronous::any_weak_scheduler<log_servant_job> scheduler)
         : boost::asynchronous::trackable_servant<log_servant_job,log_servant_job>(scheduler)
         // for testing purpose
-        , m_promise(new boost::promise<int>)
+        , m_promise(new std::promise<int>)
         , m_total(0)
         , m_tasks_done(0)
     {
@@ -87,7 +87,7 @@ struct Servant : boost::asynchronous::trackable_servant<log_servant_job,log_serv
         }
     }
     // call to this is posted and executes in our (safe) single-thread scheduler
-    boost::future<int> start_async_work()
+    std::future<int> start_async_work()
     {
         std::cout << "start_async_work()" << std::endl;
         // for testing purpose
@@ -123,7 +123,7 @@ struct Servant : boost::asynchronous::trackable_servant<log_servant_job,log_serv
     }
 private:
 // for testing
-std::shared_ptr<boost::promise<int> > m_promise;
+std::shared_ptr<std::promise<int> > m_promise;
 int m_total;
 unsigned int m_tasks_done;//will count until 10, then we are done (we start 10 tasks)
 // keep the remore pool composite connection alive

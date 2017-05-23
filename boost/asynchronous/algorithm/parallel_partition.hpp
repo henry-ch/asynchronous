@@ -161,7 +161,7 @@ struct partition_worker : public boost::asynchronous::continuation_task<std::pai
                     }
                     catch (std::exception& e)
                     {
-                        task_res.set_exception(boost::copy_exception(e));
+                        task_res.set_exception(std::make_exception_ptr(e));
                         return;
                     }
                 },
@@ -173,7 +173,7 @@ struct partition_worker : public boost::asynchronous::continuation_task<std::pai
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
 
@@ -369,7 +369,7 @@ struct parallel_partition_helper : public boost::asynchronous::continuation_task
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
 private:
@@ -427,13 +427,13 @@ struct parallel_partition_range_move_helper:
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             });
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     std::shared_ptr<Range> range_;
@@ -517,14 +517,14 @@ struct parallel_partition_continuation_helper:
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             }
             );
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Continuation cont_;

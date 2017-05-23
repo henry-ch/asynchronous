@@ -87,7 +87,7 @@ struct parallel_quicksort_helper: public boost::asynchronous::continuation_task<
                     }
                     catch(std::exception& e)
                     {
-                        task_res.set_exception(boost::copy_exception(e));
+                        task_res.set_exception(std::make_exception_ptr(e));
                     }
                 });
             }
@@ -119,7 +119,7 @@ struct parallel_quicksort_helper: public boost::asynchronous::continuation_task<
                         }
                         catch(std::exception& e)
                         {
-                            task_res.set_exception(boost::copy_exception(e));
+                            task_res.set_exception(std::make_exception_ptr(e));
                             return;
                         }
                        //check if reverse sorted
@@ -144,7 +144,7 @@ struct parallel_quicksort_helper: public boost::asynchronous::continuation_task<
                                         }
                                         catch(std::exception& e)
                                         {
-                                            task_res.set_exception(boost::copy_exception(e));
+                                            task_res.set_exception(std::make_exception_ptr(e));
                                         }
                                     });
                                     return;
@@ -185,7 +185,7 @@ struct parallel_quicksort_helper: public boost::asynchronous::continuation_task<
                                                 }
                                                 catch(std::exception& e)
                                                 {
-                                                    task_res.set_exception(boost::copy_exception(e));
+                                                    task_res.set_exception(std::make_exception_ptr(e));
                                                 }
                                             },
                                             // recursive tasks
@@ -197,13 +197,13 @@ struct parallel_quicksort_helper: public boost::asynchronous::continuation_task<
                                     }
                                     catch(std::exception& e)
                                     {
-                                        task_res.set_exception(boost::copy_exception(e));
+                                        task_res.set_exception(std::make_exception_ptr(e));
                                     }
                                 });
                             }
                             catch(std::exception& e)
                             {
-                                task_res.set_exception(boost::copy_exception(e));
+                                task_res.set_exception(std::make_exception_ptr(e));
                             }
                         });
                 });
@@ -211,7 +211,7 @@ struct parallel_quicksort_helper: public boost::asynchronous::continuation_task<
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
 

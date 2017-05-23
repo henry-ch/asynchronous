@@ -145,7 +145,7 @@ BOOST_AUTO_TEST_CASE( test_make_safe_callback )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::future<std::future<void> > fuv = proxy.start_async_work();
+        std::future<std::future<void> > fuv = proxy.start_async_work();
         try
         {
             std::future<void> resfuv = fuv.get();
@@ -187,7 +187,7 @@ BOOST_AUTO_TEST_CASE( test_make_safe_callback_failed )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::future<std::future<void> > fuv = proxy.start_async_work_failed();
+        std::future<std::future<void> > fuv = proxy.start_async_work_failed();
         try
         {
             std::future<void> resfuv = fuv.get();

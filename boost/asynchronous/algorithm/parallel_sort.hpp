@@ -114,11 +114,11 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
                                             if (depth == 0)
                                             {
                                                 merge_memory->clear([task_res,merge_memory,e]()mutable
-                                                                    {task_res.set_exception(boost::copy_exception(e));});
+                                                                    {task_res.set_exception(std::make_exception_ptr(e));});
                                             }
                                             else
                                             {
-                                                task_res.set_exception(boost::copy_exception(e));
+                                                task_res.set_exception(std::make_exception_ptr(e));
                                             }
                                         }
                                     };
@@ -142,11 +142,11 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
                                     if (depth == 0)
                                     {
                                         merge_memory->clear([task_res,merge_memory,e]()mutable
-                                                            {task_res.set_exception(boost::copy_exception(e));});
+                                                            {task_res.set_exception(std::make_exception_ptr(e));});
                                     }
                                     else
                                     {
-                                        task_res.set_exception(boost::copy_exception(e));
+                                        task_res.set_exception(std::make_exception_ptr(e));
                                     }
                                 }
                             },
@@ -163,11 +163,11 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
             if (depth == 0)
             {
                 merge_memory->clear([task_res,merge_memory,e]()mutable
-                                    {task_res.set_exception(boost::copy_exception(e));});
+                                    {task_res.set_exception(std::make_exception_ptr(e));});
             }
             else
             {
-                task_res.set_exception(boost::copy_exception(e));
+                task_res.set_exception(std::make_exception_ptr(e));
             }
         }
     }
@@ -247,7 +247,7 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
                                         }
                                         catch(std::exception& e)
                                         {
-                                            task_res.set_exception(boost::copy_exception(e));
+                                            task_res.set_exception(std::make_exception_ptr(e));
                                         }
                                     });
                                     return;
@@ -297,19 +297,19 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
                                     }
                                     catch(std::exception& e)
                                     {
-                                        task_res.set_exception(boost::copy_exception(e));
+                                        task_res.set_exception(std::make_exception_ptr(e));
                                     }
                                 });
                             }
                             catch(std::exception& e)
                             {
-                                task_res.set_exception(boost::copy_exception(e));
+                                task_res.set_exception(std::make_exception_ptr(e));
                             }
                         });
                     }
                     catch(std::exception& e)
                     {
-                        task_res.set_exception(boost::copy_exception(e));
+                        task_res.set_exception(std::make_exception_ptr(e));
                     }
                 });
                 return;
@@ -318,7 +318,7 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Iterator beg_;
@@ -579,7 +579,7 @@ struct parallel_sort_range_move_helper_serializable
                                         }
                                         catch(std::exception& e)
                                         {
-                                            task_res.set_exception(boost::copy_exception(e));
+                                            task_res.set_exception(std::make_exception_ptr(e));
                                         }
                                     };
                                     auto c = boost::asynchronous::parallel_merge<decltype(boost::begin(*r1)),decltype(boost::begin(*r1)),
@@ -590,7 +590,7 @@ struct parallel_sort_range_move_helper_serializable
                                 }
                                 catch(std::exception& e)
                                 {
-                                    task_res.set_exception(boost::copy_exception(e));
+                                    task_res.set_exception(std::make_exception_ptr(e));
                                 }
                             },
                             // recursive tasks
@@ -605,7 +605,7 @@ struct parallel_sort_range_move_helper_serializable
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
 
@@ -759,7 +759,7 @@ struct parallel_sort_range_move_helper2 : public boost::asynchronous::continuati
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             });
         }
@@ -793,7 +793,7 @@ struct parallel_sort_range_move_helper2 : public boost::asynchronous::continuati
                                             }
                                             catch(std::exception& e)
                                             {
-                                                task_res.set_exception(boost::copy_exception(e));
+                                                task_res.set_exception(std::make_exception_ptr(e));
                                             }
                                         };
                                         auto c = boost::asynchronous::parallel_merge<decltype(boost::begin(*r1)),decltype(boost::begin(*r1)),
@@ -804,13 +804,13 @@ struct parallel_sort_range_move_helper2 : public boost::asynchronous::continuati
                                     }
                                     catch(std::exception& e)
                                     {
-                                        task_res.set_exception(boost::copy_exception(e));
+                                        task_res.set_exception(std::make_exception_ptr(e));
                                     }
                                 });
                             }
                             catch(std::exception& e)
                             {
-                                task_res.set_exception(boost::copy_exception(e));
+                                task_res.set_exception(std::make_exception_ptr(e));
                             }
                         },
                         // recursive tasks
@@ -883,7 +883,7 @@ struct parallel_sort_range_move_helper2 : public boost::asynchronous::continuati
                                         }
                                         catch(std::exception& e)
                                         {
-                                            task_res.set_exception(boost::copy_exception(e));
+                                            task_res.set_exception(std::make_exception_ptr(e));
                                         }
                                     });
                                     return;
@@ -892,13 +892,13 @@ struct parallel_sort_range_move_helper2 : public boost::asynchronous::continuati
                             }
                             catch(std::exception& e)
                             {
-                                task_res.set_exception(boost::copy_exception(e));
+                                task_res.set_exception(std::make_exception_ptr(e));
                             }
                         });
                     }
                     catch(std::exception& e)
                     {
-                        task_res.set_exception(boost::copy_exception(e));
+                        task_res.set_exception(std::make_exception_ptr(e));
                     }
                 });
                 return;
@@ -907,7 +907,7 @@ struct parallel_sort_range_move_helper2 : public boost::asynchronous::continuati
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     std::shared_ptr<Range> range_;
@@ -997,7 +997,7 @@ struct parallel_sort_continuation_range_helper: public boost::asynchronous::cont
             auto cutoff = cutoff_;
             auto task_name = this->get_name();
             auto prio = prio_;
-            cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res)
+            cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<std::future<typename Continuation::return_type> >&& continuation_res)
             {
                 try
                 {
@@ -1009,7 +1009,7 @@ struct parallel_sort_continuation_range_helper: public boost::asynchronous::cont
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             }
             );
@@ -1018,7 +1018,7 @@ struct parallel_sort_continuation_range_helper: public boost::asynchronous::cont
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Continuation cont_;
@@ -1058,14 +1058,14 @@ struct parallel_sort_continuation_range_helper<Continuation,Func,Job,
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             }
             );
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Continuation cont_;
@@ -1092,7 +1092,7 @@ struct parallel_stable_sort_continuation_range_helper: public boost::asynchronou
             auto cutoff = cutoff_;
             auto task_name = this->get_name();
             auto prio = prio_;
-            cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res)
+            cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<std::future<typename Continuation::return_type> >&& continuation_res)
             {
                 try
                 {
@@ -1105,7 +1105,7 @@ struct parallel_stable_sort_continuation_range_helper: public boost::asynchronou
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             }
             );
@@ -1114,7 +1114,7 @@ struct parallel_stable_sort_continuation_range_helper: public boost::asynchronou
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Continuation cont_;
@@ -1155,14 +1155,14 @@ struct parallel_stable_sort_continuation_range_helper<Continuation,Func,Job,
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             }
             );
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Continuation cont_;
@@ -1189,7 +1189,7 @@ struct parallel_spreadsort_continuation_range_helper: public boost::asynchronous
             auto cutoff = cutoff_;
             auto task_name = this->get_name();
             auto prio = prio_;
-            cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res) mutable
+            cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<std::future<typename Continuation::return_type> >&& continuation_res) mutable
             {
                 try
                 {
@@ -1202,7 +1202,7 @@ struct parallel_spreadsort_continuation_range_helper: public boost::asynchronous
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             }
             );
@@ -1211,7 +1211,7 @@ struct parallel_spreadsort_continuation_range_helper: public boost::asynchronous
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Continuation cont_;
@@ -1252,14 +1252,14 @@ struct parallel_spreadsort_continuation_range_helper<Continuation,Func,Job,
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             }
             );
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Continuation cont_;
@@ -1330,7 +1330,7 @@ struct parallel_sort_continuation_range_helper2: public boost::asynchronous::con
             auto cutoff = cutoff_;
             auto task_name = this->get_name();
             auto prio = prio_;
-            cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res) mutable
+            cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<std::future<typename Continuation::return_type> >&& continuation_res) mutable
             {
                 try
                 {
@@ -1342,7 +1342,7 @@ struct parallel_sort_continuation_range_helper2: public boost::asynchronous::con
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             }
             );
@@ -1351,7 +1351,7 @@ struct parallel_sort_continuation_range_helper2: public boost::asynchronous::con
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Continuation cont_;
@@ -1391,14 +1391,14 @@ struct parallel_sort_continuation_range_helper2<Continuation,Func,Job,
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             }
             );
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Continuation cont_;
@@ -1425,7 +1425,7 @@ struct parallel_stable_sort_continuation_range_helper2: public boost::asynchrono
             auto cutoff = cutoff_;
             auto task_name = this->get_name();
             auto prio = prio_;
-            cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res) mutable
+            cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<std::future<typename Continuation::return_type> >&& continuation_res) mutable
             {
                 try
                 {
@@ -1438,7 +1438,7 @@ struct parallel_stable_sort_continuation_range_helper2: public boost::asynchrono
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             }
             );
@@ -1447,7 +1447,7 @@ struct parallel_stable_sort_continuation_range_helper2: public boost::asynchrono
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Continuation cont_;
@@ -1488,14 +1488,14 @@ struct parallel_stable_sort_continuation_range_helper2<Continuation,Func,Job,
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             }
             );
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Continuation cont_;
@@ -1522,7 +1522,7 @@ struct parallel_spreadsort_continuation_range_helper2: public boost::asynchronou
             auto cutoff = cutoff_;
             auto task_name = this->get_name();
             auto prio = prio_;
-            cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res) mutable
+            cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<std::future<typename Continuation::return_type> >&& continuation_res) mutable
             {
                 try
                 {
@@ -1535,7 +1535,7 @@ struct parallel_spreadsort_continuation_range_helper2: public boost::asynchronou
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             }
             );
@@ -1544,7 +1544,7 @@ struct parallel_spreadsort_continuation_range_helper2: public boost::asynchronou
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Continuation cont_;
@@ -1585,14 +1585,14 @@ struct parallel_spreadsort_continuation_range_helper2<Continuation,Func,Job,
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             }
             );
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Continuation cont_;

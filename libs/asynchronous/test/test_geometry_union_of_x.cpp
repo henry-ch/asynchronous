@@ -90,7 +90,7 @@ BOOST_AUTO_TEST_CASE( test_geometry_union_of_x_200_200_2 )
 
     // make a copy and execute in pool
     auto many_polygons_ = std::move(many_polygons);
-    boost::future<std::vector<multi_polygon_type>> fu = boost::asynchronous::post_future(scheduler,
+    std::future<std::vector<multi_polygon_type>> fu = boost::asynchronous::post_future(scheduler,
     [many_polygons_]()mutable
     {
         return boost::asynchronous::geometry::parallel_geometry_union_of_x<std::vector<multi_polygon_type>,
@@ -164,7 +164,7 @@ BOOST_AUTO_TEST_CASE( test_geometry_union_of_x_200_200_2_continuation )
 
     // make a copy and execute in pool
     auto many_polygons_ = std::move(many_polygons);
-    boost::future<std::vector<multi_polygon_type>> fu = boost::asynchronous::post_future(scheduler,
+    std::future<std::vector<multi_polygon_type>> fu = boost::asynchronous::post_future(scheduler,
     [many_polygons_]()mutable
     {
         return boost::asynchronous::geometry::parallel_geometry_union_of_x(

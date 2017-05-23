@@ -46,7 +46,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
 struct Interface
 {
     virtual ~Interface(){}
-    virtual boost::future<void> foo_(int) const=0;
+    virtual std::future<void> foo_(int) const=0;
 };
 
 class ServantProxy : public Interface, public boost::asynchronous::servant_proxy<ServantProxy,Servant>
@@ -58,7 +58,7 @@ public:
         boost::asynchronous::servant_proxy<ServantProxy,Servant>(s)
     {}
     BOOST_ASYNC_FUTURE_MEMBER(foo)
-    boost::future<void> foo_(int i) const override
+    std::future<void> foo_(int i) const override
     {
         return this->foo(i);
     }

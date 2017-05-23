@@ -216,7 +216,7 @@ void test_many_intersections(int count_x, int count_y, double distance, bool met
         /*auto beg = many_polygons.begin();
         auto end = many_polygons.end();
 
-        boost::future<multi_polygon_type> fu = boost::asynchronous::post_future(pool,
+        std::future<multi_polygon_type> fu = boost::asynchronous::post_future(pool,
         [beg,end,intersection_of_x_cutoff]()
         {
             return boost::asynchronous::geometry::parallel_geometry_intersection_of_x<decltype(beg),BOOST_ASYNCHRONOUS_DEFAULT_JOB>
@@ -224,7 +224,7 @@ void test_many_intersections(int count_x, int count_y, double distance, bool met
         }
         ,"",0);*/
 
-        boost::future<multi_polygon_type> fu = boost::asynchronous::post_future(pool,
+        std::future<multi_polygon_type> fu = boost::asynchronous::post_future(pool,
         [intersection_of_x_cutoff,many_polygons=std::move(many_polygons),overlay_cutoff,partition_cutoff]()mutable
         {
             return boost::asynchronous::geometry::parallel_geometry_intersection_of_x<std::vector<multi_polygon_type>,BOOST_ASYNCHRONOUS_DEFAULT_JOB>

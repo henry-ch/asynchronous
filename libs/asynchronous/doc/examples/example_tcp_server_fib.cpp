@@ -23,7 +23,7 @@ struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any
     Servant(boost::asynchronous::any_weak_scheduler<> scheduler)
         : boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,boost::asynchronous::any_serializable>(scheduler)
         // for testing purpose
-        , m_promise(new boost::promise<long>)
+        , m_promise(new std::promise<long>)
     {
         // let's build our pool step by step. First we need a worker pool
         // possibly for us, and we want to share it with the tcp pool for its serialization work
@@ -45,7 +45,7 @@ struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any
         m_promise->set_value(res);
     }
     // call to this is posted and executes in our (safe) single-thread scheduler
-    boost::future<long> calc_fibonacci(long n,long cutoff)
+    std::future<long> calc_fibonacci(long n,long cutoff)
     {
         // for testing purpose
         auto fu = m_promise->get_future();
@@ -62,7 +62,7 @@ struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any
     }
 private:
 // for testing
-std::shared_ptr<boost::promise<long> > m_promise;
+std::shared_ptr<std::promise<long> > m_promise;
 };
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>
 {

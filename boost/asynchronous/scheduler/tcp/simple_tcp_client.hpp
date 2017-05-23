@@ -138,7 +138,7 @@ struct simple_tcp_client : boost::asynchronous::trackable_servant<boost::asynchr
         boost::system::error_code ec;
         m_socket->set_option(option,ec);
     }
-    boost::future<void> run()
+    std::future<void> run()
     {
         check_for_work();
         // start continuous task
@@ -479,7 +479,7 @@ private:
     std::shared_ptr<boost::asio::ip::tcp::socket> m_socket;
     std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,
                        std::function<void(boost::asynchronous::tcp::client_request const&)>)> m_executor;
-    boost::promise<void> m_done;
+    std::promise<void> m_done;
     // The size of a fixed length header.
     // TODO not fixed
     enum { m_header_length = 10 };
@@ -612,7 +612,7 @@ void deserialize_and_call_top_level_continuation_task(
     task_archive >> t;
     // call task
     auto cont = t();
-    cont.on_done([request,when_done](std::tuple<boost::future<typename decltype(t())::return_type> >&& continuation_res)mutable
+    cont.on_done([request,when_done](std::tuple<std::future<typename decltype(t())::return_type> >&& continuation_res)mutable
         {
             std::ostringstream res_archive_stream;
             typename SerializableType::oarchive res_archive(res_archive_stream);
@@ -655,7 +655,7 @@ void deserialize_and_call_continuation_task(
     t();
     // create continuation waiting for task completion
     boost::asynchronous::create_continuation
-        ([request,when_done](std::tuple<boost::future<typename Task::return_type> > continuation_res)mutable
+        ([request,when_done](std::tuple<std::future<typename Task::return_type> > continuation_res)mutable
          {
             std::ostringstream res_archive_stream;
             typename SerializableType::oarchive res_archive(res_archive_stream);

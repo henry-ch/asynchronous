@@ -22,10 +22,10 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                boost::asynchronous::make_shared_scheduler_proxy<
                                                    boost::asynchronous::threadpool_scheduler<
                                                             boost::asynchronous::lockfree_queue<>>>(1))
-        , m_promise(new boost::promise<int>)
+        , m_promise(new std::promise<int>)
     {
     }
-    boost::future<int> start_async_work()
+    std::future<int> start_async_work()
     {
         // for demonstration purpose
         auto fu = m_promise->get_future();
@@ -47,7 +47,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     }
 private:
 // for demonstration purpose
-std::shared_ptr<boost::promise<int> > m_promise;
+std::shared_ptr<std::promise<int> > m_promise;
 };
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>
 {

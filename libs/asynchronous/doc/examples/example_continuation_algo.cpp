@@ -45,20 +45,20 @@ struct main_task : public boost::asynchronous::continuation_task<long>
         // simulate algo work
         boost::this_thread::sleep(boost::posix_time::milliseconds(100));
         // let's say we just found a subtask
-        boost::future<int> fu1 = boost::asynchronous::post_future(locked_scheduler,sub_task());
+        std::future<int> fu1 = boost::asynchronous::post_future(locked_scheduler,sub_task());
         // simulate more algo work
         boost::this_thread::sleep(boost::posix_time::milliseconds(100));
         // let's say we just found a subtask
-        boost::future<int> fu2 = boost::asynchronous::post_future(locked_scheduler,sub_task());
+        std::future<int> fu2 = boost::asynchronous::post_future(locked_scheduler,sub_task());
         // simulate algo work
         boost::this_thread::sleep(boost::posix_time::milliseconds(100));
         // let's say we just found a subtask
-        boost::future<int> fu3 = boost::asynchronous::post_future(locked_scheduler,sub_task());
+        std::future<int> fu3 = boost::asynchronous::post_future(locked_scheduler,sub_task());
 
         // our algo is now done, wrap all and return
         boost::asynchronous::create_continuation(
                     // called when subtasks are done, set our result
-                    [task_res](std::tuple<boost::future<int>,boost::future<int>,boost::future<int> > res)
+                    [task_res](std::tuple<std::future<int>,std::future<int>,std::future<int> > res)
                     {
                         try
                         {
@@ -67,7 +67,7 @@ struct main_task : public boost::asynchronous::continuation_task<long>
                         }
                         catch(std::exception& e)
                         {
-                            task_res.set_exception(boost::copy_exception(e));
+                            task_res.set_exception(std::make_exception_ptr(e));
                         }
                     },
                     // future results of recursive tasks

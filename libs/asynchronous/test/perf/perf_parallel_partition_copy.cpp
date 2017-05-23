@@ -78,7 +78,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     typedef std::vector<SORTED_TYPE>::iterator Iterator;
     Servant(boost::asynchronous::any_weak_scheduler<> scheduler)
         : boost::asynchronous::trackable_servant<>(scheduler, pool)
-        , m_promise(new boost::promise<void>)
+        , m_promise(new std::promise<void>)
         , m_tpsize(tpsize)
     {
     }
@@ -89,7 +89,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         servant_intern += (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - servant_time).count() / 1000000);
         m_promise->set_value();
     }
-    boost::future<void> do_partition_vec(std::vector<SORTED_TYPE> a)
+    std::future<void> do_partition_vec(std::vector<SORTED_TYPE> a)
     {
         auto fu = m_promise->get_future();
         long tasksize = NELEM / tasks;
@@ -120,7 +120,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     }
 private:
 // for testing
-std::shared_ptr<boost::promise<void> > m_promise;
+std::shared_ptr<std::promise<void> > m_promise;
 size_t m_tpsize;
 };
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>

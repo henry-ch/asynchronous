@@ -137,8 +137,8 @@ int main(int argc, char* argv[])
                                                                     10/*ms between calls to server*/);
 #endif
             // run forever
-            boost::future<boost::future<void> > fu = std::move(proxy.run());
-            boost::future<void> fu_end = std::move(fu.get());
+            std::future<std::future<void> > fu = std::move(proxy.run());
+            std::future<void> fu_end = std::move(fu.get());
             fu_end.get();
         }
         else
@@ -161,8 +161,8 @@ int main(int argc, char* argv[])
                        job_getting_policy /* number of jobs we try to keep in queue */);
 #endif
             // run forever
-            boost::future<boost::future<void> > fu = std::move(proxy.run());
-            boost::future<void> fu_end = std::move(fu.get());
+            std::future<std::future<void> > fu = std::move(proxy.run());
+            std::future<void> fu_end = std::move(fu.get());
             fu_end.get();
         }
     }

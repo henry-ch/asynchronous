@@ -319,7 +319,7 @@ BOOST_AUTO_TEST_CASE( test_parallel_sort_post_future2 )
     std::vector<int> data;
     generate(data);
     // make a copy and execute in pool
-    boost::future<std::vector<int>> fu = boost::asynchronous::post_future(
+    std::future<std::vector<int>> fu = boost::asynchronous::post_future(
                 scheduler,
                 [data]() mutable {return boost::asynchronous::parallel_sort2(std::move(data),std::less<int>(),1500);});
     try

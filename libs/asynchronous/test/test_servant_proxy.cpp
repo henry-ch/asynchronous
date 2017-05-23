@@ -171,7 +171,7 @@ BOOST_AUTO_TEST_CASE( test_servant_proxy_members )
     // references ought to be ignored
     BOOST_CHECK_MESSAGE(something==100,"servant did not manage to modify data. something=" << something);
     
-    boost::future<int> fu = proxy.doIt();
+    std::future<int> fu = proxy.doIt();
     BOOST_CHECK_MESSAGE(fu.get()==5,"servant returned incorrect data. Expected 5."); 
 }
 

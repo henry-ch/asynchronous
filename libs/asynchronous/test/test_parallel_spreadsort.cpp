@@ -76,7 +76,7 @@ BOOST_AUTO_TEST_CASE( test_parallel_spreadsort_int_post_future )
     std::vector<int> data;
     generate(data);
     // make a copy and execute in pool
-    boost::future<std::vector<int>> fu = boost::asynchronous::post_future(
+    std::future<std::vector<int>> fu = boost::asynchronous::post_future(
                 scheduler,
                 [data]() mutable {return boost::asynchronous::parallel_spreadsort(std::move(data),std::less<int>(),1500);});
     try
@@ -98,7 +98,7 @@ BOOST_AUTO_TEST_CASE( test_parallel_spreadsort_int_post_future2 )
     std::vector<int> data;
     generate(data);
     // make a copy and execute in pool
-    boost::future<std::vector<int>> fu = boost::asynchronous::post_future(
+    std::future<std::vector<int>> fu = boost::asynchronous::post_future(
                 scheduler,
                 [data]() mutable {return boost::asynchronous::parallel_spreadsort2(std::move(data),std::less<int>(),1500);});
     try
@@ -120,7 +120,7 @@ BOOST_AUTO_TEST_CASE( test_parallel_spreadsort_int_post_future_dist )
     std::vector<int> data;
     generate(data);
     // make a copy and execute in pool
-    boost::future<std::vector<int>> fu = boost::asynchronous::post_future(
+    std::future<std::vector<int>> fu = boost::asynchronous::post_future(
                 scheduler,
                 [data]() mutable {return boost::asynchronous::parallel_spreadsort(std::move(data),increasing_sort_subtask(),1500);});
     try

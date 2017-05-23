@@ -58,7 +58,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
             }// work
         );
     }
-    boost::future<int> start_posting2()
+    std::future<int> start_posting2()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_posting not posted.");
         auto fct_alive = make_check_alive_functor();

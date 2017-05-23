@@ -24,7 +24,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     Servant(boost::asynchronous::any_weak_scheduler<> scheduler)
         : boost::asynchronous::trackable_servant<>(scheduler)
         // for testing purpose
-        , m_promise(new boost::promise<int>)
+        , m_promise(new std::promise<int>)
     {
         // create a composite threadpool made of:
         // a multiqueue_threadpool_scheduler, 1 thread, with a lockfree_queue.
@@ -54,10 +54,10 @@ struct Servant : boost::asynchronous::trackable_servant<>
         m_promise->set_value(res);
     }
     // call to this is posted and executes in our (safe) single-thread scheduler
-    boost::future<int> start_async_work()
+    std::future<int> start_async_work()
     {
         // for testing purpose
-        boost::future<int> fu = m_promise->get_future();
+        std::future<int> fu = m_promise->get_future();
         // start long tasks in threadpool (first lambda) and callback in our thread
         post_callback(
                [](){
@@ -88,7 +88,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     }
 private:
 // for testing
-std::shared_ptr<boost::promise<int> > m_promise;
+std::shared_ptr<std::promise<int> > m_promise;
 };
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>
 {
@@ -115,8 +115,8 @@ void example_composite_threadpool()
             ServantProxy proxy(scheduler);
             // result of BOOST_ASYNC_FUTURE_MEMBER is a future,
             // so we have a future holding a future(result of start_async_work)
-            boost::future<boost::future<int> > fu = proxy.start_async_work();
-            boost::future<int> resfu = fu.get();
+            std::future<std::future<int> > fu = proxy.start_async_work();
+            std::future<int> resfu = fu.get();
             int res = resfu.get();
             std::cout << "res==42? " << std::boolalpha << (res == 42) << std::endl;// of course 42.
         }

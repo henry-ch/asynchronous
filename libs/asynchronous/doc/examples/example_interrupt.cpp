@@ -67,7 +67,7 @@ void example_interrupt()
                                      boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler);
-            boost::future<void> fu = proxy.start_async_work();
+            std::future<void> fu = proxy.start_async_work();
             fu.get();
         }
     }

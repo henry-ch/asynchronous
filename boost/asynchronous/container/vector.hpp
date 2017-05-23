@@ -845,7 +845,7 @@ public:
                 auto placement_result = fu.get();
                 if (placement_result.first != boost::asynchronous::detail::parallel_placement_helper_enum::success)
                 {
-                    boost::rethrow_exception(placement_result.second);
+                    std::rethrow_exception(placement_result.second);
                 }
             }
             else
@@ -945,7 +945,7 @@ public:
                 auto placement_result = fu.get();
                 if (placement_result.first != boost::asynchronous::detail::parallel_placement_helper_enum::success)
                 {
-                    boost::rethrow_exception(placement_result.second);
+                    std::rethrow_exception(placement_result.second);
                 }
             }
             else
@@ -1076,7 +1076,7 @@ public:
             auto placement_result = fu.get();
             if (placement_result.first != boost::asynchronous::detail::parallel_placement_helper_enum::success)
             {
-                boost::rethrow_exception(placement_result.second);
+                std::rethrow_exception(placement_result.second);
             }
         }
         else
@@ -1221,7 +1221,7 @@ public:
             auto placement_result = fu.get();
             if (placement_result.first != boost::asynchronous::detail::parallel_placement_helper_enum::success)
             {
-                boost::rethrow_exception(placement_result.second);
+                std::rethrow_exception(placement_result.second);
             }
         }
         else
@@ -1276,7 +1276,7 @@ public:
             auto placement_result2 = fu3.get();
             if (placement_result2.first != boost::asynchronous::detail::parallel_placement_helper_enum::success)
             {
-                boost::rethrow_exception(placement_result2.second);
+                std::rethrow_exception(placement_result2.second);
             }
         }
         else
@@ -1526,7 +1526,7 @@ public:
             auto placement_result = fu.get();
             if (placement_result.first != boost::asynchronous::detail::parallel_placement_helper_enum::success)
             {
-                boost::rethrow_exception(placement_result.second);
+                std::rethrow_exception(placement_result.second);
             }
         }
         else
@@ -1580,7 +1580,7 @@ public:
             auto placement_result2 = fu3.get();
             if (placement_result2.first != boost::asynchronous::detail::parallel_placement_helper_enum::success)
             {
-                boost::rethrow_exception(placement_result2.second);
+                std::rethrow_exception(placement_result2.second);
             }
         }
         else
@@ -1696,7 +1696,7 @@ public:
             auto placement_result = fu.get();
             if (placement_result.first != boost::asynchronous::detail::parallel_placement_helper_enum::success)
             {
-                boost::rethrow_exception(placement_result.second);
+                std::rethrow_exception(placement_result.second);
             }
         }
         else
@@ -1750,7 +1750,7 @@ public:
             auto placement_result2 = fu3.get();
             if (placement_result2.first != boost::asynchronous::detail::parallel_placement_helper_enum::success)
             {
-                boost::rethrow_exception(placement_result2.second);
+                std::rethrow_exception(placement_result2.second);
             }
         }
         else
@@ -1936,7 +1936,7 @@ private:
             auto placement_result = fu.get();
             if (placement_result.first != boost::asynchronous::detail::parallel_placement_helper_enum::success)
             {
-                boost::rethrow_exception(placement_result.second);
+                std::rethrow_exception(placement_result.second);
             }
         }
         else
@@ -2079,13 +2079,13 @@ private:
                                 }
                                 catch(std::exception& e)
                                 {
-                                    task_res.set_exception(boost::copy_exception(e));
+                                    task_res.set_exception(std::make_exception_ptr(e));
                                 }
                             });
                         }
                         catch(std::exception& e)
                         {
-                            task_res.set_exception(boost::copy_exception(e));
+                            task_res.set_exception(std::make_exception_ptr(e));
                         }
 
                     });
@@ -2094,7 +2094,7 @@ private:
             }
             catch(std::exception& e)
             {
-                task_res.set_exception(boost::copy_exception(e));
+                task_res.set_exception(std::make_exception_ptr(e));
             }
         }
         size_type m_new_memory;

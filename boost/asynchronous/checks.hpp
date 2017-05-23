@@ -14,7 +14,6 @@
 
 
 #include <memory>
-#include <boost/exception/all.hpp>
 
 #include <boost/asynchronous/exceptions.hpp>
 #include <boost/asynchronous/detail/metafunctions.hpp>

@@ -100,7 +100,7 @@ BOOST_AUTO_TEST_CASE( test_interrupt_running_task_asio )
         std::future<void> end=p->get_future();
         {
             ServantProxy proxy(scheduler);
-            boost::future<std::future<boost::asynchronous::any_interruptible> > fu = proxy.start_async_work(p);
+            std::future<std::future<boost::asynchronous::any_interruptible> > fu = proxy.start_async_work(p);
             std::future<boost::asynchronous::any_interruptible> resfu = fu.get();
             boost::asynchronous::any_interruptible res = resfu.get();
             end.get();
@@ -122,7 +122,7 @@ BOOST_AUTO_TEST_CASE( test_interrupt_not_running_task_asio )
                  > res_type;
             
             ServantProxy proxy(scheduler);
-            boost::future<res_type> fu = proxy.start_async_work2();
+            std::future<res_type> fu = proxy.start_async_work2();
             res_type res = fu.get();
             boost::asynchronous::any_interruptible i = res.second.get();
             // provoke interrupt before job starts

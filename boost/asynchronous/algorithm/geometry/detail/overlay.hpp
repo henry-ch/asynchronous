@@ -359,7 +359,7 @@ std::cout << "traverse" << std::endl;
                         catch(std::exception& e)
                         {
                             std::cout << "overlay. exception 0" << std::endl;
-                            task_res.set_exception(boost::copy_exception(e));
+                            task_res.set_exception(std::make_exception_ptr(e));
                         }
                     }
                     );
@@ -368,14 +368,14 @@ std::cout << "traverse" << std::endl;
                 catch(std::exception& e)
                 {
                     std::cout << "overlay. exception 1" << std::endl;
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             });
             }
             catch(std::exception& e)
             {
                 std::cout << "overlay. exception 2" << std::endl;
-                task_res.set_exception(boost::copy_exception(e));
+                task_res.set_exception(std::make_exception_ptr(e));
             }
         });
 

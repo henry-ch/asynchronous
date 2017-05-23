@@ -43,26 +43,26 @@ struct sub_task : public boost::asynchronous::continuation_task<long>
             // ok, we are shutting down, ok give up
             return;
         // simulate algo work
-        std::vector<boost::future<int> > fus;
+        std::vector<std::future<int> > fus;
         boost::this_thread::sleep(boost::posix_time::milliseconds(100));
         // let's say we just found a subtask
-        boost::future<int> fu1 = boost::asynchronous::post_future(locked_scheduler,sub_sub_task());
+        std::future<int> fu1 = boost::asynchronous::post_future(locked_scheduler,sub_sub_task());
         fus.emplace_back(std::move(fu1));
         // simulate more algo work
         boost::this_thread::sleep(boost::posix_time::milliseconds(100));
         // let's say we just found a subtask
-        boost::future<int> fu2 = boost::asynchronous::post_future(locked_scheduler,sub_sub_task());
+        std::future<int> fu2 = boost::asynchronous::post_future(locked_scheduler,sub_sub_task());
         fus.emplace_back(std::move(fu2));
         // simulate algo work
         boost::this_thread::sleep(boost::posix_time::milliseconds(100));
         // let's say we just found a subtask
-        boost::future<int> fu3 = boost::asynchronous::post_future(locked_scheduler,sub_sub_task());
+        std::future<int> fu3 = boost::asynchronous::post_future(locked_scheduler,sub_sub_task());
         fus.emplace_back(std::move(fu3));
 
         // our algo is now done, wrap all and return
         boost::asynchronous::create_continuation(
                     // called when subtasks are done, set our result
-                    [task_res](std::vector<boost::future<int>> res)
+                    [task_res](std::vector<std::future<int>> res)
                     {
                         try
                         {
@@ -71,7 +71,7 @@ struct sub_task : public boost::asynchronous::continuation_task<long>
                         }
                         catch(std::exception& e)
                         {
-                            task_res.set_exception(boost::copy_exception(e));
+                            task_res.set_exception(std::make_exception_ptr(e));
                         }
                     },
                     // future results of recursive tasks
@@ -98,7 +98,7 @@ struct main_task : public boost::asynchronous::continuation_task<long>
         // prepare return
         boost::asynchronous::create_continuation(
                     // called when subtasks are done, set our result
-                    [task_res](std::tuple<boost::future<long>,boost::future<long> > res)
+                    [task_res](std::tuple<std::future<long>,std::future<long> > res)
                     {
                         try
                         {
@@ -107,7 +107,7 @@ struct main_task : public boost::asynchronous::continuation_task<long>
                         }
                         catch(std::exception& e)
                         {
-                            task_res.set_exception(boost::copy_exception(e));
+                            task_res.set_exception(std::make_exception_ptr(e));
                         }
                     },
                     // future results of recursive tasks

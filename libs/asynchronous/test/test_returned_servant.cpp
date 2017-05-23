@@ -47,7 +47,7 @@ class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Serv
 {
 public:
     template <class Scheduler>
-    ServantProxy(Scheduler s, boost::future<std::shared_ptr<Servant> > servant):
+    ServantProxy(Scheduler s, std::future<std::shared_ptr<Servant> > servant):
         boost::asynchronous::servant_proxy<ServantProxy,Servant>(s, std::move(servant))
     {}
     BOOST_ASYNC_FUTURE_MEMBER(foo)
@@ -97,7 +97,7 @@ BOOST_AUTO_TEST_CASE( test_returned_servant )
 
         {
             ServantProxy2 proxy2(scheduler);
-            ServantProxy proxy( scheduler,std::move(proxy2.get_servant2()));
+            ServantProxy proxy( scheduler,proxy2.get_servant2());
             auto fu = proxy.foo();
             int res = fu.get();
             BOOST_CHECK_MESSAGE(res==5,"servant returned incorrect data. Expected 5.");

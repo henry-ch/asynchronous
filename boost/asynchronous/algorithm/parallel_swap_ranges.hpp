@@ -58,7 +58,7 @@ struct parallel_swap_ranges_helper: public boost::asynchronous::continuation_tas
                             }
                             catch(std::exception& e)
                             {
-                                task_res.set_exception(boost::copy_exception(e));
+                                task_res.set_exception(std::make_exception_ptr(e));
                             }
                         },
                         // recursive tasks
@@ -71,7 +71,7 @@ struct parallel_swap_ranges_helper: public boost::asynchronous::continuation_tas
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Iterator1 beg1_;

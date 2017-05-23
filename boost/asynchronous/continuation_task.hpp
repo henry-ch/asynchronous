@@ -14,6 +14,8 @@
 #include <sstream>
 #include <functional>
 #include <type_traits>
+#include <exception>
+
 #include <boost/asynchronous/expected.hpp>
 #include <boost/asynchronous/scheduler/tss_scheduler.hpp>
 #include <boost/asynchronous/detail/continuation_impl.hpp>
@@ -183,7 +185,7 @@ create_continuation_job(OnDone&& on_done, Args&&... args)
 /*! \fn void create_continuation_job(OnDone&& on_done, Args&&... args)
     \brief Create a future-based continuation as sub-task of a top-level continuation.
     \brief A Job type can be given as argument. This version must be used for loggable or serializable jobs.
-    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost::future<T>...>) where T is the return type of the sub-tasks.
+    \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<std::future<T>...>) where T is the return type of the sub-tasks.
     \param args a variadic sequence of sub-tasks. All are posted except the last, which is immediately executed from within the caller context.
 */
 template <typename Job, class OnDone, typename... Args>

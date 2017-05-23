@@ -132,7 +132,7 @@ struct convert_visitor_to_ring_map : public boost::asynchronous::continuation_ta
             }
             catch(std::exception& e)
             {
-                task_res.set_exception(boost::copy_exception(e));
+                task_res.set_exception(std::make_exception_ptr(e));
             }
         }
         );

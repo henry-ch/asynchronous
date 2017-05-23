@@ -45,8 +45,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
         dtor_called=true;
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant dtor not posted.");
     }
-    std::tuple<boost::future<void>,boost::asynchronous::any_interruptible>
-    start_posting(std::shared_ptr<boost::promise<void> > done, std::shared_ptr<std::promise<void> > ready)
+    std::tuple<std::future<void>,boost::asynchronous::any_interruptible>
+    start_posting(std::shared_ptr<std::promise<void> > done, std::shared_ptr<std::promise<void> > ready)
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_posting not posted.");
         // post task to self
@@ -83,18 +83,18 @@ BOOST_AUTO_TEST_CASE( test_post_self_interrupt )
         auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
                                                                             boost::asynchronous::lockfree_queue<>>>();
 
-        std::shared_ptr<boost::promise<void> > done(new boost::promise<void>);
+        std::shared_ptr<std::promise<void> > done(new std::promise<void>);
         std::shared_ptr<std::promise<void> > ready(new std::promise<void>);
         auto end=ready->get_future();
         {
             ServantProxy proxy(scheduler);
-            boost::future<std::tuple<boost::future<void>,boost::asynchronous::any_interruptible> > res = proxy.start_posting(done,ready);
+            std::future<std::tuple<std::future<void>,boost::asynchronous::any_interruptible> > res = proxy.start_posting(done,ready);
             // wait for task to start
             boost::asynchronous::any_interruptible i = std::get<1>(res.get());
             // interrupt
             i.interrupt();
             boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
-            BOOST_CHECK_MESSAGE(!done->get_future().has_value(),"task not interrupted.");
+            BOOST_CHECK_MESSAGE(!boost::asynchronous::is_ready(done->get_future()),"task not interrupted.");
         }
     }
     // at this point, the dtor has been called

@@ -124,10 +124,10 @@ struct TopLayerServant : boost::asynchronous::trackable_servant<>
     {
     }
     // call to this is posted and executes in our (safe) single-thread scheduler
-    boost::future<bool> start()
+    std::future<bool> start()
     {
         // to inform main  of shutdown
-        boost::future<bool> fu = m_promise.get_future();
+        std::future<bool> fu = m_promise.get_future();
         // delegate work to middle layer
         m_middle.do_something(
                     make_safe_callback(
@@ -152,7 +152,7 @@ struct TopLayerServant : boost::asynchronous::trackable_servant<>
     }
 private:
 // to signal that we shutdown
-boost::promise<bool> m_promise;
+std::promise<bool> m_promise;
 // top layer holds middle-level alive, which keeps low-level alive
 MiddleLayerProxy m_middle;
 };
@@ -181,7 +181,7 @@ void example_layers()
                                      boost::asynchronous::lockfree_queue<>>>();
         {
             TopLayerProxy proxy(scheduler,boost::thread::hardware_concurrency());
-            boost::future<boost::future<bool> > fu = proxy.start();
+            std::future<std::future<bool> > fu = proxy.start();
             // main just waits for end of application and shows result
             bool app_res = fu.get().get();
             std::cout << "app finished with success? " << std::boolalpha << app_res << std::endl;

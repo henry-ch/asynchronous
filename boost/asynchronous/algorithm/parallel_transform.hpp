@@ -144,7 +144,7 @@ struct parallel_transform_helper : public boost::asynchronous::continuation_task
                         }
                         catch (std::exception const & e)
                         {
-                            task_res.set_exception(boost::copy_exception(e));
+                            task_res.set_exception(std::make_exception_ptr(e));
                         }
                     },
                     // recursive tasks
@@ -155,7 +155,7 @@ struct parallel_transform_helper : public boost::asynchronous::continuation_task
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
 
@@ -238,7 +238,7 @@ struct parallel_transform2_helper : public boost::asynchronous::continuation_tas
                         }
                         catch (std::exception const & e)
                         {
-                            task_res.set_exception(boost::copy_exception(e));
+                            task_res.set_exception(std::make_exception_ptr(e));
                         }
                     },
                     // recursive tasks
@@ -249,7 +249,7 @@ struct parallel_transform2_helper : public boost::asynchronous::continuation_tas
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
 
@@ -322,7 +322,7 @@ struct parallel_transform_range_helper : public boost::asynchronous::continuatio
                         }
                         catch (std::exception const & e)
                         {
-                            task_res.set_exception(boost::copy_exception(e));
+                            task_res.set_exception(std::make_exception_ptr(e));
                         }
                     },
                     // recursive tasks
@@ -333,7 +333,7 @@ struct parallel_transform_range_helper : public boost::asynchronous::continuatio
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
 
@@ -413,7 +413,7 @@ struct parallel_transform2_range_helper : public boost::asynchronous::continuati
                         }
                         catch (std::exception const & e)
                         {
-                            task_res.set_exception(boost::copy_exception(e));
+                            task_res.set_exception(std::make_exception_ptr(e));
                         }
                     },
                     // recursive tasks
@@ -424,7 +424,7 @@ struct parallel_transform2_range_helper : public boost::asynchronous::continuati
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
 
@@ -512,7 +512,7 @@ struct parallel_transform_any_iterators_helper : public boost::asynchronous::con
                         }
                         catch (std::exception const & e)
                         {
-                            task_res.set_exception(boost::copy_exception(e));
+                            task_res.set_exception(std::make_exception_ptr(e));
                         }
                     },
                     // recursive tasks
@@ -523,7 +523,7 @@ struct parallel_transform_any_iterators_helper : public boost::asynchronous::con
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
 

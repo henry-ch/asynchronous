@@ -57,7 +57,7 @@ struct main_task : public boost::asynchronous::continuation_task<long>
             // ok, we are shutting down, ok give up
             return;
         // simulate algo work
-        std::vector<boost::future<int> > fus;
+        std::vector<std::future<int> > fus;
         boost::this_thread::sleep(boost::posix_time::milliseconds(100));
         // let's say we just found a subtask
         auto fu1 = boost::asynchronous::post_future(locked_scheduler,sub_task());
@@ -76,7 +76,7 @@ struct main_task : public boost::asynchronous::continuation_task<long>
         // our algo is now done, wrap all and return
         boost::asynchronous::create_continuation(
                     // called when subtasks are done, set our result
-                    [task_res](std::vector<boost::future<int>> res)
+                    [task_res](std::vector<std::future<int>> res)
                     {
                         long r = res[0].get() + res[1].get() + res[2].get();
                         task_res.set_value(r);

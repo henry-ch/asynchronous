@@ -72,7 +72,7 @@ struct main_task : public boost::asynchronous::continuation_task<long>
         // our algo is now done, wrap all and return
         boost::asynchronous::create_continuation(
                     // called when subtasks are done, set our result
-                    [task_res](std::tuple<boost::future<int>,boost::future<int>,boost::future<int> > res)
+                    [task_res](std::tuple<std::future<int>,std::future<int>,std::future<int> > res)
                     {
                         long r = std::get<0>(res).get() + std::get<1>(res).get()+ std::get<2>(res).get();
                         task_res.set_value(r);

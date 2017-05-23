@@ -90,7 +90,7 @@ struct parallel_adjacent_find_helper : public boost::asynchronous::continuation_
                         }
                         catch (std::exception const & e)
                         {
-                            task_res.set_exception(boost::copy_exception(e));
+                            task_res.set_exception(std::make_exception_ptr(e));
                         }
                     },
                     // recursive tasks
@@ -101,7 +101,7 @@ struct parallel_adjacent_find_helper : public boost::asynchronous::continuation_
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
 

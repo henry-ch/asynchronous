@@ -191,7 +191,7 @@ public:
 #else
                    std::string const& task_name="", std::size_t post_prio=0)
 #endif
-     -> boost::future<typename boost::asynchronous::detail::get_return_type_if_possible_continuation<decltype(func())>::type>
+     -> std::future<typename boost::asynchronous::detail::get_return_type_if_possible_continuation<decltype(func())>::type>
     {
         unsigned long connect_id = m_next_helper_id;
         std::weak_ptr<boost::asynchronous::detail::qt_track> tracking (m_tracking);

@@ -14,7 +14,7 @@
 #include <utility>
 #include <type_traits>
 #include <iterator>
-
+#include <exception>
 #include <boost/thread/future.hpp>
 #include <boost/serialization/vector.hpp>
 
@@ -67,7 +67,7 @@ struct parallel_all_of_helper: public boost::asynchronous::continuation_task<boo
                             }
                             catch(std::exception& e)
                             {
-                                task_res.set_exception(boost::copy_exception(e));
+                                task_res.set_exception(std::make_exception_ptr(e));
                             }
                         },
                         // recursive tasks

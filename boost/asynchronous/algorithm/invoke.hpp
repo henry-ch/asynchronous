@@ -52,7 +52,7 @@ struct invoke_helper: public boost::asynchronous::continuation_task<Return>
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             }
             );
@@ -61,7 +61,7 @@ struct invoke_helper: public boost::asynchronous::continuation_task<Return>
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
 private:
@@ -93,7 +93,7 @@ struct invoke_helper<Continuation,Func,Job,Return,typename std::enable_if<boost:
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             }
             );
@@ -102,7 +102,7 @@ struct invoke_helper<Continuation,Func,Job,Return,typename std::enable_if<boost:
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     template <class Archive>

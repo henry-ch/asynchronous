@@ -72,7 +72,7 @@ struct parallel_lexicographical_compare_helper: public boost::asynchronous::cont
                                 }
                                 catch(std::exception& e)
                                 {
-                                    task_res.set_exception(boost::copy_exception(e));
+                                    task_res.set_exception(std::make_exception_ptr(e));
                                 }
                             },
                             // recursive tasks
@@ -85,7 +85,7 @@ struct parallel_lexicographical_compare_helper: public boost::asynchronous::cont
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Iterator1 beg1_;
@@ -135,7 +135,7 @@ struct parallel_lexicographical_compare_helper2: public boost::asynchronous::con
                                 }
                                 catch(std::exception& e)
                                 {
-                                    task_res.set_exception(boost::copy_exception(e));
+                                    task_res.set_exception(std::make_exception_ptr(e));
                                 }
                             },
                             // recursive tasks
@@ -148,7 +148,7 @@ struct parallel_lexicographical_compare_helper2: public boost::asynchronous::con
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Iterator1 beg1_;

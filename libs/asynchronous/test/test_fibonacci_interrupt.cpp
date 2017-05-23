@@ -85,11 +85,11 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                    boost::asynchronous::multiqueue_threadpool_scheduler<
                                                            boost::asynchronous::lockfree_queue<>>>(4))
         // for testing purpose
-        , m_promise(new boost::promise<long>)
+        , m_promise(new std::promise<long>)
     {
     }
     // call to this is posted and executes in our (safe) single-thread scheduler
-    std::pair<boost::future<long>, boost::asynchronous::any_interruptible> calc_fibonacci(long n,long cutoff)
+    std::pair<std::future<long>, boost::asynchronous::any_interruptible> calc_fibonacci(long n,long cutoff)
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant calc_fibonacci not posted.");
         // for testing purpose
@@ -124,7 +124,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     }
 private:
 // for testing
-std::shared_ptr<boost::promise<long> > m_promise;
+std::shared_ptr<std::promise<long> > m_promise;
 };
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>
 {
@@ -154,13 +154,13 @@ BOOST_AUTO_TEST_CASE( test_fibonacci_100_100_interrupt )
                                                                             boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler);
-            boost::future<std::pair<boost::future<long>, boost::asynchronous::any_interruptible>  > fu = proxy.calc_fibonacci(fibo_val,cutoff);
-            std::pair<boost::future<long>, boost::asynchronous::any_interruptible>  resfu = fu.get();
+            std::future<std::pair<std::future<long>, boost::asynchronous::any_interruptible>  > fu = proxy.calc_fibonacci(fibo_val,cutoff);
+            std::pair<std::future<long>, boost::asynchronous::any_interruptible>  resfu = fu.get();
             // ok we decide it takes too long, interrupt
             boost::this_thread::sleep(boost::posix_time::milliseconds(30));
             resfu.second.interrupt();
             boost::this_thread::sleep(boost::posix_time::milliseconds(30));
-            BOOST_CHECK_MESSAGE(!resfu.first.has_value(),"fibonacci should not be ready");
+            BOOST_CHECK_MESSAGE(!boost::asynchronous::is_ready(resfu.first),"fibonacci should not be ready");
         }
     }
 }

@@ -69,7 +69,7 @@ struct parallel_merge_helper: public boost::asynchronous::continuation_task<void
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     template <class It1, class It2, class OutIt>
@@ -93,7 +93,7 @@ struct parallel_merge_helper: public boost::asynchronous::continuation_task<void
                         }
                         catch(std::exception& e)
                         {
-                            task_res.set_exception(boost::copy_exception(e));
+                            task_res.set_exception(std::make_exception_ptr(e));
                         }
                     },
                     // recursive tasks

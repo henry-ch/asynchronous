@@ -79,7 +79,7 @@ struct parallel_sort_helper: public boost::asynchronous::continuation_task<void>
                                 }
                                 catch(std::exception& e)
                                 {
-                                    task_res.set_exception(boost::copy_exception(e));
+                                    task_res.set_exception(std::make_exception_ptr(e));
                                 }
                             },
                             // recursive tasks
@@ -90,7 +90,7 @@ struct parallel_sort_helper: public boost::asynchronous::continuation_task<void>
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Iterator beg_;
@@ -258,7 +258,7 @@ struct parallel_sort_continuation_range_inplace_helper: public boost::asynchrono
             auto cutoff = cutoff_;
             auto task_name = this->get_name();
             auto prio = prio_;
-            cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res) mutable
+            cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<std::future<typename Continuation::return_type> >&& continuation_res) mutable
             {
                 try
                 {
@@ -271,7 +271,7 @@ struct parallel_sort_continuation_range_inplace_helper: public boost::asynchrono
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             }
             );
@@ -280,7 +280,7 @@ struct parallel_sort_continuation_range_inplace_helper: public boost::asynchrono
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Continuation cont_;
@@ -321,14 +321,14 @@ struct parallel_sort_continuation_range_inplace_helper<Continuation,Func,Job,
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             }
             );
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Continuation cont_;
@@ -355,7 +355,7 @@ struct parallel_stable_sort_continuation_range_inplace_helper: public boost::asy
             auto cutoff = cutoff_;
             auto task_name = this->get_name();
             auto prio = prio_;
-            cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res) mutable
+            cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<std::future<typename Continuation::return_type> >&& continuation_res) mutable
             {
                 try
                 {
@@ -368,7 +368,7 @@ struct parallel_stable_sort_continuation_range_inplace_helper: public boost::asy
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             }
             );
@@ -377,7 +377,7 @@ struct parallel_stable_sort_continuation_range_inplace_helper: public boost::asy
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Continuation cont_;
@@ -418,14 +418,14 @@ struct parallel_stable_sort_continuation_range_inplace_helper<Continuation,Func,
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             }
             );
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Continuation cont_;
@@ -452,7 +452,7 @@ struct parallel_spreadsort_continuation_range_inplace_helper: public boost::asyn
             auto cutoff = cutoff_;
             auto task_name = this->get_name();
             auto prio = prio_;
-            cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res) mutable
+            cont_.on_done([task_res,func,cutoff,task_name,prio](std::tuple<std::future<typename Continuation::return_type> >&& continuation_res) mutable
             {
                 try
                 {
@@ -465,7 +465,7 @@ struct parallel_spreadsort_continuation_range_inplace_helper: public boost::asyn
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             }
             );
@@ -474,7 +474,7 @@ struct parallel_spreadsort_continuation_range_inplace_helper: public boost::asyn
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Continuation cont_;
@@ -515,14 +515,14 @@ struct parallel_spreadsort_continuation_range_inplace_helper<Continuation,Func,J
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             }
             );
         }
         catch(std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
     Continuation cont_;

@@ -74,7 +74,7 @@ struct main_task : public boost::asynchronous::continuation_task<long>
         // our algo is now done, wrap all and return
         boost::asynchronous::create_continuation(
                     // called when subtasks are done, set our result
-                    [task_res](std::tuple<boost::future<int>,boost::future<int>,boost::future<int> > res)
+                    [task_res](std::tuple<std::future<int>,std::future<int>,std::future<int> > res)
                     {
                         try{
                             long r = std::get<0>(res).get() + std::get<1>(res).get()+ std::get<2>(res).get();
@@ -82,7 +82,7 @@ struct main_task : public boost::asynchronous::continuation_task<long>
                         }
                         catch(some_exception& e)
                         {
-                            task_res.set_exception(boost::copy_exception(e));
+                            task_res.set_exception(std::make_exception_ptr(e));
                         }
                     },
                     // future results of recursive tasks

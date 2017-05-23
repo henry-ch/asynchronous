@@ -93,13 +93,13 @@ struct parallel_geometry_intersection_of_x_helper:
                                     }
                                     catch(std::exception& e)
                                     {
-                                        task_res.set_exception(boost::copy_exception(e));
+                                        task_res.set_exception(std::make_exception_ptr(e));
                                     }
                                 });
                             }
                             catch(std::exception& e)
                             {
-                                task_res.set_exception(boost::copy_exception(e));
+                                task_res.set_exception(std::make_exception_ptr(e));
                             }
                         },
                         // recursive tasks
@@ -202,13 +202,13 @@ struct parallel_geometry_intersection_of_x_range_helper: public boost::asynchron
                                     }
                                     catch(std::exception& e)
                                     {
-                                        task_res.set_exception(boost::copy_exception(e));
+                                        task_res.set_exception(std::make_exception_ptr(e));
                                     }
                                 });
                             }
                             catch(std::exception& e)
                             {
-                                task_res.set_exception(boost::copy_exception(e));
+                                task_res.set_exception(std::make_exception_ptr(e));
                             }
                         },
                         // recursive tasks
@@ -277,7 +277,7 @@ struct parallel_geometry_intersection_of_x_continuation_range_helper: public boo
         auto task_name = this->get_name();
         auto prio = prio_;
         cont_.on_done([task_res,cutoff,overlay_cutoff,partition_cutoff,task_name,prio]
-                      (std::tuple<boost::future<typename Continuation::return_type> >&& continuation_res)
+                      (std::tuple<std::future<typename Continuation::return_type> >&& continuation_res)
         {
             try
             {
@@ -290,7 +290,7 @@ struct parallel_geometry_intersection_of_x_continuation_range_helper: public boo
             }
             catch(std::exception& e)
             {
-                task_res.set_exception(boost::copy_exception(e));
+                task_res.set_exception(std::make_exception_ptr(e));
             }
         }
         );
@@ -336,7 +336,7 @@ struct parallel_geometry_intersection_of_x_continuation_range_helper<Continuatio
             }
             catch(std::exception& e)
             {
-                task_res.set_exception(boost::copy_exception(e));
+                task_res.set_exception(std::make_exception_ptr(e));
             }
         }
         );

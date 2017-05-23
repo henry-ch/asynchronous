@@ -128,7 +128,7 @@ struct Fsm_ : public msm::front::state_machine_def<Fsm_>, public boost::asynchro
         std::cout << "no transition from state " << state << " on event " << typeid(Event).name() << std::endl;
     }
     // to signal that we shutdown
-    boost::promise<void> m_promise;
+    std::promise<void> m_promise;
 };
 struct Fsm : public msm::back::state_machine<Fsm_>
 {
@@ -160,7 +160,7 @@ struct Manager : boost::asynchronous::trackable_servant<>
     }
 
     // call to this is posted and executes in our (safe) single-thread scheduler
-    boost::future<void> start()
+    std::future<void> start()
     {
         fsm.process_event(init());
         return fsm.m_promise.get_future();
@@ -191,7 +191,7 @@ void example_callback_msm()
                                 boost::asynchronous::single_thread_scheduler<
                                      boost::asynchronous::lockfree_queue<>>>();
         ManagerProxy proxy(scheduler,boost::thread::hardware_concurrency());
-        boost::future<boost::future<void> > fu = proxy.start();
+        std::future<std::future<void> > fu = proxy.start();
         // show that we have in our ManagerProxy a completely safe thread world which can be accessed by several threads
         // add more threads for fun if needed. An odd number of them will cause second task to be called.
         std::thread t1([proxy](){proxy.count();});

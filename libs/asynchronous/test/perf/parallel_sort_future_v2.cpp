@@ -142,7 +142,7 @@ void ParallelAsyncPostCb(std::vector<SORTED_TYPE> a, size_t n)
     //std::cout << "sorted before? " << std::boolalpha << std::is_sorted(a.begin(), a.end()) << std::endl;
     long tasksize = NELEM / tasks;
     servant_time = std::chrono::high_resolution_clock::now();
-    boost::future<std::vector<SORTED_TYPE>> fu = boost::asynchronous::post_future(pool,
+    std::future<std::vector<SORTED_TYPE>> fu = boost::asynchronous::post_future(pool,
     [a=std::move(a),n,tasksize]()mutable
     {
         return boost::asynchronous::parallel_sort2(std::move(a),SORT_FCT(),tasksize,"",0);
@@ -159,7 +159,7 @@ void ParallelAsyncPostCbSpreadsort(std::vector<SORTED_TYPE> a, size_t n)
 #ifndef NO_SPREADSORT
     long tasksize = NELEM / tasks;
     servant_time = std::chrono::high_resolution_clock::now();
-    boost::future<std::vector<SORTED_TYPE>> fu = boost::asynchronous::post_future(pool,
+    std::future<std::vector<SORTED_TYPE>> fu = boost::asynchronous::post_future(pool,
     [a=std::move(a),n,tasksize]()mutable
     {
         return boost::asynchronous::parallel_spreadsort2(std::move(a),SORT_FCT(),tasksize,"",0);

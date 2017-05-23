@@ -15,6 +15,7 @@
 #include <utility>
 #include <atomic>
 #include <type_traits>
+#include <future>
 
 #include <functional>
 #include <memory>
@@ -45,7 +46,7 @@ struct continuation_result
 {
 public:
     typedef Return return_type;
-    continuation_result(std::shared_ptr<boost::promise<Return> > p,std::function<void(boost::asynchronous::expected<Return>)> f)
+    continuation_result(std::shared_ptr<std::promise<Return> > p,std::function<void(boost::asynchronous::expected<Return>)> f)
         : m_promise(p),m_done_func(f){}
     continuation_result(continuation_result&& rhs)noexcept
         : m_promise(std::move(rhs.m_promise))
@@ -79,7 +80,7 @@ public:
             m_promise->set_value(std::move(val));
         }
     }
-    void set_exception(boost::exception_ptr p)const
+    void set_exception(std::exception_ptr p)const
     {
         // inform caller if any
         if (m_done_func)
@@ -93,7 +94,7 @@ public:
     }
 
 private:
-    std::shared_ptr<boost::promise<Return> > m_promise;
+    std::shared_ptr<std::promise<Return> > m_promise;
     std::function<void(boost::asynchronous::expected<Return>)> m_done_func;
 };
 template <>
@@ -101,7 +102,7 @@ struct continuation_result<void>
 {
 public:
     typedef void return_type;
-    continuation_result(std::shared_ptr<boost::promise<void> > p,std::function<void(boost::asynchronous::expected<void>)> f)
+    continuation_result(std::shared_ptr<std::promise<void> > p,std::function<void(boost::asynchronous::expected<void>)> f)
         :m_promise(p),m_done_func(f){}
     continuation_result(continuation_result&& rhs)noexcept
         : m_promise(std::move(rhs.m_promise))
@@ -135,7 +136,7 @@ public:
             m_promise->set_value();
         }
     }
-    void set_exception(boost::exception_ptr p)const
+    void set_exception(std::exception_ptr p)const
     {
 
         // inform caller if any
@@ -150,7 +151,7 @@ public:
     }
 
 private:
-    std::shared_ptr<boost::promise<void> > m_promise;
+    std::shared_ptr<std::promise<void> > m_promise;
     std::function<void(boost::asynchronous::expected<void>)> m_done_func;
 };
 
@@ -192,19 +193,19 @@ public:
         return *this;
     }
 
-    boost::future<Return> get_future()const
+    std::future<Return> get_future()const
     {
         // create only when asked
         if (!m_promise)
-            const_cast<continuation_task<Return>&>(*this).m_promise = std::make_shared<boost::promise<Return>>();
+            const_cast<continuation_task<Return>&>(*this).m_promise = std::make_shared<std::promise<Return>>();
         return m_promise->get_future();
     }
 
-    std::shared_ptr<boost::promise<Return> > get_promise()const
+    std::shared_ptr<std::promise<Return> > get_promise()const
     {
         // create only when asked
         if (!m_promise)
-            const_cast<continuation_task<Return>&>(*this).m_promise = std::make_shared<boost::promise<Return>>();
+            const_cast<continuation_task<Return>&>(*this).m_promise = std::make_shared<std::promise<Return>>();
         return m_promise;
     }
     std::string get_name()const
@@ -237,9 +238,9 @@ public:
         else
         {
             if (m_done_func)
-                (m_done_func)(boost::asynchronous::expected<Return>(boost::copy_exception(payload.m_exception)));
+                (m_done_func)(boost::asynchronous::expected<Return>(std::make_exception_ptr(payload.m_exception)));
             else
-                get_promise()->set_exception(boost::copy_exception(payload.m_exception));
+                get_promise()->set_exception(std::make_exception_ptr(payload.m_exception));
         }
     }
     void set_done_func(std::function<void(boost::asynchronous::expected<Return>)> f)
@@ -247,7 +248,7 @@ public:
         m_done_func=std::move(f);
     }
 private:
-    std::shared_ptr<boost::promise<Return> > m_promise;
+    std::shared_ptr<std::promise<Return> > m_promise;
     std::string m_name;
     std::function<void(boost::asynchronous::expected<Return>)> m_done_func;
 };
@@ -287,19 +288,19 @@ public:
     continuation_task(const std::string& name=""):m_promise(),m_name(name){}
 #endif
 
-    boost::future<void> get_future()const
+    std::future<void> get_future()const
     {
         // create only when asked
         if (!m_promise)
-            const_cast<continuation_task<void>&>(*this).m_promise = std::make_shared<boost::promise<void>>();
+            const_cast<continuation_task<void>&>(*this).m_promise = std::make_shared<std::promise<void>>();
         return m_promise->get_future();
     }
 
-    std::shared_ptr<boost::promise<void> > get_promise()const
+    std::shared_ptr<std::promise<void> > get_promise()const
     {
         // create only when asked
         if (!m_promise)
-            const_cast<continuation_task<void>&>(*this).m_promise = std::make_shared<boost::promise<void>>();
+            const_cast<continuation_task<void>&>(*this).m_promise = std::make_shared<std::promise<void>>();
         return m_promise;
     }
     std::string get_name()const
@@ -327,9 +328,9 @@ public:
         else
         {
             if (m_done_func)
-                (m_done_func)(boost::asynchronous::expected<void>(boost::copy_exception(payload.m_exception)));
+                (m_done_func)(boost::asynchronous::expected<void>(std::make_exception_ptr(payload.m_exception)));
             else
-                get_promise()->set_exception(boost::copy_exception(payload.m_exception));
+                get_promise()->set_exception(std::make_exception_ptr(payload.m_exception));
         }
     }
     void set_done_func(std::function<void(boost::asynchronous::expected<void>)> f)
@@ -338,7 +339,7 @@ public:
     }
 
 private:
-    std::shared_ptr<boost::promise<void> > m_promise;
+    std::shared_ptr<std::promise<void> > m_promise;
     std::string m_name;
     std::function<void(boost::asynchronous::expected<void>)> m_done_func;
 };
@@ -362,7 +363,7 @@ struct lambda_continuation_wrapper : public boost::asynchronous::continuation_ta
         }
         catch (std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
 
@@ -385,7 +386,7 @@ struct lambda_continuation_wrapper<Func,void> : public boost::asynchronous::cont
         }
         catch (std::exception& e)
         {
-            task_res.set_exception(boost::copy_exception(e));
+            task_res.set_exception(std::make_exception_ptr(e));
         }
     }
 
@@ -452,7 +453,7 @@ if (!boost::type_erasure::is_empty(weak_scheduler))                         \
 }
 
 // the continuation task implementation
-template <class Return, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB, typename Tuple=std::tuple<boost::future<Return> > , typename Duration = std::chrono::milliseconds >
+template <class Return, typename Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB, typename Tuple=std::tuple<std::future<Return> > , typename Duration = std::chrono::milliseconds >
 struct continuation
 {
     typedef int is_continuation_task;
@@ -461,12 +462,12 @@ struct continuation
     template <class T>
     struct continuation_args
     {
-        typedef boost::future<T> type;
+        typedef std::future<T> type;
     };
     // workaround for compiler crash (gcc 4.7)
-    boost::future<Return> get_continuation_args()const
+    std::future<Return> get_continuation_args()const
     {
-        return boost::future<Return>();
+        return std::future<Return>();
     }
 
     continuation()=default;
@@ -628,7 +629,7 @@ struct continuation
             ++index;
             check_ready<I + 1, Tp...>(ready,index,t,ready_futures);
         }
-        else if (((std::get<I>(t)).has_value() || (std::get<I>(t)).has_exception()) )
+        else if ((boost::asynchronous::is_ready(std::get<I>(t)) /*|| (std::get<I>(t)).has_exception()*/) )
         {
             ready_futures[index]=true;
             ++index;
@@ -814,7 +815,7 @@ struct callback_continuation
                     catch(std::exception& e)
                     {
                         boost::asynchronous::expected<typename Task::return_type> r;
-                        r.set_exception(boost::copy_exception(e));
+                        r.set_exception(std::make_exception_ptr(e));
                         std::get<I>((*finished).m_futures) = std::move(r);
                         finished->done();
                     }
@@ -885,7 +886,7 @@ struct callback_continuation
             catch(std::exception& e)
             {
                 boost::asynchronous::expected<typename std::tuple_element<I, std::tuple<ArgsTuple...>>::type::return_type> r;
-                r.set_exception(boost::copy_exception(e));
+                r.set_exception(std::make_exception_ptr(e));
                 std::get<I>((*finished).m_futures) = std::move(r);
                 finished->done();
             }
@@ -1008,12 +1009,12 @@ struct continuation_as_seq
     template <class T>
     struct continuation_args
     {
-        typedef boost::future<T> type;
+        typedef std::future<T> type;
     };
     // workaround for compiler crash (gcc 4.7)
-    boost::future<Return> get_continuation_args()const
+    std::future<Return> get_continuation_args()const
     {
-        return boost::future<Return>();
+        return std::future<Return>();
     }
 
     continuation_as_seq()=default;
@@ -1095,7 +1096,7 @@ struct continuation_as_seq
         {
             if (m_ready_futures[index])
                 continue;
-            else if (((*it).is_ready() || (*it).has_exception() ) )
+            else if ((boost::asynchronous::is_ready(*it) /*|| (*it).has_exception()*/ ) )
                 m_ready_futures[index]=true;
             else return false;
         }
@@ -1142,7 +1143,7 @@ struct callback_continuation_as_seq
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             });
         }
@@ -1170,7 +1171,7 @@ struct callback_continuation_as_seq
                 }
                 catch(std::exception& e)
                 {
-                    task_res.set_exception(boost::copy_exception(e));
+                    task_res.set_exception(std::make_exception_ptr(e));
                 }
             });
         }
@@ -1298,7 +1299,7 @@ struct callback_continuation_as_seq
                 catch(std::exception& e)
                 {
                     boost::asynchronous::expected<typename ArgsVec::return_type> r;
-                    r.set_exception(boost::copy_exception(e));
+                    r.set_exception(std::make_exception_ptr(e));
                     (*finished).m_futures[index] = std::move(r);
                     finished->done();
                 }

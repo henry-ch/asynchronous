@@ -19,6 +19,7 @@
 #include <boost/asynchronous/servant_proxy.hpp>
 #include <boost/asynchronous/trackable_servant.hpp>
 #include "test_common.hpp"
+#include <boost/thread/future.hpp>
 
 #include <boost/test/unit_test.hpp>
 

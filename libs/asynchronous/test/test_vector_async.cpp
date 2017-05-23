@@ -68,7 +68,7 @@ BOOST_AUTO_TEST_CASE( test_make_asynchronous_range)
         auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
                                                                             boost::asynchronous::lockfree_queue<>>>(8);
 
-        boost::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
+        std::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
         []()mutable
         {
             return boost::asynchronous::make_asynchronous_range<boost::asynchronous::vector<some_type>>
@@ -103,7 +103,7 @@ BOOST_AUTO_TEST_CASE( test_vector_async_ctor_push_back )
         // (inside the pool, it doesn't need any anyway)
         pv->release_scheduler();
 
-        boost::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
+        std::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
         [pv]()mutable
         {
             return boost::asynchronous::async_push_back<boost::asynchronous::vector<some_type>,some_type>(std::move(*pv), some_type(42));
@@ -126,7 +126,7 @@ BOOST_AUTO_TEST_CASE( test_vector_async_ctor_push_back_2)
         auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
                                                                             boost::asynchronous::lockfree_queue<>>>(8);
 
-        boost::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
+        std::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
         []()mutable
         {
             return boost::asynchronous::async_push_back(
@@ -162,7 +162,7 @@ BOOST_AUTO_TEST_CASE( test_vector_async_resize)
         // (inside the pool, it doesn't need any anyway)
         pv->release_scheduler();
 
-        boost::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
+        std::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
         [pv]()mutable
         {
             return boost::asynchronous::async_resize(
@@ -186,7 +186,7 @@ BOOST_AUTO_TEST_CASE( test_vector_async_resize_2)
         auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
                                                                             boost::asynchronous::lockfree_queue<>>>(8);
 
-        boost::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
+        std::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
         []()mutable
         {
             return boost::asynchronous::async_resize(
@@ -219,7 +219,7 @@ BOOST_AUTO_TEST_CASE( test_vector_async_resize_to_smaller)
         // (inside the pool, it doesn't need any anyway)
         pv->release_scheduler();
 
-        boost::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
+        std::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
         [pv]()mutable
         {
             return boost::asynchronous::async_resize(
@@ -243,7 +243,7 @@ BOOST_AUTO_TEST_CASE( test_vector_async_reserve_to_smaller)
         auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
                                                                             boost::asynchronous::lockfree_queue<>>>(8);
 
-        boost::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
+        std::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
         []()mutable
         {
             return boost::asynchronous::async_reserve(
@@ -269,7 +269,7 @@ BOOST_AUTO_TEST_CASE( test_vector_async_reserve_to_bigger)
         auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
                                                                             boost::asynchronous::lockfree_queue<>>>(8);
 
-        boost::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
+        std::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
         []()mutable
         {
             return boost::asynchronous::async_reserve(
@@ -295,7 +295,7 @@ BOOST_AUTO_TEST_CASE( test_vector_async_shrink_to_fit)
         auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::multiqueue_threadpool_scheduler<
                                                                             boost::asynchronous::lockfree_queue<>>>(8);
 
-        boost::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
+        std::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
         []()mutable
         {
             return boost::asynchronous::async_shrink_to_fit(
@@ -357,20 +357,20 @@ BOOST_AUTO_TEST_CASE( test_vector_async_merge)
                                             }
                                             catch(std::exception& e)
                                             {
-                                                task_res.set_exception(boost::copy_exception(e));
+                                                task_res.set_exception(std::make_exception_ptr(e));
                                             }
                                         },
                                         std::move(subs));
                     }
                     catch(std::exception& e)
                     {
-                        task_res.set_exception(boost::copy_exception(e));
+                        task_res.set_exception(std::make_exception_ptr(e));
                     }
                 });
             }
         };
 
-        boost::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
+        std::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
         []()mutable
         {
             return boost::asynchronous::top_level_callback_continuation<boost::asynchronous::vector<some_type>>(merge_task());
@@ -406,7 +406,7 @@ BOOST_AUTO_TEST_CASE( test_vector_async_merge_task )
         // (inside the pool, it doesn't need any anyway)
         pv2->release_scheduler();
 
-        boost::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
+        std::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
         [pv1,pv2]()mutable
         {
             return boost::asynchronous::async_merge_containers<boost::asynchronous::vector<some_type>>(std::move(*pv1),std::move(*pv2));
@@ -442,7 +442,7 @@ BOOST_AUTO_TEST_CASE( test_vector_async_merge_task_vec )
         vecs->push_back(std::move(pv2));
 
 
-        boost::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
+        std::future<boost::asynchronous::vector<some_type>> fu = boost::asynchronous::post_future(scheduler,
         [vecs]()mutable
         {
             return boost::asynchronous::async_merge_containers<std::vector<boost::asynchronous::vector<some_type>>>(std::move(*vecs));

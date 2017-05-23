@@ -12,7 +12,7 @@
 
 #include <utility>
 #include <type_traits>
-#include <boost/exception_ptr.hpp>
+#include <exception>
 
 namespace boost { namespace asynchronous {
 
@@ -46,7 +46,7 @@ public:
     /*!
      * \brief constructor taking an exception_ptr as argument
      */
-    expected(boost::exception_ptr ex)
+    expected(std::exception_ptr ex)
     : m_value()
     , m_exception(std::move(ex)) {}
 
@@ -93,9 +93,9 @@ public:
 
     /*!
      * \brief sets the exception, calling get() later will throw
-     * \param boost::exception_ptr the exception which will be thrown
+     * \param std::exception_ptr the exception which will be thrown
      */
-    void set_exception(const boost::exception_ptr & ex)
+    void set_exception(const std::exception_ptr & ex)
     {
       m_exception = ex;
     }
@@ -120,7 +120,7 @@ public:
     {
         if (m_exception)
         {
-            boost::rethrow_exception(m_exception);
+            std::rethrow_exception(m_exception);
         }
         return *m_value;
     }
@@ -133,7 +133,7 @@ public:
     {
         if (m_exception)
         {
-            boost::rethrow_exception(m_exception);
+            std::rethrow_exception(m_exception);
         }
         return *m_value;
     }
@@ -149,9 +149,9 @@ public:
 
     /*!
      * \brief returns the stored exception pointer if any
-     * \return boost::exception_ptr
+     * \return std::exception_ptr
      */
-    boost::exception_ptr get_exception_ptr()
+    std::exception_ptr get_exception_ptr()
     {
         return m_exception;
     }
@@ -167,7 +167,7 @@ public:
 
 private:
     std::shared_ptr<value_type>   m_value;
-    boost::exception_ptr            m_exception;
+    std::exception_ptr            m_exception;
 };
 
 /*!
@@ -200,7 +200,7 @@ public:
     /*!
      * \brief constructor taking an exception_ptr as argument
      */
-    expected(boost::exception_ptr ex)
+    expected(std::exception_ptr ex)
     : m_value()
     , m_exception(std::move(ex)) {}
 
@@ -244,9 +244,9 @@ public:
 
     /*!
      * \brief sets the exception, calling get() later will throw
-     * \param boost::exception_ptr the exception which will be thrown
+     * \param std::exception_ptr the exception which will be thrown
      */
-    void set_exception(const boost::exception_ptr & ex)
+    void set_exception(const std::exception_ptr & ex)
     {
       m_exception = ex;
     }
@@ -268,7 +268,7 @@ public:
     {
         if (m_exception)
         {
-            boost::rethrow_exception(m_exception);
+            std::rethrow_exception(m_exception);
         }
         return m_value;
     }
@@ -281,7 +281,7 @@ public:
     {
         if (m_exception)
         {
-            boost::rethrow_exception(m_exception);
+            std::rethrow_exception(m_exception);
         }
         return m_value;
     }
@@ -297,9 +297,9 @@ public:
 
     /*!
      * \brief returns the stored exception pointer if any
-     * \return boost::exception_ptr
+     * \return std::exception_ptr
      */
-    boost::exception_ptr get_exception_ptr()
+    std::exception_ptr get_exception_ptr()
     {
         return m_exception;
     }
@@ -315,7 +315,7 @@ public:
 
 private:
     value_type                m_value;
-    boost::exception_ptr      m_exception;
+    std::exception_ptr      m_exception;
 };
 
 /*!
@@ -340,7 +340,7 @@ public:
     /*!
      * \brief constructor taking an exception_ptr as argument
      */
-    explicit expected(boost::exception_ptr ex)
+    explicit expected(std::exception_ptr ex)
     : m_exception(std::move(ex)) {}
 
     /*!
@@ -379,9 +379,9 @@ public:
 
     /*!
      * \brief sets the exception, calling get() later will throw
-     * \param boost::exception_ptr the exception which will be thrown
+     * \param std::exception_ptr the exception which will be thrown
      */
-    void set_exception(const boost::exception_ptr & ex)
+    void set_exception(const std::exception_ptr & ex)
     {
       m_exception = ex;
     }
@@ -402,7 +402,7 @@ public:
     {
         if (m_exception)
         {
-            boost::rethrow_exception(m_exception);
+            std::rethrow_exception(m_exception);
         }
     }
 
@@ -414,7 +414,7 @@ public:
     {
         if (m_exception)
         {
-            boost::rethrow_exception(m_exception);
+            std::rethrow_exception(m_exception);
         }
     }
 
@@ -429,9 +429,9 @@ public:
 
     /*!
      * \brief returns the stored exception pointer if any
-     * \return boost::exception_ptr
+     * \return std::exception_ptr
      */
-    boost::exception_ptr get_exception_ptr()
+    std::exception_ptr get_exception_ptr()
     {
         return m_exception;
     }
@@ -446,7 +446,7 @@ public:
     }
 
 private:
-    boost::exception_ptr      m_exception;
+    std::exception_ptr      m_exception;
 };
 
 }}

@@ -31,7 +31,7 @@ class Servant : public boost::asynchronous::trackable_servant<job, job>
 public:
     Servant(boost::asynchronous::any_weak_scheduler<job> scheduler, boost::asynchronous::any_shared_scheduler_proxy<job> pool)
         : boost::asynchronous::trackable_servant<job, job>(scheduler, pool)
-        , m_promise(new boost::promise<void>)
+        , m_promise(new std::promise<void>)
     {
         m_data = std::vector<long long>(1 << DATA_EXPONENT);
         std::iota(m_data.begin(), m_data.end(), 0);
@@ -42,9 +42,9 @@ public:
         m_promise->set_value();
     }
 
-    boost::future<void> foo()
+    std::future<void> foo()
     {
-        boost::future<void> fu = m_promise->get_future();
+        std::future<void> fu = m_promise->get_future();
 
         auto fn = [](long long const& i)
         {
@@ -90,7 +90,7 @@ public:
         return fu;
     }
 private:
-    std::shared_ptr<boost::promise<void> > m_promise;
+    std::shared_ptr<std::promise<void> > m_promise;
     std::vector<long long> m_data;
 };
 
@@ -145,7 +145,7 @@ void test_html_diagnostics(int argc, char *argv[])
     {
         // Create proxy
         ServantProxy proxy(scheduler, pool);
-        boost::future<boost::future<void> > fu = proxy.foo();
+        std::future<std::future<void> > fu = proxy.foo();
 
         // Sleep
         std::this_thread::sleep_for(std::chrono::milliseconds(std::atoi(argv[3])));
@@ -158,7 +158,7 @@ void test_html_diagnostics(int argc, char *argv[])
         formatter.clear_schedulers();
 
         // Wait for the task to finish
-        boost::future<void> resfu = fu.get();
+        std::future<void> resfu = fu.get();
         resfu.get();
     }
 
