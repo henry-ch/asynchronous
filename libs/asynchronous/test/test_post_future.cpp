@@ -44,7 +44,7 @@ struct int_task
         return 42;
     }
 };
-struct my_exception : virtual boost::exception, virtual std::exception
+struct my_exception : boost::asynchronous::asynchronous_exception
 {
     virtual const char* what() const throw()
     {
@@ -61,7 +61,8 @@ struct throwing_int_task
 
     int operator()()const
     {
-        throw my_exception();
+        ASYNCHRONOUS_THROW(my_exception());
+        return 0;
     }
 };
 struct blocking_void_task
@@ -103,56 +104,62 @@ BOOST_AUTO_TEST_CASE( test_int_post_future )
 }
 
 //TODO repair
-//BOOST_AUTO_TEST_CASE( test_interruptible_void_post_future )
-//{
-//    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<
-//                                                                        boost::asynchronous::lockfree_queue<>>>(1);
+BOOST_AUTO_TEST_CASE( test_interruptible_void_post_future )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(1);
 
 
-//    std::tuple<std::future<void>,boost::asynchronous::any_interruptible> res = boost::asynchronous::interruptible_post_future(scheduler, blocking_void_task());
-//    // we let the task start
-//    boost::this_thread::sleep(boost::posix_time::milliseconds(200));
-//    std::get<1>(res).interrupt();
-//    try
-//    {
-//        std::get<0>(res).get();
-//    }
-//    catch (boost::asynchronous::task_aborted_exception&)
-//    {
-//        //normal flow
-//    }
-//    catch (std::exception&)
-//    {
-//        // can happen if interrupt very fast, before we can start anything
-//    }
-//    BOOST_CHECK_MESSAGE(!called2,"interruptible_post_future<void> called task.");
-//}
+    std::tuple<std::future<void>,boost::asynchronous::any_interruptible> res = boost::asynchronous::interruptible_post_future(scheduler, blocking_void_task());
+    // we let the task start
+    boost::this_thread::sleep(boost::posix_time::milliseconds(2000));
+    std::get<1>(res).interrupt();
+    bool is_interrupted=false;
+    try
+    {
+        std::get<0>(res).get();
+    }
+    catch (boost::asynchronous::task_aborted_exception& e)
+    {
+        //normal flow
+        is_interrupted = true;
+    }
+    catch (...)
+    {
+        // can happen if interrupt very fast, before we can start anything
+    }
+    BOOST_CHECK_MESSAGE(is_interrupted,"interruptible_post_future<void> not interrupted.");
+    BOOST_CHECK_MESSAGE(!called2,"interruptible_post_future<void> called task.");
+}
 
-//BOOST_AUTO_TEST_CASE( test_interruptible_int_post_future )
-//{
-//    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<
-//                                                                        boost::asynchronous::lockfree_queue<>>>(1);
+BOOST_AUTO_TEST_CASE( test_interruptible_int_post_future )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<>>>(1);
 
 
-//    std::tuple<std::future<int>,boost::asynchronous::any_interruptible> res = boost::asynchronous::interruptible_post_future(scheduler, blocking_int_task());
-//    int task_res=0;
-//    // we let the task start
-//    boost::this_thread::sleep(boost::posix_time::milliseconds(200));
-//    std::get<1>(res).interrupt();
-//    try
-//    {
-//        task_res = std::get<0>(res).get();
-//    }
-//    catch (boost::asynchronous::task_aborted_exception&)
-//    {
-//        //normal flow
-//    }
-//    catch (std::exception&)
-//    {
-//        // can happen if interrupt very fast, before we can start anything
-//    }
-//    BOOST_CHECK_MESSAGE(task_res == 0,"interruptible_post_future<int> called task.");
-//}
+    std::tuple<std::future<int>,boost::asynchronous::any_interruptible> res = boost::asynchronous::interruptible_post_future(scheduler, blocking_int_task());
+    int task_res=0;
+    // we let the task start
+    boost::this_thread::sleep(boost::posix_time::milliseconds(2000));
+    std::get<1>(res).interrupt();
+    bool is_interrupted=false;
+    try
+    {
+        task_res = std::get<0>(res).get();
+    }
+    catch (boost::asynchronous::task_aborted_exception&)
+    {
+        //normal flow
+        is_interrupted = true;
+    }
+    catch (...)
+    {
+        // can happen if interrupt very fast, before we can start anything
+    }
+    BOOST_CHECK_MESSAGE(is_interrupted,"interruptible_post_future<void> not interrupted.");
+    BOOST_CHECK_MESSAGE(task_res == 0,"interruptible_post_future<int> called task.");
+}
 
 BOOST_AUTO_TEST_CASE( test_throw_int_post_future )
 {
@@ -164,10 +171,18 @@ BOOST_AUTO_TEST_CASE( test_throw_int_post_future )
     {
         fui.get();
     }
-    catch(std::exception&)
+    catch(my_exception& e)
     {
         future_with_exception = true;
+        // check for correct exception data
+        BOOST_CHECK_MESSAGE(std::string(e.what_) == "my_exception","test_throw_int_post_future has wrong data");
+        BOOST_CHECK_MESSAGE(!std::string(e.file_).empty(),"test_throw_int_post_future has wrong data");
+        BOOST_CHECK_MESSAGE(e.line_ != -1,"test_throw_int_post_future has wrong data");
     }
+    catch(...)
+    {
+    }
+
     BOOST_CHECK_MESSAGE(future_with_exception,"post_future<throwing_int_task> did not throw.");
     boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
 

@@ -38,7 +38,7 @@
 #include  <boost/preprocessor/facilities/overload.hpp>
 
 #include <boost/thread/thread.hpp>
-#include <boost/thread/future.hpp>
+
 #include <memory>
 #include <boost/type_traits/has_trivial_constructor.hpp>
 #include <boost/mpl/has_xxx.hpp>

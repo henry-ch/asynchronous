@@ -15,7 +15,7 @@
 #include <atomic>
 
 #include <boost/thread.hpp>
-#include <boost/thread/future.hpp>
+
 #include <boost/asynchronous/container/vector.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>

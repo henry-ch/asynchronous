@@ -22,6 +22,7 @@
 #include <boost/asynchronous/trackable_servant.hpp>
 
 #include <boost/test/unit_test.hpp>
+#include <boost/thread/future.hpp>
 
 namespace
 {
@@ -39,7 +40,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                            boost::asynchronous::lockfree_queue<
                                                                 BOOST_ASYNCHRONOUS_DEFAULT_JOB,
                                                                 boost::asynchronous::lockfree_size>>>(2,4))
-        , m_dtor_done(new boost::promise<void>)
+        , m_dtor_done(new std::promise<void>)
         , m_counter(0)
         , m_current(0)
     {
@@ -123,7 +124,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         return apromise->get_future();
     }
 
-std::shared_ptr<boost::promise<void> > m_dtor_done;
+std::shared_ptr<std::promise<void> > m_dtor_done;
 size_t m_counter;
 size_t m_current;
 std::set<boost::thread::id> m_worker_ids;

@@ -15,7 +15,7 @@
 #include <type_traits>
 #include <iterator>
 #include <exception>
-#include <boost/thread/future.hpp>
+
 #include <boost/serialization/vector.hpp>
 
 #include <boost/asynchronous/detail/any_interruptible.hpp>

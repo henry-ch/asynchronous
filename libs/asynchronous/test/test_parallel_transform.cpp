@@ -41,14 +41,6 @@ boost::thread::id main_thread_id;
 bool servant_dtor=false;
 typedef std::vector<int>::iterator Iterator;
 
-struct my_exception : virtual boost::exception, virtual std::exception
-{
-    virtual const char* what() const throw()
-    {
-        return "my_exception";
-    }
-};
-
 struct Servant : boost::asynchronous::trackable_servant<>
 {
     typedef int simple_ctor;

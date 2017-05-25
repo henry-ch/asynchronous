@@ -37,13 +37,7 @@ namespace
 boost::thread::id main_thread_id;
 bool servant_dtor=false;
 typedef std::vector<int>::iterator Iterator;
-struct my_exception : virtual boost::exception, virtual std::exception
-{
-    virtual const char* what() const throw()
-    {
-        return "my_exception";
-    }
-};
+
 void generate(std::vector<int>& data, unsigned elements, unsigned dist)
 {
     data = std::vector<int>(elements,1);

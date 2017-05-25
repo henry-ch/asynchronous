@@ -23,7 +23,7 @@
 #endif
 
 #include <boost/thread/thread.hpp>
-#include <boost/thread/future.hpp>
+
 #include <boost/thread/tss.hpp>
 
 

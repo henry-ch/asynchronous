@@ -13,6 +13,7 @@
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/extensions/asio/asio_scheduler.hpp>
 #include "test_common.hpp"
+#include <boost/thread/future.hpp>
 
 #include <boost/test/unit_test.hpp>
 

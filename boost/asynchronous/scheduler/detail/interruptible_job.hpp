@@ -17,7 +17,7 @@
 #include <memory>
 #include <future>
 
-#include <boost/thread/future.hpp>
+
 #include <boost/asynchronous/scheduler/detail/interrupt_state.hpp>
 #include <boost/asynchronous/job_traits.hpp>
 #include <boost/asynchronous/scheduler/tss_scheduler.hpp>

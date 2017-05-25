@@ -14,7 +14,7 @@
 #include <vector>
 
 #include <boost/thread.hpp>
-#include <boost/thread/future.hpp>
+
 #include <boost/asynchronous/container/vector.hpp>
 #include <boost/asynchronous/container/algorithms.hpp>
 #include <boost/asynchronous/queue/lockfree_queue.hpp>

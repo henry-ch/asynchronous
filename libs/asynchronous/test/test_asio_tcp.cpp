@@ -8,6 +8,7 @@
 #include <boost/asynchronous/extensions/asio/asio_tcp_resolver.hpp>
 #include <boost/asynchronous/extensions/asio/asio_tcp_servant.hpp>
 #include "test_common.hpp"
+#include <boost/thread/future.hpp>
 
 #include <boost/test/unit_test.hpp>
 

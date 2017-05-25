@@ -38,13 +38,6 @@ namespace
 boost::thread::id main_thread_id;
 bool servant_dtor=false;
 
-struct my_exception : virtual boost::exception, virtual std::exception
-{
-    virtual const char* what() const throw()
-    {
-        return "my_exception";
-    }
-};
 
 std::vector<int> mkdata() { // 1 to 100
     std::vector<int> data;

@@ -33,13 +33,6 @@ namespace
 // main thread id
 boost::thread::id main_thread_id;
 
-struct my_exception : virtual boost::exception, virtual std::exception
-{
-    virtual const char* what() const throw()
-    {
-        return "my_exception";
-    }
-};
 void generate(std::vector<int>& data)
 {
     data = std::vector<int>(10000,1);

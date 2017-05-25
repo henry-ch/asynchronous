@@ -19,6 +19,7 @@
 #include <boost/thread/thread.hpp>
 #include <boost/thread/tss.hpp>
 #include <boost/asio.hpp>
+#include <boost/thread/future.hpp>
 
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/scheduler/detail/scheduler_helpers.hpp>

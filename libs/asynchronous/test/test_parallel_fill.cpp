@@ -37,14 +37,6 @@ bool servant_dtor=false;
 constexpr int TEST_VALUE_INNER = 100;
 constexpr int TEST_VALUE = 200;
 
-struct my_exception : virtual boost::exception, virtual std::exception
-{
-    virtual const char* what() const throw()
-    {
-        return "my_exception";
-    }
-};
-
 struct Servant : boost::asynchronous::trackable_servant<>
 {
     typedef int simple_ctor;

@@ -15,7 +15,7 @@
 #include <type_traits>
 #include <iterator>
 
-#include <boost/thread/future.hpp>
+
 #include <type_traits>
 #include <boost/serialization/vector.hpp>
 

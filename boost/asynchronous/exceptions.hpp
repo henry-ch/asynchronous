@@ -22,9 +22,9 @@ void asynchronous_throw(SomethingDerivedFromAsynchronousException ex, const char
 {
   ex.type = std::type_index(typeid(ex));
   ex.what_ = ex.what();
-  ex.currentFunction = currentFunction;
-  ex.file = file;
-  ex.line = line;
+  ex.currentFunction_ = currentFunction;
+  ex.file_ = file;
+  ex.line_ = line;
   throw ex;
 }
 }}
@@ -46,13 +46,13 @@ struct asynchronous_exception: public std::exception
 
   std::type_index type = std::type_index(typeid(asynchronous_exception));
   const char* what_ = "asynchronous_exception";
-  const char* currentFunction = nullptr;
-  const char* file = nullptr;
-  int line = -1;
+  const char* currentFunction_ = nullptr;
+  const char* file_ = nullptr;
+  int line_ = -1;
 };
 
 // exception thrown by interruptible_post_callback.
-struct task_aborted_exception : std::exception
+struct task_aborted_exception : public boost::asynchronous::asynchronous_exception//std::exception
 {
     virtual const char* what() const throw ()
     {

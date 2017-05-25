@@ -13,7 +13,7 @@
 #include <algorithm>
 #include <vector>
 
-#include <boost/thread/future.hpp>
+
 #include <type_traits>
 #include <boost/serialization/vector.hpp>
 

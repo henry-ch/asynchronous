@@ -36,14 +36,6 @@ int TEST_VALUE = 42;
 boost::thread::id main_thread_id;
 bool servant_dtor=false;
 
-struct my_exception : virtual boost::exception, virtual std::exception
-{
-    virtual const char* what() const throw()
-    {
-        return "my_exception";
-    }
-};
-
 struct Servant : boost::asynchronous::trackable_servant<>
 {
     typedef int simple_ctor;

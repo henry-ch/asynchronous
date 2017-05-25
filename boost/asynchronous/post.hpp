@@ -23,7 +23,7 @@
 #ifndef BOOST_THREAD_PROVIDES_FUTURE
 #define BOOST_THREAD_PROVIDES_FUTURE
 #endif
-#include <boost/thread/future.hpp>
+
 #include <memory>
 #include <type_traits>
 #include <boost/mpl/has_xxx.hpp>
@@ -116,6 +116,11 @@ namespace detail
             {
                 OP()(m_promise,m_func);
             }
+            catch(boost::thread_interrupted&)
+            {
+                boost::asynchronous::task_aborted_exception ta;
+                m_promise.set_exception(std::make_exception_ptr(ta));this->set_failed();
+            }
             catch(...){m_promise.set_exception(std::current_exception());this->set_failed();}
         }
         std::promise<R> m_promise;
@@ -188,6 +193,11 @@ namespace detail
             {
                 OP()(m_promise,m_func);
             }
+            catch(boost::thread_interrupted&)
+            {
+                boost::asynchronous::task_aborted_exception ta;
+                m_promise.set_exception(std::make_exception_ptr(ta));this->set_failed();
+            }
             catch(...){m_promise.set_exception(std::current_exception());this->set_failed();}
         }
         std::promise<R> m_promise;
@@ -242,6 +252,11 @@ namespace detail
             try
             {
                 OP()(m_promise,m_func);
+            }
+            catch(boost::thread_interrupted&)
+            {
+                boost::asynchronous::task_aborted_exception ta;
+                m_promise.set_exception(std::make_exception_ptr(ta));this->set_failed();
             }
             catch(...){m_promise.set_exception(std::current_exception());this->set_failed();}
         }

@@ -151,7 +151,7 @@ struct call_if_alive_exec
             return m_wrapped();
         }
         // throw exception, will be caught, then ignored
-        boost::throw_exception(boost::asynchronous::task_aborted_exception());
+        ASYNCHRONOUS_THROW(boost::asynchronous::task_aborted_exception());
     }
     Func m_wrapped;
     std::weak_ptr<T> m_tracked;
@@ -197,7 +197,7 @@ struct call_if_alive_exec<Func,T,R,typename std::enable_if<boost::asynchronous::
             return m_wrapped();
         }
         // throw exception, will be caught, then ignored
-        boost::throw_exception(boost::asynchronous::task_aborted_exception());
+        ASYNCHRONOUS_THROW(boost::asynchronous::task_aborted_exception());
     }
     typedef int serializable_type;
 

@@ -25,6 +25,7 @@
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/extensions/tbb/tbb_concurrent_queue.hpp>
 #include "test_common.hpp"
+#include <boost/thread/future.hpp>
 
 //#define BOOST_TEST_MODULE MyTest2
 //#define BOOST_TEST_DYN_LINK

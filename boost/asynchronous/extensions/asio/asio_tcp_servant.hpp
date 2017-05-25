@@ -5,7 +5,7 @@
 #ifndef BOOST_THREAD_PROVIDES_FUTURE
 #define BOOST_THREAD_PROVIDES_FUTURE
 #endif
-#include <boost/thread/future.hpp>
+
 
 namespace boost { namespace asynchronous
 {
