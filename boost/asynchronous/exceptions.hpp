@@ -18,6 +18,7 @@ namespace boost { namespace asynchronous
 {
 template<
     class SomethingDerivedFromAsynchronousException>
+[[ noreturn ]]
 void asynchronous_throw(SomethingDerivedFromAsynchronousException ex, const char* currentFunction, const char* file, int line)
 {
   ex.type = std::type_index(typeid(ex));

@@ -27,7 +27,7 @@ namespace
 // main thread id
 boost::thread::id main_thread_id;
 
-struct my_exception : virtual boost::exception, virtual std::exception
+struct my_exception : public boost::asynchronous::asynchronous_exception
 {
     virtual const char* what() const throw()
     {
@@ -92,7 +92,7 @@ struct Servant2
     }
     void generate_exception()
     {
-        BOOST_THROW_EXCEPTION( my_exception());
+        ASYNCHRONOUS_THROW( my_exception());
     }
     ~Servant2()
     {
@@ -147,6 +147,9 @@ BOOST_AUTO_TEST_CASE( test_exception_member )
     catch ( my_exception& e)
     {
         got_exception=true;
+        BOOST_CHECK_MESSAGE(std::string(e.what_) == "my_exception","no what data");
+        BOOST_CHECK_MESSAGE(!std::string(e.file_).empty(),"no file data");
+        BOOST_CHECK_MESSAGE(e.line_ != -1,"no line data");
     }
     catch(...)
     {

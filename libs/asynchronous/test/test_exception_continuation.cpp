@@ -42,7 +42,7 @@ boost::thread::id main_thread_id;
 bool servant_dtor=false;
 typedef std::vector<int>::iterator Iterator;
 
-struct my_exception : virtual boost::exception, virtual std::exception
+struct my_exception : public boost::asynchronous::asynchronous_exception
 {
     virtual const char* what() const throw()
     {
@@ -80,7 +80,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         post_callback(
             [this]()
             {
-                BOOST_THROW_EXCEPTION( my_exception());
+                ASYNCHRONOUS_THROW( my_exception());
                 return boost::asynchronous::parallel_transform(this->m_data.begin(), this->m_data.end(), this->m_result.begin(), [](int i) { return ++i; }, 1500, "", 0);
             },
             [aPromise, this](boost::asynchronous::expected<Iterator> res) mutable
@@ -91,9 +91,12 @@ struct Servant : boost::asynchronous::trackable_servant<>
                 {
                     res.get();
                 }
-                catch(my_exception&)
+                catch(my_exception& e)
                 {
                     failed=true;
+                    BOOST_CHECK_MESSAGE(std::string(e.what_) == "my_exception","no what data");
+                    BOOST_CHECK_MESSAGE(!std::string(e.file_).empty(),"no file data");
+                    BOOST_CHECK_MESSAGE(e.line_ != -1,"no line data");
                 }
                 BOOST_CHECK_MESSAGE(failed,"task should have thrown my_exception.");
                 generate();

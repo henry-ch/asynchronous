@@ -138,9 +138,9 @@ struct continuation_task_wrapper<void,Func> : public boost::asynchronous::contin
             func_();
             task_res.set_value();
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     template <class Archive>

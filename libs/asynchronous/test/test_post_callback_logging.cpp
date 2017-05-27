@@ -34,7 +34,7 @@ typedef std::pair<std::string,boost::asynchronous::diagnostic_item> one_current_
 // main thread id
 boost::thread::id main_thread_id;
 bool servant_dtor=false;
-struct my_exception : virtual boost::exception, virtual std::exception
+struct my_exception : public boost::asynchronous::asynchronous_exception
 {
     virtual const char* what() const throw()
     {
@@ -120,7 +120,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
                           BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant work not posted.");                          
                           BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
                           boost::this_thread::sleep(boost::posix_time::milliseconds(50));
-                          BOOST_THROW_EXCEPTION( my_exception());
+                          ASYNCHRONOUS_THROW( my_exception());
                     },// work
                     [aPromise,ids](boost::asynchronous::expected<int> res)mutable{
                            BOOST_CHECK_MESSAGE(res.has_exception(),"servant work did not throw an exception.");
@@ -313,6 +313,9 @@ BOOST_AUTO_TEST_CASE( test_post_callback_logging_exception )
         catch ( my_exception& e)
         {
             got_exception=true;
+            BOOST_CHECK_MESSAGE(std::string(e.what_) == "my_exception","no what data");
+            BOOST_CHECK_MESSAGE(!std::string(e.file_).empty(),"no file data");
+            BOOST_CHECK_MESSAGE(e.line_ != -1,"no line data");
         }
         catch(...)
         {

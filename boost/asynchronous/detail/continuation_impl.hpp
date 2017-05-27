@@ -982,7 +982,7 @@ struct callback_continuation
             // not supported
         }
         void return_result()
-        {            
+        {
             m_done(std::move(m_futures));
         }
 

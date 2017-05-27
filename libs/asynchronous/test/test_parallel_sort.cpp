@@ -36,7 +36,7 @@ namespace
 boost::thread::id main_thread_id;
 bool servant_dtor=false;
 
-struct my_exception : virtual boost::exception, virtual std::exception
+struct my_exception : public boost::asynchronous::asynchronous_exception
 {
     virtual const char* what() const throw()
     {
@@ -51,7 +51,7 @@ struct BadType
     {
         if (data_ == 0 && (++counter_%10 == 0))
         {
-            BOOST_THROW_EXCEPTION( my_exception());
+            ASYNCHRONOUS_THROW( my_exception());
         }
     }
     int data_=0;
@@ -1049,6 +1049,9 @@ BOOST_AUTO_TEST_CASE( test_parallel_sort_exception )
         catch ( my_exception& e)
         {
             got_exception=true;
+            BOOST_CHECK_MESSAGE(std::string(e.what_) == "my_exception","no what data");
+            BOOST_CHECK_MESSAGE(!std::string(e.file_).empty(),"no file data");
+            BOOST_CHECK_MESSAGE(e.line_ != -1,"no line data");
         }
         catch ( std::exception& e)
         {

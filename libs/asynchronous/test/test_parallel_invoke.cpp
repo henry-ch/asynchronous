@@ -34,7 +34,7 @@ namespace
 boost::thread::id main_thread_id;
 bool servant_dtor=false;
 
-struct my_exception : virtual boost::exception, virtual std::exception
+struct my_exception : public boost::asynchronous::asynchronous_exception
 {
     virtual const char* what() const throw()
     {
@@ -73,7 +73,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
 
                     BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task executed in the wrong thread");
                     return boost::asynchronous::parallel_invoke<boost::asynchronous::any_callable>(
-                                boost::asynchronous::to_continuation_task([](){throw my_exception();}),
+                                boost::asynchronous::to_continuation_task([](){ASYNCHRONOUS_THROW (my_exception());}),
                                 boost::asynchronous::to_continuation_task([](){return 42.0;}));
                     },// work
            [aPromise,ids,this](boost::asynchronous::expected<std::tuple<boost::asynchronous::expected<void>,
@@ -88,6 +88,22 @@ struct Servant : boost::asynchronous::trackable_servant<>
                             BOOST_CHECK_MESSAGE((std::get<0>(t)).has_exception(),"first lambda did not throw an exception. It should have");
                             BOOST_CHECK_MESSAGE(!(std::get<1>(t)).has_exception(),"second lambda threw an exception. It should not have");
                             BOOST_CHECK_MESSAGE((std::get<1>(t)).get() == 42.0,"second lambda returned wrong result");
+                        }
+                        catch(std::exception& e)
+                        {
+                            BOOST_FAIL( "unexpected exception in callback" );
+                        }
+                        // check correct exception
+                        try
+                        {
+                            auto t = res.get();
+                            (std::get<0>(t)).get();
+                        }
+                        catch ( my_exception& e)
+                        {
+                            BOOST_CHECK_MESSAGE(std::string(e.what_) == "my_exception","no what data");
+                            BOOST_CHECK_MESSAGE(!std::string(e.file_).empty(),"no file data");
+                            BOOST_CHECK_MESSAGE(e.line_ != -1,"no line data");
                         }
                         catch(std::exception& e)
                         {
