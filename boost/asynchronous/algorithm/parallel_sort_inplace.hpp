@@ -77,9 +77,9 @@ struct parallel_sort_helper: public boost::asynchronous::continuation_task<void>
                                     std::inplace_merge(beg,it,end,func);
                                     task_res.set_value();
                                 }
-                                catch(std::exception& e)
+                                catch(...)
                                 {
-                                    task_res.set_exception(std::make_exception_ptr(e));
+                                    task_res.set_exception(std::current_exception());
                                 }
                             },
                             // recursive tasks
@@ -88,9 +88,9 @@ struct parallel_sort_helper: public boost::asynchronous::continuation_task<void>
                    );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Iterator beg_;
@@ -269,18 +269,18 @@ struct parallel_sort_continuation_range_inplace_helper: public boost::asynchrono
                         task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                     });
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             }
             );
             boost::asynchronous::any_continuation ac(std::move(cont_));
             boost::asynchronous::get_continuations().emplace_front(std::move(ac));
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Continuation cont_;
@@ -319,16 +319,16 @@ struct parallel_sort_continuation_range_inplace_helper<Continuation,Func,Job,
                         task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                     });
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             }
             );
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Continuation cont_;
@@ -366,18 +366,18 @@ struct parallel_stable_sort_continuation_range_inplace_helper: public boost::asy
                         task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                     });
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             }
             );
             boost::asynchronous::any_continuation ac(std::move(cont_));
             boost::asynchronous::get_continuations().emplace_front(std::move(ac));
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Continuation cont_;
@@ -416,16 +416,16 @@ struct parallel_stable_sort_continuation_range_inplace_helper<Continuation,Func,
                         task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                     });
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             }
             );
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Continuation cont_;
@@ -463,18 +463,18 @@ struct parallel_spreadsort_continuation_range_inplace_helper: public boost::asyn
                         task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                     });
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             }
             );
             boost::asynchronous::any_continuation ac(std::move(cont_));
             boost::asynchronous::get_continuations().emplace_front(std::move(ac));
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Continuation cont_;
@@ -513,16 +513,16 @@ struct parallel_spreadsort_continuation_range_inplace_helper<Continuation,Func,J
                         task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                     });
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             }
             );
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Continuation cont_;

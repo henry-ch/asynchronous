@@ -240,7 +240,6 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
         boost::asynchronous::post_future(this->m_proxy,                                                                                             \
                 boost::asynchronous::move_bind([servant,cb_func](Args... as)                                                                        \
                                     {try{ cb_func(boost::asynchronous::expected<servant_return>(servant->funcname(std::move(as)...)));}             \
-                                     catch(std::exception& e){cb_func(boost::asynchronous::expected<servant_return>(std::make_exception_ptr(e)));}      \
                                      catch(...){cb_func(boost::asynchronous::expected<servant_return>(std::current_exception()));}                  \
                                     },std::move(args)...),"",prio);                                                                                 \
     }                                                                                                                                               \
@@ -253,7 +252,6 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
         boost::asynchronous::post_future(this->m_proxy,                                                                                             \
                 boost::asynchronous::move_bind([servant,cb_func](Args... as)                                                                        \
                                     {try{servant->funcname(std::move(as)...); cb_func(boost::asynchronous::expected<void>());}                      \
-                                     catch(std::exception& e){cb_func(boost::asynchronous::expected<void>(std::make_exception_ptr(e)));}                \
                                      catch(...){cb_func(boost::asynchronous::expected<void>(std::current_exception()));}                            \
                                     },std::move(args)...),"",prio);                                                                                 \
     }
@@ -271,7 +269,6 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
         boost::asynchronous::post_future(this->m_proxy,                                                                                             \
                 boost::asynchronous::move_bind([servant,cb_func](Args... as)                                                                        \
                                     {try{ cb_func(boost::asynchronous::expected<servant_return>(servant->funcname(std::move(as)...)));}             \
-                                     catch(std::exception& e){cb_func(boost::asynchronous::expected<servant_return>(std::make_exception_ptr(e)));}      \
                                      catch(...){cb_func(boost::asynchronous::expected<servant_return>(std::current_exception()));}                  \
                                     },std::move(args)...),"",p);                                                                                    \
     }                                                                                                                                               \
@@ -284,7 +281,6 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
         boost::asynchronous::post_future(this->m_proxy,                                                                                             \
                 boost::asynchronous::move_bind([servant,cb_func](Args... as)                                                                        \
                                     {try{servant->funcname(std::move(as)...); cb_func(boost::asynchronous::expected<void>());}                      \
-                                     catch(std::exception& e){cb_func(boost::asynchronous::expected<void>(std::make_exception_ptr(e)));}                \
                                      catch(...){cb_func(boost::asynchronous::expected<void>(std::current_exception()));}                            \
                                     },std::move(args)...),"",p);                                                                                    \
     }
@@ -306,7 +302,6 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
         boost::asynchronous::post_future(this->m_proxy,                                                                                             \
                 boost::asynchronous::move_bind([servant,cb_func](Args... as)                                                                        \
                                     {try{ cb_func(boost::asynchronous::expected<servant_return>(servant->funcname(std::move(as)...)));}             \
-                                     catch(std::exception& e){cb_func(boost::asynchronous::expected<servant_return>(std::make_exception_ptr(e)));}      \
                                      catch(...){cb_func(boost::asynchronous::expected<servant_return>(std::current_exception()));}                  \
                                     },std::move(args)...),taskname,prio);                                                                           \
     }                                                                                                                                               \
@@ -319,7 +314,6 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
         boost::asynchronous::post_future(this->m_proxy,                                                                                             \
                 boost::asynchronous::move_bind([servant,cb_func](Args... as)                                                                        \
                                     {try{servant->funcname(std::move(as)...); cb_func(boost::asynchronous::expected<void>());}                      \
-                                     catch(std::exception& e){cb_func(boost::asynchronous::expected<void>(std::make_exception_ptr(e)));}                \
                                      catch(...){cb_func(boost::asynchronous::expected<void>(std::current_exception()));}                            \
                                     },std::move(args)...),taskname,prio);                                                                           \
     }
@@ -337,7 +331,6 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
         boost::asynchronous::post_future(this->m_proxy,                                                                                             \
                 boost::asynchronous::move_bind([servant,cb_func](Args... as)                                                                        \
                                     {try{ cb_func(boost::asynchronous::expected<servant_return>(servant->funcname(std::move(as)...)));}             \
-                                     catch(std::exception& e){cb_func(boost::asynchronous::expected<servant_return>(std::make_exception_ptr(e)));}      \
                                      catch(...){cb_func(boost::asynchronous::expected<servant_return>(std::current_exception()));}                  \
                                     },std::move(args)...),taskname,p);                                                                              \
     }                                                                                                                                               \
@@ -350,7 +343,6 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
         boost::asynchronous::post_future(this->m_proxy,                                                                                             \
                 boost::asynchronous::move_bind([servant,cb_func](Args... as)                                                                        \
                                     {try{servant->funcname(std::move(as)...); cb_func(boost::asynchronous::expected<void>());}                      \
-                                     catch(std::exception& e){cb_func(boost::asynchronous::expected<void>(std::make_exception_ptr(e)));}                \
                                      catch(...){cb_func(boost::asynchronous::expected<void>(std::current_exception()));}                            \
                                     },std::move(args)...),taskname,p);                                                                              \
     }
@@ -748,7 +740,7 @@ private:
             {
                 m_promise->set_value(servant_create_helper::template create<servant_type>(proxy,std::move(as)...));
             }
-            catch(std::exception& e){m_promise->set_exception(std::make_exception_ptr(e));}
+            catch(...){m_promise->set_exception(std::current_exception());}
         }
         std::shared_ptr<std::promise<std::shared_ptr<servant_type> > > m_promise;
     };

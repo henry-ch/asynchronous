@@ -470,9 +470,9 @@ struct convert_visitor_to_turns : public boost::asynchronous::continuation_task<
                 Turns t(std::move((std::get<0>(continuation_res).get()).m_turns));
                 task_res.set_value(std::move(t));
             }
-            catch(std::exception& e)
+            catch(...)
             {
-                task_res.set_exception(std::make_exception_ptr(e));
+                task_res.set_exception(std::current_exception());
             }
         }
         );

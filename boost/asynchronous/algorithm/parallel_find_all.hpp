@@ -103,9 +103,9 @@ struct parallel_find_all_helper: public boost::asynchronous::continuation_task<R
                             boost::range::push_back(rt, std::move(std::get<1>(res).get()));
                             task_res.set_value(std::move(rt));
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
-                            task_res.set_exception(std::make_exception_ptr(e));
+                            task_res.set_exception(std::current_exception());
                         }
                     },
                     // recursive tasks
@@ -114,9 +114,9 @@ struct parallel_find_all_helper: public boost::asynchronous::continuation_task<R
                 );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Iterator beg_;
@@ -179,9 +179,9 @@ struct parallel_find_all_range_helper: public boost::asynchronous::continuation_
                                     boost::range::push_back(rt, std::move(std::get<1>(res).get()));
                                     task_res.set_value(std::move(rt));
                                 }
-                                catch(std::exception& e)
+                                catch(...)
                                 {
-                                    task_res.set_exception(std::make_exception_ptr(e));
+                                    task_res.set_exception(std::current_exception());
                                 }
                             },
                             // recursive tasks
@@ -192,9 +192,9 @@ struct parallel_find_all_range_helper: public boost::asynchronous::continuation_
                         );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Range const& range_;
@@ -254,9 +254,9 @@ struct parallel_find_all_range_move_helper: public boost::asynchronous::continua
                             boost::range::push_back(rt, std::move(std::get<1>(res).get()));
                             task_res.set_value(std::move(rt));
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
-                            task_res.set_exception(std::make_exception_ptr(e));
+                            task_res.set_exception(std::current_exception());
                         }
                     },
                     // recursive tasks
@@ -267,9 +267,9 @@ struct parallel_find_all_range_move_helper: public boost::asynchronous::continua
                 );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     std::shared_ptr<Range> range_;
@@ -321,9 +321,9 @@ struct parallel_find_all_range_move_helper<Range,Func,ReturnRange,Job,typename s
                             boost::range::push_back(rt, std::move(std::get<1>(res).get()));
                             task_res.set_value(std::move(rt));
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
-                            task_res.set_exception(std::make_exception_ptr(e));
+                            task_res.set_exception(std::current_exception());
                         }
                     },
                     // recursive tasks
@@ -336,9 +336,9 @@ struct parallel_find_all_range_move_helper<Range,Func,ReturnRange,Job,typename s
                 );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     template <class Archive>
@@ -421,18 +421,18 @@ struct parallel_find_all_continuation_range_helper: public boost::asynchronous::
                         task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                     });
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             }
             );
             boost::asynchronous::any_continuation ac(std::move(cont_));
             boost::asynchronous::get_continuations().emplace_front(std::move(ac));
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Continuation cont_;
@@ -471,16 +471,16 @@ struct parallel_find_all_continuation_range_helper<Continuation,Func,ReturnRange
                         task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                     });
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             }
             );
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Continuation cont_;

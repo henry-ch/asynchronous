@@ -100,9 +100,9 @@ struct parallel_is_partitioned_helper2:
                                                                    res2.second));
                                     }
                                 }
-                                catch(std::exception& e)
+                                catch(...)
                                 {
-                                    task_res.set_exception(std::make_exception_ptr(e));
+                                    task_res.set_exception(std::current_exception());
                                 }
                             },
                             // recursive tasks
@@ -113,9 +113,9 @@ struct parallel_is_partitioned_helper2:
                 );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Iterator beg_;
@@ -150,9 +150,9 @@ struct parallel_is_partitioned_helper: public boost::asynchronous::continuation_
                                 task_res.set_value((res1.first != boost::asynchronous::detail::parallel_is_partitioned_state::error_)&&
                                                    (res1.second != boost::asynchronous::detail::parallel_is_partitioned_state::error_));
                             }
-                            catch(std::exception& e)
+                            catch(...)
                             {
-                                task_res.set_exception(std::make_exception_ptr(e));
+                                task_res.set_exception(std::current_exception());
                             }
                         },
                         // recursive tasks
@@ -160,9 +160,9 @@ struct parallel_is_partitioned_helper: public boost::asynchronous::continuation_
                             (beg_,end_,func_,cutoff_,this->get_name(),prio_)
             );
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Iterator beg_;

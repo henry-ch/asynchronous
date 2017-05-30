@@ -107,11 +107,6 @@ BOOST_AUTO_TEST_CASE( test_force_move_safe_callback )
             int i = resfuv.get();
             BOOST_CHECK_MESSAGE(i==42,"result should be 42.");
         }
-        catch(std::exception& e)
-        {
-            std::cout << "exception: " << e.what() << std::endl;
-            BOOST_FAIL( "unexpected exception" );
-        }
         catch(...)
         {
             BOOST_FAIL( "unexpected exception" );

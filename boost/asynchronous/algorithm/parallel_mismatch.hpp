@@ -70,9 +70,9 @@ struct parallel_mismatch_helper: public boost::asynchronous::continuation_task<s
                                     if (r1.first == it) task_res.set_value(std::get<1>(res).get());
                                     else task_res.set_value(r1);
                                 }
-                                catch(std::exception& e)
+                                catch(...)
                                 {
-                                    task_res.set_exception(std::make_exception_ptr(e));
+                                    task_res.set_exception(std::current_exception());
                                 }
                             },
                             // recursive tasks
@@ -81,9 +81,9 @@ struct parallel_mismatch_helper: public boost::asynchronous::continuation_task<s
                 );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Iterator1 beg1_;
@@ -129,9 +129,9 @@ struct parallel_mismatch_helper2: public boost::asynchronous::continuation_task<
                                     if (r1.first == it) task_res.set_value(std::get<1>(res).get());
                                     else task_res.set_value(r1);
                                 }
-                                catch(std::exception& e)
+                                catch(...)
                                 {
-                                    task_res.set_exception(std::make_exception_ptr(e));
+                                    task_res.set_exception(std::current_exception());
                                 }
                             },
                             // recursive tasks
@@ -140,9 +140,9 @@ struct parallel_mismatch_helper2: public boost::asynchronous::continuation_task<
                 );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Iterator1 beg1_;

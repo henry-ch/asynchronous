@@ -290,7 +290,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                         }
                                         catch (std::exception& e)
                                         {
-                                            task_res.set_exception(std::make_exception_ptr(e));
+                                            task_res.set_exception(std::current_exception());
                                         }
                                     }));
                  }// work

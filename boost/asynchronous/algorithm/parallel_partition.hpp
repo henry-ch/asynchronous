@@ -161,7 +161,7 @@ struct partition_worker : public boost::asynchronous::continuation_task<std::pai
                     }
                     catch (std::exception& e)
                     {
-                        task_res.set_exception(std::make_exception_ptr(e));
+                        task_res.set_exception(std::current_exception());
                         return;
                     }
                 },
@@ -171,9 +171,9 @@ struct partition_worker : public boost::asynchronous::continuation_task<std::pai
                 );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
 
@@ -367,9 +367,9 @@ struct parallel_partition_helper : public boost::asynchronous::continuation_task
                 return;
             });
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
 private:
@@ -425,15 +425,15 @@ struct parallel_partition_range_move_helper:
                 {
                     task_res.set_value(std::make_pair(std::move(*range),std::get<0>(continuation_res).get()));
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             });
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     std::shared_ptr<Range> range_;
@@ -515,16 +515,16 @@ struct parallel_partition_continuation_helper:
                         task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                     });
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             }
             );
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Continuation cont_;

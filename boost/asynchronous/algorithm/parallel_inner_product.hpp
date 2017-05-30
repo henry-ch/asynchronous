@@ -65,9 +65,9 @@ struct default_value_helper : public boost::asynchronous::continuation_task<T>
         try {
             task_res.set_value(std::move(t_));
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     T t_;
@@ -126,9 +126,9 @@ struct parallel_inner_product_helper: public boost::asynchronous::continuation_t
                         {
                             task_res.set_value(std::move(red(std::get<0>(res).get(), std::get<1>(res).get())));
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
-                            task_res.set_exception(std::make_exception_ptr(e));
+                            task_res.set_exception(std::current_exception());
                         }
                     },
                     // Subtasks
@@ -137,9 +137,9 @@ struct parallel_inner_product_helper: public boost::asynchronous::continuation_t
                 );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Iterator1 beg1_;
@@ -285,9 +285,9 @@ struct parallel_inner_product_range_move_helper: public boost::asynchronous::con
                         {
                             task_res.set_value(std::move(red(std::get<0>(res).get(), std::get<1>(res).get())));
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
-                            task_res.set_exception(std::make_exception_ptr(e));
+                            task_res.set_exception(std::current_exception());
                         }
                     },
                     // Subtasks
@@ -296,9 +296,9 @@ struct parallel_inner_product_range_move_helper: public boost::asynchronous::con
                 );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
 
@@ -382,9 +382,9 @@ struct parallel_inner_product_range_move_helper<Range1, Range2, T, BinaryOperati
                         {
                             task_res.set_value(std::move(red(std::get<0>(res).get(), std::get<1>(res).get())));
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
-                            task_res.set_exception(std::make_exception_ptr(e));
+                            task_res.set_exception(std::current_exception());
                         }
                     },
                     // Subtasks
@@ -393,9 +393,9 @@ struct parallel_inner_product_range_move_helper<Range1, Range2, T, BinaryOperati
                 );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
 
@@ -592,24 +592,24 @@ struct parallel_inner_product_continuation_helper: public boost::asynchronous::c
                                 }
                                 catch (std::exception& e)
                                 {
-                                    task_res.set_exception(std::make_exception_ptr(e));
+                                    task_res.set_exception(std::current_exception());
                                 }
                             },
                             parallel_inner_product_range_move_helper<Continuation1, Continuation2, T, BinaryOperation, Reduce, Job>(std::move(range1), std::move(range2), std::move(op), std::move(red), cutoff, task_name, prio)
                         );
                     }
-                    catch(std::exception& e)
+                    catch(...)
                     {
-                        task_res.set_exception(std::make_exception_ptr(e));
+                        task_res.set_exception(std::current_exception());
                     }
                 },
                 std::move(cont1_),
                 std::move(cont2_)
             );
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
 
@@ -666,24 +666,24 @@ struct parallel_inner_product_continuation_helper<Continuation1, Continuation2, 
                                 }
                                 catch (std::exception& e)
                                 {
-                                    task_res.set_exception(std::make_exception_ptr(e));
+                                    task_res.set_exception(std::current_exception());
                                 }
                             },
                             parallel_inner_product(std::move(range1), std::move(range2), std::move(op), std::move(red), cutoff, task_name, prio)
                         );
                     }
-                    catch(std::exception& e)
+                    catch(...)
                     {
-                        task_res.set_exception(std::make_exception_ptr(e));
+                        task_res.set_exception(std::current_exception());
                     }
                 },
                 std::move(cont1_),
                 std::move(cont2_)
             );
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
 

@@ -67,7 +67,7 @@ struct parallel_iota_inplace_helper : public boost::asynchronous::continuation_t
                             }
                             catch (std::exception& e)
                             {
-                                task_res.set_exception(std::make_exception_ptr(e));
+                                task_res.set_exception(std::current_exception());
                             }
                         },
                         // recursive tasks
@@ -145,7 +145,7 @@ struct parallel_iota_generate_helper : public boost::asynchronous::continuation_
                             }
                             catch (std::exception& e)
                             {
-                                task_res.set_exception(std::make_exception_ptr(e));
+                                task_res.set_exception(std::current_exception());
                             }
                         },
                         // recursive tasks

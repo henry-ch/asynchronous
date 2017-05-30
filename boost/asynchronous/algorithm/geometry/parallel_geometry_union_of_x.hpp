@@ -101,15 +101,15 @@ struct parallel_geometry_union_of_x_helper: public boost::asynchronous::continua
                                         merge_res.emplace_back(std::move(std::get<0>(res_p_union).get()));
                                         task_res.set_value(std::move(merge_res));
                                     }
-                                    catch(std::exception& e)
+                                    catch(...)
                                     {
-                                        task_res.set_exception(std::make_exception_ptr(e));
+                                        task_res.set_exception(std::current_exception());
                                     }
                                 });
                             }
-                            catch(std::exception& e)
+                            catch(...)
                             {
-                                task_res.set_exception(std::make_exception_ptr(e));
+                                task_res.set_exception(std::current_exception());
                             }
                         },
                         // recursive tasks
@@ -201,15 +201,15 @@ struct parallel_geometry_union_of_x_range_helper: public boost::asynchronous::co
                                         merge_res.emplace_back(std::move(std::get<0>(res_p_union).get()));
                                         task_res.set_value(std::move(merge_res));
                                     }
-                                    catch(std::exception& e)
+                                    catch(...)
                                     {
-                                        task_res.set_exception(std::make_exception_ptr(e));
+                                        task_res.set_exception(std::current_exception());
                                     }
                                 });
                             }
-                            catch(std::exception& e)
+                            catch(...)
                             {
-                                task_res.set_exception(std::make_exception_ptr(e));
+                                task_res.set_exception(std::current_exception());
                             }
                         },
                         // recursive tasks
@@ -283,9 +283,9 @@ struct parallel_geometry_union_of_x_continuation_range_helper: public boost::asy
                     task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                 });
             }
-            catch(std::exception& e)
+            catch(...)
             {
-                task_res.set_exception(std::make_exception_ptr(e));
+                task_res.set_exception(std::current_exception());
             }
         }
         );
@@ -329,9 +329,9 @@ struct parallel_geometry_union_of_x_continuation_range_helper<Continuation,Job,
                     task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                 });
             }
-            catch(std::exception& e)
+            catch(...)
             {
-                task_res.set_exception(std::make_exception_ptr(e));
+                task_res.set_exception(std::current_exception());
             }
         }
         );

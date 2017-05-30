@@ -78,9 +78,9 @@ struct parallel_scan_part1_helper: public boost::asynchronous::continuation_task
                                     res_all.data_.emplace_back(std::move(res_right));
                                     task_res.set_value(std::move(res_all));
                                 }
-                                catch(std::exception& e)
+                                catch(...)
                                 {
-                                    task_res.set_exception(std::make_exception_ptr(e));
+                                    task_res.set_exception(std::current_exception());
                                 }
                             },
                             // recursive tasks
@@ -91,9 +91,9 @@ struct parallel_scan_part1_helper: public boost::asynchronous::continuation_task
                 );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
 
@@ -189,9 +189,9 @@ struct parallel_scan_part2_helper: public boost::asynchronous::continuation_task
                                     else
                                         task_res.set_value(T());
                                 }
-                                catch(std::exception& e)
+                                catch(...)
                                 {
-                                    task_res.set_exception(std::make_exception_ptr(e));
+                                    task_res.set_exception(std::current_exception());
                                 }
                             },
                             // recursive tasks
@@ -202,9 +202,9 @@ struct parallel_scan_part2_helper: public boost::asynchronous::continuation_task
                 );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
 
@@ -281,21 +281,21 @@ struct parallel_scan_helper: public boost::asynchronous::continuation_task<T>
                         {
                             task_res.set_value(std::move(std::get<0>(res).get()));
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
-                            task_res.set_exception(std::make_exception_ptr(e));
+                            task_res.set_exception(std::current_exception());
                         }
                     });
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             });
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
 
@@ -364,16 +364,16 @@ struct parallel_scan_range_move_helper: public boost::asynchronous::continuation
                     std::get<0>(continuation_res).get();
                     task_res.set_value(std::make_pair(std::move(*range),std::move(*out_range)));
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             }
             );
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
 
@@ -438,16 +438,16 @@ struct parallel_scan_range_move_single_helper: public boost::asynchronous::conti
                     std::get<0>(continuation_res).get();
                     task_res.set_value(std::move(*range));
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             }
             );
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
 
@@ -524,22 +524,22 @@ struct parallel_scan_range_continuation_helper: public boost::asynchronous::cont
                         {
                             task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
-                            task_res.set_exception(std::make_exception_ptr(e));
+                            task_res.set_exception(std::current_exception());
                         }
                     });
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             }
             );
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
 

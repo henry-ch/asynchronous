@@ -92,9 +92,9 @@ struct parallel_copy_if_part1_helper: public boost::asynchronous::continuation_t
                                     res_all.data_.push_back(std::move(res_right));
                                     task_res.set_value(std::move(res_all));
                                 }
-                                catch(std::exception& e)
+                                catch(...)
                                 {
-                                    task_res.set_exception(std::make_exception_ptr(e));
+                                    task_res.set_exception(std::current_exception());
                                 }
                             },
                             // recursive tasks
@@ -105,9 +105,9 @@ struct parallel_copy_if_part1_helper: public boost::asynchronous::continuation_t
                 );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Iterator beg_;
@@ -173,9 +173,9 @@ struct parallel_copy_if_part2_helper: public boost::asynchronous::continuation_t
                                     std::get<1>(res).get();
                                     task_res.set_value();
                                 }
-                                catch(std::exception& e)
+                                catch(...)
                                 {
-                                    task_res.set_exception(std::make_exception_ptr(e));
+                                    task_res.set_exception(std::current_exception());
                                 }
                             },
                             // recursive tasks
@@ -192,9 +192,9 @@ struct parallel_copy_if_part2_helper: public boost::asynchronous::continuation_t
                 );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Iterator beg_;
@@ -263,21 +263,21 @@ struct parallel_copy_if_helper: public boost::asynchronous::continuation_task<It
                             std::get<0>(res).get();
                             task_res.set_value(ret);
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
-                            task_res.set_exception(std::make_exception_ptr(e));
+                            task_res.set_exception(std::current_exception());
                         }
                     });
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             });
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Iterator beg_;

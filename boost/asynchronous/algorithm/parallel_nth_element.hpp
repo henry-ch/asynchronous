@@ -77,9 +77,9 @@ struct parallel_nth_element_helper: public boost::asynchronous::continuation_tas
                             std::get<0>(sort_res).get();
                             task_res.set_value();
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
-                            task_res.set_exception(std::make_exception_ptr(e));
+                            task_res.set_exception(std::current_exception());
                         }
                     });
                 }
@@ -121,9 +121,9 @@ struct parallel_nth_element_helper: public boost::asynchronous::continuation_tas
                                         std::get<0>(nth_element_res).get();
                                         task_res.set_value();
                                     }
-                                    catch(std::exception& e)
+                                    catch(...)
                                     {
-                                        task_res.set_exception(std::make_exception_ptr(e));
+                                        task_res.set_exception(std::current_exception());
                                     }
                                 });
                             }
@@ -142,25 +142,25 @@ struct parallel_nth_element_helper: public boost::asynchronous::continuation_tas
                                         std::get<0>(nth_element_res).get();
                                         task_res.set_value();
                                     }
-                                    catch(std::exception& e)
+                                    catch(...)
                                     {
-                                        task_res.set_exception(std::make_exception_ptr(e));
+                                        task_res.set_exception(std::current_exception());
                                     }
                                 });
                             }
 
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
-                            task_res.set_exception(std::make_exception_ptr(e));
+                            task_res.set_exception(std::current_exception());
                         }
                     });
                 }
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Iterator beg_;

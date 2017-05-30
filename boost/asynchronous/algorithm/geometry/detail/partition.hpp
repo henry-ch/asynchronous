@@ -222,9 +222,9 @@ class parallel_partition_two_collections
                                         (nl1).merge(nl2);
                                         task_res.set_value(std::move(nl1));
                                     }
-                                    catch(std::exception& e)
+                                    catch(...)
                                     {
-                                        task_res.set_exception(std::make_exception_ptr(e));
+                                        task_res.set_exception(std::current_exception());
                                     }
                                 },
                                 // recursive tasks
@@ -269,9 +269,9 @@ class parallel_partition_two_collections
                                         (nl1).merge(nl2);
                                         task_res.set_value(std::move(nl1));
                                     }
-                                    catch(std::exception& e)
+                                    catch(...)
                                     {
-                                        task_res.set_exception(std::make_exception_ptr(e));
+                                        task_res.set_exception(std::current_exception());
                                     }
                                 },
                                 // recursive tasks
@@ -692,9 +692,9 @@ public :
                     {
                         task_res.set_value(std::move(std::get<0>(continuation_res).get()));
                     }
-                    catch(std::exception& e)
+                    catch(...)
                     {
-                        task_res.set_exception(std::make_exception_ptr(e));
+                        task_res.set_exception(std::current_exception());
                     }
                 }
                 );*/
@@ -826,9 +826,9 @@ public :
 
                                     task_res.set_value(std::move(*policy));
                                 }
-                                catch(std::exception& e)
+                                catch(...)
                                 {
-                                    task_res.set_exception(std::make_exception_ptr(e));
+                                    task_res.set_exception(std::current_exception());
                                 }
                             },
                             // recursive tasks
@@ -870,9 +870,9 @@ public :
 
                                                         task_res.set_value(std::move(*policy));
                                                     }
-                                                    catch(std::exception& e)
+                                                    catch(...)
                                                     {
-                                                        task_res.set_exception(std::make_exception_ptr(e));
+                                                        task_res.set_exception(std::current_exception());
                                                     }
                                                 },
                                                 // recursive tasks
@@ -882,9 +882,9 @@ public :
                                                      level,min_elements,std::make_shared<Policy>(policy->clone()),box_policy,cutoff,name,prio)
                                        );
                                 }
-                                catch(std::exception& e)
+                                catch(...)
                                 {
-                                    task_res.set_exception(std::make_exception_ptr(e));
+                                    task_res.set_exception(std::current_exception());
                                 }
                             },
                             // recursive tasks

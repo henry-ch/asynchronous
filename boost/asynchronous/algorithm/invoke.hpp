@@ -50,18 +50,18 @@ struct invoke_helper: public boost::asynchronous::continuation_task<Return>
                 {
                     task_res.set_value(std::move(func(std::move(std::get<0>(continuation_res).get()))));
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             }
             );
             boost::asynchronous::any_continuation ac(std::move(cont_));
             boost::asynchronous::get_continuations().emplace_front(std::move(ac));
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
 private:
@@ -91,18 +91,18 @@ struct invoke_helper<Continuation,Func,Job,Return,typename std::enable_if<boost:
                 {
                     task_res.set_value(std::move(func(std::move(std::get<0>(continuation_res).get()))));
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             }
             );
             boost::asynchronous::any_continuation ac(std::move(cont_));
             boost::asynchronous::get_continuations().emplace_front(std::move(ac));
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     template <class Archive>

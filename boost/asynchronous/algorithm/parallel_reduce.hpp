@@ -112,9 +112,9 @@ struct parallel_reduce_helper: public boost::asynchronous::continuation_task<Ret
                             rt = std::move(func(rt, std::get<1>(res).get()));
                             task_res.set_value(std::move(rt));
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
-                            task_res.set_exception(std::make_exception_ptr(e));
+                            task_res.set_exception(std::current_exception());
                         }
                     },
                     // recursive tasks
@@ -123,9 +123,9 @@ struct parallel_reduce_helper: public boost::asynchronous::continuation_task<Ret
                 );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Iterator beg_;
@@ -203,9 +203,9 @@ struct parallel_reduce_range_move_helper: public boost::asynchronous::continuati
                             rt = std::move(func(rt, std::get<1>(res).get()));
                             task_res.set_value(std::move(rt));
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
-                            task_res.set_exception(std::make_exception_ptr(e));
+                            task_res.set_exception(std::current_exception());
                         }
                     },
                     // recursive tasks
@@ -216,9 +216,9 @@ struct parallel_reduce_range_move_helper: public boost::asynchronous::continuati
                 );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     std::shared_ptr<Range> range_;
@@ -270,9 +270,9 @@ struct parallel_reduce_range_move_helper<Range,Func,Func2,ReturnType,Job,typenam
                                     rt = std::move(func(rt, std::get<1>(res).get()));
                                     task_res.set_value(std::move(rt));
                                 }
-                                catch(std::exception& e)
+                                catch(...)
                                 {
-                                    task_res.set_exception(std::make_exception_ptr(e));
+                                    task_res.set_exception(std::current_exception());
                                 }
                             },
                             // recursive tasks
@@ -285,9 +285,9 @@ struct parallel_reduce_range_move_helper<Range,Func,Func2,ReturnType,Job,typenam
                 );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     template <class Archive>
@@ -401,9 +401,9 @@ struct parallel_reduce_range_helper: public boost::asynchronous::continuation_ta
                                     rt = std::move(func(rt, std::get<1>(res).get()));
                                     task_res.set_value(std::move(rt));
                                 }
-                                catch(std::exception& e)
+                                catch(...)
                                 {
-                                    task_res.set_exception(std::make_exception_ptr(e));
+                                    task_res.set_exception(std::current_exception());
                                 }
                             },
                             // recursive tasks
@@ -414,9 +414,9 @@ struct parallel_reduce_range_helper: public boost::asynchronous::continuation_ta
                 );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Range const& range_;
@@ -490,18 +490,18 @@ struct parallel_reduce_continuation_range_helper: public boost::asynchronous::co
                         task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                     });
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             }
             );
             boost::asynchronous::any_continuation ac(std::move(cont_));
             boost::asynchronous::get_continuations().emplace_front(std::move(ac));
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Continuation cont_;
@@ -543,16 +543,16 @@ struct parallel_reduce_continuation_range_helper<Continuation,Func,Func2,ReturnT
                       task_res.set_value(std::move(std::get<0>(new_continuation_res).get()));
                   });
               }
-              catch(std::exception& e)
+              catch(...)
               {
-                  task_res.set_exception(std::make_exception_ptr(e));
+                  task_res.set_exception(std::current_exception());
               }
           }
           );
       }
-      catch(std::exception& e)
+      catch(...)
       {
-          task_res.set_exception(std::make_exception_ptr(e));
+          task_res.set_exception(std::current_exception());
       }
   }
   Continuation cont_;

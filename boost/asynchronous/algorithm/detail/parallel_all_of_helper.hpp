@@ -65,9 +65,9 @@ struct parallel_all_of_helper: public boost::asynchronous::continuation_task<boo
                                 bool rt2 = std::get<1>(res).get();
                                 task_res.set_value( Op().merge(rt,rt2));
                             }
-                            catch(std::exception& e)
+                            catch(...)
                             {
-                                task_res.set_exception(std::make_exception_ptr(e));
+                                task_res.set_exception(std::current_exception());
                             }
                         },
                         // recursive tasks

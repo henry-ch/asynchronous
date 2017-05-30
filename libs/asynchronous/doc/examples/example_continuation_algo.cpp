@@ -65,9 +65,9 @@ struct main_task : public boost::asynchronous::continuation_task<long>
                             long r = std::get<0>(res).get() + std::get<1>(res).get()+ std::get<2>(res).get();
                             task_res.set_value(r);
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
-                            task_res.set_exception(std::make_exception_ptr(e));
+                            task_res.set_exception(std::current_exception());
                         }
                     },
                     // future results of recursive tasks
@@ -115,7 +115,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                     {
                         this->on_callback(res.get());
                     }
-                    catch(std::exception& e)
+                    catch(...)
                     {
                         // do something useful
                         this->on_callback(-1);

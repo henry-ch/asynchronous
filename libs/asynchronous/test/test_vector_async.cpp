@@ -355,16 +355,16 @@ BOOST_AUTO_TEST_CASE( test_vector_async_merge)
                                                 // (the vector has no scheduler yet, so not possible anyway)
                                                 task_res.set_value(std::move(*res));
                                             }
-                                            catch(std::exception& e)
+                                            catch(...)
                                             {
-                                                task_res.set_exception(std::make_exception_ptr(e));
+                                                task_res.set_exception(std::current_exception());
                                             }
                                         },
                                         std::move(subs));
                     }
-                    catch(std::exception& e)
+                    catch(...)
                     {
-                        task_res.set_exception(std::make_exception_ptr(e));
+                        task_res.set_exception(std::current_exception());
                     }
                 });
             }

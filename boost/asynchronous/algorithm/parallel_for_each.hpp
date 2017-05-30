@@ -101,9 +101,9 @@ struct parallel_for_each_helper: public boost::asynchronous::continuation_task<F
                                     f1.merge(std::move(f2));
                                     task_res.set_value(std::move(f1));
                                 }
-                                catch(std::exception& e)
+                                catch(...)
                                 {
-                                    task_res.set_exception(std::make_exception_ptr(e));
+                                    task_res.set_exception(std::current_exception());
                                 }
                             },
                             // recursive tasks
@@ -112,9 +112,9 @@ struct parallel_for_each_helper: public boost::asynchronous::continuation_task<F
                    );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Iterator beg_;

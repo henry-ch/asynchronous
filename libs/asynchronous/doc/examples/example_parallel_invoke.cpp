@@ -63,7 +63,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                             std::cout << "got exception?: " << (std::get<0>(t)).has_exception() << std::endl;
                             this->on_callback();
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
                             std::cout << "got exception: " << e.what() << std::endl;
                         }

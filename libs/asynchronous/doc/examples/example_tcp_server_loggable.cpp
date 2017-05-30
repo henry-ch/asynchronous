@@ -104,7 +104,7 @@ struct Servant : boost::asynchronous::trackable_servant<log_servant_job,log_serv
                                 try{
                                     this->on_callback(res.get());
                                 }
-                                catch(std::exception& e)
+                                catch(...)
                                 {
                                     std::cout << "got exception: " << e.what() << std::endl;
                                     this->on_callback(0);

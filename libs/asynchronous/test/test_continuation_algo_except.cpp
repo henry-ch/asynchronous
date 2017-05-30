@@ -82,7 +82,7 @@ struct main_task : public boost::asynchronous::continuation_task<long>
                         }
                         catch(some_exception& e)
                         {
-                            task_res.set_exception(std::make_exception_ptr(e));
+                            task_res.set_exception(std::current_exception());
                         }
                     },
                     // future results of recursive tasks

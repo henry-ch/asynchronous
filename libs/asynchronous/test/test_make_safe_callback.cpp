@@ -151,11 +151,6 @@ BOOST_AUTO_TEST_CASE( test_make_safe_callback )
             std::future<void> resfuv = fuv.get();
             resfuv.get();
         }
-        catch(std::exception& e)
-        {
-            std::cout << "exception: " << e.what() << std::endl;
-            BOOST_FAIL( "unexpected exception" );
-        }
         catch(...)
         {
             BOOST_FAIL( "unexpected exception" );
@@ -192,10 +187,6 @@ BOOST_AUTO_TEST_CASE( test_make_safe_callback_failed )
         {
             std::future<void> resfuv = fuv.get();
             resfuv.get();
-        }
-        catch(std::exception& e)
-        {
-            BOOST_FAIL( "unexpected exception" );
         }
         catch(...)
         {

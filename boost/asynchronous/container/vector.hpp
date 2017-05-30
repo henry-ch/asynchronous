@@ -2077,24 +2077,24 @@ private:
                                     std::get<0>(dres).get();
                                     task_res.set_value(std::move(new_data));
                                 }
-                                catch(std::exception& e)
+                                catch(...)
                                 {
-                                    task_res.set_exception(std::make_exception_ptr(e));
+                                    task_res.set_exception(std::current_exception());
                                 }
                             });
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
-                            task_res.set_exception(std::make_exception_ptr(e));
+                            task_res.set_exception(std::current_exception());
                         }
 
                     });
                 });
 
             }
-            catch(std::exception& e)
+            catch(...)
             {
-                task_res.set_exception(std::make_exception_ptr(e));
+                task_res.set_exception(std::current_exception());
             }
         }
         size_type m_new_memory;

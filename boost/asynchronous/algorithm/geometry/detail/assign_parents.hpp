@@ -130,9 +130,9 @@ struct convert_visitor_to_ring_map : public boost::asynchronous::continuation_ta
                 RingMap t(std::move((std::get<0>(continuation_res).get()).m_ring_map));
                 task_res.set_value(std::make_pair(std::move(t),true));
             }
-            catch(std::exception& e)
+            catch(...)
             {
-                task_res.set_exception(std::make_exception_ptr(e));
+                task_res.set_exception(std::current_exception());
             }
         }
         );

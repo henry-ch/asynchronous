@@ -356,26 +356,26 @@ std::cout << "traverse" << std::endl;
 #endif
                             task_res.set_value(std::move(*output_collection));
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
                             std::cout << "overlay. exception 0" << std::endl;
-                            task_res.set_exception(std::make_exception_ptr(e));
+                            task_res.set_exception(std::current_exception());
                         }
                     }
                     );
 
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
                     std::cout << "overlay. exception 1" << std::endl;
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             });
             }
-            catch(std::exception& e)
+            catch(...)
             {
                 std::cout << "overlay. exception 2" << std::endl;
-                task_res.set_exception(std::make_exception_ptr(e));
+                task_res.set_exception(std::current_exception());
             }
         });
 

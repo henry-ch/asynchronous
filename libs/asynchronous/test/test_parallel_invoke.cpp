@@ -89,7 +89,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                             BOOST_CHECK_MESSAGE(!(std::get<1>(t)).has_exception(),"second lambda threw an exception. It should not have");
                             BOOST_CHECK_MESSAGE((std::get<1>(t)).get() == 42.0,"second lambda returned wrong result");
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
                             BOOST_FAIL( "unexpected exception in callback" );
                         }
@@ -105,7 +105,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                             BOOST_CHECK_MESSAGE(!std::string(e.file_).empty(),"no file data");
                             BOOST_CHECK_MESSAGE(e.line_ != -1,"no line data");
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
                             BOOST_FAIL( "unexpected exception in callback" );
                         }

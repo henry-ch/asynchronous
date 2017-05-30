@@ -70,9 +70,9 @@ struct parallel_lexicographical_compare_helper: public boost::asynchronous::cont
                                     else
                                         task_res.set_value(r2);
                                 }
-                                catch(std::exception& e)
+                                catch(...)
                                 {
-                                    task_res.set_exception(std::make_exception_ptr(e));
+                                    task_res.set_exception(std::current_exception());
                                 }
                             },
                             // recursive tasks
@@ -83,9 +83,9 @@ struct parallel_lexicographical_compare_helper: public boost::asynchronous::cont
                 );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Iterator1 beg1_;
@@ -133,9 +133,9 @@ struct parallel_lexicographical_compare_helper2: public boost::asynchronous::con
                                     else
                                         task_res.set_value(r2);
                                 }
-                                catch(std::exception& e)
+                                catch(...)
                                 {
-                                    task_res.set_exception(std::make_exception_ptr(e));
+                                    task_res.set_exception(std::current_exception());
                                 }
                             },
                             // recursive tasks
@@ -146,9 +146,9 @@ struct parallel_lexicographical_compare_helper2: public boost::asynchronous::con
                 );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Iterator1 beg1_;

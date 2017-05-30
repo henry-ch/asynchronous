@@ -72,7 +72,7 @@ struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any
                             std::cout << "Result should be 705082704. Is: " << res.get() << std::endl;
                             this->on_callback();
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
                             std::cout << "got exception: " << e.what() << std::endl;
                         }

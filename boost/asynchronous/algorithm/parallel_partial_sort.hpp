@@ -67,9 +67,9 @@ struct parallel_partial_sort_helper: public boost::asynchronous::continuation_ta
                         std::get<0>(sort_res).get();
                         task_res.set_value();
                     }
-                    catch(std::exception& e)
+                    catch(...)
                     {
-                        task_res.set_exception(std::make_exception_ptr(e));
+                        task_res.set_exception(std::current_exception());
                     }
                 });
             }
@@ -106,9 +106,9 @@ struct parallel_partial_sort_helper: public boost::asynchronous::continuation_ta
                                     std::get<0>(sort_res).get();
                                     task_res.set_value();
                                 }
-                                catch(std::exception& e)
+                                catch(...)
                                 {
-                                    task_res.set_exception(std::make_exception_ptr(e));
+                                    task_res.set_exception(std::current_exception());
                                 }
                             });
                         }
@@ -126,9 +126,9 @@ struct parallel_partial_sort_helper: public boost::asynchronous::continuation_ta
                                     std::get<0>(middle_element_res).get();
                                     task_res.set_value();
                                 }
-                                catch(std::exception& e)
+                                catch(...)
                                 {
-                                    task_res.set_exception(std::make_exception_ptr(e));
+                                    task_res.set_exception(std::current_exception());
                                 }
                             });
                         }
@@ -146,24 +146,24 @@ struct parallel_partial_sort_helper: public boost::asynchronous::continuation_ta
                                     std::get<0>(middle_element_res).get();
                                     task_res.set_value();
                                 }
-                                catch(std::exception& e)
+                                catch(...)
                                 {
-                                    task_res.set_exception(std::make_exception_ptr(e));
+                                    task_res.set_exception(std::current_exception());
                                 }
                             });
                         }
 
                     }
-                    catch(std::exception& e)
+                    catch(...)
                     {
-                        task_res.set_exception(std::make_exception_ptr(e));
+                        task_res.set_exception(std::current_exception());
                     }
                 });
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
 

@@ -85,9 +85,9 @@ struct parallel_quicksort_helper: public boost::asynchronous::continuation_task<
                         std::get<0>(sort_res).get();
                         task_res.set_value();
                     }
-                    catch(std::exception& e)
+                    catch(...)
                     {
-                        task_res.set_exception(std::make_exception_ptr(e));
+                        task_res.set_exception(std::current_exception());
                     }
                 });
             }
@@ -117,9 +117,9 @@ struct parallel_quicksort_helper: public boost::asynchronous::continuation_task<
                                 return;
                             }
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
-                            task_res.set_exception(std::make_exception_ptr(e));
+                            task_res.set_exception(std::current_exception());
                             return;
                         }
                        //check if reverse sorted
@@ -142,9 +142,9 @@ struct parallel_quicksort_helper: public boost::asynchronous::continuation_task<
                                             std::get<0>(res).get();
                                             task_res.set_value();
                                         }
-                                        catch(std::exception& e)
+                                        catch(...)
                                         {
-                                            task_res.set_exception(std::make_exception_ptr(e));
+                                            task_res.set_exception(std::current_exception());
                                         }
                                     });
                                     return;
@@ -183,9 +183,9 @@ struct parallel_quicksort_helper: public boost::asynchronous::continuation_task<
                                                     std::get<1>(res).get();
                                                     task_res.set_value();
                                                 }
-                                                catch(std::exception& e)
+                                                catch(...)
                                                 {
-                                                    task_res.set_exception(std::make_exception_ptr(e));
+                                                    task_res.set_exception(std::current_exception());
                                                 }
                                             },
                                             // recursive tasks
@@ -195,23 +195,23 @@ struct parallel_quicksort_helper: public boost::asynchronous::continuation_task<
                                                     (it,end,func,thread_num,size_all_partitions+dist_it_end,original_size,cutoff,task_name,prio)
                                         );
                                     }
-                                    catch(std::exception& e)
+                                    catch(...)
                                     {
-                                        task_res.set_exception(std::make_exception_ptr(e));
+                                        task_res.set_exception(std::current_exception());
                                     }
                                 });
                             }
-                            catch(std::exception& e)
+                            catch(...)
                             {
-                                task_res.set_exception(std::make_exception_ptr(e));
+                                task_res.set_exception(std::current_exception());
                             }
                         });
                 });
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
 

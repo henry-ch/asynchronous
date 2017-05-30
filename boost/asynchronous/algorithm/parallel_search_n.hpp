@@ -96,9 +96,9 @@ struct parallel_search_n_helper: public boost::asynchronous::continuation_task<I
                                         }
                                     }
                                 }
-                                catch(std::exception& e)
+                                catch(...)
                                 {
-                                    task_res.set_exception(std::make_exception_ptr(e));
+                                    task_res.set_exception(std::current_exception());
                                 }
                             },
                             // recursive tasks
@@ -109,9 +109,9 @@ struct parallel_search_n_helper: public boost::asynchronous::continuation_task<I
                    );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
 

@@ -78,7 +78,7 @@ struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any
                             std::cout << "Same result as std::sort? " << std::boolalpha << (v==m_data) <<std::endl;
                             this->on_callback();
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
                             std::cout << "got exception: " << e.what() << std::endl;
                         }

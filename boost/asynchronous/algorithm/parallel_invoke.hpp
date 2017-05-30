@@ -52,9 +52,9 @@ struct parallel_invoke_helper: public boost::asynchronous::continuation_task<Ret
                         // recursive tasks
                         std::move(m_tuple));
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     template <class Archive>
@@ -89,9 +89,9 @@ struct parallel_invoke_helper_timeout: public boost::asynchronous::continuation_
                         // recursive tasks
                         std::move(m_tuple));
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     template <class Archive>
@@ -114,9 +114,9 @@ struct continuation_task_wrapper : public boost::asynchronous::continuation_task
         {
             task_res.set_value(std::move(func_()));
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     template <class Archive>
