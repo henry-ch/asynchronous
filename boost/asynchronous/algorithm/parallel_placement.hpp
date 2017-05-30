@@ -42,14 +42,6 @@ void serial_placement(Iterator beg, Iterator end,char* data)
         {
             new (((T*)data)+ (i+beg)) T;
         }
-        catch (std::exception& e)
-        {
-            // we need to cleanup
-            for (std::size_t j = 0; j < i; ++j)
-            {
-                ((T*)(data)+(j+beg))->~T();
-            }
-        }
         catch (...)
         {
             // we need to cleanup
@@ -69,14 +61,6 @@ void serial_placement(Iterator beg, Iterator end,char* data,T init)
         {
             new (((T*)data)+ (i+beg)) T(init);
         }
-        catch (std::exception& e)
-        {
-            // we need to cleanup
-            for (std::size_t j = 0; j < i; ++j)
-            {
-                ((T*)(data)+(j+beg))->~T();
-            }
-        }
         catch (...)
         {
             // we need to cleanup
@@ -95,14 +79,6 @@ void serial_placement_it(Iterator beg, Iterator end,char* data,Iterator2 it2)
         try
         {
             new (((T*)data)+ (i+beg)) T(*it2);
-        }
-        catch (std::exception& e)
-        {
-            // we need to cleanup
-            for (std::size_t j = 0; j < i; ++j)
-            {
-                ((T*)(data)+(j+beg))->~T();
-            }
         }
         catch (...)
         {
@@ -146,15 +122,6 @@ struct parallel_placement_helper: public boost::asynchronous::continuation_task<
                     try
                     {
                         new (((T*)data_.get())+ (i+beg_)) T;
-                    }
-                    catch (std::exception& e)
-                    {
-                        // we need to cleanup
-                        for (std::size_t j = 0; j < i; ++j)
-                        {
-                            ((T*)(data_.get())+(j+beg_))->~T();
-                        }
-                        task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,std::make_exception_ptr(e)));
                     }
                     catch (...)
                     {
@@ -214,10 +181,6 @@ struct parallel_placement_helper: public boost::asynchronous::continuation_task<
                                         task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_handled,res2.second));
                                     }
                                 }
-                                catch(std::exception& e)
-                                {
-                                    task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,std::make_exception_ptr(e)));
-                                }
                                 catch (...)
                                 {
                                     task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,std::current_exception()));
@@ -231,9 +194,9 @@ struct parallel_placement_helper: public boost::asynchronous::continuation_task<
                  );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     std::size_t beg_;
@@ -283,15 +246,6 @@ struct parallel_placement_helper_raw: public boost::asynchronous::continuation_t
                     try
                     {
                         new (((T*)data_)+ (i+beg_)) T(init_);
-                    }
-                    catch (std::exception& e)
-                    {
-                        // we need to cleanup
-                        for (std::size_t j = 0; j < i; ++j)
-                        {
-                            ((T*)(data_)+(j+beg_))->~T();
-                        }
-                        task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,std::make_exception_ptr(e)));
                     }
                     catch (...)
                     {
@@ -351,10 +305,6 @@ struct parallel_placement_helper_raw: public boost::asynchronous::continuation_t
                                         task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_handled,res2.second));
                                     }
                                 }
-                                catch(std::exception& e)
-                                {
-                                    task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,std::make_exception_ptr(e)));
-                                }
                                 catch (...)
                                 {
                                     task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,std::current_exception()));
@@ -368,9 +318,9 @@ struct parallel_placement_helper_raw: public boost::asynchronous::continuation_t
                  );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     std::size_t beg_;
@@ -422,15 +372,6 @@ struct parallel_placement_iterators_helper: public boost::asynchronous::continua
                     try
                     {
                         new (((T*)data_.get())+ (i+beg_)) T(*it2);
-                    }
-                    catch (std::exception& e)
-                    {
-                        // we need to cleanup
-                        for (std::size_t j = 0; j < i; ++j)
-                        {
-                            ((T*)(data_.get())+(j+beg_))->~T();
-                        }
-                        task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,std::make_exception_ptr(e)));
                     }
                     catch (...)
                     {
@@ -492,10 +433,6 @@ struct parallel_placement_iterators_helper: public boost::asynchronous::continua
                                         task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_handled,res2.second));
                                     }
                                 }
-                                catch(std::exception& e)
-                                {
-                                    task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,std::make_exception_ptr(e)));
-                                }
                                 catch (...)
                                 {
                                     task_res.set_value(std::make_pair(boost::asynchronous::detail::parallel_placement_helper_enum::error_not_handled,std::current_exception()));
@@ -509,9 +446,9 @@ struct parallel_placement_iterators_helper: public boost::asynchronous::continua
                  );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     std::size_t beg_;
@@ -575,9 +512,9 @@ struct parallel_placement_delete_helper: public boost::asynchronous::continuatio
                                     std::get<1>(res).get();
                                     task_res.set_value();
                                 }
-                                catch(std::exception& e)
+                                catch(...)
                                 {
-                                    task_res.set_exception(std::make_exception_ptr(e));
+                                    task_res.set_exception(std::current_exception());
                                 }
                             },
                             // recursive tasks
@@ -588,9 +525,9 @@ struct parallel_placement_delete_helper: public boost::asynchronous::continuatio
                  );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     std::size_t beg_;

@@ -173,7 +173,7 @@ BOOST_AUTO_TEST_CASE( test_exception_before_continuation_post_future )
                      scheduler,
                      [&data,&result]()
                      {
-                         BOOST_THROW_EXCEPTION( my_exception());
+                         ASYNCHRONOUS_THROW( my_exception());
                          return boost::asynchronous::parallel_transform(
                                      data.begin(), data.end(), result.begin(), [](int i) { return ++i; }, 1500, "", 0);
                      },"",0);
@@ -182,8 +182,7 @@ BOOST_AUTO_TEST_CASE( test_exception_before_continuation_post_future )
         {
             fu.get();
         }
-        //TODO why does my_exception not work?
-        catch(std::exception&)
+        catch(my_exception&)
         {
             failed =true;
         }

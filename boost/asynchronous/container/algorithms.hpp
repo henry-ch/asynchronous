@@ -63,16 +63,16 @@ struct push_back_task: public boost::asynchronous::continuation_task<Container>
                     c->push_back(v);
                     task_res.set_value(std::move(*c));
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             });
 
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Container m_container;
@@ -117,21 +117,21 @@ struct push_back_task_continuation: public boost::asynchronous::continuation_tas
                         {
                             task_res.set_value(std::move(std::get<0>(res).get()));
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
-                            task_res.set_exception(std::make_exception_ptr(e));
+                            task_res.set_exception(std::current_exception());
                         }
                     });
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             });
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Continuation m_continuation;
@@ -188,9 +188,9 @@ struct resize_task: public boost::asynchronous::continuation_task<Container>
                             c->set_internal_data(new_data,capacity);
                             task_res.set_value(std::move(*c));
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
-                            task_res.set_exception(std::make_exception_ptr(e));
+                            task_res.set_exception(std::current_exception());
                         }
                     });
                 }
@@ -211,16 +211,16 @@ struct resize_task: public boost::asynchronous::continuation_task<Container>
                         c->set_internal_data(data,c->capacity());
                         task_res.set_value(std::move(*c));
                     }
-                    catch(std::exception& e)
+                    catch(...)
                     {
-                        task_res.set_exception(std::make_exception_ptr(e));
+                        task_res.set_exception(std::current_exception());
                     }
                 });
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Container m_container;
@@ -265,21 +265,21 @@ struct resize_task_continuation: public boost::asynchronous::continuation_task<t
                         {
                             task_res.set_value(std::move(std::get<0>(res).get()));
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
-                            task_res.set_exception(std::make_exception_ptr(e));
+                            task_res.set_exception(std::current_exception());
                         }
                     });
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             });
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Continuation m_continuation;
@@ -329,15 +329,15 @@ struct reserve_task: public boost::asynchronous::continuation_task<Container>
                     c->set_internal_data(new_data,v);
                     task_res.set_value(std::move(*c));
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             });
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Container m_container;
@@ -383,21 +383,21 @@ struct reserve_task_continuation: public boost::asynchronous::continuation_task<
                         {
                             task_res.set_value(std::move(std::get<0>(res).get()));
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
-                            task_res.set_exception(std::make_exception_ptr(e));
+                            task_res.set_exception(std::current_exception());
                         }
                     });
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             });
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Continuation m_continuation;
@@ -447,15 +447,15 @@ struct shrink_to_fit_task: public boost::asynchronous::continuation_task<Contain
                     c->set_internal_data(new_data,c->size());
                     task_res.set_value(std::move(*c));
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             });
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Container m_container;
@@ -499,21 +499,21 @@ struct shrink_to_fit_task_continuation: public boost::asynchronous::continuation
                         {
                             task_res.set_value(std::move(std::get<0>(res).get()));
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
-                            task_res.set_exception(std::make_exception_ptr(e));
+                            task_res.set_exception(std::current_exception());
                         }
                     });
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             });
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Continuation m_continuation;
@@ -581,15 +581,15 @@ void make_asynchronous_range_task<Range,Job>::operator()()
                     task_res.set_value(std::move(*v));
                 }
             }
-            catch(std::exception& e)
+            catch(...)
             {
-                task_res.set_exception(std::make_exception_ptr(e));
+                task_res.set_exception(std::current_exception());
             }
         });
     }
-    catch(std::exception& e)
+    catch(...)
     {
-        task_res.set_exception(std::make_exception_ptr(e));
+        task_res.set_exception(std::current_exception());
     }
 }
 
@@ -695,21 +695,21 @@ struct async_merge_task: public boost::asynchronous::continuation_task<Container
                             std::get<0>(res_move).get();
                             task_res.set_value(std::move(*c1));
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
-                            task_res.set_exception(std::make_exception_ptr(e));
+                            task_res.set_exception(std::current_exception());
                         }
                     });
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             });
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Container m_container1;
@@ -788,22 +788,22 @@ struct async_merge_container_of_containers_task: public boost::asynchronous::con
                             }
                             task_res.set_value(std::move(*c1));
                         }
-                        catch(std::exception& e)
+                        catch(...)
                         {
-                            task_res.set_exception(std::make_exception_ptr(e));
+                            task_res.set_exception(std::current_exception());
                         }
                     },
                     std::move(subs));
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             });
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Container m_container;

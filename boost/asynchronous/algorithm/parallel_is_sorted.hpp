@@ -63,9 +63,9 @@ struct parallel_is_sorted_helper: public boost::asynchronous::continuation_task<
                                     bool res2 = std::get<1>(res).get();
                                     task_res.set_value(res1 && res2);
                                 }
-                                catch(std::exception& e)
+                                catch(...)
                                 {
-                                    task_res.set_exception(std::make_exception_ptr(e));
+                                    task_res.set_exception(std::current_exception());
                                 }
                             },
                             // recursive tasks
@@ -76,9 +76,9 @@ struct parallel_is_sorted_helper: public boost::asynchronous::continuation_task<
                 );
             }
         }
-        catch(std::exception& e)
+        catch(...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
     Iterator beg_;

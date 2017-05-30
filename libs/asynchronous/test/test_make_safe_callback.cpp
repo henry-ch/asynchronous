@@ -195,7 +195,6 @@ BOOST_AUTO_TEST_CASE( test_make_safe_callback_failed )
         }
         catch(std::exception& e)
         {
-            std::cout << "exception: " << e.what() << std::endl;
             BOOST_FAIL( "unexpected exception" );
         }
         catch(...)

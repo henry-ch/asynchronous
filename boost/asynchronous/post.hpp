@@ -321,9 +321,9 @@ namespace detail
                     {
                         m_promise.set_value(std::move(std::get<0>(continuation_res).get()));
                     }
-                    catch(std::exception& e)
+                    catch(...)
                     {
-                        m_promise.set_exception(std::make_exception_ptr(e));
+                        m_promise.set_exception(std::current_exception());
                     }
                 }
             }
@@ -338,11 +338,6 @@ namespace detail
                 cont.on_done(promise_move_helper(std::move(m_promise)));
                 boost::asynchronous::any_continuation ac(std::move(cont));
                 boost::asynchronous::get_continuations().emplace_front(std::move(ac));
-            }
-            catch(std::exception& e)
-            {
-                m_promise.set_exception(std::make_exception_ptr(e));
-                this->set_failed();
             }
             catch(...)
             {
@@ -412,9 +407,9 @@ namespace detail
                     {
                         m_promise.set_value();
                     }
-                    catch(std::exception& e)
+                    catch(...)
                     {
-                        m_promise.set_exception(std::make_exception_ptr(e));
+                        m_promise.set_exception(std::current_exception());
                     }
                 }
             }
@@ -429,11 +424,6 @@ namespace detail
                 cont.on_done(promise_move_helper(std::move(m_promise)));
                 boost::asynchronous::any_continuation ac(std::move(cont));
                 boost::asynchronous::get_continuations().emplace_front(std::move(ac));
-            }
-            catch(std::exception& e)
-            {
-                m_promise.set_exception(std::make_exception_ptr(e));
-                this->set_failed();
             }
             catch(...)
             {
@@ -504,9 +494,9 @@ namespace detail
                     {
                         m_promise.set_value(std::move(std::get<0>(continuation_res).get()));
                     }
-                    catch(std::exception& e)
+                    catch(...)
                     {
-                        m_promise.set_exception(std::make_exception_ptr(e));
+                        m_promise.set_exception(std::current_exception());
                     }
                 }
             }
@@ -522,9 +512,9 @@ namespace detail
                 boost::asynchronous::any_continuation ac(std::move(cont));
                 boost::asynchronous::get_continuations().emplace_front(std::move(ac));
             }
-            catch(std::exception& e)
+            catch(...)
             {
-                m_promise.set_exception(std::make_exception_ptr(e));
+                m_promise.set_exception(std::current_exception());
                 this->set_failed();
             }
         }
@@ -873,7 +863,7 @@ namespace detail
                 callback_fct cb(std::move(m_work),std::move(ex));
                 Callback()(shared_scheduler,std::move(cb),m_task_name,m_cb_prio);
             }
-            catch(std::exception& ){/* TODO */}
+            catch(...){/* TODO */}
         }
         Work m_work;
         Sched m_scheduler;
@@ -1006,7 +996,7 @@ namespace detail
                 callback_fct cb(std::move(m_work),std::move(ex));
                 Callback()(shared_scheduler,std::move(cb),m_task_name,m_cb_prio);
             }
-            catch(std::exception& ){/* TODO */}
+            catch(...){/* TODO */}
         }
 
         void callback_ready(boost::asynchronous::expected<typename Work::result_type> work_fu)
@@ -1021,7 +1011,7 @@ namespace detail
                 callback_fct cb(std::move(m_work),std::move(work_fu));
                 Callback()(shared_scheduler,std::move(cb),m_task_name,m_cb_prio);
             }
-            catch(std::exception& ){/* TODO */}
+            catch(...){/* TODO */}
         }
         Work m_work;
         Sched m_scheduler;
@@ -1058,9 +1048,9 @@ namespace detail
                             {
                                 ex.set_value(std::move(std::get<0>(continuation_res).get()));
                             }
-                            catch(std::exception& e)
+                            catch(...)
                             {
-                                ex.set_exception(std::make_exception_ptr(e));
+                                ex.set_exception(std::current_exception());
                             }
                         }
 
@@ -1104,9 +1094,9 @@ namespace detail
                             {
                                 ex.set_value();
                             }
-                            catch(std::exception& e)
+                            catch(...)
                             {
-                                ex.set_exception(std::make_exception_ptr(e));
+                                ex.set_exception(std::current_exception());
                             }
                         }
 
@@ -1183,7 +1173,7 @@ namespace detail
                 post_helper_continuation<typename Work::result_type,Sched,Func,Work,F1,F2,callback_fct,Callback>()(m_task_name,m_cb_prio,m_scheduler,m_work);
             }
             catch(boost::asynchronous::task_aborted_exception& e)
-            {
+            {                
                 ex.set_exception(std::make_exception_ptr(e));
                 callback_fct cb(std::move(m_work),std::move(ex));
                 auto shared_scheduler = m_scheduler.lock();
@@ -1305,7 +1295,7 @@ namespace detail
                 callback_fct cb(std::move(m_work),std::move(work_fu));
                 Callback()(shared_scheduler,std::move(cb),m_task_name,m_cb_prio);
             }
-            catch(std::exception& ){/* TODO */}
+            catch(...){/* TODO */}
         }
         void operator()()
         {

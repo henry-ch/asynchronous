@@ -361,9 +361,9 @@ struct lambda_continuation_wrapper : public boost::asynchronous::continuation_ta
         {
             task_res.set_value(myFunc());
         }
-        catch (std::exception& e)
+        catch (...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
 
@@ -384,9 +384,9 @@ struct lambda_continuation_wrapper<Func,void> : public boost::asynchronous::cont
             myFunc();
             task_res.set_value();
         }
-        catch (std::exception& e)
+        catch (...)
         {
-            task_res.set_exception(std::make_exception_ptr(e));
+            task_res.set_exception(std::current_exception());
         }
     }
 
@@ -812,10 +812,10 @@ struct callback_continuation
                     {
                         t();
                     }
-                    catch(std::exception& e)
+                    catch(...)
                     {
                         boost::asynchronous::expected<typename Task::return_type> r;
-                        r.set_exception(std::make_exception_ptr(e));
+                        r.set_exception(std::current_exception());
                         std::get<I>((*finished).m_futures) = std::move(r);
                         finished->done();
                     }
@@ -883,10 +883,10 @@ struct callback_continuation
             {
                 std::get<I>(l)();
             }
-            catch(std::exception& e)
+            catch(...)
             {
                 boost::asynchronous::expected<typename std::tuple_element<I, std::tuple<ArgsTuple...>>::type::return_type> r;
-                r.set_exception(std::make_exception_ptr(e));
+                r.set_exception(std::current_exception());
                 std::get<I>((*finished).m_futures) = std::move(r);
                 finished->done();
             }
@@ -1141,9 +1141,9 @@ struct callback_continuation_as_seq
                 {
                     task_res.set_value(std::move(std::get<0>(res).get()));
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             });
         }
@@ -1169,9 +1169,9 @@ struct callback_continuation_as_seq
                     std::get<0>(res).get();
                     task_res.set_value();
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
-                    task_res.set_exception(std::make_exception_ptr(e));
+                    task_res.set_exception(std::current_exception());
                 }
             });
         }
@@ -1296,10 +1296,10 @@ struct callback_continuation_as_seq
                 {
                     elem();
                 }
-                catch(std::exception& e)
+                catch(...)
                 {
                     boost::asynchronous::expected<typename ArgsVec::return_type> r;
-                    r.set_exception(std::make_exception_ptr(e));
+                    r.set_exception(std::current_exception());
                     (*finished).m_futures[index] = std::move(r);
                     finished->done();
                 }
