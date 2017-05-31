@@ -65,6 +65,19 @@ struct throwing_int_task
         return 0;
     }
 };
+struct throwing_void_task
+{
+    throwing_void_task()=default;
+    throwing_void_task(throwing_void_task&&)=default;
+    throwing_void_task& operator=(throwing_void_task&&)=default;
+    throwing_void_task(throwing_void_task const&)=delete;
+    throwing_void_task& operator=(throwing_void_task const&)=delete;
+
+    void operator()()const
+    {
+        ASYNCHRONOUS_THROW(my_exception());
+    }
+};
 struct blocking_void_task
 {
     blocking_void_task(){}
@@ -192,6 +205,46 @@ BOOST_AUTO_TEST_CASE( test_throw_int_post_future )
     for (auto mit = diag.begin(); mit != diag.end() ; ++mit)
     {
         if ((*mit).first != "throwing_int_task")
+        {
+            continue;
+        }
+        for (auto jit = (*mit).second.begin(); jit != (*mit).second.end();++jit)
+        {
+            BOOST_CHECK_MESSAGE((*jit).is_failed(),"task should have been marked as failed.");
+        }
+    }
+}
+BOOST_AUTO_TEST_CASE( test_throw_void_post_future )
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<
+                                                                        boost::asynchronous::lockfree_queue<servant_job>>>(1);
+    auto fu = boost::asynchronous::post_future(scheduler, throwing_void_task(),"throwing_void_task",0);
+    bool future_with_exception = false;
+    try
+    {
+        fu.get();
+    }
+    catch(my_exception& e)
+    {
+        future_with_exception = true;
+        // check for correct exception data
+        BOOST_CHECK_MESSAGE(std::string(e.what_) == "my_exception","test_throw_int_post_future has wrong data");
+        BOOST_CHECK_MESSAGE(!std::string(e.file_).empty(),"test_throw_int_post_future has wrong data");
+        BOOST_CHECK_MESSAGE(e.line_ != -1,"test_throw_int_post_future has wrong data");
+    }
+    catch(...)
+    {
+    }
+
+    BOOST_CHECK_MESSAGE(future_with_exception,"post_future<throwing_void_task> did not throw.");
+    boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
+
+    // check if we found a throwing task
+    diag_type diag = scheduler.get_diagnostics().totals();
+
+    for (auto mit = diag.begin(); mit != diag.end() ; ++mit)
+    {
+        if ((*mit).first != "throwing_void_task")
         {
             continue;
         }
