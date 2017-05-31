@@ -1057,7 +1057,7 @@ namespace detail
                         CallbackFct cb(std::move(work),std::move(ex));
                         Callback()(shared_scheduler,std::move(cb),task_name,cb_prio);
                     }
-                    catch(std::exception& ){/* TODO */}
+                    catch(...){/* TODO */}
                 }
             );
             boost::asynchronous::any_continuation ac(std::move(cont));
@@ -1083,7 +1083,7 @@ namespace detail
                             return;
                         // call callback
                         boost::asynchronous::expected<typename Work::result_type> ex;
-                        if(!std::get<0>(continuation_res).has_value())
+                        if(!boost::asynchronous::is_ready(std::get<0>(continuation_res)))
                         {
                             boost::asynchronous::task_aborted_exception ta;
                             ex.set_exception(std::make_exception_ptr(ta));
@@ -1092,6 +1092,8 @@ namespace detail
                         {
                             try
                             {
+                                // check for exception
+                                std::get<0>(continuation_res).get();
                                 ex.set_value();
                             }
                             catch(...)
@@ -1103,7 +1105,7 @@ namespace detail
                         CallbackFct cb(std::move(work),std::move(ex));
                         Callback()(shared_scheduler,std::move(cb),task_name,cb_prio);
                     }
-                    catch(std::exception& ){/* TODO */}
+                    catch(...){/* TODO */}
                 }
             );
             boost::asynchronous::any_continuation ac(std::move(cont));

@@ -549,8 +549,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         try{res.get();aPromise->set_value();}
-                        catch(my_exception&){/*std::cout << "ok" << std::endl;*/aPromise->set_exception(std::current_exception());}
-                        catch(...){/*std::cout << "nok" << std::endl;*/aPromise->set_exception(std::current_exception());}
+                        catch(...){aPromise->set_exception(std::current_exception());}
            }// callback functor.
         );
         return fu;
@@ -1049,11 +1048,6 @@ BOOST_AUTO_TEST_CASE( test_parallel_sort_exception )
             BOOST_CHECK_MESSAGE(std::string(e.what_) == "my_exception","no what data");
             BOOST_CHECK_MESSAGE(!std::string(e.file_).empty(),"no file data");
             BOOST_CHECK_MESSAGE(e.line_ != -1,"no line data");
-        }
-        //TODO
-        catch ( std::exception& e)
-        {
-            got_exception=true;
         }
         catch(...)
         {
