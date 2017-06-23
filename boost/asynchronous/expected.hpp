@@ -13,6 +13,7 @@
 #include <utility>
 #include <type_traits>
 #include <exception>
+#include <memory>
 
 namespace boost { namespace asynchronous {
 
