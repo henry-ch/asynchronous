@@ -73,7 +73,6 @@ struct Servant : boost::asynchronous::trackable_servant<boost::asynchronous::any
                                 }
                                 catch(...)
                                 {
-                                    std::cout << "got exception: " << e.what() << std::endl;
                                     this->on_callback(0);
                                 }
                    }// callback functor.
