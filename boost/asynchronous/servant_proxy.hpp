@@ -548,7 +548,7 @@ public:
         , m_servant()
         , m_offset_id(0)
     {
-        bool ok = s.timed_wait(boost::posix_time::milliseconds(max_create_wait_ms));
+        bool ok = s.wait_for(std::chrono::milliseconds(max_create_wait_ms)) == std::future_status::ready;
         if(ok)
         {
             m_servant = std::make_shared<servant_type>(std::move(s.get()));
