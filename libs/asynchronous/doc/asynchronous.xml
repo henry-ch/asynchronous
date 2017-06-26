@@ -91,7 +91,7 @@ f2.get(); // just a "small get" at the end?</programlisting>
         <programlisting>auto pool = boost::asynchronous::make_shared_scheduler_proxy&lt;
                   boost::asynchronous::multiqueue_threadpool_scheduler&lt;
                         boost::asynchronous::lockfree_queue&lt;>>>(8); // create a pool with 8 threads
-boost::future&lt;int> fu = boost::asynchronous::post_future(pool,
+std::future&lt;int> fu = boost::asynchronous::post_future(pool,
     []()
     {
         return 123;
@@ -101,7 +101,7 @@ f1.get();</programlisting>
             task itself. We will see later how to do it. For the moment, here is a quick example.
             Let's say we want to modify a vector in parallel, then reduce it, also in parallel,
             without having to write synchronization points:</para>
-        <programlisting>boost::future&lt;int> fu = boost::asynchronous::post_future(pool, // pool as before
+        <programlisting>std::future&lt;int> fu = boost::asynchronous::post_future(pool, // pool as before
     [this]()
     {
         return boost::asynchronous::parallel_reduce(                   // reduce will be done in parallel after for
@@ -635,7 +635,7 @@ private:
                     object.</para>
                 <para>Like an Active Object, a client uses a proxy (a shared object type), which
                     offers the same members as the real servant, with the same parameters, the only
-                    difference being the return type, a boost::future&lt;R>, with R being the return
+                    difference being the return type, a std::future&lt;R>, with R being the return
                     type of the servant's member. All calls to a servant from the client side are
                     posted, which includes the servant constructor and destructor. When the last
                     instance of a servant is destroyed, be it used inside the Thread world or
@@ -761,10 +761,10 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                             new boost::asynchronous::threadpool_scheduler&lt;
                                 boost::asynchronous::lockfree_queue&lt;> >(3));
 // post a simple task and wait for execution to complete
-boost::future&lt;void> fuv = boost::asynchronous::post_future(scheduler, void_task());
+std::future&lt;void> fuv = boost::asynchronous::post_future(scheduler, void_task());
 fuv.get();
 // post a simple task and wait for result
-boost::future&lt;int> fui = boost::asynchronous::post_future(scheduler, int_task());
+std::future&lt;int> fui = boost::asynchronous::post_future(scheduler, int_task());
 int res = fui.get();
   </programlisting>
                 <para>Of course this works with C++11 lambdas:</para>
@@ -772,14 +772,14 @@ int res = fui.get();
                             new boost::asynchronous::threadpool_scheduler&lt;
                                 boost::asynchronous::lockfree_queue&lt;> >(3));
 // post a simple task and wait for execution to complete
-boost::future&lt;void> fuv = boost::asynchronous::post_future(scheduler, [](){std::cout &lt;&lt; "void lambda" &lt;&lt; std::endl;});
+std::future&lt;void> fuv = boost::asynchronous::post_future(scheduler, [](){std::cout &lt;&lt; "void lambda" &lt;&lt; std::endl;});
 fuv.get();
 // post a simple task and wait for result
-boost::future&lt;int> fui = boost::asynchronous::post_future(scheduler, [](){std::cout &lt;&lt; "int lambda" &lt;&lt; std::endl;return 42;});
+std::future&lt;int> fui = boost::asynchronous::post_future(scheduler, [](){std::cout &lt;&lt; "int lambda" &lt;&lt; std::endl;return 42;});
 int res = fui.get();   </programlisting>
                 <para>boost::asynchronous::post_future posts a piece of work to a threadpool
-                    scheduler with 3 threads and using a lockfree_queue. We get a
-                    boost::future&lt;the type of the task return type>.</para>
+                    scheduler with 3 threads and using a lockfree_queue. We get a std::future&lt;the
+                    type of the task return type>.</para>
                 <para>This looks like much std::async, but we're just getting started. Let's move on
                     to something more asynchronous.</para>
             </sect1>
@@ -838,7 +838,7 @@ public:
         // post a call to foo. To avoid races, the reference is ignored.
         proxy.foo(something);
         // post and get a future because we're interested in the result.
-        boost::future&lt;int> fu = proxy.doIt();
+        std::future&lt;int> fu = proxy.doIt();
         std::cout&lt;&lt; "future:" &lt;&lt; fu.get() &lt;&lt; std::endl;
     }// here, Servant's destructor is posted and waited for
 }// scheduler is gone, its thread has been joined
@@ -1052,9 +1052,9 @@ struct Servant2 : boost::asynchronous::trackable_servant&lt;>
                     parameters for <code>trackable_servant</code>, in case you wondered why they are
                     here.</para>
                 <programlisting>// we will be using loggable jobs internally
-typedef boost::asynchronous::any_loggable&lt;boost::chrono::high_resolution_clock> <emphasis role="bold">servant_job</emphasis>;
+typedef boost::asynchronous::any_loggable&lt;std::chrono::high_resolution_clock> <emphasis role="bold">servant_job</emphasis>;
 // the type of our log
-typedef std::map&lt;std::string,std::list&lt;boost::asynchronous::diagnostic_item&lt;boost::chrono::high_resolution_clock> > > <emphasis role="bold">diag_type</emphasis>;
+typedef std::map&lt;std::string,std::list&lt;boost::asynchronous::diagnostic_item&lt;std::chrono::high_resolution_clock> > > <emphasis role="bold">diag_type</emphasis>;
 
 // we log our scheduler and our threadpool scheduler (both use servant_job)
 struct Servant : boost::asynchronous::trackable_servant&lt;<emphasis role="bold">servant_job</emphasis>,<emphasis role="bold">servant_job</emphasis>>
@@ -1114,8 +1114,8 @@ for (auto mit = single_thread_sched_diag.begin(); mit != single_thread_sched_dia
      std::cout &lt;&lt; "job type: " &lt;&lt; (*mit).first &lt;&lt; std::endl;
      for (auto jit = (*mit).second.begin(); jit != (*mit).second.end();++jit)
      {
-          std::cout &lt;&lt; "job waited in us: " &lt;&lt; boost::chrono::nanoseconds((*jit).get_started_time() - (*jit).<emphasis role="bold">get_posted_time()</emphasis>).count() / 1000 &lt;&lt; std::endl;
-          std::cout &lt;&lt; "job lasted in us: " &lt;&lt; boost::chrono::nanoseconds((*jit).get_finished_time() - (*jit).<emphasis role="bold">get_started_time()</emphasis>).count() / 1000 &lt;&lt; std::endl;
+          std::cout &lt;&lt; "job waited in us: " &lt;&lt; std::chrono::nanoseconds((*jit).get_started_time() - (*jit).<emphasis role="bold">get_posted_time()</emphasis>).count() / 1000 &lt;&lt; std::endl;
+          std::cout &lt;&lt; "job lasted in us: " &lt;&lt; std::chrono::nanoseconds((*jit).get_finished_time() - (*jit).<emphasis role="bold">get_started_time()</emphasis>).count() / 1000 &lt;&lt; std::endl;
           std::cout &lt;&lt; "job interrupted? "  &lt;&lt; std::boolalpha &lt;&lt; (*jit).<emphasis role="bold">is_interrupted()</emphasis> &lt;&lt; std::endl;
           std::cout &lt;&lt; "job failed? "  &lt;&lt; std::boolalpha &lt;&lt; (*jit).<emphasis role="bold">is_failed()</emphasis> &lt;&lt; std::endl; // did this job throw an exception?
      }
@@ -1243,7 +1243,7 @@ public:
                     can then define the priority of the posted servant constructor and
                     destructor.</para>
                 <programlisting>ServantProxy proxy(scheduler);
-boost::future&lt;boost::future&lt;int>> fu = proxy.start_async_work();</programlisting>
+std::future&lt;std::future&lt;int>> fu = proxy.start_async_work();</programlisting>
                 <para>Calling our proxy member stays unchanged because the macro defines the
                     priority of the call.</para>
                 <para>We also have an extended version of <code>post_callback</code>, called by a
@@ -1899,7 +1899,7 @@ struct fib_task : public <emphasis role="bold">boost::asynchronous::continuation
                     <para>What about logging? We don't want to give up this feature of course and
                         would like to know how long all these fib_task took to complete. This is
                         done through minor changes. As always we need a job:</para>
-                    <programlisting>typedef boost::asynchronous::any_loggable&lt;boost::chrono::high_resolution_clock> servant_job;                                                 </programlisting>
+                    <programlisting>typedef boost::asynchronous::any_loggable&lt;std::chrono::high_resolution_clock> servant_job;                                                 </programlisting>
                     <para> We give the logged name of the task in the constructor of fib_task, for
                         example fib_task_xxx:</para>
                     <programlisting>fib_task(long n,long cutoff)
@@ -2123,29 +2123,29 @@ struct main_task : public boost::asynchronous::continuation_task&lt;long>
         // simulate algo work
         boost::this_thread::sleep(boost::posix_time::milliseconds(100));
         // let's say we just found a subtask
-        boost::future&lt;int> fu1 = boost::asynchronous::post_future(locked_scheduler,sub_task());
+        std::future&lt;int> fu1 = boost::asynchronous::post_future(locked_scheduler,sub_task());
         // simulate more algo work
         boost::this_thread::sleep(boost::posix_time::milliseconds(100));
         // let's say we just found a subtask
-        boost::future&lt;int> fu2 = boost::asynchronous::post_future(locked_scheduler,sub_task());
+        std::future&lt;int> fu2 = boost::asynchronous::post_future(locked_scheduler,sub_task());
         // simulate algo work
         boost::this_thread::sleep(boost::posix_time::milliseconds(100));
         // let's say we just found a subtask
-        boost::future&lt;int> fu3 = boost::asynchronous::post_future(locked_scheduler,sub_task());
+        std::future&lt;int> fu3 = boost::asynchronous::post_future(locked_scheduler,sub_task());
 
         // our algo is now done, wrap all and return
         boost::asynchronous::<emphasis role="bold">create_continuation</emphasis>(
                     // called when subtasks are done, set our result
-                    [task_res](std::tuple&lt;boost::future&lt;int>,boost::future&lt;int>,boost::future&lt;int> > res)
+                    [task_res](std::tuple&lt;std::future&lt;int>,std::future&lt;int>,std::future&lt;int> > res)
                     {
                         try
                         {
                             long r = std::get&lt;0>(res).get() + std::get&lt;1>(res).get()+ std::get&lt;2>(res).get();
                             <emphasis role="bold">task_res.set_value(r);</emphasis>
                         }
-                        catch(std::exception&amp; e)
+                        catch(...)
                         {
-                            <emphasis role="bold">task_res.set_exception(boost::copy_exception(e));</emphasis>
+                            <emphasis role="bold">task_res.set_exception(std::current_exception());</emphasis>
                         }
                     },
                     // future results of recursive tasks
@@ -2160,7 +2160,7 @@ struct main_task : public boost::asynchronous::continuation_task&lt;long>
                     exception), the callback is called, with 3 futures containing the result.</para>
                 <para>Advantage:<itemizedlist>
                         <listitem>
-                            <para>can be used with any library returning a boost::future</para>
+                            <para>can be used with any library returning a std::future</para>
                         </listitem>
                     </itemizedlist></para>
                 <para>Drawbacks:<itemizedlist>
@@ -2196,35 +2196,35 @@ struct main_task : public boost::asynchronous::continuation_task&lt;long>
             // ok, we are shutting down, ok give up
             return;
         // simulate algo work
-        std::vector&lt;boost::future&lt;int> > fus;
+        std::vector&lt;std::future&lt;int> > fus;
         boost::this_thread::sleep(boost::posix_time::milliseconds(100));
         // let's say we just found a subtask
-        boost::future&lt;int> fu1 = boost::asynchronous::post_future(locked_scheduler,sub_task());
+        std::future&lt;int> fu1 = boost::asynchronous::post_future(locked_scheduler,sub_task());
         fus.emplace_back(std::move(fu1));
         // simulate more algo work
         boost::this_thread::sleep(boost::posix_time::milliseconds(100));
         // let's say we just found a subtask
-        boost::future&lt;int> fu2 = boost::asynchronous::post_future(locked_scheduler,sub_task());
+        std::future&lt;int> fu2 = boost::asynchronous::post_future(locked_scheduler,sub_task());
         fus.emplace_back(std::move(fu2));
         // simulate algo work
         boost::this_thread::sleep(boost::posix_time::milliseconds(100));
         // let's say we just found a subtask
-        boost::future&lt;int> fu3 = boost::asynchronous::post_future(locked_scheduler,sub_task());
+        std::future&lt;int> fu3 = boost::asynchronous::post_future(locked_scheduler,sub_task());
         fus.emplace_back(std::move(fu3));
 
         // our algo is now done, wrap all and return
         boost::asynchronous::<emphasis role="bold">create_continuation</emphasis>(
                     // called when subtasks are done, set our result
-                    [task_res](std::vector&lt;boost::future&lt;int>> res)
+                    [task_res](std::vector&lt;std::future&lt;int>> res)
                     {
                         try
                         {
                             long r = res[0].get() + res[1].get() + res[2].get();
                             task_res.set_value(r);
                         }
-                        catch(std::exception&amp; e)
+                        catch(...)
                         {
-                            task_res.set_exception(boost::copy_exception(e));
+                            task_res.set_exception(std::current_exception());
                         }
                     },
                     // future results of recursive tasks
@@ -2366,8 +2366,8 @@ for (int i =0 ;i &lt; 10 ; ++i)
                             boost::asynchronous::lockfree_queue&lt;boost::asynchronous::any_serializable>>>(threads);
         boost::asynchronous::tcp::<emphasis role="bold">simple_tcp_client_proxy proxy</emphasis>(scheduler,pool,server_address,server_port,executor,
                                                                     0/*ms between calls to server*/);
-        boost::future&lt;boost::future&lt;void> > fu = proxy.run();
-        boost::future&lt;void> fu_end = fu.get();
+        std::future&lt;std::future&lt;void> > fu = proxy.run();
+        std::future&lt;void> fu_end = fu.get();
         fu_end.get();
     }
     return 0;
@@ -2493,7 +2493,7 @@ struct fib_task : public boost::asynchronous::continuation_task&lt;long>
             // n>= cutoff, create 2 new tasks and when both are done, set our result (res(task1) + res(task2))
             boost::asynchronous::create_callback_continuation_job&lt;boost::asynchronous::any_serializable>(
                         // called when subtasks are done, set our result
-                        [task_res](std::tuple&lt;boost::future&lt;long>,boost::future&lt;long> > res)
+                        [task_res](std::tuple&lt;std::future&lt;long>,std::future&lt;long> > res)
                         {
                             long r = std::get&lt;0>(res).get() + std::get&lt;1>(res).get();
                             task_res.set_value(r);
@@ -2597,8 +2597,8 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
       ServantProxy proxy(scheduler,<emphasis role="bold">pool</emphasis>);
       // result of BOOST_ASYNC_FUTURE_MEMBER is a shared_future,
       // so we have a shared_future of a shared_future(result of start_async_work)
-      boost::future&lt;boost::future&lt;long> > fu = proxy.calc_fibonacci(fibo_val,cutoff);
-      boost::future&lt;long> resfu = fu.get();
+      std::future&lt;std::future&lt;long> > fu = proxy.calc_fibonacci(fibo_val,cutoff);
+      std::future&lt;long> resfu = fu.get();
       long res = resfu.get();
 }</programlisting>                    
                 <para>Notice how we give only the worker "pool" to the servant. This means, the
@@ -2665,8 +2665,8 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                         0/*ms between calls to server*/,
                         <emphasis role="bold">job_getting_policy /* number of jobs we try to keep in queue */</emphasis>);
         // run forever
-        boost::future&lt;boost::future&lt;void> > fu = proxy.run();
-        boost::future&lt;void> fu_end = fu.get();
+        std::future&lt;std::future&lt;void> > fu = proxy.run();
+        std::future&lt;void> fu_end = fu.get();
         fu_end.get();
     }
     return 0;
@@ -2785,8 +2785,8 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
    auto composite = boost::asynchronous::create_shared_scheduler_proxy(new boost::asynchronous::<emphasis role="bold">composite_threadpool_scheduler</emphasis>&lt;boost::asynchronous::any_serializable>
                                                                    (<emphasis role="bold">pool</emphasis>,<emphasis role="bold">tcp_server</emphasis>));
 
-   boost::future&lt;boost::future&lt;void> > fu = client_proxy.run();
-   boost::future&lt;void> fu_end = fu.get();
+   std::future&lt;std::future&lt;void> > fu = client_proxy.run();
+   std::future&lt;void> fu_end = fu.get();
    fu_end.get();
 } //end block
 
@@ -3590,7 +3590,7 @@ parallel_for(Iterator beg, Iterator end,Func func,long cutoff,const std::string&
 };
 
 // same using post_future
-boost::future&lt;void> fu = post_future(
+std::future&lt;void> fu = post_future(
                            [this](){
                             <emphasis role="bold">return</emphasis> boost::asynchronous::<emphasis role="bold">parallel_for</emphasis>(<emphasis role="bold">this->m_data.begin(),this->m_data.end()</emphasis>,
                                                                  [](int&amp; i)
@@ -3625,7 +3625,7 @@ boost::future&lt;void> fu = post_future(
                         >the complete example</link>.</para>
                     <para>The functor can either be called for every single element, or for a range
                         of elements:
-                        <programlisting>boost::future&lt;void> fu = post_future(
+                        <programlisting>std::future&lt;void> fu = post_future(
                            [this](){
                             <emphasis role="bold">return</emphasis> boost::asynchronous::<emphasis role="bold">parallel_for</emphasis>(<emphasis role="bold">this->m_data.begin(),this->m_data.end()</emphasis>,
                                                                  [](std::vector&lt;int>::iterator beg, std::vector&lt;int>::iterator end)
@@ -7039,7 +7039,7 @@ boost::asynchronous::any_shared_scheduler_proxy&lt;> scheduler =
           boost::asynchronous::lockfree_queue&lt;>>>(10); // size of queue
                 </programlisting>
                 <para>Or, using logging:</para>
-                <programlisting>typedef boost::asynchronous::any_loggable&lt;boost::chrono::high_resolution_clock> <emphasis role="bold">servant_job</emphasis>;
+                <programlisting>typedef boost::asynchronous::any_loggable&lt;std::chrono::high_resolution_clock> <emphasis role="bold">servant_job</emphasis>;
 
 boost::asynchronous::any_shared_scheduler_proxy&lt;<emphasis role="bold">servant_job</emphasis>> scheduler = 
     boost::asynchronous::make_shared_scheduler_proxy&lt;
@@ -7111,7 +7111,7 @@ boost::asynchronous::any_shared_scheduler_proxy&lt;> scheduler =
  
                 </programlisting>
                 <para>Or, using logging:</para>
-                <programlisting>typedef boost::asynchronous::any_loggable&lt;boost::chrono::high_resolution_clock> <emphasis role="bold">servant_job</emphasis>;
+                <programlisting>typedef boost::asynchronous::any_loggable&lt;std::chrono::high_resolution_clock> <emphasis role="bold">servant_job</emphasis>;
 
 boost::asynchronous::any_shared_scheduler_proxy&lt;<emphasis role="bold">servant_job</emphasis>> scheduler = 
     boost::asynchronous::make_shared_scheduler_proxy&lt;
@@ -7181,7 +7181,7 @@ boost::asynchronous::any_shared_scheduler_proxy&lt;> scheduler =
                           boost::asynchronous::lockfree_queue&lt;>>>(4,10); // size of queue=10, 4 threads in pool
                 </programlisting>
                 <para>Or, using logging:</para>
-                <programlisting>typedef boost::asynchronous::any_loggable&lt;boost::chrono::high_resolution_clock> <emphasis role="bold">servant_job</emphasis>;
+                <programlisting>typedef boost::asynchronous::any_loggable&lt;std::chrono::high_resolution_clock> <emphasis role="bold">servant_job</emphasis>;
 
 boost::asynchronous::any_shared_scheduler_proxy&lt;<emphasis role="bold">servant_job</emphasis>> scheduler = 
     boost::asynchronous::make_shared_scheduler_proxy&lt;
@@ -7248,7 +7248,7 @@ boost::asynchronous::any_shared_scheduler_proxy&lt;> scheduler =
                           boost::asynchronous::lockfree_queue&lt;>>>(4,10); // size of queue=10, 4 threads in pool
                 </programlisting>
                 <para>Or, using logging:</para>
-                <programlisting>typedef boost::asynchronous::any_loggable&lt;boost::chrono::high_resolution_clock> <emphasis role="bold">servant_job</emphasis>;
+                <programlisting>typedef boost::asynchronous::any_loggable&lt;std::chrono::high_resolution_clock> <emphasis role="bold">servant_job</emphasis>;
 
 boost::asynchronous::any_shared_scheduler_proxy&lt;<emphasis role="bold">servant_job</emphasis>> scheduler = 
     boost::asynchronous::make_shared_scheduler_proxy&lt;
@@ -7436,7 +7436,7 @@ auto tp_worker = boost::asynchronous::make_shared_scheduler_proxy&lt;<emphasis r
                 <para>Declaration:</para>
                 <programlisting>template&lt;class Job = boost::asynchronous::any_callable,
          class FindPosition=boost::asynchronous::default_find_position&lt; >,
-         class Clock = boost::chrono::high_resolution_clock  >
+         class Clock = std::chrono::high_resolution_clock  >
 class composite_threadpool_scheduler;                 
                 </programlisting>
                 <para>
