@@ -21,7 +21,7 @@
         <title>Introduction</title>
         <para>
             <emphasis role="underline">Note</emphasis>: Asynchronous is not part of the Boost
-            library. It is planed to be offered for Review at the beginning of 2016. </para>
+            library. It is planed to be offered for Review at the beginning in 2017. </para>
         <para>Asynchronous is first of all an architecture tool. It allows organizing a complete
             application into Thread Worlds, each world having the possibility to use the same or
             different threadpools for long-lasting tasks. The library provides an implementation of
