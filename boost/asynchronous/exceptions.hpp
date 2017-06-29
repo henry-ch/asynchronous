@@ -28,9 +28,32 @@ void asynchronous_throw(SomethingDerivedFromAsynchronousException ex, const char
   ex.line_ = line;
   throw ex;
 }
+
+template<
+    class SomethingDerivedFromAsynchronousException>
+std::exception_ptr asynchronous_create_exception(SomethingDerivedFromAsynchronousException ex, const char* currentFunction, const char* file, int line)
+{
+    std::exception_ptr eptr;
+    try
+    {
+      ex.type = std::type_index(typeid(ex));
+      ex.what_ = ex.what();
+      ex.currentFunction_ = currentFunction;
+      ex.file_ = file;
+      ex.line_ = line;
+      throw ex;
+    }
+    catch(...)
+    {
+        eptr = std::current_exception();
+    }
+    return eptr;
+}
+
 }}
 #define ASYNCHRONOUS_THROW(SomethingDerivedFromAsynchronousException_) asynchronous_throw(SomethingDerivedFromAsynchronousException_, BOOST_CURRENT_FUNCTION, __FILE__, __LINE__)
 
+#define ASYNCHRONOUS_CREATE_EXCEPTION(SomethingDerivedFromAsynchronousException_) asynchronous_create_exception(SomethingDerivedFromAsynchronousException_, BOOST_CURRENT_FUNCTION, __FILE__, __LINE__)
 
 
 namespace boost { namespace asynchronous

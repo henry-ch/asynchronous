@@ -77,7 +77,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         servant_dtor = true;
     }
 
-    boost::shared_future<void> test_transform_inclusive_scan()
+    std::shared_future<void> test_transform_inclusive_scan()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant async work not posted.");
         generate(m_data1,1000,700);
@@ -85,8 +85,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
         auto data_copy = m_data1;
         auto data_copy2 = m_data2;
         // we need a promise to inform caller when we're done
-        boost::shared_ptr<boost::promise<void> > aPromise(new boost::promise<void>);
-        boost::shared_future<void> fu = aPromise->get_future();
+        boost::shared_ptr<std::promise<void> > aPromise(new std::promise<void>);
+        std::shared_future<void> fu = aPromise->get_future();
         boost::asynchronous::any_shared_scheduler_proxy<> tp =get_worker();
         std::vector<boost::thread::id> ids = tp.thread_ids();
         // start long tasks
@@ -139,10 +139,10 @@ BOOST_AUTO_TEST_CASE( test_transform_inclusive_scan )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        boost::shared_future<boost::shared_future<void> > fuv = proxy.test_transform_inclusive_scan();
+        std::shared_future<std::shared_future<void> > fuv = proxy.test_transform_inclusive_scan();
         try
         {
-            boost::shared_future<void> resfuv = fuv.get();
+            std::shared_future<void> resfuv = fuv.get();
             resfuv.get();
         }
         catch(...)
