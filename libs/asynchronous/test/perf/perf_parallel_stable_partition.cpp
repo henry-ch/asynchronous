@@ -196,7 +196,7 @@ int main( int argc, const char *argv[] )
                 //boost::asynchronous::no_cpu_load_saving
                 >>(tpsize);
     // set processor affinity to improve cache usage. We start at core 0, until tpsize-1
-    scheduler.processor_bind(0);
+    scheduler.processor_bind({{0,tpsize}});
 
     servant_intern=0.0;
     for (int i=0;i<LOOP;++i)

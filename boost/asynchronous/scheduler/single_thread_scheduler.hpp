@@ -154,9 +154,9 @@ public:
     {
         return m_name;
     }
-    void processor_bind(unsigned int p)
+    void processor_bind(std::vector<std::tuple<unsigned int/*first core*/,unsigned int/*number of threads*/>> p)
     {
-        boost::asynchronous::detail::processor_bind_task task(p);
+        boost::asynchronous::detail::processor_bind_task task(std::get<0>(p[0]));
         boost::asynchronous::any_callable job(std::move(task));
         m_private_queue->push(std::move(job),std::numeric_limits<std::size_t>::max());
     }

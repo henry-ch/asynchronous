@@ -158,13 +158,18 @@ public:
     {
         return boost::asynchronous::any_joinable (boost::asynchronous::detail::worker_wrap<boost::thread_group>(m_group));
     }
-    void processor_bind(unsigned int p)
+    void processor_bind(std::vector<std::tuple<unsigned int/*first core*/,unsigned int/*number of threads*/>> p)
     {
-        for (size_t i = 1; i<= m_ioservices.size();++i)
+        // our thread (queue) index. 0 means "don't care" and is therefore not desirable)
+        size_t t = 1;
+        for(auto const& v : p)
         {
-            boost::asynchronous::detail::processor_bind_task task(p+i-1);
-            job_type job(std::move(task));
-            this->post(std::move(job),i);
+            for (size_t i = 0; i<= std::get<1>(v) && (t < m_ioservices.size()) ;++i)
+            {
+                boost::asynchronous::detail::processor_bind_task task(std::get<0>(v)+i);
+                job_type job(std::move(task));
+                this->post(std::move(job),t++);
+            }
         }
     }
     

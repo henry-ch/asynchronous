@@ -219,17 +219,18 @@ public:
         }
         return res;
     }
-    void processor_bind(unsigned int p)
+    void processor_bind(std::vector<std::tuple<unsigned int,unsigned int>> /*p*/)
     {
-        // distribute linearly to subpools according to their queue sizes
-        // This is only useful for multiqueue_ schedulers as they have a thread/queue
-        for (typename std::vector<subpool_type>::iterator it = m_subpools.begin(); it != m_subpools.end();++it)
-        {
-            (*it).processor_bind(p);
-            auto one_queue_vec = (*it).get_queue_size();
-            p += std::accumulate(one_queue_vec.begin(),one_queue_vec.end(),0,
-                                 [](std::size_t rhs,std::size_t lhs){return rhs + lhs;});
-        }
+        //TODO currently unsupported
+//        // distribute linearly to subpools according to their queue sizes
+//        // This is only useful for multiqueue_ schedulers as they have a thread/queue
+//        for (typename std::vector<subpool_type>::iterator it = m_subpools.begin(); it != m_subpools.end();++it)
+//        {
+//            (*it).processor_bind(p);
+//            auto one_queue_vec = (*it).get_queue_size();
+//            p += std::accumulate(one_queue_vec.begin(),one_queue_vec.end(),0,
+//                                 [](std::size_t rhs,std::size_t lhs){return rhs + lhs;});
+//        }
     }
     void set_steal_from_queues(std::vector<boost::asynchronous::any_queue_ptr<job_type> > const& )
     {
@@ -467,17 +468,18 @@ private:
         {
             return "composite_threadpool_scheduler";
         }
-        void processor_bind(unsigned int p)
+        void processor_bind(std::vector<std::tuple<unsigned int,unsigned int>> /*p*/)
         {
-            // distribute linearly to subpools according to their queue sizes
-            // This is only useful for multiqueue_ schedulers as they have a thread/queue
-            for (auto it = m_schedulers.begin(); it != m_schedulers.end();++it)
-            {
-                 (*it).processor_bind(p);
-                 auto one_queue_vec = (*it).get_queue_size();
-                 p += std::accumulate(one_queue_vec.begin(),one_queue_vec.end(),0,
-                                  [](std::size_t rhs,std::size_t lhs){return rhs + lhs;});
-            }
+            //TODO currently unsupported
+//            // distribute linearly to subpools according to their queue sizes
+//            // This is only useful for multiqueue_ schedulers as they have a thread/queue
+//            for (auto it = m_schedulers.begin(); it != m_schedulers.end();++it)
+//            {
+//                 (*it).processor_bind(p);
+//                 auto one_queue_vec = (*it).get_queue_size();
+//                 p += std::accumulate(one_queue_vec.begin(),one_queue_vec.end(),0,
+//                                  [](std::size_t rhs,std::size_t lhs){return rhs + lhs;});
+//            }
         }
     private:
         std::vector<boost::asynchronous::any_shared_scheduler<job_type> > m_schedulers;

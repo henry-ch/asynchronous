@@ -14,6 +14,8 @@
 #include <map>
 #include <list>
 #include <cstddef>
+#include <vector>
+#include <tuple>
 
 #include <boost/pointee.hpp>
 #include <boost/mpl/vector.hpp>
@@ -71,7 +73,7 @@ struct any_shared_scheduler_concept :
     boost::asynchronous::has_get_diagnostics<boost::asynchronous::scheduler_diagnostics(),
                                           const boost::type_erasure::_a>,
     boost::asynchronous::has_get_name<std::string(), const boost::type_erasure::_a>,
-    boost::asynchronous::has_processor_bind<void(unsigned int), boost::type_erasure::_a>
+    boost::asynchronous::has_processor_bind<void(std::vector<std::tuple<unsigned int,unsigned int>>), boost::type_erasure::_a>
 > {};
 
 template <class T = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
@@ -105,7 +107,7 @@ struct any_shared_scheduler_concept
                                                     boost::asynchronous::register_diagnostics_type()) =0;
     virtual void clear_diagnostics() =0;
     virtual std::string get_name()const =0;
-    virtual void processor_bind(unsigned int p)=0;
+    virtual void processor_bind(std::vector<std::tuple<unsigned int/*first core*/,unsigned int /*number of threads*/>> p)=0;
 };
 
 // concept for shared pointer to a scheduler
@@ -202,9 +204,9 @@ public:
     {
         return (*my_ptr).get_name();
     }
-    void processor_bind(unsigned int p)
+    void processor_bind(std::vector<std::tuple<unsigned int,unsigned int>> p)
     {
-        (*my_ptr).processor_bind(p);
+        (*my_ptr).processor_bind(std::move(p));
     }
 private:
     any_shared_scheduler_ptr<JOB> my_ptr;

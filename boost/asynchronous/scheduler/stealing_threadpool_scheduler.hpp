@@ -173,13 +173,18 @@ public:
     {
         return m_name;
     }
-    void processor_bind(unsigned int p)
+    void processor_bind(std::vector<std::tuple<unsigned int/*first core*/,unsigned int/*number of threads*/>> p)
     {
-        for (size_t i = 0; i< m_number_of_workers;++i)
+        // our thread (queue) index. 0 means "don't care" and is therefore not desirable)
+        size_t t = 0;
+        for(auto const& v : p)
         {
-            boost::asynchronous::detail::processor_bind_task task(p+i);
-            boost::asynchronous::any_callable job(std::move(task));
-            m_private_queues[i]->push(std::move(job),std::numeric_limits<std::size_t>::max());
+            for (size_t i = 0; i<= std::get<1>(v) && (t < m_number_of_workers);++i)
+            {
+                boost::asynchronous::detail::processor_bind_task task(std::get<0>(v)+i);
+                boost::asynchronous::any_callable job(std::move(task));
+                m_private_queues[t++]->push(std::move(job),std::numeric_limits<std::size_t>::max());
+            }
         }
     }
     // try to execute a job, return true

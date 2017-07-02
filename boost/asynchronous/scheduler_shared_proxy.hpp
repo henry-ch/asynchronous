@@ -165,9 +165,9 @@ public:
     {
         return m_scheduler->get_name();
     }
-    void processor_bind(unsigned int p)
+    void processor_bind(std::vector<std::tuple<unsigned int,unsigned int>> p)
     {
-        m_scheduler->processor_bind(p);
+        m_scheduler->processor_bind(std::move(p));
     }
     ~scheduler_shared_proxy_impl()
     {
@@ -371,9 +371,9 @@ public:
      * \brief thread 0 will be bound to from, thread 1 to from + 1, etc.
      * \param start id
      */
-    void processor_bind(unsigned int p)
+    void processor_bind(std::vector<std::tuple<unsigned int,unsigned int>> p)
     {
-        m_impl->processor_bind(p);
+        m_impl->processor_bind(std::move(p));
     }
     ~scheduler_shared_proxy()
     {

@@ -61,12 +61,12 @@ inline bool operator< (const LongOne& lhs, const LongOne& rhs)
     return std::lexicographical_compare(lhs.data.begin(),lhs.data.end(),rhs.data.begin(),rhs.data.end());
 }
 #endif
-#define NELEM 10000000
-#define SORTED_TYPE LongOne
-#define NO_SPREADSORT
+//#define NELEM 10000000
+//#define SORTED_TYPE LongOne
+//#define NO_SPREADSORT
 
-//#define NELEM 200000000
-//#define SORTED_TYPE uint32_t
+#define NELEM 200000000
+#define SORTED_TYPE uint32_t
 
 //#define NELEM 10000000
 //#define SORTED_TYPE std::string
@@ -283,7 +283,7 @@ int main( int argc, const char *argv[] )
                         boost::asynchronous::no_cpu_load_saving
                     >>(tpsize,tasks);
     // set processor affinity to improve cache usage. We start at core 0, until tpsize-1
-    pool.processor_bind(0);
+    pool.processor_bind({{0,tpsize}});
 
     servant_intern=0.0;
     for (int i=0;i<LOOP;++i)

@@ -94,7 +94,7 @@ int main( int argc, const char *argv[] )
                             boost::asynchronous::no_cpu_load_saving*/
                         >>(tpsize,tasks);
     // set processor affinity to improve cache usage. We start at core 0, until tpsize-1
-    pool.processor_bind(0);
+    pool.processor_bind({{0,tpsize}});
     // creation asynchronous
     duration2=0.0;
     start = std::chrono::high_resolution_clock::now();

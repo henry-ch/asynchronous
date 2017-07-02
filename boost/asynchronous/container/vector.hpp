@@ -1389,7 +1389,7 @@ public:
             auto placement_result = fu.get();
             if (placement_result.first != boost::asynchronous::detail::parallel_placement_helper_enum::success)
             {
-                boost::rethrow_exception(placement_result.second);
+                std::rethrow_exception(placement_result.second);
             }
         }
         else
