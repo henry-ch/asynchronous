@@ -25,6 +25,7 @@
 #include <boost/asynchronous/servant_proxy.hpp>
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
+#include <boost/asynchronous/algorithm/parallel_sort.hpp>
 
 using namespace std;
 #define LOOP_COUNT 10000
@@ -43,7 +44,7 @@ void test_callable_multiqueue_threadpool_scheduler_lockfree(long tpsize,long que
     for (auto i=0; i< LOOP_COUNT; ++i)
     {
         auto fu = boost::asynchronous::post_future(scheduler,
-                   []()
+                   []()mutable
                    {
                    });
         fus.emplace_back(std::move(fu));
@@ -69,7 +70,7 @@ void test_loggable_multiqueue_threadpool_scheduler_lockfree(long tpsize,long que
     for (auto i=0; i< LOOP_COUNT; ++i)
     {
         auto fu = boost::asynchronous::post_future(scheduler,
-                   []()
+                   []()mutable
                    {
                    },"loooooooooooooooooonnnnnnnnnnnnnnngggggggggggggggggg",0);
         fus.emplace_back(std::move(fu));
@@ -99,7 +100,7 @@ void test_loggable_composite_threadpool_scheduler_lockfree(long tpsize,long queu
     for (auto i=0; i< LOOP_COUNT; ++i)
     {
         auto fu = boost::asynchronous::post_future(scheduler,
-                   []()
+                   []()mutable
                    {
                    },"loooooooooooooooooonnnnnnnnnnnnnnngggggggggggggggggg",i%2);
         fus.emplace_back(std::move(fu));
@@ -127,7 +128,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         for (auto i=0; i< LOOP_COUNT; ++i)
         {
             post_callback(
-                   [](){},
+                   []()mutable{},
                    [this,p](boost::asynchronous::expected<void>)
                    {
                         if(++cpt_ == LOOP_COUNT)
@@ -144,19 +145,25 @@ struct Servant : boost::asynchronous::trackable_servant<>
     {
         std::shared_ptr<std::promise<void> > p(new std::promise<void>);
         std::future<void> fu = p->get_future();
+        std::vector<std::shared_ptr<std::vector<int>>> datas;
+        for (auto i=0; i< LOOP_COUNT; ++i)
+        {
+            std::shared_ptr<std::vector<int>> data = std::make_shared<std::vector<int>>(10000,1);
+            std::mt19937 mt(static_cast<unsigned int>(std::time(nullptr)));
+            std::uniform_int_distribution<> dis(0, 1000);
+            std::generate(data->begin(), data->end(), std::bind(dis, std::ref(mt)));
+            datas.push_back(data);
+        }
         auto start = std::chrono::high_resolution_clock::now();
         for (auto i=0; i< LOOP_COUNT; ++i)
         {
             post_callback(
-                   []()
-                   {
-                        std::vector<int> data = std::vector<int>(10000,1);
-                        std::mt19937 mt(static_cast<unsigned int>(std::time(nullptr)));
-                        std::uniform_int_distribution<> dis(0, 1000);
-                        std::generate(data.begin(), data.end(), std::bind(dis, std::ref(mt)));
-                        std::sort(data.begin(),data.end(),std::less<int>());
+                   [data=datas[i]]()mutable
+                   {                        
+                        //std::sort(data.begin(),data.end(),std::less<int>());
+                        return boost::asynchronous::parallel_sort(data->begin(),data->end(),std::less<int>(),1500);
                    },
-                   [this,p](boost::asynchronous::expected<void>)
+                   [this,p,data=datas[i]](boost::asynchronous::expected<void>)
                    {
                         if(++cpt_ == LOOP_COUNT)
                             p->set_value();
