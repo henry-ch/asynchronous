@@ -10,6 +10,10 @@
 #ifndef BOOST_ASYNCHRONOUS_PARALLEL_SORT_HPP
 #define BOOST_ASYNCHRONOUS_PARALLEL_SORT_HPP
 
+#if defined BOOST_ASYNCHRONOUS_HBW_SUPPORT
+#include <hbwmalloc.h>
+#endif
+
 #include <vector>
 #include <iterator> // for std::iterator_traits
 #include <type_traits>
@@ -260,8 +264,23 @@ struct parallel_sort_fast_helper: public boost::asynchronous::continuation_task<
 #ifdef BOOST_ASYNCHRONOUS_TIMING
                                 auto alloc_start = std::chrono::high_resolution_clock::now();
 #endif
-                                std::shared_ptr<char> merge_memory_ (
-                                            new char[size * sizeof(typename std::iterator_traits<Iterator>::value_type)],[](char* p){delete[] p;});
+
+#if defined BOOST_ASYNCHRONOUS_HBW_SUPPORT
+    std::shared_ptr<char> merge_memory_;
+    if (hbw_check_available() == 0)
+    {
+        merge_memory_ = std::shared_ptr<char>((char*)hbw_malloc(size * sizeof(typename std::iterator_traits<Iterator>::value_type)),
+                                              [](char* ptr){ hbw_free((void*)ptr); });
+    }
+    else
+    {
+        merge_memory_ = std::shared_ptr<char>(new char[size * sizeof(typename std::iterator_traits<Iterator>::value_type)],
+                                             [](char* p){delete[] p;});
+    }
+#else
+    std::shared_ptr<char> merge_memory_(new char[size * sizeof(typename std::iterator_traits<Iterator>::value_type)],
+                                        [](char* p){delete[] p;});
+#endif
 
 #ifdef BOOST_ASYNCHRONOUS_TIMING
                                 auto alloc_stop = std::chrono::high_resolution_clock::now();

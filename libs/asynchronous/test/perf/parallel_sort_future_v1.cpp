@@ -1,3 +1,7 @@
+#if defined BOOST_ASYNCHRONOUS_HBW_SUPPORT
+#include <hbwmalloc.h>
+#endif
+
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
@@ -132,11 +136,28 @@ void ParallelAsyncPostCbSpreadsort(SORTED_TYPE a[], size_t n)
 #endif
 }
 
-
+std::shared_ptr<SORTED_TYPE> allocate_memory_for_test_data()
+{
+#if defined BOOST_ASYNCHRONOUS_HBW_SUPPORT
+    std::shared_ptr<SORTED_TYPE> a;
+    if (hbw_check_available() == 0)
+    {
+        std::cout << "using HBW memory" << std::endl;
+        a = std::shared_ptr<SORTED_TYPE>((SORTED_TYPE*)hbw_malloc(NELEM*sizeof(SORTED_TYPE)), [](SORTED_TYPE* ptr){ hbw_free((void*)ptr); });
+    }
+    else
+    {
+        a = std::shared_ptr<SORTED_TYPE>(new SORTED_TYPE[NELEM],[](SORTED_TYPE* p){delete[] p;});
+    }
+#else
+    std::shared_ptr<SORTED_TYPE> a (new SORTED_TYPE[NELEM],[](SORTED_TYPE* p){delete[] p;});
+#endif
+    return a;
+}
 
 void test_sorted_elements(void(*pf)(SORTED_TYPE [], size_t ))
 {
-    std::shared_ptr<SORTED_TYPE> a (new SORTED_TYPE[NELEM],[](SORTED_TYPE* p){delete[] p;});
+    std::shared_ptr<SORTED_TYPE> a = allocate_memory_for_test_data();
     auto lazy = boost::asynchronous::lazy_irange(
                   0, NELEM,
                   [](uint32_t index) {
@@ -161,7 +182,7 @@ void test_sorted_elements(void(*pf)(SORTED_TYPE [], size_t ))
 }
 void test_random_elements_many_repeated(void(*pf)(SORTED_TYPE [], size_t ))
 {
-    std::shared_ptr<SORTED_TYPE> a (new SORTED_TYPE[NELEM],[](SORTED_TYPE* p){delete[] p;});
+    std::shared_ptr<SORTED_TYPE> a = allocate_memory_for_test_data();
     auto fu = boost::asynchronous::post_future(
                 pool,
                 [&]{
@@ -184,7 +205,7 @@ void test_random_elements_many_repeated(void(*pf)(SORTED_TYPE [], size_t ))
 }
 void test_random_elements_few_repeated(void(*pf)(SORTED_TYPE [], size_t ))
 {
-    std::shared_ptr<SORTED_TYPE> a (new SORTED_TYPE[NELEM],[](SORTED_TYPE* p){delete[] p;});
+    std::shared_ptr<SORTED_TYPE> a = allocate_memory_for_test_data();
     auto fu = boost::asynchronous::post_future(
                 pool,
                 [&]{
@@ -206,7 +227,7 @@ void test_random_elements_few_repeated(void(*pf)(SORTED_TYPE [], size_t ))
 }
 void test_random_elements_quite_repeated(void(*pf)(SORTED_TYPE [], size_t ))
 {
-    std::shared_ptr<SORTED_TYPE> a (new SORTED_TYPE[NELEM],[](SORTED_TYPE* p){delete[] p;});
+    std::shared_ptr<SORTED_TYPE> a = allocate_memory_for_test_data();
     auto fu = boost::asynchronous::post_future(
                 pool,
                 [&]{
@@ -229,7 +250,7 @@ void test_random_elements_quite_repeated(void(*pf)(SORTED_TYPE [], size_t ))
 }
 void test_reversed_sorted_elements(void(*pf)(SORTED_TYPE [], size_t ))
 {
-    std::shared_ptr<SORTED_TYPE> a (new SORTED_TYPE[NELEM],[](SORTED_TYPE* p){delete[] p;});
+    std::shared_ptr<SORTED_TYPE> a = allocate_memory_for_test_data();
     auto lazy = boost::asynchronous::lazy_irange(
                   0, NELEM,
                   [](uint32_t index) {
@@ -254,7 +275,7 @@ void test_reversed_sorted_elements(void(*pf)(SORTED_TYPE [], size_t ))
 }
 void test_equal_elements(void(*pf)(SORTED_TYPE [], size_t ))
 {
-    std::shared_ptr<SORTED_TYPE> a (new SORTED_TYPE[NELEM],[](SORTED_TYPE* p){delete[] p;});
+    std::shared_ptr<SORTED_TYPE> a = allocate_memory_for_test_data();
     auto fu = boost::asynchronous::post_future(
                 pool,
                 [&]{
@@ -283,7 +304,10 @@ int main( int argc, const char *argv[] )
                         boost::asynchronous::no_cpu_load_saving
                     >>(tpsize,tasks);
     // set processor affinity to improve cache usage. We start at core 0, until tpsize-1
-    pool.processor_bind({{0,tpsize}});
+    std::vector<std::tuple<unsigned int,unsigned int>> v;
+    v.push_back(std::make_tuple(0,tpsize));
+    //pool.processor_bind({{0,tpsize}});
+    pool.processor_bind(v);
 
     servant_intern=0.0;
     for (int i=0;i<LOOP;++i)

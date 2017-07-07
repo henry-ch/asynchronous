@@ -6,6 +6,9 @@
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 // For more information, see http://www.boost.org
+#if defined BOOST_ASYNCHRONOUS_HBW_SUPPORT
+#include <hbwmalloc.h>
+#endif
 
 #include <algorithm>
 #include <iostream>
@@ -24,7 +27,7 @@
 
 using namespace std;
 
-#define SIZE 100000000
+#define SIZE 1000000000
 #define LOOP 1
 
 float Foo(float f)
@@ -75,19 +78,33 @@ void ParallelAsyncPostFuture(float a[], size_t n)
 void test(void(*pf)(float [], size_t ))
 {
     auto start_mem = std::chrono::high_resolution_clock::now();
+#if defined BOOST_ASYNCHRONOUS_HBW_SUPPORT
+    std::shared_ptr<float> a;
+    if (hbw_check_available() == 0)
+    {
+        std::cout << "using HBW memory" << std::endl;
+        a = std::shared_ptr<float>((float*)hbw_malloc(SIZE*sizeof(float)), [](float* ptr){ hbw_free((void*)ptr); });
+    }
+    else
+    {
+        std::cout << "using RAM" << std::endl;
+        a = std::shared_ptr<float>(new float[SIZE],[](float* p){delete[] p;});
+    }
+#else
     std::shared_ptr<float> a (new float[SIZE],[](float* p){delete[] p;});
+#endif
     auto duration_mem = (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start_mem).count() / 1000);
     std::cout << "memory alloc: " << duration_mem <<std::endl;
 
     auto start_generate = std::chrono::high_resolution_clock::now();
     int n = {0};
     // in case we have a huge input or complicated generate function
-    /*long tasksize = SIZE / tasks;
+    long tasksize = SIZE / tasks;
     auto fu = boost::asynchronous::post_future(
                 scheduler,
                 [&]{return boost::asynchronous::parallel_generate(a.get(), a.get()+SIZE,[&n]{ return n++; },tasksize);});
-    fu.get();*/
-    std::generate(a.get(), a.get()+SIZE,[&n]{ return n++; });
+    fu.get();
+    //std::generate(a.get(), a.get()+SIZE,[&n]{ return n++; });
     auto duration_generate = (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start_generate).count() / 1000);
     std::cout << "generate: " << duration_generate <<std::endl;
     (*pf)(a.get(),SIZE);
@@ -108,7 +125,10 @@ int main( int argc, const char *argv[] )
                     boost::asynchronous::no_cpu_load_saving
                 >>(tpsize,tasks/tpsize);
     // set processor affinity to improve cache usage. We start at core 0, until tpsize-1
-    scheduler.processor_bind({{0,tpsize}});
+    std::vector<std::tuple<unsigned int,unsigned int>> v;
+    v.push_back(std::make_tuple(0,tpsize));
+    //scheduler.processor_bind({{0,tpsize}});
+    scheduler.processor_bind(v);
 
     for (int i=0;i<LOOP;++i)
     {
