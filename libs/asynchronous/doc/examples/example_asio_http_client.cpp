@@ -115,8 +115,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
                        };
                        auto cb2=cb1;
                        // post 2 string comparison tasks, provide callback where the last step will run
-                       this->post_callback([s1,s2](){return s1 == s2;},std::move(cb1));
-                       this->post_callback([s2,s3](){return s2 == s3;},std::move(cb2));
+                       this->post_callback([s1,s2](){return s1 == s2;},std::move(cb1),"",1);
+                       this->post_callback([s2,s3](){return s2 == s3;},std::move(cb2),"",1);
                    }
                 };
         // ok, our simple "state machine" is ready, get the work going and start tcp tasks
