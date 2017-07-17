@@ -169,6 +169,12 @@ public:
     {
         m_scheduler->processor_bind(std::move(p));
     }
+
+    std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c)
+    {
+        return m_scheduler->execute_in_all_threads(std::move(c));
+    }
+
     ~scheduler_shared_proxy_impl()
     {
         // stop scheduler and block until joined
@@ -375,6 +381,18 @@ public:
     {
         m_impl->processor_bind(std::move(p));
     }
+
+    /*!
+     * \brief Executes callable (no logging) in each thread of a scheduler.
+     * \brief Useful to register something into the TLS of each thread.
+     * \param c callable object
+     * \return futures indicating when tasks have been executed
+     */
+    std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c)
+    {
+        return m_impl->execute_in_all_threads(std::move(c));
+    }
+
     ~scheduler_shared_proxy()
     {
     }

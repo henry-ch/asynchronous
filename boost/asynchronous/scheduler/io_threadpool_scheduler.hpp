@@ -320,6 +320,12 @@ public:
             }
         }
     }
+    std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c)
+    {
+        // not supported
+        return std::vector<std::future<void>>();
+    }
+
     // try to execute a job, return true
     static bool execute_one_job(std::shared_ptr<queue_type> const& queue,CPULoad* cpu_load,std::shared_ptr<diag_type> diagnostics,
                                 std::list<boost::asynchronous::any_continuation>& waiting,size_t index)

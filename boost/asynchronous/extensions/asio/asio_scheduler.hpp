@@ -37,6 +37,7 @@
 #include <boost/asynchronous/scheduler/detail/any_continuation.hpp>
 #include <boost/asynchronous/scheduler/tss_scheduler.hpp>
 #include <boost/asynchronous/scheduler/cpu_load_policies.hpp>
+#include <boost/asynchronous/scheduler/detail/execute_in_all_threads.hpp>
 
 // partial implementation of any_shared_scheduler_impl using boost::asio
 namespace boost { namespace asynchronous
@@ -171,6 +172,23 @@ public:
                 this->post(std::move(job),t++);
             }
         }
+    }
+    std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c)
+    {
+        // our thread (queue) index. 0 means "don't care" and is therefore not desirable)
+        size_t t = 1;
+        std::vector<std::future<void>> res;
+        res.reserve(m_number_of_workers);
+        for (size_t i = 0; i< m_number_of_workers;++i)
+        {
+            std::promise<void> p;
+            auto fu = p.get_future();
+            res.emplace_back(std::move(fu));
+            boost::asynchronous::detail::execute_in_all_threads_task task(std::move(c),std::move(p));
+            job_type job(std::move(task));
+            this->post(std::move(job),t++);
+        }
+        return res;
     }
     
     std::vector<boost::thread::id> thread_ids()const

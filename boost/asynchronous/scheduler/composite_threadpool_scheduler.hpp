@@ -232,6 +232,20 @@ public:
 //                                 [](std::size_t rhs,std::size_t lhs){return rhs + lhs;});
 //        }
     }
+    std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c)
+    {
+        std::vector<std::future<void>> res;
+        for (typename std::vector<subpool_type>::iterator it = m_subpools.begin(); it != m_subpools.end();++it)
+        {
+            std::vector<std::future<void>> sub_res = (*it).execute_in_all_threads(c);
+            for (auto& fu : sub_res)
+            {
+                res.emplace_back(std::move(fu));
+            }
+        }
+        return res;
+    }
+
     void set_steal_from_queues(std::vector<boost::asynchronous::any_queue_ptr<job_type> > const& )
     {
         // composite of composite is not supported
@@ -480,6 +494,19 @@ private:
 //                 p += std::accumulate(one_queue_vec.begin(),one_queue_vec.end(),0,
 //                                  [](std::size_t rhs,std::size_t lhs){return rhs + lhs;});
 //            }
+        }
+        std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c)
+        {
+            std::vector<std::future<void>> res;
+            for (auto it = m_schedulers.begin(); it != m_schedulers.end();++it)
+            {
+                std::vector<std::future<void>> sub_res = (*it).execute_in_all_threads(c);
+                for (auto& fu : sub_res)
+                {
+                    res.emplace_back(std::move(fu));
+                }
+            }
+            return res;
         }
     private:
         std::vector<boost::asynchronous::any_shared_scheduler<job_type> > m_schedulers;

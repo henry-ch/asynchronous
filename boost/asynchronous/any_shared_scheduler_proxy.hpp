@@ -94,6 +94,7 @@ struct any_shared_scheduler_proxy_concept:
     boost::asynchronous::has_set_name<void(std::string const&), boost::type_erasure::_a>,
     boost::asynchronous::has_get_name<std::string(), const boost::type_erasure::_a>,
     boost::asynchronous::has_processor_bind<void(std::vector<std::tuple<unsigned int,unsigned int>>), boost::type_erasure::_a>,
+    boost::asynchronous::has_execute_in_all_threads<std::vector<std::future<void>>(boost::asynchronous::any_callable), boost::type_erasure::_a>,
     boost::type_erasure::relaxed,
     boost::type_erasure::copy_constructible<>
 >{} ;
@@ -187,6 +188,10 @@ public:
     void processor_bind(std::vector<std::tuple<unsigned int,unsigned int>> p)
     {
         (*my_ptr).processor_bind(std::move(p));
+    }
+    std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c)
+    {
+        (*my_ptr).execute_in_all_threads(std::move(c));
     }
 private:
     any_shared_scheduler_proxy_ptr<JOB> my_ptr;
@@ -321,6 +326,14 @@ struct any_shared_scheduler_proxy_concept
      * \param start id
      */
     virtual void processor_bind(std::vector<std::tuple<unsigned int,unsigned int>> /*from*/)=0;
+
+    /*!
+     * \brief Executes callable (no logging) in each thread of a scheduler.
+     * \brief Useful to register something into the TLS of each thread.
+     * \param c callable object
+     * \return futures indicating when tasks have been executed
+     */
+    virtual std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable)=0;
 };
 template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 class any_shared_scheduler_proxy
@@ -488,6 +501,16 @@ public:
         (*my_ptr).processor_bind(std::move(p));
     }
 
+    /*!
+     * \brief Executes callable (no logging) in each thread of a scheduler.
+     * \brief Useful to register something into the TLS of each thread.
+     * \param c callable object
+     * \return futures indicating when tasks have been executed
+     */
+    std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c)
+    {
+        (*my_ptr).execute_in_all_threads(std::move(c));
+    }
 private:
     template <class J>
     friend class scheduler_weak_proxy;

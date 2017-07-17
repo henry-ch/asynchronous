@@ -32,6 +32,7 @@
 #include <boost/asynchronous/scheduler/tss_scheduler.hpp>
 #include <boost/asynchronous/scheduler/detail/lockable_weak_scheduler.hpp>
 #include <boost/asynchronous/scheduler/cpu_load_policies.hpp>
+#include <boost/asynchronous/scheduler/detail/execute_in_all_threads.hpp>
 
 namespace boost { namespace asynchronous
 {
@@ -160,6 +161,18 @@ public:
         boost::asynchronous::any_callable job(std::move(task));
         m_private_queue->push(std::move(job),std::numeric_limits<std::size_t>::max());
     }
+    std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c)
+    {
+        std::vector<std::future<void>> res;
+        res.reserve(1);
+        std::promise<void> p;
+        auto fu = p.get_future();
+        res.emplace_back(std::move(fu));
+        boost::asynchronous::detail::execute_in_all_threads_task task(std::move(c),std::move(p));
+        m_private_queue->push(std::move(task),std::numeric_limits<std::size_t>::max());
+        return res;
+    }
+
     // try to execute a job, return true
     static bool execute_one_job(std::shared_ptr<queue_type> const& queue,CPULoad& cpu_load,std::shared_ptr<diag_type> diagnostics,
                                 std::list<boost::asynchronous::any_continuation>& waiting)

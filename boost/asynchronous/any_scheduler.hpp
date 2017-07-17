@@ -16,6 +16,7 @@
 #include <cstddef>
 #include <vector>
 #include <tuple>
+#include <future>
 
 #include <boost/pointee.hpp>
 #include <boost/mpl/vector.hpp>
@@ -73,7 +74,8 @@ struct any_shared_scheduler_concept :
     boost::asynchronous::has_get_diagnostics<boost::asynchronous::scheduler_diagnostics(),
                                           const boost::type_erasure::_a>,
     boost::asynchronous::has_get_name<std::string(), const boost::type_erasure::_a>,
-    boost::asynchronous::has_processor_bind<void(std::vector<std::tuple<unsigned int,unsigned int>>), boost::type_erasure::_a>
+    boost::asynchronous::has_processor_bind<void(std::vector<std::tuple<unsigned int,unsigned int>>), boost::type_erasure::_a>,
+    boost::asynchronous::has_execute_in_all_threads<std::vector<std::future<void>>(boost::asynchronous::any_callable), boost::type_erasure::_a>
 > {};
 
 template <class T = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
@@ -107,7 +109,8 @@ struct any_shared_scheduler_concept
                                                     boost::asynchronous::register_diagnostics_type()) =0;
     virtual void clear_diagnostics() =0;
     virtual std::string get_name()const =0;
-    virtual void processor_bind(std::vector<std::tuple<unsigned int/*first core*/,unsigned int /*number of threads*/>> p)=0;
+    virtual void processor_bind(std::vector<std::tuple<unsigned int/*first core*/,unsigned int /*number of threads*/>> )=0;
+    virtual std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable)=0;
 };
 
 // concept for shared pointer to a scheduler
@@ -208,6 +211,17 @@ public:
     {
         (*my_ptr).processor_bind(std::move(p));
     }
+    /*!
+     * \brief Executes callable (no logging) in each thread of a scheduler.
+     * \brief Useful to register something into the TLS of each thread.
+     * \param c callable object
+     * \return futures indicating when tasks have been executed
+     */
+    std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c)
+    {
+        (*my_ptr).execute_in_all_threads(std::move(c));
+    }
+
 private:
     any_shared_scheduler_ptr<JOB> my_ptr;
 };

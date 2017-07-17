@@ -38,6 +38,7 @@
 #include <boost/asynchronous/scheduler/detail/any_continuation.hpp>
 #include <boost/asynchronous/scheduler/cpu_load_policies.hpp>
 #include <boost/asynchronous/any_scheduler.hpp>
+#include <boost/asynchronous/scheduler/detail/execute_in_all_threads.hpp>
 
 namespace boost { namespace asynchronous
 {
@@ -198,6 +199,21 @@ public:
                 m_private_queues[t++]->push(std::move(job),std::numeric_limits<std::size_t>::max());
             }
         }
+    }
+
+    std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c)
+    {
+        std::vector<std::future<void>> res;
+        res.reserve(m_number_of_workers);
+        for (size_t i = 0; i< m_number_of_workers;++i)
+        {
+            std::promise<void> p;
+            auto fu = p.get_future();
+            res.emplace_back(std::move(fu));
+            boost::asynchronous::detail::execute_in_all_threads_task task(std::move(c),std::move(p));
+            m_private_queues[i]->push(std::move(task),std::numeric_limits<std::size_t>::max());
+        }
+        return res;
     }
 
     void register_diagnostics_functor(std::function<void(boost::asynchronous::scheduler_diagnostics)> fct,
