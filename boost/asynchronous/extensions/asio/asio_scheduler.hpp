@@ -184,7 +184,7 @@ public:
             std::promise<void> p;
             auto fu = p.get_future();
             res.emplace_back(std::move(fu));
-            boost::asynchronous::detail::execute_in_all_threads_task task(std::move(c),std::move(p));
+            boost::asynchronous::detail::execute_in_all_threads_task task(c,std::move(p));
             job_type job(std::move(task));
             this->post(std::move(job),t++);
         }

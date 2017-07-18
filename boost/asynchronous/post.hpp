@@ -596,11 +596,11 @@ auto post_future(S const& scheduler, F const& func,
     detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper,S> fct (p,func);
     if (task_name.empty())
     {
-        scheduler.post(fct);
+        scheduler.post(fct,prio);
     }
     else
     {
-        scheduler.post_log(fct,task_name);
+        scheduler.post_log(fct,task_name,prio);
     }
 #endif
     return std::move(fu);
@@ -646,11 +646,11 @@ auto post_future(S const& scheduler, F const& func,
     detail::post_future_helper_base<decltype(func()),F,typename S::job_type,post_helper,S> fct (p,func);
     if (task_name.empty())
     {
-        scheduler.post(fct);
+        scheduler.post(fct,prio);
     }
     else
     {
-        scheduler.post_log(fct,task_name);
+        scheduler.post_log(fct,task_name,prio);
     }
 #endif
 
@@ -780,8 +780,7 @@ const std::string& task_name = "", std::size_t prio = 0, typename std::enable_if
 	detail::post_future_helper_continuation<typename decltype(func())::return_type, F, typename S::job_type> fct
 		(std::move(p), std::move(func));
 	typename boost::asynchronous::job_traits<typename S::job_type>::wrapper_type w(std::move(fct));
-	w.set_name(task_name);
-	;
+    w.set_name(task_name);
 
 	return std::make_tuple(std::move(fu),scheduler.interruptible_post(std::move(w), prio));
 }

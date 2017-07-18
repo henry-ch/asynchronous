@@ -177,7 +177,7 @@ public:
             std::promise<void> p;
             auto fu = p.get_future();
             res.emplace_back(std::move(fu));
-            boost::asynchronous::detail::execute_in_all_threads_task task(std::move(c),std::move(p));
+            boost::asynchronous::detail::execute_in_all_threads_task task(c,std::move(p));
             m_private_queues[i]->push(std::move(task),std::numeric_limits<std::size_t>::max());
         }
         return res;

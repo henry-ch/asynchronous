@@ -191,7 +191,7 @@ public:
     }
     std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c)
     {
-        (*my_ptr).execute_in_all_threads(std::move(c));
+        return (*my_ptr).execute_in_all_threads(std::move(c));
     }
 private:
     any_shared_scheduler_proxy_ptr<JOB> my_ptr;
@@ -509,7 +509,7 @@ public:
      */
     std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c)
     {
-        (*my_ptr).execute_in_all_threads(std::move(c));
+        return (*my_ptr).execute_in_all_threads(std::move(c));
     }
 private:
     template <class J>
