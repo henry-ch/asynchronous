@@ -34,6 +34,7 @@
 #include <boost/asynchronous/scheduler/detail/lockable_weak_scheduler.hpp>
 #include <boost/asynchronous/scheduler/detail/any_continuation.hpp>
 #include <boost/asynchronous/scheduler/cpu_load_policies.hpp>
+#include <boost/asynchronous/scheduler/detail/execute_in_all_threads.hpp>
 
 namespace boost { namespace asynchronous
 {
@@ -179,7 +180,8 @@ public:
                                                                 m_private_queues[m_data->m_current_number_of_workers-1],
                                                                 m_diagnostics,fu,m_data->m_weak_self,d,c,
                                                                 m_data->m_current_number_of_workers-1,
-                                                                m_name));
+                                                                m_name,
+                                                                m_data->m_execute_in_all_threads));
             m_data->m_thread_ids.insert(new_thread->get_id());
             new_thread_promise.set_value(new_thread);
         }
@@ -320,10 +322,27 @@ public:
             }
         }
     }
-    std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable )
+    std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c)
     {
-        // not supported
-        return std::vector<std::future<void>>();
+        std::vector<std::future<void>> res;
+        std::size_t idsize=0;
+        {
+            boost::mutex::scoped_lock lock(m_data->m_current_number_of_workers_mutex);
+            idsize = m_data->m_thread_ids.size();
+            // remember waiting callable for newly created threads
+            m_data->m_execute_in_all_threads.push_back(c);
+        }
+        // handle basic (always present) threads
+        res.reserve(idsize);
+        for (size_t i = 0; i< idsize;++i)
+        {
+            std::promise<void> p;
+            auto fu = p.get_future();
+            res.emplace_back(std::move(fu));
+            boost::asynchronous::detail::execute_in_all_threads_task task(c,std::move(p));
+            m_private_queues[i]->push(std::move(task),std::numeric_limits<std::size_t>::max());
+        }
+        return res;
     }
 
     // try to execute a job, return true
@@ -475,7 +494,8 @@ public:
                          std::function<void(boost::thread*)> on_done,
                          std::function<bool()> check_continue,
                          size_t index,
-                         std::string name)
+                         std::string name,
+                         std::vector<boost::asynchronous::any_callable> execute_in_all_threads_tasks)
     {
         boost::thread* t = self.get();
         boost::asynchronous::detail::single_queue_scheduler_policy<Q>::m_self_thread.reset(new thread_ptr_wrapper(t));
@@ -488,6 +508,11 @@ public:
         // set thread name
         boost::asynchronous::detail::set_name_task<typename Q::diagnostic_type> ntask(name);
         ntask();
+        // execute tasks which were given to us and have to be executed in all threads
+        for (auto& c : execute_in_all_threads_tasks)
+        {
+            c();
+        }
         // we run once then end
         do
         {
@@ -614,6 +639,8 @@ private:
         std::shared_ptr<queue_type> m_queue;
         // remembers if the thread group has already been given for joining. If yes, no thread will be created
         bool m_joining=false;
+        // pass them to any newly created thread
+        std::vector<boost::asynchronous::any_callable> m_execute_in_all_threads;
         // protects m_done_threads
         boost::mutex m_done_threads_mutex;
         // protects m_current_number_of_workers
