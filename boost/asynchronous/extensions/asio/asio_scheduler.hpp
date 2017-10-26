@@ -165,7 +165,7 @@ public:
         size_t t = 1;
         for(auto const& v : p)
         {
-            for (size_t i = 0; i<= std::get<1>(v) && (t < m_ioservices.size()) ;++i)
+            for (size_t i = 0; i< std::get<1>(v) && (t < m_ioservices.size()) ;++i)
             {
                 boost::asynchronous::detail::processor_bind_task task(std::get<0>(v)+i);
                 job_type job(std::move(task));
