@@ -8,7 +8,7 @@
             <email>christophe.j.henry@gmail.com</email>
         </author>
         <copyright>
-            <year>2015</year>
+            <year>2017</year>
             <holder>
                 <phrase> Distributed under the Boost Software License, Version 1.0. (See
                     accompanying file LICENSE_1_0.txt or copy at <link
@@ -64,8 +64,8 @@
                 </listitem>
             </itemizedlist>
         </para>
-        <para>TBB is a wonderful parallel library. But it's not asynchronous as one needs to wait
-            for the end of a parallel call.</para>
+        <para>TBB is a wonderful parallel library. But it's not asynchronous as parallel calls are
+            blocking.</para>
         <para>std::async will return a future. But what to do with it? Wait for it? This would be
             synchronous. Collect them and then wait for all? This would also be synchronous. Collect
             them, do something else, then check whether they are ready? This would be wasted
