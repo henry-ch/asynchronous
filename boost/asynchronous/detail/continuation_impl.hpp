@@ -925,6 +925,14 @@ struct callback_continuation
         }
         continuation_ctor_helper_tuple<I+1>(sched,interruptibles,front);
     }
+    std::string get_name() const
+    {
+        return m_name;
+    }
+    void set_name(std::string const& name)
+    {
+        m_name = name;
+    }
     void operator()()
     {
     }
@@ -996,6 +1004,7 @@ struct callback_continuation
     typename std::chrono::high_resolution_clock::time_point m_start;
     std::shared_ptr<subtask_finished> m_finished;
     boost::asynchronous::continuation_post_policy m_post_policy;
+    std::string m_name="";
 
 };
 
@@ -1128,8 +1137,8 @@ struct callback_continuation_as_seq
     template <class Continuation, class Enable =void>
     struct callback_continuation_wrapper : public boost::asynchronous::continuation_task<Return>
     {
-        callback_continuation_wrapper(Continuation cont)
-        : boost::asynchronous::continuation_task<Return>("callback_continuation_wrapper")
+        callback_continuation_wrapper(Continuation cont, std::string const& name)
+        : boost::asynchronous::continuation_task<Return>(name)
         , m_cont(std::move(cont))
         {}
         void operator()()
@@ -1154,8 +1163,8 @@ struct callback_continuation_as_seq
                                          typename std::enable_if<std::is_same<typename Continuation::return_type,void>::value >::type>
             : public boost::asynchronous::continuation_task<void>
     {
-        callback_continuation_wrapper(Continuation cont)
-        : boost::asynchronous::continuation_task<void>("callback_continuation_wrapper")
+        callback_continuation_wrapper(Continuation cont, std::string const& name)
+            : boost::asynchronous::continuation_task<void>(name)
         , m_cont(std::move(cont))
         {}
         void operator()()
@@ -1261,7 +1270,7 @@ struct callback_continuation_as_seq
         args.reserve((args.size()));
         for(auto& c : args_)
         {
-            args.emplace_back(std::move(c));
+            args.emplace_back(std::move(c),c.get_name());
         }
         BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES3(Job)
         else

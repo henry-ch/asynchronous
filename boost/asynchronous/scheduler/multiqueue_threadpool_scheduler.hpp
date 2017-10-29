@@ -181,7 +181,7 @@ public:
         size_t t = 0;
         for(auto const& v : p)
         {
-            for (size_t i = 0; i<= std::get<1>(v) && (t < m_number_of_workers);++i)
+            for (size_t i = 0; i< std::get<1>(v) && (t < m_number_of_workers);++i)
             {
                 boost::asynchronous::detail::processor_bind_task task(std::get<0>(v)+i);
                 boost::asynchronous::any_callable job(std::move(task));

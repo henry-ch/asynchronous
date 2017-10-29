@@ -39,6 +39,28 @@
 
 namespace boost { namespace asynchronous {
 
+// helper for building names in top_level_callback_continuation / create_callback_continuation and args...
+namespace detail
+{
+struct variadic_name_builder
+{
+    template <typename Front>
+    static
+    std::string build(Front&& f)
+    {
+        return f.get_name();
+    }
+
+    template <typename Front, typename... Tail>
+    static
+    std::string build(Front&& f, Tail&&... t)
+    {
+        return f.get_name() + boost::asynchronous::detail::variadic_name_builder::build(std::forward<Tail>(t)...);
+    }
+};
+
+}
+
 /*! \fn void create_continuation(OnDone&& on_done, Args&&... args)
     \brief Create a future-based continuation as sub-task of a top-level continuation.
     \param on_done. Functor called upon completion of sub-tasks. The functor signature is void (std::tuple<boost/std::future<T>...>) where T is the return type of the sub-tasks.
@@ -464,10 +486,13 @@ template <class Return, class FirstTask>
 boost::asynchronous::detail::callback_continuation<Return,BOOST_ASYNCHRONOUS_DEFAULT_JOB> top_level_callback_continuation(FirstTask&& t)
 {
     std::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
-    return boost::asynchronous::detail::callback_continuation<Return,BOOST_ASYNCHRONOUS_DEFAULT_JOB> (
+    boost::asynchronous::detail::callback_continuation<Return,BOOST_ASYNCHRONOUS_DEFAULT_JOB> cont (
                 state,boost::asynchronous::detail::make_expected_tuple(t), std::chrono::milliseconds(0),
                 true,boost::asynchronous::continuation_post_policy::post_all_but_one,std::forward<FirstTask>(t));
+    cont.set_name(t.get_name());
+    return cont;
 }
+
 
 /*! \fn callback_continuation<Return,BOOST_ASYNCHRONOUS_DEFAULT_JOB> top_level_callback_continuation(FirstTask&& t)
     \brief Creates the first continuation in the serie.
@@ -481,9 +506,11 @@ template <class Return, typename Job, class ... Args>
 boost::asynchronous::detail::callback_continuation<Return,Job> top_level_callback_continuation_job(Args&&... args)
 {
     std::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
-    return boost::asynchronous::detail::callback_continuation<Return,Job>(
+    boost::asynchronous::detail::callback_continuation<Return,Job> cont(
                 state,boost::asynchronous::detail::make_expected_tuple(args...), std::chrono::milliseconds(0),
                 true,boost::asynchronous::continuation_post_policy::post_all_but_one,std::forward<Args>(args)...);
+    cont.set_name(boost::asynchronous::detail::variadic_name_builder::build(std::forward<Args>(args)...));
+    return cont;
 }
 
 /*! \fn callback_continuation<Return,BOOST_ASYNCHRONOUS_DEFAULT_JOB> top_level_callback_continuation_force_post(FirstTask&& t)
@@ -498,9 +525,11 @@ template <class Return, class FirstTask>
 boost::asynchronous::detail::callback_continuation<Return,BOOST_ASYNCHRONOUS_DEFAULT_JOB> top_level_callback_continuation_force_post(FirstTask&& t)
 {
     std::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
-    return boost::asynchronous::detail::callback_continuation<Return,BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+    boost::asynchronous::detail::callback_continuation<Return,BOOST_ASYNCHRONOUS_DEFAULT_JOB> cont
             (state,boost::asynchronous::detail::make_expected_tuple(t), std::chrono::milliseconds(0),
              true,boost::asynchronous::continuation_post_policy::post_all,std::forward<FirstTask>(t));
+    cont.set_name(t.get_name());
+    return cont;
 }
 
 /*! \fn callback_continuation<Return,BOOST_ASYNCHRONOUS_DEFAULT_JOB> top_level_callback_continuation_force_post(FirstTask&& t)
@@ -516,9 +545,11 @@ template <class Return, typename Job, class ... Args>
 boost::asynchronous::detail::callback_continuation<Return,Job> top_level_callback_continuation_job_force_post(Args&&... args)
 {
     std::shared_ptr<boost::asynchronous::detail::interrupt_state> state = boost::asynchronous::get_interrupt_state<>();
-    return boost::asynchronous::detail::callback_continuation<Return,Job>
+    boost::asynchronous::detail::callback_continuation<Return,Job> cont
             (state,boost::asynchronous::detail::make_expected_tuple(args...), std::chrono::milliseconds(0),
              true,boost::asynchronous::continuation_post_policy::post_all,std::forward<Args>(args)...);
+    cont.set_name(boost::asynchronous::detail::variadic_name_builder::build(std::forward<Args>(args)...));
+    return cont;
 }
 
 }}
