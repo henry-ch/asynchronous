@@ -116,7 +116,6 @@ struct result_of_then
 {
     // Handle continuations returning void
     constexpr static bool input_is_void = std::is_same<typename Continuation::return_type, void>::value;
-    static_assert(!input_is_void, "input must not be void");
 
     // Handle types that cannot be moved
     constexpr static bool can_move_into_functor = can_move_into_functor_helper<Functor, typename Continuation::return_type>::value;

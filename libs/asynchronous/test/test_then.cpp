@@ -1,7 +1,7 @@
 
 
 // Boost.Asynchronous library
-//  Copyright (C) Christophe Henry 2013
+//  Copyright (C) Christophe Henry, Tobias Holl 2018
 //
 //  Use, modification and distribution is subject to the Boost
 //  Software License, Version 1.0.  (See accompanying file
@@ -343,12 +343,12 @@ struct Servant : boost::asynchronous::trackable_servant<>, public Holder
 #define TASK_N(index) std::future<void> task_##index() { return automated_task<(((index - 1) & 4) > 0), (((index - 1) & 2) > 0), (((index - 1) & 1) > 0)>(); }
     TASK_N(1)
     TASK_N(2)
-    //TASK_N(3)
-    //TASK_N(4)
+    TASK_N(3)
+    TASK_N(4)
     TASK_N(5)
     TASK_N(6)
-    //TASK_N(7)
-    //TASK_N(8)
+    TASK_N(7)
+    TASK_N(8)
 };
 
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>
@@ -361,12 +361,12 @@ public:
 #ifndef _MSC_VER
     BOOST_ASYNC_FUTURE_MEMBER(task_1)
     BOOST_ASYNC_FUTURE_MEMBER(task_2)
-    //BOOST_ASYNC_FUTURE_MEMBER(task_3)
-    //BOOST_ASYNC_FUTURE_MEMBER(task_4)
+    BOOST_ASYNC_FUTURE_MEMBER(task_3)
+    BOOST_ASYNC_FUTURE_MEMBER(task_4)
     BOOST_ASYNC_FUTURE_MEMBER(task_5)
     BOOST_ASYNC_FUTURE_MEMBER(task_6)
-    //BOOST_ASYNC_FUTURE_MEMBER(task_7)
-    //BOOST_ASYNC_FUTURE_MEMBER(task_8)
+    BOOST_ASYNC_FUTURE_MEMBER(task_7)
+    BOOST_ASYNC_FUTURE_MEMBER(task_8)
 #else
     BOOST_ASYNC_FUTURE_MEMBER_1(task_1)
     BOOST_ASYNC_FUTURE_MEMBER_1(task_2)
@@ -405,9 +405,9 @@ public:
 
 TEST_N(1)
 TEST_N(2)
-//TEST_N(3)
-//TEST_N(4)
+TEST_N(3)
+TEST_N(4)
 TEST_N(5)
 TEST_N(6)
-//TEST_N(7)
-//TEST_N(8)
+TEST_N(7)
+TEST_N(8)
