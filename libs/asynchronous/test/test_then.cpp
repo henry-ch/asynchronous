@@ -120,10 +120,11 @@ struct TestCase
 
     // Each of these returns a functor, and the matching test
     template <bool FunctorReturnsContinuation, bool InnerReturnsVoid, bool OuterReturnsVoid>
-    static std::pair<std::function<void()>, ExpectedState> functor(Holder *servant, typename std::enable_if<!FunctorReturnsContinuation && InnerReturnsVoid && OuterReturnsVoid>::type* = nullptr)
+    static std::pair<std::function<void(boost::asynchronous::expected<void>)>, ExpectedState> functor(Holder *servant, typename std::enable_if<!FunctorReturnsContinuation && InnerReturnsVoid && OuterReturnsVoid>::type* = nullptr)
     {
-        return std::pair<std::function<void()>, ExpectedState>(
-            [servant]() mutable {
+        return std::pair<std::function<void(boost::asynchronous::expected<void>)>, ExpectedState>(
+            [servant](boost::asynchronous::expected<void> res) mutable {
+                res.get();
                 servant->m_flag = std::accumulate(servant->m_data.begin(), servant->m_data.end(), 0);
             },
             ExpectedState().m_data(0, 4).m_data(9999, 4).m_flag(40000)
@@ -131,11 +132,12 @@ struct TestCase
     }
 
     template <bool FunctorReturnsContinuation, bool InnerReturnsVoid, bool OuterReturnsVoid>
-    static std::pair<std::function<int()>, ExpectedState> functor(Holder *servant, typename std::enable_if<!FunctorReturnsContinuation && InnerReturnsVoid && !OuterReturnsVoid>::type* = nullptr)
+    static std::pair<std::function<int(boost::asynchronous::expected<void>)>, ExpectedState> functor(Holder *servant, typename std::enable_if<!FunctorReturnsContinuation && InnerReturnsVoid && !OuterReturnsVoid>::type* = nullptr)
     {
-        return std::pair<std::function<int()>, ExpectedState>(
-            [servant]() mutable
+        return std::pair<std::function<int(boost::asynchronous::expected<void>)>, ExpectedState>(
+            [servant](boost::asynchronous::expected<void> res) mutable
             {
+                res.get();
                 return std::accumulate(servant->m_data.begin(), servant->m_data.end(), 0);
             },
             ExpectedState().m_data(0, 4).m_data(9999, 4).result(40000)
@@ -143,11 +145,12 @@ struct TestCase
     }
 
     template <bool FunctorReturnsContinuation, bool InnerReturnsVoid, bool OuterReturnsVoid>
-    static std::pair<std::function<void(std::vector<int>&&)>, ExpectedState> functor(Holder *servant, typename std::enable_if<!FunctorReturnsContinuation && !InnerReturnsVoid && OuterReturnsVoid>::type* = nullptr)
+    static std::pair<std::function<void(boost::asynchronous::expected<std::vector<int>>)>, ExpectedState> functor(Holder *servant, typename std::enable_if<!FunctorReturnsContinuation && !InnerReturnsVoid && OuterReturnsVoid>::type* = nullptr)
     {
-        return std::pair<std::function<void(std::vector<int>&&)>, ExpectedState>(
-            [servant](std::vector<int>&& data) mutable
+        return std::pair<std::function<void(boost::asynchronous::expected<std::vector<int>>)>, ExpectedState>(
+            [servant](boost::asynchronous::expected<std::vector<int>> res) mutable
             {
+                auto data = std::move(res.get());
                 servant->m_flag = std::accumulate(data.begin(), data.end(), 0);
             },
             ExpectedState().m_flag(40000)
@@ -155,11 +158,12 @@ struct TestCase
     }
 
     template <bool FunctorReturnsContinuation, bool InnerReturnsVoid, bool OuterReturnsVoid>
-    static std::pair<std::function<int(std::vector<int>&&)>, ExpectedState> functor(Holder *servant, typename std::enable_if<!FunctorReturnsContinuation && !InnerReturnsVoid && !OuterReturnsVoid>::type* = nullptr)
+    static std::pair<std::function<int(boost::asynchronous::expected<std::vector<int>>)>, ExpectedState> functor(Holder *servant, typename std::enable_if<!FunctorReturnsContinuation && !InnerReturnsVoid && !OuterReturnsVoid>::type* = nullptr)
     {
-        return std::pair<std::function<int(std::vector<int>&&)>, ExpectedState>(
-            [servant](std::vector<int>&& data) mutable
+        return std::pair<std::function<int(boost::asynchronous::expected<std::vector<int>>)>, ExpectedState>(
+            [servant](boost::asynchronous::expected<std::vector<int>> res) mutable
             {
+                auto data = std::move(res.get());
                 return std::accumulate(data.begin(), data.end(), 0);
             },
             ExpectedState().result(40000)
@@ -167,11 +171,12 @@ struct TestCase
     }
 
     template <bool FunctorReturnsContinuation, bool InnerReturnsVoid, bool OuterReturnsVoid>
-    static std::pair<std::function<boost::asynchronous::detail::callback_continuation<void>()>, ExpectedState> functor(Holder *servant, typename std::enable_if<FunctorReturnsContinuation && InnerReturnsVoid && OuterReturnsVoid>::type* = nullptr)
+    static std::pair<std::function<boost::asynchronous::detail::callback_continuation<void>(boost::asynchronous::expected<void>)>, ExpectedState> functor(Holder *servant, typename std::enable_if<FunctorReturnsContinuation && InnerReturnsVoid && OuterReturnsVoid>::type* = nullptr)
     {
-        return std::pair<std::function<boost::asynchronous::detail::callback_continuation<void>()>, ExpectedState>(
-            [servant]() mutable
+        return std::pair<std::function<boost::asynchronous::detail::callback_continuation<void>(boost::asynchronous::expected<void>)>, ExpectedState>(
+            [servant](boost::asynchronous::expected<void> res) mutable
             {
+                res.get();
                 return boost::asynchronous::parallel_for(
                     servant->m_data.begin(),
                     servant->m_data.end(),
@@ -187,11 +192,12 @@ struct TestCase
     }
 
     template <bool FunctorReturnsContinuation, bool InnerReturnsVoid, bool OuterReturnsVoid>
-    static std::pair<std::function<boost::asynchronous::detail::callback_continuation<int>()>, ExpectedState> functor(Holder *servant, typename std::enable_if<FunctorReturnsContinuation && InnerReturnsVoid && !OuterReturnsVoid>::type* = nullptr)
+    static std::pair<std::function<boost::asynchronous::detail::callback_continuation<int>(boost::asynchronous::expected<void>)>, ExpectedState> functor(Holder *servant, typename std::enable_if<FunctorReturnsContinuation && InnerReturnsVoid && !OuterReturnsVoid>::type* = nullptr)
     {
-        return std::pair<std::function<boost::asynchronous::detail::callback_continuation<int>()>, ExpectedState>(
-            [servant]() mutable
+        return std::pair<std::function<boost::asynchronous::detail::callback_continuation<int>(boost::asynchronous::expected<void>)>, ExpectedState>(
+            [servant](boost::asynchronous::expected<void> res) mutable
             {
+                res.get();
                 return boost::asynchronous::parallel_reduce(
                     servant->m_data.begin(),
                     servant->m_data.end(),
@@ -204,13 +210,12 @@ struct TestCase
     }
 
     template <bool FunctorReturnsContinuation, bool InnerReturnsVoid, bool OuterReturnsVoid>
-    static std::pair<std::function<boost::asynchronous::detail::callback_continuation<void>(std::vector<int>&&)>, ExpectedState> functor(Holder *servant, typename std::enable_if<FunctorReturnsContinuation && !InnerReturnsVoid && OuterReturnsVoid>::type* = nullptr)
+    static std::pair<std::function<boost::asynchronous::detail::callback_continuation<void>(boost::asynchronous::expected<std::vector<int>>)>, ExpectedState> functor(Holder *servant, typename std::enable_if<FunctorReturnsContinuation && !InnerReturnsVoid && OuterReturnsVoid>::type* = nullptr)
     {
-        return std::pair<std::function<boost::asynchronous::detail::callback_continuation<void>(std::vector<int>&&)>, ExpectedState>(
-            [servant](std::vector<int>&& data) mutable
+        return std::pair<std::function<boost::asynchronous::detail::callback_continuation<void>(boost::asynchronous::expected<std::vector<int>>)>, ExpectedState>(
+            [servant](boost::asynchronous::expected<std::vector<int>> res) mutable
             {
-                (void) data;
-                servant->m_data = std::vector<int>(10000);
+                servant->m_data = std::move(res.get());
                 return boost::asynchronous::parallel_iota(
                     servant->m_data.begin(),
                     servant->m_data.end(),
@@ -223,11 +228,12 @@ struct TestCase
     }
 
     template <bool FunctorReturnsContinuation, bool InnerReturnsVoid, bool OuterReturnsVoid>
-    static std::pair<std::function<boost::asynchronous::detail::callback_continuation<int>(std::vector<int>&&)>, ExpectedState> functor(Holder *servant, typename std::enable_if<FunctorReturnsContinuation && !InnerReturnsVoid && !OuterReturnsVoid>::type* = nullptr)
+    static std::pair<std::function<boost::asynchronous::detail::callback_continuation<int>(boost::asynchronous::expected<std::vector<int>>)>, ExpectedState> functor(Holder *servant, typename std::enable_if<FunctorReturnsContinuation && !InnerReturnsVoid && !OuterReturnsVoid>::type* = nullptr)
     {
-        return std::pair<std::function<boost::asynchronous::detail::callback_continuation<int>(std::vector<int>&&)>, ExpectedState>(
-            [servant](std::vector<int>&& data) mutable
+        return std::pair<std::function<boost::asynchronous::detail::callback_continuation<int>(boost::asynchronous::expected<std::vector<int>>)>, ExpectedState>(
+            [servant](boost::asynchronous::expected<std::vector<int>> res) mutable
             {
+                auto data = std::move(res.get());
                 return boost::asynchronous::parallel_reduce(
                     std::move(data),
                     SumFunctor {},
