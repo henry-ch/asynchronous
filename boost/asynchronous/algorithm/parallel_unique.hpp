@@ -146,16 +146,16 @@ parallel_unique(Range range,Func func,long cutoff,
 
     return boost::asynchronous::then(
                  std::move(range),
-                 [func,cutoff,task_name,prio](typename Range::return_type&& r)mutable
+                 [func,cutoff,task_name,prio](boost::asynchronous::expected<typename Range::return_type>&& r)mutable
                  {
-                    auto res = std::make_shared<typename Range::return_type>(std::move(r));
+                    auto res = std::make_shared<typename Range::return_type>(std::move(r.get()));
                     return boost::asynchronous::then(
                             boost::asynchronous::parallel_unique
                                   <typename Range::return_type::iterator, Func, Job>
                                        (boost::begin(*res),boost::end(*res),func,cutoff,task_name,prio),
-                            [res](typename Range::return_type::iterator it)mutable
+                            [res](boost::asynchronous::expected<typename Range::return_type::iterator> it)mutable
                             {
-                                res->erase(it, res->end());
+                                res->erase(it.get(), res->end());
                                 return *res;
                             }
                            );
