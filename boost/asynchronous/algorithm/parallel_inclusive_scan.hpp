@@ -28,7 +28,7 @@ parallel_inclusive_scan(Iterator beg, Iterator end, OutIterator out, T init,Func
 {
     auto reduce = [f](Iterator beg, Iterator end)
     {
-        int r = T();
+        T r = T();
         for (;beg != end; ++beg)
         {
             r = f(r , *beg);
@@ -62,7 +62,7 @@ parallel_inclusive_scan(Range&& range,OutRange&& out_range,T init,Func f,long cu
 {
     auto reduce = [f](decltype(boost::begin(range)) beg, decltype(boost::begin(range)) end)
     {
-        int r = T();
+        T r = T();
         for (;beg != end; ++beg)
         {
             r = f(r , *beg);
@@ -96,7 +96,7 @@ parallel_inclusive_scan(Range&& range,T init,Func f,long cutoff,
 {
     auto reduce = [f](decltype(boost::begin(range)) beg, decltype(boost::begin(range)) end)
     {
-        int r = T();
+        T r = T();
         for (;beg != end; ++beg)
         {
             r = f(r , *beg);
@@ -131,7 +131,7 @@ parallel_inclusive_scan(Range range,T init,Func f,long cutoff,
     auto reduce = [f](decltype(boost::begin(std::declval<typename Range::return_type>())) beg,
                       decltype(boost::begin(std::declval<typename Range::return_type>())) end)
     {
-        int r = T();
+        T r = T();
         for (;beg != end; ++beg)
         {
             r = f(r , *beg);

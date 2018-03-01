@@ -26,7 +26,7 @@ parallel_transform_inclusive_scan(Iterator beg, Iterator end, OutIterator out, T
 {
     auto reduce = [f,t](Iterator beg, Iterator end)
     {
-        int r = T();
+        T r = T();
         for (;beg != end; ++beg)
         {
             r = f(r , t(*beg));
