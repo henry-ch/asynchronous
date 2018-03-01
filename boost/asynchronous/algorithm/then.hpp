@@ -163,7 +163,7 @@ template <class Continuation,
           class ResultOfThen = boost::asynchronous::detail::result_of_then<Continuation, Functor>>
 struct then_helper : public boost::asynchronous::continuation_task<typename ResultOfThen::return_type>
 {
-    using IntermediateType  = typename Continuation::return_type;         // Return type of the input continuation
+    using InputType         = typename Continuation::return_type;         // Return type of the input continuation
     using FunctorReturnType = typename ResultOfThen::functor_return_type; // Return type of the functor
     using ReturnType        = typename ResultOfThen::return_type;         // Return type of this continuation (special-cased for functors returning continuations)
 
@@ -263,18 +263,18 @@ struct then_helper : public boost::asynchronous::continuation_task<typename Resu
     try \
     { \
         continuation_.on_done( \
-            [task_res, functor BOOST_ASYNCHRONOUS_THEN_IMPL_MOVE_FUNCTOR](std::tuple<boost::asynchronous::expected<IntermediateType>>&& res) mutable \
+            [task_res, functor BOOST_ASYNCHRONOUS_THEN_IMPL_MOVE_FUNCTOR](std::tuple<boost::asynchronous::expected<InputType>>&& res) mutable \
             { \
                 try \
                 {
 
 // Handle input data (from the continuation)
 #define BOOST_ASYNCHRONOUS_THEN_IMPL_DISCARD_INPUT     std::get<0>(res).get();
-#define BOOST_ASYNCHRONOUS_THEN_IMPL_GET_NONVOID_INPUT IntermediateType intermediate(boost::asynchronous::detail::move_where_possible(std::get<0>(res).get()));
+#define BOOST_ASYNCHRONOUS_THEN_IMPL_GET_NONVOID_INPUT InputType input(boost::asynchronous::detail::move_where_possible(std::get<0>(res).get()));
 
 // Call the functor
 #define BOOST_ASYNCHRONOUS_THEN_IMPL_CALL_WITHOUT_INPUT BOOST_ASYNCHRONOUS_CALL_THEN_FUNCTOR_1(functor)
-#define BOOST_ASYNCHRONOUS_THEN_IMPL_CALL_WITH_INPUT    BOOST_ASYNCHRONOUS_CALL_THEN_FUNCTOR_2(functor, intermediate)
+#define BOOST_ASYNCHRONOUS_THEN_IMPL_CALL_WITH_INPUT    BOOST_ASYNCHRONOUS_CALL_THEN_FUNCTOR_2(functor, input)
 
 // Handle output
 #define BOOST_ASYNCHRONOUS_THEN_IMPL_NONVOID_DISPATCH(call) dispatch<HasInnerContinuation, HasVoidOutput>(call, task_res);
@@ -362,7 +362,7 @@ typename std::enable_if<
         Job
     >
 >::type
-then(Continuation&& continuation, Functor&& func,
+then(Continuation continuation, Functor func,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
              const std::string& task_name)
 #else
@@ -371,8 +371,8 @@ then(Continuation&& continuation, Functor&& func,
 {
     return boost::asynchronous::top_level_callback_continuation_job<typename boost::asynchronous::detail::result_of_then<Continuation, Functor>::return_type, Job>(
         boost::asynchronous::detail::then_helper<Continuation, Functor>(
-            std::forward<Continuation>(continuation),
-            std::forward<Functor>(func),
+            boost::asynchronous::detail::move_where_possible(continuation),
+            boost::asynchronous::detail::move_where_possible(func),
             task_name
         )
     );
