@@ -27,6 +27,7 @@
 #include <boost/asynchronous/scheduler/serializable_task.hpp>
 #include <boost/asynchronous/algorithm/detail/safe_advance.hpp>
 #include <boost/asynchronous/detail/metafunctions.hpp>
+#include <boost/asynchronous/algorithm/then.hpp>
 
 #include <boost/range/begin.hpp>
 #include <boost/range/end.hpp>
@@ -132,62 +133,6 @@ parallel_unique(Iterator beg, Iterator end,Func func,long cutoff,
 }
 
 // version for ranges returned as continuations
-namespace detail
-{
-template <class Continuation, class Func,class Job>
-struct parallel_unique_continuation_range_helper:
-        public boost::asynchronous::continuation_task<typename Continuation::return_type>
-{
-    parallel_unique_continuation_range_helper(Continuation c,Func func,long cutoff,
-                        const std::string& task_name, std::size_t prio)
-        : boost::asynchronous::continuation_task<typename Continuation::return_type>(task_name)
-        , cont_(std::move(c)),func_(std::move(func)),cutoff_(cutoff),prio_(prio)
-    {}
-    void operator()()
-    {
-        boost::asynchronous::continuation_result<typename Continuation::return_type> task_res = this->this_task_result();
-        try
-        {
-            auto func(std::move(func_));
-            auto cutoff = cutoff_;
-            auto task_name = this->get_name();
-            auto prio = prio_;
-            cont_.on_done([task_res,func,cutoff,task_name,prio]
-                          (std::tuple<boost::asynchronous::expected<typename Continuation::return_type> >&& continuation_res) mutable
-            {
-                try
-                {
-                    auto res = std::make_shared<typename Continuation::return_type>(std::move(std::get<0>(continuation_res).get()));
-                    auto new_continuation = boost::asynchronous::parallel_unique
-                            <typename Continuation::return_type::iterator, Func, Job>
-                                (boost::begin(*res),boost::end(*res),func,cutoff,task_name,prio);
-                    new_continuation.on_done([res,task_res]
-                                             (std::tuple<boost::asynchronous::expected<
-                                                typename Continuation::return_type::iterator> >&& new_continuation_res)mutable
-                    {
-                        // erase to return a correct container
-                        res->erase(std::get<0>(new_continuation_res).get(), res->end());
-                        task_res.set_value(std::move(*res));
-                    });
-                }
-                catch(...)
-                {
-                    task_res.set_exception(std::current_exception());
-                }
-            });
-        }
-        catch(...)
-        {
-            task_res.set_exception(std::current_exception());
-        }
-    }
-    Continuation cont_;
-    Func func_;
-    long cutoff_;
-    std::size_t prio_;
-};
-
-}
 template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>::value,
                         boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
@@ -198,8 +143,23 @@ parallel_unique(Range range,Func func,long cutoff,
              const std::string& task_name="", std::size_t prio=0)
 #endif
 {
-    return boost::asynchronous::top_level_callback_continuation_job<typename Range::return_type,Job>
-            (boost::asynchronous::detail::parallel_unique_continuation_range_helper<Range,Func,Job>(range,std::move(func),cutoff,task_name,prio));
+
+    return boost::asynchronous::then(
+                 std::move(range),
+                 [func,cutoff,task_name,prio](typename Range::return_type&& r)mutable
+                 {
+                    auto res = std::make_shared<typename Range::return_type>(std::move(r));
+                    return boost::asynchronous::then(
+                            boost::asynchronous::parallel_unique
+                                  <typename Range::return_type::iterator, Func, Job>
+                                       (boost::begin(*res),boost::end(*res),func,cutoff,task_name,prio),
+                            [res](typename Range::return_type::iterator it)mutable
+                            {
+                                res->erase(it, res->end());
+                                return *res;
+                            }
+                           );
+                 });
 }
 }}
 #endif // BOOST_ASYNCHRONOUS_PARALLEL_UNIQUE_HPP
