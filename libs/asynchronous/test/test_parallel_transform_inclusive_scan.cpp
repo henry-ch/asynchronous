@@ -105,7 +105,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant callback in main thread.");
                         BOOST_CHECK_MESSAGE(!contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"task callback executed in the wrong thread(pool)");
                         BOOST_CHECK_MESSAGE(!res.has_exception(),"servant work threw an exception.");
-                        auto it = transform_inclusive_scan(
+                        transform_inclusive_scan(
                                     data_copy.begin(),data_copy.end(),data_copy2.begin(),0,
                                     std::plus<int>(),[](int i){return i+2;});
                         BOOST_CHECK_MESSAGE(m_data2 == data_copy2,"parallel_scan gave a wrong value.");

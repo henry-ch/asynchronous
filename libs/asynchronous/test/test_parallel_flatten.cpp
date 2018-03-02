@@ -206,7 +206,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                         std::move(this->m_data),
                         [](const std::vector<int>& item)
                         {
-                            for (int i = 0; i < item.size(); ++i)
+                            for (std::size_t i = 0; i < item.size(); ++i)
                                 const_cast<std::vector<int>&>(item)[i] = 5 * item[i] + i;
                         },
                         1500
