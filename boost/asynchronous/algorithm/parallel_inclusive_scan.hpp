@@ -35,7 +35,7 @@ parallel_inclusive_scan(Iterator beg, Iterator end, OutIterator out, T init,Func
         }
         return r;
     };
-    auto scan = [f](Iterator beg, Iterator end, Iterator out, T init) mutable
+    auto scan = [f](Iterator beg, Iterator end, OutIterator out, T init) mutable
     {
       for (;beg != end; ++beg)
       {
@@ -69,7 +69,7 @@ parallel_inclusive_scan(Range&& range,OutRange&& out_range,T init,Func f,long cu
         }
         return r;
     };
-    auto scan = [f](decltype(boost::begin(range)) beg, decltype(boost::begin(range)) end, decltype(boost::begin(range)) out, T init) mutable
+    auto scan = [f](decltype(boost::begin(range)) beg, decltype(boost::begin(range)) end, decltype(boost::begin(out_range)) out, T init) mutable
     {
       for (;beg != end; ++beg)
       {

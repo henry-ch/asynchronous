@@ -33,7 +33,7 @@ parallel_transform_exclusive_scan(Iterator beg, Iterator end, OutIterator out, T
         }
         return r;
     };
-    auto scan = [f,t](Iterator beg, Iterator end, Iterator out, T init) mutable
+    auto scan = [f,t](Iterator beg, Iterator end, OutIterator out, T init) mutable
     {
       for (;beg != end; ++beg)
       {
