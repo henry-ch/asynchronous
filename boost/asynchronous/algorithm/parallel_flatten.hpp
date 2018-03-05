@@ -36,9 +36,9 @@ namespace asynchronous
 // Iterator version
 template <
     class OuterIterator,
-    class Result        = std::vector<typename boost::asynchronous::detail::container_traits<typename std::iterator_traits<OuterIterator>::value_type>::value_type>,
+    class Result        = std::vector<typename boost::asynchronous::container_traits<typename std::iterator_traits<OuterIterator>::value_type>::value_type>,
     class Job           = BOOST_ASYNCHRONOUS_DEFAULT_JOB,
-    class OffsetStorage = std::vector<typename boost::asynchronous::detail::container_traits<typename std::iterator_traits<OuterIterator>::value_type>::size_type>
+    class OffsetStorage = std::vector<typename boost::asynchronous::container_traits<typename std::iterator_traits<OuterIterator>::value_type>::size_type>
 >
 boost::asynchronous::detail::callback_continuation<Result, Job>
 parallel_flatten(
@@ -56,8 +56,7 @@ parallel_flatten(
 )
 {
     using InnerContainer = typename std::iterator_traits<OuterIterator>::value_type;
-    using InnerIterator  = typename boost::asynchronous::detail::container_traits<InnerContainer>::iterator_type;
-    using InnerSize      = typename boost::asynchronous::detail::container_traits<InnerContainer>::size_type;
+    using InnerSize      = typename boost::asynchronous::container_traits<InnerContainer>::size_type;
 
     auto outer_size = std::distance(outer_begin, outer_end);
     auto offsets = std::make_shared<OffsetStorage>(outer_size);
@@ -71,7 +70,7 @@ parallel_flatten(
             std::plus<InnerSize>(),
             [](const InnerContainer& container)
             {
-                return boost::asynchronous::detail::container_size(container);
+                return boost::asynchronous::container_size(container);
             },
             offset_calculation_cutoff,
             task_name + ": offset calculation",
@@ -115,9 +114,9 @@ parallel_flatten(
 // Range version (reference)
 template <
     class OuterRange,
-    class Result        = std::vector<typename boost::asynchronous::detail::container_traits<typename boost::asynchronous::detail::container_traits<OuterRange>::value_type>::value_type>,
+    class Result        = std::vector<typename boost::asynchronous::container_traits<typename boost::asynchronous::container_traits<OuterRange>::value_type>::value_type>,
     class Job           = BOOST_ASYNCHRONOUS_DEFAULT_JOB,
-    class OffsetStorage = std::vector<typename boost::asynchronous::detail::container_traits<typename boost::asynchronous::detail::container_traits<OuterRange>::value_type>::size_type>
+    class OffsetStorage = std::vector<typename boost::asynchronous::container_traits<typename boost::asynchronous::container_traits<OuterRange>::value_type>::size_type>
 >
 typename std::enable_if<!boost::asynchronous::detail::has_is_continuation_task<OuterRange>::value, boost::asynchronous::detail::callback_continuation<Result, Job>>::type
 parallel_flatten(
@@ -133,11 +132,10 @@ parallel_flatten(
 #endif
 )
 {
-    using InnerContainer = typename boost::asynchronous::detail::container_traits<OuterRange>::value_type;
-    using InnerIterator  = typename boost::asynchronous::detail::container_traits<InnerContainer>::iterator_type;
-    using InnerSize      = typename boost::asynchronous::detail::container_traits<InnerContainer>::size_type;
+    using InnerContainer = typename boost::asynchronous::container_traits<OuterRange>::value_type;
+    using InnerSize      = typename boost::asynchronous::container_traits<InnerContainer>::size_type;
 
-    auto outer_size = boost::asynchronous::detail::container_size(range);
+    auto outer_size = boost::asynchronous::container_size(range);
     auto offsets = std::make_shared<OffsetStorage>(outer_size);
 
     auto outer_begin = std::begin(range);
@@ -151,7 +149,7 @@ parallel_flatten(
             std::plus<InnerSize>(),
             [](const InnerContainer& container)
             {
-                return boost::asynchronous::detail::container_size(container);
+                return boost::asynchronous::container_size(container);
             },
             offset_calculation_cutoff,
             task_name + ": offset calculation",
@@ -194,9 +192,9 @@ parallel_flatten(
 // Range version (moved ranges)
 template <
     class OuterRange,
-    class Result        = std::vector<typename boost::asynchronous::detail::container_traits<typename boost::asynchronous::detail::container_traits<OuterRange>::value_type>::value_type>,
+    class Result        = std::vector<typename boost::asynchronous::container_traits<typename boost::asynchronous::container_traits<OuterRange>::value_type>::value_type>,
     class Job           = BOOST_ASYNCHRONOUS_DEFAULT_JOB,
-    class OffsetStorage = std::vector<typename boost::asynchronous::detail::container_traits<typename boost::asynchronous::detail::container_traits<OuterRange>::value_type>::size_type>
+    class OffsetStorage = std::vector<typename boost::asynchronous::container_traits<typename boost::asynchronous::container_traits<OuterRange>::value_type>::size_type>
 >
 typename std::enable_if<!boost::asynchronous::detail::has_is_continuation_task<OuterRange>::value, boost::asynchronous::detail::callback_continuation<Result, Job>>::type
 parallel_flatten(
@@ -212,11 +210,10 @@ parallel_flatten(
 #endif
 )
 {
-    using InnerContainer = typename boost::asynchronous::detail::container_traits<OuterRange>::value_type;
-    using InnerIterator  = typename boost::asynchronous::detail::container_traits<InnerContainer>::iterator_type;
-    using InnerSize      = typename boost::asynchronous::detail::container_traits<InnerContainer>::size_type;
+    using InnerContainer = typename boost::asynchronous::container_traits<OuterRange>::value_type;
+    using InnerSize      = typename boost::asynchronous::container_traits<InnerContainer>::size_type;
 
-    auto outer_size = boost::asynchronous::detail::container_size(range);
+    auto outer_size = boost::asynchronous::container_size(range);
     auto offsets = std::make_shared<OffsetStorage>(outer_size);
 
     auto outer = std::make_shared<OuterRange>(std::move(range));
@@ -231,7 +228,7 @@ parallel_flatten(
             std::plus<InnerSize>(),
             [](const InnerContainer& container)
             {
-                return boost::asynchronous::detail::container_size(container);
+                return boost::asynchronous::container_size(container);
             },
             offset_calculation_cutoff,
             task_name + ": offset calculation",
@@ -274,9 +271,9 @@ parallel_flatten(
 // Continuation version
 template <
     class Continuation,
-    class Result        = std::vector<typename boost::asynchronous::detail::container_traits<typename boost::asynchronous::detail::container_traits<typename Continuation::return_type>::value_type>::value_type>,
+    class Result        = std::vector<typename boost::asynchronous::container_traits<typename boost::asynchronous::container_traits<typename Continuation::return_type>::value_type>::value_type>,
     class Job           = BOOST_ASYNCHRONOUS_DEFAULT_JOB,
-    class OffsetStorage = std::vector<typename boost::asynchronous::detail::container_traits<typename boost::asynchronous::detail::container_traits<typename Continuation::return_type>::value_type>::size_type>
+    class OffsetStorage = std::vector<typename boost::asynchronous::container_traits<typename boost::asynchronous::container_traits<typename Continuation::return_type>::value_type>::size_type>
 >
 typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Continuation>::value, boost::asynchronous::detail::callback_continuation<Result, Job>>::type
 parallel_flatten(
