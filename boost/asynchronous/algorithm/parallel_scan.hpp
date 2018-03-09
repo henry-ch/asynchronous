@@ -553,7 +553,7 @@ struct parallel_scan_range_continuation_helper: public boost::asynchronous::cont
 };
 }
 // version for ranges given as continuation => will return the range as continuation
-template <class Range, class T, class Reduce, class Combine, class Scan, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+template <class Range, class T, class Reduce, class Combine, class Scan, class Job=typename Range::job_type>
 typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>::value,
                           boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_scan(Range range,T init,Reduce r, Combine c, Scan s,long cutoff,

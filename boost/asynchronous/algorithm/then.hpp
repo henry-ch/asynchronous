@@ -211,7 +211,7 @@ struct then_helper : public boost::asynchronous::continuation_task<typename Trai
 
 } // namespace detail
 
-template <class Continuation, class Functor, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+template <class Continuation, class Functor, class Job = typename Continuation::job_type>
 typename std::enable_if<
     boost::asynchronous::detail::has_is_continuation_task<Continuation>::value,
     boost::asynchronous::detail::callback_continuation<
@@ -232,6 +232,29 @@ then(Continuation continuation, Functor func,
             boost::asynchronous::detail::move_where_possible(func),
             task_name
         )
+    );
+}
+
+// This is a special version of boost::asynchronous::then that allows algorithm implementations to pass in a job type without sacrificing deduction of the continuation and functor types
+template <class Job, class Continuation, class Functor>
+typename std::enable_if<
+    boost::asynchronous::detail::has_is_continuation_task<Continuation>::value,
+    boost::asynchronous::detail::callback_continuation<
+        typename boost::asynchronous::detail::then_traits<Continuation, Functor>::ReturnType,
+        Job
+    >
+>::type
+then_job(Continuation continuation, Functor func,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+             const std::string& task_name)
+#else
+             const std::string& task_name="")
+#endif
+{
+    return boost::asynchronous::then<Continuation, Functor, Job>(
+        boost::asynchronous::detail::move_where_possible(continuation),
+        boost::asynchronous::detail::move_where_possible(func),
+        task_name
     );
 }
 

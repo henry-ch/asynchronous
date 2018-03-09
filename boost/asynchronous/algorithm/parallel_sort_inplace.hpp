@@ -532,7 +532,7 @@ struct parallel_spreadsort_continuation_range_inplace_helper<Continuation,Func,J
 };
 #endif
 }
-template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+template <class Range, class Func, class Job=typename Range::job_type>
 typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>::value,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_sort_inplace(Range range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -544,7 +544,7 @@ parallel_sort_inplace(Range range,Func func,long cutoff,
     return boost::asynchronous::top_level_callback_continuation_job<typename Range::return_type,Job>
             (boost::asynchronous::detail::parallel_sort_continuation_range_inplace_helper<Range,Func,Job>(range,std::move(func),cutoff,task_name,prio));
 }
-template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+template <class Range, class Func, class Job=typename Range::job_type>
 typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>::value,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_stable_sort_inplace(Range range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -557,7 +557,7 @@ parallel_stable_sort_inplace(Range range,Func func,long cutoff,
             (boost::asynchronous::detail::parallel_stable_sort_continuation_range_inplace_helper<Range,Func,Job>(range,std::move(func),cutoff,task_name,prio));
 }
 #ifdef BOOST_ASYNCHRONOUS_USE_BOOST_SPREADSORT
-template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+template <class Range, class Func, class Job=typename Range::job_type>
 typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>::value,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_spreadsort_inplace(Range range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS

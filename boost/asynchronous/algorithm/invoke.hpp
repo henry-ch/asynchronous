@@ -118,7 +118,7 @@ private:
 };
 }
 // Notice: return value of Continuation must have a default-ctor
-template <class Continuation, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+template <class Continuation, class Func, class Job=typename Continuation::job_type>
 auto invoke(Continuation c,Func func,
  #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
             const std::string& task_name, std::size_t prio=0
