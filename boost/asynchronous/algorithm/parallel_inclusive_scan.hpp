@@ -28,14 +28,14 @@ parallel_inclusive_scan(Iterator beg, Iterator end, OutIterator out, T init,Func
 {
     auto reduce = [f](Iterator beg, Iterator end)
     {
-        int r = T();
+        T r = T();
         for (;beg != end; ++beg)
         {
             r = f(r , *beg);
         }
         return r;
     };
-    auto scan = [f](Iterator beg, Iterator end, Iterator out, T init) mutable
+    auto scan = [f](Iterator beg, Iterator end, OutIterator out, T init) mutable
     {
       for (;beg != end; ++beg)
       {
@@ -62,14 +62,14 @@ parallel_inclusive_scan(Range&& range,OutRange&& out_range,T init,Func f,long cu
 {
     auto reduce = [f](decltype(boost::begin(range)) beg, decltype(boost::begin(range)) end)
     {
-        int r = T();
+        T r = T();
         for (;beg != end; ++beg)
         {
             r = f(r , *beg);
         }
         return r;
     };
-    auto scan = [f](decltype(boost::begin(range)) beg, decltype(boost::begin(range)) end, decltype(boost::begin(range)) out, T init) mutable
+    auto scan = [f](decltype(boost::begin(range)) beg, decltype(boost::begin(range)) end, decltype(boost::begin(out_range)) out, T init) mutable
     {
       for (;beg != end; ++beg)
       {
@@ -96,7 +96,7 @@ parallel_inclusive_scan(Range&& range,T init,Func f,long cutoff,
 {
     auto reduce = [f](decltype(boost::begin(range)) beg, decltype(boost::begin(range)) end)
     {
-        int r = T();
+        T r = T();
         for (;beg != end; ++beg)
         {
             r = f(r , *beg);
@@ -131,7 +131,7 @@ parallel_inclusive_scan(Range range,T init,Func f,long cutoff,
     auto reduce = [f](decltype(boost::begin(std::declval<typename Range::return_type>())) beg,
                       decltype(boost::begin(std::declval<typename Range::return_type>())) end)
     {
-        int r = T();
+        T r = T();
         for (;beg != end; ++beg)
         {
             r = f(r , *beg);
