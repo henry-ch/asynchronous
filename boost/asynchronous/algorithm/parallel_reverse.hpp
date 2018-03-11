@@ -226,7 +226,7 @@ struct parallel_reverse_continuation_range_helper<Continuation,Job,
     std::size_t prio_;
 };
 }
-template <class Range, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+template <class Range, class Job=typename Range::job_type>
 typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>::value,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_reverse(Range range,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS

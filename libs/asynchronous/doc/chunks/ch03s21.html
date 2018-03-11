@@ -1,0 +1,37 @@
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>Parallel containers</title><link rel="stylesheet" href="boostbook.css" type="text/css"><meta name="generator" content="DocBook XSL-NS Stylesheets V1.75.2"><link rel="home" href="index.html" title="Boost Asynchronous"><link rel="up" href="ch03.html" title="Chapter&nbsp;3.&nbsp;Using Asynchronous"><link rel="prev" href="ch03s20.html" title="Parallel Algorithms (Christophe Henry / Tobias Holl)"><link rel="next" href="ch04.html" title="Chapter&nbsp;4.&nbsp;Tips."></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Parallel containers</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch03s20.html">Prev</a>&nbsp;</td><th width="60%" align="center">Chapter&nbsp;3.&nbsp;Using Asynchronous</th><td width="20%" align="right">&nbsp;<a accesskey="n" href="ch04.html">Next</a></td></tr></table><hr></div><div class="sect1" title="Parallel containers"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="d0e2396"></a>Parallel containers</h2></div></div></div><p>TODO example.</p><p>Any gain made by using a parallel algorithm can be reduced to nothing if the
+                    calling codes spends most of its time creating a std::vector. Interestingly,
+                    most parallel libraries provide parallel algorithms, but very few offer parallel
+                    data structures. This is unfortunate because a container can be parallelized
+                    with a great gain as long as the contained type either has a non-simple
+                    constructor / destructor or simply is big enough, as our tests show (see
+                    test/perf/perf_vector.cpp). Though memory allocating is not parallel,
+                    constructors can be made so. Reallocating and resizing can also greatly
+                    benefit.</p><p>Asynchronous fills this gap by providing boost::asynchronous::vector. It can
+                    be used as a parallel, synchronous type. Apart from the construction, it looks
+                    and feels very much like a std::vector with an added threadpool. In this case,
+                        <span class="underline">it cannot be posted to its own threadpool without
+                        releasing it</span> (see release_scheduler / set_scheduler). It is
+                    defined in:</p><p>#include &lt;boost/asynchronous/container/vector.hpp&gt; </p><p>The vector supports the same constructors that std::vector, with as extra
+                    parameters, the threadpool for parallel work, and a cutoff. Optionally, a name
+                    used for logging and a threadpool priority can be given, for example:</p><pre class="programlisting">struct LongOne;
+boost::asynchronous::any_shared_scheduler_proxy&lt;&gt; pool = 
+               boost::asynchronous::make_shared_scheduler_proxy&lt;
+                    boost::asynchronous::multiqueue_threadpool_scheduler&lt;
+                            boost::asynchronous::lockfree_queue&lt;&gt;
+                        &gt;&gt;(tpsize,tasks);
+
+<span class="bold"><strong>boost::asynchronous::vector</strong></span>&lt;LongOne&gt; vec (pool,1024 /* cutoff */, /* std::vector ctor arguments */ 10000,LongOne()
+                                            // optional, name for logging, priority in the threadpool
+                                            , "vector", 1);                </pre><p>At this point, asynchronous::vector can be used like std::vector, with the
+                    difference that constructor, destructor, operator=, assign, clear, push_back,
+                    emplace_back, reserve, resize, erase, insert are executed in parallel in the
+                    given threadpool.</p><p>The vector adds a few members compared to std::vector:</p><div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem"><p>release_scheduler(): removes the threadpool from vector. At this
+                                point, the vector is no more parallel, but can live from within the
+                                pool.</p></li><li class="listitem"><p>set_scheduler(): (re)sets scheduler, so that vector is again
+                                parallel. At this point, the vector cannot live from within the
+                                pool.</p></li><li class="listitem"><p>long get_cutoff() const: returns the cutoff as given in
+                                constructor.</p></li><li class="listitem"><p>std::string get_name() const: the logged name, as given in the
+                                constructor.</p></li><li class="listitem"><p>std::size_t get_prio()const: the priority, as given in the
+                                constructor.</p></li></ul></div></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch03s20.html">Prev</a>&nbsp;</td><td width="20%" align="center"><a accesskey="u" href="ch03.html">Up</a></td><td width="40%" align="right">&nbsp;<a accesskey="n" href="ch04.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Parallel Algorithms (Christophe Henry / Tobias Holl)&nbsp;</td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top">&nbsp;Chapter&nbsp;4.&nbsp;Tips.</td></tr></table></div></body></html>

@@ -120,7 +120,7 @@ struct parallel_none_of_continuation_range_helper: public boost::asynchronous::c
 };
 
 }
-template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+template <class Range, class Func, class Job=typename Range::job_type>
 typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>::value,boost::asynchronous::detail::callback_continuation<bool,Job> >::type
 parallel_none_of(Range range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS

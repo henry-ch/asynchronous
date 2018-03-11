@@ -92,7 +92,7 @@ parallel_replace(Range&& range, T const& old_value, T const& new_value, long cut
 }
 
 // versions with continuation
-template <class Range, class T,class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+template <class Range, class T,class Func, class Job=typename Range::job_type>
 typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>::value,
                           boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_replace_if(Range range, Func func, T const& new_value, long cutoff,
@@ -111,7 +111,7 @@ parallel_replace_if(Range range, Func func, T const& new_value, long cutoff,
     };
     return boost::asynchronous::parallel_for<Range,decltype(l),Job>(std::move(range),std::move(l),cutoff,task_name,prio);
 }
-template <class Range, class T, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+template <class Range, class T, class Job=typename Range::job_type>
 typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>::value,
                           boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_replace(Range range, T const& old_value, T const& new_value, long cutoff,

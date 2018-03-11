@@ -718,7 +718,7 @@ template <class Continuation1,
                             )
                         )
                     ),
-          class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+          class Job=typename std::conditional<std::is_same<typename Continuation1::job_type, typename Continuation2::job_type>::value, typename Continuation1::job_type, BOOST_ASYNCHRONOUS_DEFAULT_JOB>::type>
 typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Continuation1>::value &&
                             boost::asynchronous::detail::has_is_continuation_task<Continuation2>::value,
                             boost::asynchronous::detail::callback_continuation<T, Job>>::type
@@ -759,7 +759,7 @@ template <class Continuation1,
                             )
                         )
                     ),
-          class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+          class Job=typename std::conditional<std::is_same<typename Continuation1::job_type, typename Continuation2::job_type>::value, typename Continuation1::job_type, BOOST_ASYNCHRONOUS_DEFAULT_JOB>::type>
 typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Continuation1>::value &&
                             boost::asynchronous::detail::has_is_continuation_task<Continuation2>::value,
                             boost::asynchronous::detail::callback_continuation<T, Job>>::type

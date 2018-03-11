@@ -201,7 +201,7 @@ struct else_if_continuation_helper :
 
 }
 
-template <class Continuation, class IfClause, class ThenClause,class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+template <class Continuation, class IfClause, class ThenClause,class Job=typename Continuation::job_type>
 boost::asynchronous::detail::callback_continuation<std::tuple<bool,typename Continuation::return_type>,Job>
 if_(Continuation cont,IfClause if_clause, ThenClause then_clause,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS

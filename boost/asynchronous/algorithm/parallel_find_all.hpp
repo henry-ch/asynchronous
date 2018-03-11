@@ -490,7 +490,7 @@ struct parallel_find_all_continuation_range_helper<Continuation,Func,ReturnRange
 };
 }
 
-template <class Range, class Func, class ReturnRange=typename Range::return_type, class Job=typename BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+template <class Range, class Func, class ReturnRange=typename Range::return_type, class Job=typename Range::job_type>
 typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>::value, boost::asynchronous::detail::callback_continuation<ReturnRange, Job>>::type
 parallel_find_all(Range range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
