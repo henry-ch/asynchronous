@@ -512,7 +512,7 @@ struct parallel_for_continuation_range_helper<Continuation,Func,Job,
     std::size_t prio_;
 };
 }
-template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+template <class Range, class Func, class Job=typename Range::job_type>
 typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>::value,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_for(Range range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS

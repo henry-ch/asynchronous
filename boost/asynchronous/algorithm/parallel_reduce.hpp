@@ -568,7 +568,7 @@ struct parallel_reduce_continuation_range_helper<Continuation,Func,Func2,ReturnT
 #define _FUNC_RETURN_TYPE decltype(func(_VALUE, _VALUE))
 #define _FUNC_RETURN_TYPE2 decltype(func2(_VALUE, _VALUE))
 
-template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+template <class Range, class Func, class Job=typename Range::job_type>
 auto parallel_reduce(Range range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                      const std::string& task_name, std::size_t prio=0)
@@ -583,7 +583,7 @@ auto parallel_reduce(Range range,Func func,long cutoff,
 }
 
 // version with 2 functors
-template <class Range, class Func, class Func2, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+template <class Range, class Func, class Func2, class Job=typename Range::job_type>
 auto parallel_reduce(Range range,Func func,Func2 func2,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                     const std::string& task_name, std::size_t prio=0)

@@ -315,7 +315,7 @@ struct parallel_move_continuation_range_helper<Continuation, ResultIterator, Job
 };
 }
 
-template <class Range, class ResultIterator, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+template <class Range, class ResultIterator, class Job=typename Range::job_type>
 typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>::value,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_move(Range range,ResultIterator out,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS

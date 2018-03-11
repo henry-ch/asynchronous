@@ -133,7 +133,7 @@ parallel_unique(Iterator beg, Iterator end,Func func,long cutoff,
 }
 
 // version for ranges returned as continuations
-template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+template <class Range, class Func, class Job=typename Range::job_type>
 typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>::value,
                         boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_unique(Range range,Func func,long cutoff,
@@ -144,12 +144,12 @@ parallel_unique(Range range,Func func,long cutoff,
 #endif
 {
 
-    return boost::asynchronous::then(
+    return boost::asynchronous::then_job<Job>(
                  std::move(range),
                  [func,cutoff,task_name,prio](boost::asynchronous::expected<typename Range::return_type>&& r)mutable
                  {
                     auto res = std::make_shared<typename Range::return_type>(std::move(r.get()));
-                    return boost::asynchronous::then(
+                    return boost::asynchronous::then_job<Job>(
                             boost::asynchronous::parallel_unique
                                   <typename Range::return_type::iterator, Func, Job>
                                        (boost::begin(*res),boost::end(*res),func,cutoff,task_name,prio),

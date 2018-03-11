@@ -333,7 +333,7 @@ parallel_flatten(
 template <
     class Continuation,
     class Result        = std::vector<typename boost::asynchronous::detail::container_traits<typename boost::asynchronous::detail::container_traits<typename Continuation::return_type>::value_type>::value_type>,
-    class Job           = BOOST_ASYNCHRONOUS_DEFAULT_JOB,
+    class Job           = typename Continuation::job_type,
     class OffsetStorage = std::vector<typename boost::asynchronous::detail::container_traits<typename boost::asynchronous::detail::container_traits<typename Continuation::return_type>::value_type>::size_type>
 >
 typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Continuation>::value, boost::asynchronous::detail::callback_continuation<Result, Job>>::type

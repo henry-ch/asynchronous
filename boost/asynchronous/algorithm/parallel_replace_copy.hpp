@@ -99,7 +99,7 @@ struct parallel_replace_copy_if_continuation_helper: public boost::asynchronous:
 };
 }
 
-template <class Range, class Iterator2, class Func, class T, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+template <class Range, class Iterator2, class Func, class T, class Job=typename Range::job_type>
 typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>::value,boost::asynchronous::detail::callback_continuation<Iterator2,Job> >::type
 parallel_replace_copy_if(Range range,Iterator2 beg2,Func func, T const& new_value, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -196,7 +196,7 @@ struct parallel_replace_copy_continuation_helper: public boost::asynchronous::co
 };
 }
 
-template <class Range, class Iterator2, class T, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+template <class Range, class Iterator2, class T, class Job=typename Range::job_type>
 typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>::value,boost::asynchronous::detail::callback_continuation<Iterator2,Job> >::type
 parallel_replace_copy(Range range,Iterator2 beg2, T const& old_value, T const& new_value, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS

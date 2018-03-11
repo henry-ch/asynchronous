@@ -344,7 +344,7 @@ struct parallel_geometry_union_of_x_continuation_range_helper<Continuation,Job,
 };
 }
 // version for ranges given as continuation => will return the range as continuation
-template <class Range, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+template <class Range, class Job=typename Range::job_type>
 typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>::value,boost::asynchronous::detail::callback_continuation<typename Range::return_type,Job> >::type
 parallel_geometry_union_of_x(Range range,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
