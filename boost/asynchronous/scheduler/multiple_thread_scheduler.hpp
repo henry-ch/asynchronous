@@ -325,6 +325,16 @@ public:
         w.set_name(name);
         return interruptible_post(std::move(w),priority);
     }
+    void enable_queue(std::size_t queue_prio, bool enable) override
+    {
+        if (queue_prio >= m_queues->size())
+        {
+            // this queue is not existing
+            assert(false);
+        }
+        (*m_queues)[queue_prio].m_queues->enable_queue(queue_prio,enable);
+    }
+
     // try to execute a job, return true
     static bool execute_one_job(std::vector<job_queues>* queues,size_t index,size_t& current_servant,CPULoad& cpu_load,std::shared_ptr<diag_type> diagnostics,
                                 std::list<boost::asynchronous::any_continuation>& waiting)

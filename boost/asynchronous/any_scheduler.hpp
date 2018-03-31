@@ -111,6 +111,7 @@ struct any_shared_scheduler_concept
     virtual std::string get_name()const =0;
     virtual void processor_bind(std::vector<std::tuple<unsigned int/*first core*/,unsigned int /*number of threads*/>> )=0;
     virtual std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable)=0;
+    virtual void enable_queue(std::size_t,bool) =0;
 };
 
 // concept for shared pointer to a scheduler
@@ -221,7 +222,10 @@ public:
     {
         return (*my_ptr).execute_in_all_threads(std::move(c));
     }
-
+    void enable_queue(std::size_t priority, bool enable)
+    {
+        (*my_ptr).enable_queue(priority,enable);
+    }
 private:
     any_shared_scheduler_ptr<JOB> my_ptr;
 };

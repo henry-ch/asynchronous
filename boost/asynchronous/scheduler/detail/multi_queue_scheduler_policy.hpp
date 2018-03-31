@@ -153,6 +153,26 @@ public:
         w.set_name(name);
         return interruptible_post(std::move(w),priority);
     }
+
+    void enable_queue(std::size_t queue_prio, bool enable) override
+    {
+        if (queue_prio == 0)
+        {
+            // en/disable all queues
+            for (typename std::vector<std::shared_ptr<queue_type> >::iterator it = m_queues.begin();
+                 it != m_queues.end();++it)
+            {
+                (*it)->enable_queue(queue_prio,enable);
+            }
+
+        }
+        else
+        {
+            // en/disable required queue
+            m_queues.at(queue_prio-1)->enable_queue(queue_prio,enable);
+        }
+    }
+
     
     static boost::thread_specific_ptr<thread_ptr_wrapper> m_self_thread;
     

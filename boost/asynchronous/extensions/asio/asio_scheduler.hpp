@@ -367,6 +367,11 @@ public:
         return interruptible_post(w,priority);
     }  
 #endif
+    void enable_queue(std::size_t , bool ) override
+    {
+        // unsupported
+    }
+
     std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues()
     {
         // this scheduler doesn't give any queues for stealing

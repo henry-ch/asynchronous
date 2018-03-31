@@ -508,6 +508,10 @@ private:
             }
             return res;
         }
+        void enable_queue(std::size_t , bool ) override
+        {
+            // unsupported
+        }
     private:
         std::vector<boost::asynchronous::any_shared_scheduler<job_type> > m_schedulers;
     };  

@@ -96,6 +96,7 @@ struct any_queue_concept
     virtual std::vector<std::size_t> get_queue_size()const=0;
     virtual std::vector<std::size_t> get_max_queue_size() const=0;
     virtual void reset_max_queue_size()=0;
+    virtual void enable_queue(std::size_t /*queue_prio*/, bool /*enable*/){/* default ignore, unsupported */}
 };
 template <class JOB>
 struct any_queue_ptr: std::shared_ptr<boost::asynchronous::any_queue_concept<JOB> >

@@ -112,6 +112,11 @@ public:
         return res;
     }
 
+    void enable_queue(std::size_t queue_prio, bool enable) override
+    {
+        m_queue->enable_queue(queue_prio,enable);
+    }
+
     static boost::thread_specific_ptr<thread_ptr_wrapper> m_self_thread;
     
 protected:
