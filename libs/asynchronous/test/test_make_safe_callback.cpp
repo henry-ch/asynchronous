@@ -115,6 +115,20 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job,servant_job>
         );
         return fu;
     }
+
+    void sync_safe_callback()
+    {
+        BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant start_async_work not posted.");
+
+        auto cb = make_safe_callback(
+                    []()
+                    {
+                        f_called = true;
+                    },
+                    "not_posted_safe_callback");
+
+        cb();
+    }
 };
 
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant,servant_job>
@@ -127,9 +141,11 @@ public:
 #ifndef _MSC_VER
     BOOST_ASYNC_FUTURE_MEMBER_LOG(start_async_work,"proxy::start_async_work")
     BOOST_ASYNC_FUTURE_MEMBER_LOG(start_async_work_failed,"proxy::start_async_work_failed")
+    BOOST_ASYNC_FUTURE_MEMBER_LOG(sync_safe_callback,"proxy::sync_safe_callback")
 #else
     BOOST_ASYNC_FUTURE_MEMBER_LOG_2(start_async_work, "proxy::start_async_work")
     BOOST_ASYNC_FUTURE_MEMBER_LOG_2(start_async_work_failed, "proxy::start_async_work_failed")
+    BOOST_ASYNC_FUTURE_MEMBER_LOG_2(sync_safe_callback,"proxy::sync_safe_callback")
 #endif
 };
 
@@ -214,5 +230,41 @@ BOOST_AUTO_TEST_CASE( test_make_safe_callback_failed )
     }
     BOOST_CHECK_MESSAGE(found_safe_cb,"found_safe_cb not called.");
     BOOST_CHECK_MESSAGE(f_called,"found_safe_cb not called.");
+    f_called=false;
+}
+
+BOOST_AUTO_TEST_CASE( test_not_posted_safe_callback )
+{
+    servant_dtor=false;
+    diag_type single_thread_sched_diag;
+    {
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+                                                                            boost::asynchronous::lockfree_queue<servant_job>>>();
+
+        main_thread_id = boost::this_thread::get_id();
+        ServantProxy proxy(scheduler);
+        try
+        {
+            std::future<void> fuv = proxy.sync_safe_callback();
+            fuv.get();
+        }
+        catch(...)
+        {
+            BOOST_FAIL( "unexpected exception" );
+        }
+        single_thread_sched_diag = scheduler.get_diagnostics().totals();
+    }
+    BOOST_CHECK_MESSAGE(servant_dtor,"servant dtor not called.");
+
+    bool found_safe_cb=false;
+    for (auto mit = single_thread_sched_diag.begin(); mit != single_thread_sched_diag.end() ; ++mit)
+    {
+        if ((*mit).first == "not_posted_safe_callback")
+        {
+            found_safe_cb = true;
+        }
+    }
+    BOOST_CHECK_MESSAGE(found_safe_cb,"not_posted_safe_callback not called.");
+    BOOST_CHECK_MESSAGE(f_called,"not_posted_safe_callback not called.");
     f_called=false;
 }

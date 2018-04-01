@@ -9,6 +9,7 @@
 #include <boost/asynchronous/any_scheduler.hpp>
 #include <boost/asynchronous/scheduler/detail/any_continuation.hpp>
 #include <boost/asynchronous/scheduler/detail/interrupt_state.hpp>
+#include <boost/asynchronous/job_traits.hpp>
 
 namespace boost { namespace asynchronous
 {
@@ -86,6 +87,30 @@ template <class dummy = void >
         return 0;
     return *s_index.get();
 }
+
+ template <class Job = BOOST_ASYNCHRONOUS_DEFAULT_JOB >
+ struct tss_weak_diagnostics_wrapper
+ {
+     tss_weak_diagnostics_wrapper(std::weak_ptr<typename boost::asynchronous::job_traits<Job>::diagnostic_table_type> d)
+         :m_diagnostics(d){}
+     std::weak_ptr<typename boost::asynchronous::job_traits<Job>::diagnostic_table_type> m_diagnostics;
+ };
+
+ template <class Job = BOOST_ASYNCHRONOUS_DEFAULT_JOB >
+ std::weak_ptr<typename boost::asynchronous::job_traits<Job>::diagnostic_table_type>
+ get_scheduler_diagnostics(std::weak_ptr<typename boost::asynchronous::job_traits<Job>::diagnostic_table_type> wdiags=
+                                std::weak_ptr<typename boost::asynchronous::job_traits<Job>::diagnostic_table_type>(),
+                           bool reset=false)
+ {
+     static boost::thread_specific_ptr<boost::asynchronous::tss_weak_diagnostics_wrapper<Job> > s_diagnostics;
+     if (reset)
+     {
+         s_diagnostics.reset(new boost::asynchronous::tss_weak_diagnostics_wrapper<Job>(wdiags));
+     }
+     if (!s_diagnostics.get())
+         return std::weak_ptr<typename boost::asynchronous::job_traits<Job>::diagnostic_table_type>();
+     return s_diagnostics.get()->m_diagnostics;
+ }
 
 }}
 

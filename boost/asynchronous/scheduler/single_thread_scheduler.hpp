@@ -255,6 +255,8 @@ public:
         std::list<boost::asynchronous::any_continuation>& waiting =
                 boost::asynchronous::get_continuations(std::list<boost::asynchronous::any_continuation>(),true);
 
+        boost::asynchronous::get_scheduler_diagnostics<job_type>(diagnostics,true);
+
         CPULoad cpu_load;
         while(true)
         {
