@@ -36,32 +36,32 @@ public:
     
     single_queue_scheduler_policy(const single_queue_scheduler_policy&) = delete;
     single_queue_scheduler_policy& operator=(const single_queue_scheduler_policy&) = delete;
-    std::vector<std::size_t> get_queue_size() const
+    std::vector<std::size_t> get_queue_size() const override
     {
         return m_queue->get_queue_size();
     }
-    std::vector<std::size_t> get_max_queue_size() const
+    std::vector<std::size_t> get_max_queue_size() const override
     {
         return m_queue->get_max_queue_size();
     }
-    void reset_max_queue_size()
+    void reset_max_queue_size() override
     {
         m_queue->reset_max_queue_size();
     }
 
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    void post(typename queue_type::job_type job, std::size_t prio)
+    void post(typename queue_type::job_type job, std::size_t prio) override
     {
         boost::asynchronous::job_traits<typename queue_type::job_type>::set_posted_time(job);
         m_queue->push(std::move(job),prio);
     }
-    void post(typename queue_type::job_type job)
+    void post(typename queue_type::job_type job) override
     {
         post(std::move(job),0);
     }
     
     boost::asynchronous::any_interruptible interruptible_post(typename queue_type::job_type job,
-                                                          std::size_t prio)
+                                                          std::size_t prio) override
     {
         std::shared_ptr<boost::asynchronous::detail::interrupt_state>
                 state = std::make_shared<boost::asynchronous::detail::interrupt_state>();
@@ -77,17 +77,17 @@ public:
 
         return boost::asynchronous::any_interruptible(interruptible);
     }
-    boost::asynchronous::any_interruptible interruptible_post(typename queue_type::job_type job)
+    boost::asynchronous::any_interruptible interruptible_post(typename queue_type::job_type job) override
     {
         return interruptible_post(std::move(job),0);
     }
 #else
-    void post(typename queue_type::job_type& job, std::size_t prio=0)
+    void post(typename queue_type::job_type& job, std::size_t prio=0) override
     {
         boost::asynchronous::job_traits<typename queue_type::job_type>::set_posted_time(job);
         m_queue->push(job,prio);
     }
-    boost::asynchronous::any_interruptible interruptible_post(typename queue_type::job_type& job, std::size_t prio=0)
+    boost::asynchronous::any_interruptible interruptible_post(typename queue_type::job_type& job, std::size_t prio=0) override
     {
         std::shared_ptr<boost::asynchronous::detail::interrupt_state>
                 state = std::make_shared<boost::asynchronous::detail::interrupt_state>();

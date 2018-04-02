@@ -88,7 +88,7 @@ public:
         }
         return res;
     }
-    std::vector<std::size_t> get_max_queue_size() const
+    std::vector<std::size_t> get_max_queue_size() const override
     {
         std::vector<std::size_t> res;
         for (typename std::vector<subpool_type>::const_iterator it = m_subpools.begin(); it != m_subpools.end();++it)
@@ -99,7 +99,7 @@ public:
         }
         return res;
     }
-    void reset_max_queue_size()
+    void reset_max_queue_size() override
     {
         for (auto it = m_subpools.begin(); it != m_subpools.end();++it)
         {
@@ -108,22 +108,22 @@ public:
     }
 
 #ifndef BOOST_NO_RVALUE_REFERENCES
-    void post(job_type job) const
+    void post(job_type job) const override
     {
         post(std::move(job),0);
     }
-    void post(job_type job,std::size_t priority) const
+    void post(job_type job,std::size_t priority) const override
     {
         if (!m_subpools.empty())
             (m_subpools[this->find_position(priority,m_subpools.size())]).post(std::move(job),priority);
     }
-    boost::asynchronous::any_interruptible interruptible_post(job_type job) const
+    boost::asynchronous::any_interruptible interruptible_post(job_type job) const override
     {
         if (m_subpools.empty())
             return boost::asynchronous::any_interruptible();
         return (m_subpools[this->find_position(0,m_subpools.size())]).interruptible_post(std::move(job));
     }
-    boost::asynchronous::any_interruptible interruptible_post(job_type job,std::size_t priority) const
+    boost::asynchronous::any_interruptible interruptible_post(job_type job,std::size_t priority) const override
     {
         if (m_subpools.empty())
             return boost::asynchronous::any_interruptible();
@@ -132,7 +132,7 @@ public:
 #else
 //TODO
 #endif
-    bool is_valid()const
+    bool is_valid()const override
     {
         if (m_subpools.empty())
             return false;
@@ -146,7 +146,7 @@ public:
         return true;
     }
     
-    std::vector<boost::thread::id> thread_ids()const
+    std::vector<boost::thread::id> thread_ids()const override
     {
         std::vector<boost::thread::id> ids;
         for (typename std::vector<subpool_type>::const_iterator it = m_subpools.begin(); it != m_subpools.end();++it)
@@ -156,19 +156,19 @@ public:
         }
         return ids;
     }
-    void set_name(std::string const& name)
+    void set_name(std::string const& name) override
     {
         for (typename std::vector<subpool_type>::iterator it = m_subpools.begin(); it != m_subpools.end();++it)
         {
             (*it).set_name(name);
         }
     }
-    std::string get_name()const
+    std::string get_name()const override
     {
         return "composite_threadpool_scheduler";
     }
     boost::asynchronous::scheduler_diagnostics
-    get_diagnostics(std::size_t pos=0)const
+    get_diagnostics(std::size_t pos=0)const override
     {
         if (pos==0)
         {
@@ -191,7 +191,7 @@ public:
             return (m_subpools[this->find_position(pos,m_subpools.size())]).get_diagnostics(pos);
         }
     }
-    void clear_diagnostics()
+    void clear_diagnostics() override
     {
         for (typename std::vector<subpool_type>::iterator it = m_subpools.begin(); it != m_subpools.end();++it)
         {
@@ -204,12 +204,12 @@ public:
     {
         //TODO
     }
-    boost::asynchronous::any_weak_scheduler<job_type> get_weak_scheduler() const
+    boost::asynchronous::any_weak_scheduler<job_type> get_weak_scheduler() const override
     {
         composite_lockable_weak_scheduler w(m_subpools);
         return boost::asynchronous::any_weak_scheduler<job_type>(std::move(w));
     }
-    std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues()
+    std::vector<boost::asynchronous::any_queue_ptr<job_type> > get_queues() override
     {
         std::vector<boost::asynchronous::any_queue_ptr<job_type> > res;
         for (typename std::vector<subpool_type>::iterator it = m_subpools.begin(); it != m_subpools.end();++it)
@@ -219,7 +219,7 @@ public:
         }
         return res;
     }
-    void processor_bind(std::vector<std::tuple<unsigned int,unsigned int>> /*p*/)
+    void processor_bind(std::vector<std::tuple<unsigned int,unsigned int>> /*p*/) override
     {
         //TODO currently unsupported
 //        // distribute linearly to subpools according to their queue sizes
@@ -232,7 +232,7 @@ public:
 //                                 [](std::size_t rhs,std::size_t lhs){return rhs + lhs;});
 //        }
     }
-    std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c)
+    std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c) override
     {
         std::vector<std::future<void>> res;
         for (typename std::vector<subpool_type>::iterator it = m_subpools.begin(); it != m_subpools.end();++it)
@@ -246,11 +246,11 @@ public:
         return res;
     }
 
-    void set_steal_from_queues(std::vector<boost::asynchronous::any_queue_ptr<job_type> > const& )
+    void set_steal_from_queues(std::vector<boost::asynchronous::any_queue_ptr<job_type> > const& ) override
     {
         // composite of composite is not supported
     }
-    boost::asynchronous::internal_scheduler_aspect<job_type> get_internal_scheduler_aspect()
+    boost::asynchronous::internal_scheduler_aspect<job_type> get_internal_scheduler_aspect() override
     {
         boost::asynchronous::internal_scheduler_aspect<job_type> a(this->shared_from_this());
         return a;
