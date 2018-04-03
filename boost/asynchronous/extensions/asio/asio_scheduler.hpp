@@ -69,17 +69,17 @@ public:
     {
         set_name(name);
     }
-    std::vector<std::size_t> get_queue_size() const
+    std::vector<std::size_t> get_queue_size() const override
     {
         // not supported
         return std::vector<std::size_t>();
     }
-    std::vector<std::size_t> get_max_queue_size() const
+    std::vector<std::size_t> get_max_queue_size() const override
     {
         // not supported
         return std::vector<std::size_t>();
     }
-    void reset_max_queue_size()
+    void reset_max_queue_size() override
     {
         // not supported
     }
@@ -151,7 +151,7 @@ public:
 #endif
         }
     }
-    std::string get_name()const
+    std::string get_name()const override
     {
         return m_name;
     }
@@ -159,7 +159,7 @@ public:
     {
         return boost::asynchronous::any_joinable (boost::asynchronous::detail::worker_wrap<boost::thread_group>(m_group));
     }
-    void processor_bind(std::vector<std::tuple<unsigned int/*first core*/,unsigned int/*number of threads*/>> p)
+    void processor_bind(std::vector<std::tuple<unsigned int/*first core*/,unsigned int/*number of threads*/>> p) override
     {
         // our thread (queue) index. 0 means "don't care" and is therefore not desirable)
         size_t t = 1;
@@ -173,7 +173,7 @@ public:
             }
         }
     }
-    std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c)
+    std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c) override
     {
         // our thread (queue) index. 0 means "don't care" and is therefore not desirable)
         size_t t = 1;
@@ -191,24 +191,24 @@ public:
         return res;
     }
     
-    std::vector<boost::thread::id> thread_ids()const
+    std::vector<boost::thread::id> thread_ids()const override
     {
         return m_thread_ids;
     }
     
     boost::asynchronous::scheduler_diagnostics
-    get_diagnostics(std::size_t =0)const
+    get_diagnostics(std::size_t =0)const override
     {
         // TODO if possible
         return boost::asynchronous::scheduler_diagnostics();
     }
-    void clear_diagnostics()
+    void clear_diagnostics() override
     {
         // TODO if possible
     }
     void register_diagnostics_functor(std::function<void(boost::asynchronous::scheduler_diagnostics)> ,
                                       boost::asynchronous::register_diagnostics_type =
-                                                    boost::asynchronous::register_diagnostics_type())
+                                                    boost::asynchronous::register_diagnostics_type()) override
     {
         //TODO if possible
     }
@@ -219,7 +219,7 @@ public:
     }
 
 #ifndef BOOST_NO_RVALUE_REFERENCES    
-    void post(job_type job, std::size_t prio)
+    void post(job_type job, std::size_t prio) override
     {
         boost::asynchronous::job_traits<job_type>::set_posted_time(job);
         if (prio == std::numeric_limits<std::size_t>::max())
@@ -234,7 +234,7 @@ public:
             m_ioservices[pos]->post(std::move(job));
         }
     }
-    void post(job_type job)
+    void post(job_type job) override
     {
         post(std::move(job),0);
     }
@@ -251,7 +251,7 @@ public:
         post(std::move(w),priority);
     } 
     boost::asynchronous::any_interruptible interruptible_post(job_type job,
-                                                          std::size_t prio)
+                                                          std::size_t prio) override
     {
         std::shared_ptr<boost::asynchronous::detail::interrupt_state>
                 state = std::make_shared<boost::asynchronous::detail::interrupt_state>();
@@ -281,7 +281,7 @@ public:
 
         return boost::asynchronous::any_interruptible(interruptible);
     }
-    boost::asynchronous::any_interruptible interruptible_post(job_type job)
+    boost::asynchronous::any_interruptible interruptible_post(job_type job) override
     {
         return interruptible_post(std::move(job),0);
     }
