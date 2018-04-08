@@ -88,28 +88,14 @@ struct then_helper : public boost::asynchronous::continuation_task<typename Trai
     template <bool FunctorReturnsVoid>
     static typename std::enable_if<!FunctorReturnsVoid, typename Traits::WrappedFunctorReturnType>::type invoke_then_functor(Functor functor, typename Traits::FunctorArgument arg)
     {
-#if __cpp_lib_invoke
-        return std::invoke(
-            boost::asynchronous::detail::move_where_possible(functor),
-            boost::asynchronous::detail::move_where_possible(arg)
-        );
-#else
         return functor(boost::asynchronous::detail::move_where_possible(arg));
-#endif
     }
 
     // Version for functors returning void
     template <bool FunctorReturnsVoid>
     static typename std::enable_if<FunctorReturnsVoid, typename Traits::WrappedFunctorReturnType>::type invoke_then_functor(Functor functor, typename Traits::FunctorArgument arg)
     {
-#if __cpp_lib_invoke
-        std::invoke(
-            boost::asynchronous::detail::move_where_possible(functor),
-            boost::asynchronous::detail::move_where_possible(arg)
-        );
-#else
         functor(boost::asynchronous::detail::move_where_possible(arg));
-#endif
         return void_wrapper{};
     }
 
