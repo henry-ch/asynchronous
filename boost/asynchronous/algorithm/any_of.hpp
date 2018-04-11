@@ -14,16 +14,18 @@
 #include <memory>
 #include <tuple>
 #include <type_traits>
+#include <vector>
 
 #include <boost/mpl/contains.hpp>
 #include <boost/mpl/vector.hpp>
 #include <boost/variant.hpp>
 
+#include <boost/asynchronous/continuation_task.hpp>
+#include <boost/asynchronous/exceptions.hpp>
+#include <boost/asynchronous/algorithm/detail/helpers.hpp>
 #include <boost/asynchronous/detail/continuation_impl.hpp>
 #include <boost/asynchronous/detail/job_type_from.hpp>
 #include <boost/asynchronous/detail/metafunctions.hpp>
-#include <boost/asynchronous/continuation_task.hpp>
-#include <boost/asynchronous/algorithm/detail/helpers.hpp>
 
 namespace boost
 {
@@ -104,10 +106,38 @@ struct distinct_variant<>
 template <typename... Types>
 struct any_of_result
 {
+    // The number of continuations that contributed to this result
     constexpr static size_t count = sizeof...(Types);
+    // Boost.Variant needs distinct types, so we need to resolve what variant we actually want here
+    using variant_type = typename boost::asynchronous::detail::distinct_variant<Types...>::type;
 
-    size_t index = std::numeric_limits<size_t>::max();
-    typename boost::asynchronous::detail::distinct_variant<Types...>::type value;
+    // The index of the continuation that returned (if any)
+    size_t& index() { return m_index; }
+    const size_t& index() const { return m_index; }
+
+    // The result of that continuation
+    variant_type& value() { return m_value; }
+    const variant_type& value() const { return m_value; }
+
+private:
+    size_t       m_index = std::numeric_limits<size_t>::max();
+    variant_type m_value;
+};
+
+// Exception storage. This is itself an exception, so we can throw this and retreive the underlying exceptions.
+struct any_of_exception : public boost::asynchronous::asynchronous_exception
+{
+    any_of_exception(size_t count)
+        : m_underlying(count)
+    {}
+
+    const char* what() const noexcept override { return "any_of_exception"; }
+
+    std::vector<std::exception_ptr>& underlying_exceptions() { return m_underlying; }
+    const std::vector<std::exception_ptr>& underlying_exceptions() const { return m_underlying; }
+
+private:
+    std::vector<std::exception_ptr> m_underlying;
 };
 
 namespace detail
@@ -118,10 +148,12 @@ template <typename Storage>
 struct any_of_task_counter
 {
     any_of_task_counter()
-        : failures_remaining(Storage::count)
+        : exceptions(Storage::count)
+        , failures_remaining(Storage::count)
     {}
 
     Storage storage;
+    any_of_exception exceptions;
     std::atomic<size_t> failures_remaining;
     std::atomic_flag has_value;
 
@@ -131,8 +163,8 @@ struct any_of_task_counter
         bool was_empty = !has_value.test_and_set();
         if (was_empty)
         {
-            storage.index = Index;
-            storage.value = std::forward<T>(t);
+            storage.index() = Index;
+            storage.value() = std::forward<T>(t);
         }
         return was_empty;
     }
@@ -142,8 +174,15 @@ struct any_of_task_counter
     {
         bool was_empty = !has_value.test_and_set();
         if (was_empty)
-            storage.index = Index;
+            storage.index() = Index;
         return was_empty;
+    }
+
+    template <size_t Index>
+    size_t store_exception(std::exception_ptr exception)
+    {
+        exceptions.underlying_exceptions()[Index] = exception;
+        return --failures_remaining;
     }
 };
 
@@ -192,13 +231,10 @@ struct any_of_helper : public boost::asynchronous::continuation_task<boost::asyn
                 }
                 catch (...)
                 {
-                    size_t failures_remaining = --(task_counter->failures_remaining);
+                    // Store the exception_ptr. If all tasks failed, throw the exception storage with all underlying exceptions
+                    size_t failures_remaining = task_counter->template store_exception<Index>(std::current_exception());
                     if (failures_remaining == 0)
-                    {
-                        // If all tasks failed, pass the last exception down
-                        // TODO: Find a way to report all exceptions?
-                        task_res.set_exception(std::current_exception());
-                    }
+                        task_res.set_exception(ASYNCHRONOUS_CREATE_EXCEPTION(task_counter->exceptions));
                 }
             }
         );
@@ -224,13 +260,10 @@ struct any_of_helper : public boost::asynchronous::continuation_task<boost::asyn
                 }
                 catch (...)
                 {
-                    size_t failures_remaining = --(task_counter->failures_remaining);
+                    // Store the exception_ptr. If all tasks failed, throw the exception storage with all underlying exceptions
+                    size_t failures_remaining = task_counter->template store_exception<Index>(std::current_exception());
                     if (failures_remaining == 0)
-                    {
-                        // If all tasks failed, pass the last exception down
-                        // TODO: Find a way to report all exceptions?
-                        task_res.set_exception(std::current_exception());
-                    }
+                        task_res.set_exception(ASYNCHRONOUS_CREATE_EXCEPTION(task_counter->exceptions));
                 }
             }
         );

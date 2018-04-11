@@ -140,8 +140,8 @@ BOOST_AUTO_TEST_CASE(test_continuation_any_of)
     {
         auto result = fu.get();
         static_assert(std::is_same<typename std::decay<decltype(result)>::type, boost::asynchronous::any_of_result<int, int, int, std::vector<int>>>::value, "Incorrect return type for any_of");
-        BOOST_CHECK_MESSAGE(result.index == 2, "Smallest continuation with result did not finish first");
-        BOOST_CHECK_MESSAGE(boost::get<int>(result.value) == 4200, "Smallest continuation returned the wrong result (" + std::to_string(boost::get<int>(result.value)) + ", should have been 4200)");
+        BOOST_CHECK_MESSAGE(result.index() == 2, "Smallest continuation with result did not finish first");
+        BOOST_CHECK_MESSAGE(boost::get<int>(result.value()) == 4200, "Smallest continuation returned the wrong result (" + std::to_string(boost::get<int>(result.value())) + ", should have been 4200)");
     }
     catch (...)
     {
@@ -162,9 +162,9 @@ BOOST_AUTO_TEST_CASE(test_continuation_any_of_only_exceptions)
         [a, b, c]() mutable
         {
             return boost::asynchronous::any_of(
-                boost::asynchronous::parallel_for(std::move(*a), [](const int&) { throw std::logic_error("Testing exception propagation"); }, 1500, "exception a", 0),
-                boost::asynchronous::parallel_for(std::move(*b), [](const int&) { throw std::logic_error("Testing exception propagation"); }, 1500, "exception b", 0),
-                boost::asynchronous::parallel_for(std::move(*c), [](const int&) { throw std::logic_error("Testing exception propagation"); }, 1500, "exception c", 0)
+                boost::asynchronous::parallel_for(std::move(*a), [](const int&) { throw std::logic_error("Testing exception propagation from 'a'"); }, 1500, "exception a", 0),
+                boost::asynchronous::parallel_for(std::move(*b), [](const int&) { throw std::logic_error("Testing exception propagation from 'b'"); }, 1500, "exception b", 0),
+                boost::asynchronous::parallel_for(std::move(*c), [](const int&) { throw std::logic_error("Testing exception propagation from 'c'"); }, 1500, "exception c", 0)
             );
         },
         "test_continuation_any_of_only_exceptions",
@@ -177,13 +177,32 @@ BOOST_AUTO_TEST_CASE(test_continuation_any_of_only_exceptions)
         static_assert(std::is_same<typename std::decay<decltype(result)>::type, boost::asynchronous::any_of_result<std::vector<int>, std::vector<int>, std::vector<int>>>::value, "Incorrect return type for any_of");
         BOOST_FAIL("Should have gotten an exception");
     }
-    catch (const std::logic_error& e)
+    catch (const boost::asynchronous::any_of_exception& e)
     {
-        BOOST_CHECK_MESSAGE(e.what() == std::string("Testing exception propagation"), "Got incorrect exception message");
+        std::vector<std::string> messages = {"Testing exception propagation from 'a'", "Testing exception propagation from 'b'", "Testing exception propagation from 'c'"};
+
+        auto& underlying = e.underlying_exceptions();
+        BOOST_CHECK_MESSAGE(underlying.size() == messages.size(), "Stored wrong number (" + std::to_string(underlying.size()) + ") of underlying exceptions");
+
+        for (size_t index = 0; index < messages.size(); ++index)
+        {
+            try
+            {
+                std::rethrow_exception(underlying[index]);
+            }
+            catch (const std::logic_error& u)
+            {
+                BOOST_CHECK_MESSAGE(u.what() == messages[index], "Got incorrect exception message for underlying exception at index " + std::to_string(index));
+            }
+            catch (...)
+            {
+                BOOST_FAIL("Underlying exception at index " + std::to_string(index) + " reported wrong type on rethrowing");
+            }
+        }
     }
     catch (...)
     {
-        BOOST_FAIL("Unexpected exception");
+        BOOST_FAIL("any_of threw incorrect exception");
     }
 }
 
