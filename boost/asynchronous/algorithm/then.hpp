@@ -14,6 +14,7 @@
 #include <functional>
 #include <type_traits>
 
+#include <boost/asynchronous/algorithm/detail/helpers.hpp>
 #include <boost/asynchronous/detail/continuation_impl.hpp>
 #include <boost/asynchronous/detail/metafunctions.hpp>
 #include <boost/asynchronous/continuation_task.hpp>
@@ -24,12 +25,6 @@ namespace asynchronous
 {
 namespace detail
 {
-
-// Wrapper to avoid void and void&& argument types
-struct void_wrapper {};
-
-template <class T> struct wrap { using type = T; };
-template <> struct wrap<void> { using type = void_wrapper; };
 
 // The result of applying the functor to the given continuation
 template <class Continuation, class Functor>
