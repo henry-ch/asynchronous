@@ -124,22 +124,6 @@ private:
     variant_type m_value;
 };
 
-// Exception storage. This is itself an exception, so we can throw this and retreive the underlying exceptions.
-struct any_of_exception : public boost::asynchronous::asynchronous_exception
-{
-    any_of_exception(size_t count)
-        : m_underlying(count)
-    {}
-
-    const char* what() const noexcept override { return "any_of_exception"; }
-
-    std::vector<std::exception_ptr>& underlying_exceptions() { return m_underlying; }
-    const std::vector<std::exception_ptr>& underlying_exceptions() const { return m_underlying; }
-
-private:
-    std::vector<std::exception_ptr> m_underlying;
-};
-
 namespace detail
 {
 
@@ -153,7 +137,7 @@ struct any_of_task_counter
     {}
 
     Storage storage;
-    any_of_exception exceptions;
+    boost::asynchronous::combined_exception exceptions;
     std::atomic<size_t> failures_remaining;
     std::atomic_flag has_value;
 

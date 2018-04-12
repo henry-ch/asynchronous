@@ -177,7 +177,7 @@ BOOST_AUTO_TEST_CASE(test_continuation_any_of_only_exceptions)
         static_assert(std::is_same<typename std::decay<decltype(result)>::type, boost::asynchronous::any_of_result<std::vector<int>, std::vector<int>, std::vector<int>>>::value, "Incorrect return type for any_of");
         BOOST_FAIL("Should have gotten an exception");
     }
-    catch (const boost::asynchronous::any_of_exception& e)
+    catch (const boost::asynchronous::combined_exception& e)
     {
         std::vector<std::string> messages = {"Testing exception propagation from 'a'", "Testing exception propagation from 'b'", "Testing exception propagation from 'c'"};
 
