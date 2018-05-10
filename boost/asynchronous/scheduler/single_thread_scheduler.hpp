@@ -260,8 +260,6 @@ public:
         CPULoad cpu_load;
         while(true)
         {
-            // get a job
-            typename Q::job_type job;
             try
             {
                 {
@@ -296,7 +294,6 @@ public:
             }
             catch(std::exception&)
             {
-                boost::asynchronous::job_traits<typename Q::job_type>::set_failed(job);
             }
         }
     }
