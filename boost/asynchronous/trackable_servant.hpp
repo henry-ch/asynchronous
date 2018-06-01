@@ -19,6 +19,7 @@
 #include <boost/asynchronous/checks.hpp>
 #include <boost/asynchronous/scheduler/tss_scheduler.hpp>
 #include <boost/asynchronous/detail/move_bind.hpp>
+#include <boost/asynchronous/job_traits.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/signals2/signal.hpp>
 #include <boost/thread/thread.hpp>
@@ -564,6 +565,18 @@ public:
     }
 
 private:
+
+    template <class Fct>
+    struct safe_callback_helper : public boost::asynchronous::job_traits<JOB>::diagnostic_type
+    {
+        safe_callback_helper(Fct f) : m_callable(std::move(f)){}
+        void operator()()
+        {
+            m_callable();
+        }
+        Fct m_callable;
+    };
+
     template<typename... Args>
     std::function<void(Args... )> make_safe_callback_helper(std::function<void(Args... )> func,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -577,6 +590,7 @@ private:
         //TODO functor with move
         std::shared_ptr<std::function<void(Args... )>> func_ptr =
                 std::make_shared<std::function<void(Args... )>>(std::move(func));
+
         std::function<void(Args...)> res = [func_ptr,tracking,wscheduler,task_name,prio](Args... as)mutable
         {
             boost::asynchronous::any_shared_scheduler<JOB> sched = wscheduler.lock();
@@ -585,9 +599,36 @@ private:
                 std::vector<boost::thread::id> ids = sched.thread_ids();
                 if (ids.size() == 1 && (ids[0] == boost::this_thread::get_id()))
                 {
-                    // our thread, call if servant alive
-                   boost::asynchronous::move_bind( boost::asynchronous::check_alive([func_ptr](Args... args){(*func_ptr)(std::move(args)...);},tracking),
-                                                   std::move(as)...)();
+                    auto weak_diagnostics = boost::asynchronous::get_scheduler_diagnostics<JOB>();
+                    auto diagnostics = weak_diagnostics.lock();
+                    auto f = boost::asynchronous::move_bind( boost::asynchronous::check_alive([func_ptr](Args... args){(*func_ptr)(std::move(args)...);},tracking),
+                                std::move(as)...);
+                    safe_callback_helper<decltype(f)> job_(std::move(f));
+                    job_.set_name(task_name);
+                    JOB job(job_);
+                    try
+                    {
+                        // log time
+                        boost::asynchronous::job_traits<JOB>::set_posted_time(job);
+                        boost::asynchronous::job_traits<JOB>::set_started_time(job);
+                        // log thread
+                        boost::asynchronous::job_traits<JOB>::set_executing_thread_id(job,boost::this_thread::get_id());
+                        // log current
+                        boost::asynchronous::job_traits<JOB>::add_current_diagnostic(0,job,diagnostics.get());
+
+                        job();
+
+                        boost::asynchronous::job_traits<JOB>::reset_current_diagnostic(0,diagnostics.get());
+                        boost::asynchronous::job_traits<JOB>::set_finished_time(job);
+                        boost::asynchronous::job_traits<JOB>::add_diagnostic(job,diagnostics.get());
+                    }
+                    catch(std::exception&)
+                    {
+                        boost::asynchronous::job_traits<JOB>::set_failed(job);
+                        boost::asynchronous::job_traits<JOB>::set_finished_time(job);
+                        boost::asynchronous::job_traits<JOB>::add_diagnostic(job,diagnostics.get());
+                        boost::asynchronous::job_traits<JOB>::reset_current_diagnostic(0,diagnostics.get());
+                    }
                 }
                 else
                 {

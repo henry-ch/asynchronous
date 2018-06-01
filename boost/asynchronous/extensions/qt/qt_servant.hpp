@@ -252,6 +252,15 @@ public:
         m_qt_async_safe_callback_custom_event_id = id;
     }
 
+    /*!
+     * \brief Returns a functor checking if servant is still alive
+     */
+    std::function<bool()> make_check_alive_functor()const
+    {
+        std::weak_ptr<boost::asynchronous::detail::qt_track> tracking (m_tracking);
+        return [tracking](){return !tracking.expired();};
+    }
+
 protected:
     boost::asynchronous::any_shared_scheduler_proxy<WJOB> const& get_worker()const
     {

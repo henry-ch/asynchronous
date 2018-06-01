@@ -255,11 +255,11 @@ public:
         std::list<boost::asynchronous::any_continuation>& waiting =
                 boost::asynchronous::get_continuations(std::list<boost::asynchronous::any_continuation>(),true);
 
+        boost::asynchronous::get_scheduler_diagnostics<job_type>(diagnostics,true);
+
         CPULoad cpu_load;
         while(true)
         {
-            // get a job
-            typename Q::job_type job;
             try
             {
                 {
@@ -294,7 +294,6 @@ public:
             }
             catch(std::exception&)
             {
-                boost::asynchronous::job_traits<typename Q::job_type>::set_failed(job);
             }
         }
     }

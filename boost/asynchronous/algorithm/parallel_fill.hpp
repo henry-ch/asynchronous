@@ -78,7 +78,7 @@ parallel_fill(const Range& range, const Value& value, long cutoff,
 }
 
 // Continuations
-template <class Range, class Value, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+template <class Range, class Value, class Job=typename Range::job_type>
 typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>::value, boost::asynchronous::detail::callback_continuation<typename Range::return_type, Job>>::type
 parallel_fill(Range range, const Value& value, long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS

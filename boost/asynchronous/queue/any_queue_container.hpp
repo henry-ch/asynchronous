@@ -57,7 +57,7 @@ class any_queue_container:
                            public boost::asynchronous::queue_base<JOB>,
                            public PushPolicy
 {
-    typedef std::vector<boost::asynchronous::any_queue_ptr<JOB> > queues_type;
+    typedef std::vector<std::pair<boost::asynchronous::any_queue_ptr<JOB>,bool> > queues_type;
 public:
     typedef JOB job_type;
     any_queue_container(const any_queue_container&) = delete;
@@ -75,7 +75,7 @@ public:
         std::vector<std::size_t> res;
         for (typename queues_type::const_iterator it = m_queues.begin(); it != m_queues.end();++it)
         {
-            auto one_queue_vec = (*(*it)).get_queue_size();
+            auto one_queue_vec = (*((*it).first)).get_queue_size();
             res.push_back(std::accumulate(one_queue_vec.begin(),one_queue_vec.end(),0,
                                           [](std::size_t rhs,std::size_t lhs){return rhs + lhs;}));
         }
@@ -86,7 +86,7 @@ public:
         std::vector<std::size_t> res;
         for (typename queues_type::const_iterator it = m_queues.begin(); it != m_queues.end();++it)
         {
-            auto one_queue_vec = (*(*it)).get_max_queue_size();
+            auto one_queue_vec = (*((*it).first)).get_max_queue_size();
             res.push_back(std::accumulate(one_queue_vec.begin(),one_queue_vec.end(),0,
                                           [](std::size_t rhs,std::size_t lhs){return std::max(rhs,lhs);}));
         }
@@ -96,7 +96,7 @@ public:
     {
         for (typename queues_type::const_iterator it = m_queues.begin(); it != m_queues.end();++it)
         {
-            (*(*it)).reset_max_queue_size();
+            (*((*it).first)).reset_max_queue_size();
         }
     }
 
@@ -106,12 +106,12 @@ public:
         if (pos == std::numeric_limits<std::size_t>::max())
         {
             // this HAS to be the lowest prio job
-            (*(m_queues.at(m_queues.size()-1))).push(std::forward<JOB>(j),pos);
+            (*((m_queues.at(m_queues.size()-1)).first)).push(std::forward<JOB>(j),pos);
         }
         else
         {
             // use the desired position
-            (*(m_queues.at(this->find_position(pos,m_queues.size())))).push(std::forward<JOB>(j),pos);
+            (*((m_queues.at(this->find_position(pos,m_queues.size()))).first)).push(std::forward<JOB>(j),pos);
         }
     }
     void push(JOB&& j)
@@ -124,12 +124,12 @@ public:
         if (pos == std::numeric_limits<std::size_t>::max())
         {
             // this HAS to be the lowest prio job
-            (*(m_queues.at(m_queues.size()-1))).push(j,pos);
+            (*((m_queues.at(m_queues.size()-1)).first)).push(j,pos);
         }
         else
         {
             // use the desired position
-            (*(m_queues.at(this->find_position(pos,m_queues.size())))).push(j,pos);
+            (*((m_queues.at(this->find_position(pos,m_queues.size()))).first)).push(j,pos);
         }
     }
     JOB pop()
@@ -140,7 +140,8 @@ public:
             for (typename queues_type::iterator it = m_queues.begin(); it != m_queues.end();++it)
             {
                 JOB j;
-                if((*(*it)).try_pop(j))
+                // if queue is enabled, try poppping job
+                if((*it).second && (*((*it).first)).try_pop(j))
                 {
                     return j;
                 }
@@ -153,7 +154,8 @@ public:
         // we iterate through our queues in order index 0 -> max to respect our priority
         for (typename queues_type::iterator it = m_queues.begin(); it != m_queues.end();++it)
         {
-            if((*(*it)).try_pop(j))
+            // if queue is enabled, try poppping job
+            if((*it).second && (*((*it).first)).try_pop(j))
             {
                 return true;
             }
@@ -165,13 +167,19 @@ public:
         // we iterate through our queues in order index 0 -> max to respect our priority
         for (typename queues_type::iterator it = m_queues.begin(); it != m_queues.end();++it)
         {
-            if((*(*it)).try_steal(j))
+            // if queue is enabled, try poppping job
+            if((*it).second && (*((*it).first)).try_steal(j))
             {
                 return true;
             }
         }
         return false;
     }
+    void enable_queue(std::size_t queue_prio, bool enable) override
+    {
+        m_queues.at(queue_prio-1).second = enable;
+    }
+
     template <typename T,typename Last>
     void ctor_helper(T& t, Last const& l)
     {
@@ -180,7 +188,7 @@ public:
         for (typename Last::queue_sequence::const_iterator it = p.first; it != p.second; ++it)
         {
             boost::asynchronous::any_queue_ptr<JOB> q(*it);
-            t.push_back(q);
+            t.push_back(std::make_pair(q,true));// a queue is by default enabled
         }
     }
 
@@ -192,14 +200,14 @@ public:
         for (typename Front::queue_sequence::const_iterator it = p.first; it != p.second; ++it)
         {
             boost::asynchronous::any_queue_ptr<JOB> q(*it);
-            t.push_back(q);
+            t.push_back(std::make_pair(q,true));// a queue is by default enabled
         }
         ctor_helper(t,tail...);
     }
 
 
 private:
-    std::vector<boost::asynchronous::any_queue_ptr<JOB> > m_queues;
+    queues_type m_queues;
 };
 
 }}

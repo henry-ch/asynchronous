@@ -226,7 +226,7 @@ struct parallel_search_range_helper: public boost::asynchronous::continuation_ta
 };
 }
 // version for 2nd range returned as continuation
-template <class Iterator1,class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+template <class Iterator1,class Range, class Func, class Job=typename Range::job_type>
 typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<Range>::value,boost::asynchronous::detail::callback_continuation<Iterator1,Job> >::type
 parallel_search(Iterator1 beg1, Iterator1 end1,Range range,Func func,long cutoff,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS

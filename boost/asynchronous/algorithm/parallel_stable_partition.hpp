@@ -531,7 +531,7 @@ struct parallel_stable_partition_continuation_helper:
 }
 
 // version where the range is itself a continuation
-template <class Range, class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+template <class Range, class Func, class Job=typename Range::job_type>
 typename std::enable_if<
         boost::asynchronous::detail::has_is_continuation_task<Range>::value,
         boost::asynchronous::detail::callback_continuation<
