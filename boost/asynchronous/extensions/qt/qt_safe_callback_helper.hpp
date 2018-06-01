@@ -15,8 +15,8 @@ namespace detail {
 class qt_async_safe_callback_custom_event : public QEvent
 {
 public:
-    qt_async_safe_callback_custom_event(std::function<void()>&& cb )
-        : QEvent(static_cast<QEvent::Type>(QEvent::registerEventType()))
+    qt_async_safe_callback_custom_event(std::function<void()>&& cb, int id )
+        : QEvent(static_cast<QEvent::Type>(id))
         , m_cb(std::forward<std::function<void()>>(cb))
     {}
 
@@ -38,13 +38,14 @@ public:
 #endif
 
     typedef boost::asynchronous::any_callable job_type;
-    qt_safe_callback_helper(connect_functor_helper* c, std::function<void()>&& cb)
+    qt_safe_callback_helper(connect_functor_helper* c, std::function<void()>&& cb, int event_id)
 #ifdef BOOST_ASYNCHRONOUS_QT_WORKAROUND
     ;
 #else
     : QObject(0)
     , m_connect(c)
     , m_cb(std::forward<std::function<void()>>(cb))
+    , m_event_id(event_id)
     {}
 #endif
     qt_safe_callback_helper(qt_safe_callback_helper const& rhs)
@@ -54,6 +55,7 @@ public:
     : QObject(0)
     , m_connect(rhs.m_connect)
     , m_cb(rhs.m_cb)
+    , m_event_id(rhs.m_event_id)
     {}
 #endif
     qt_safe_callback_helper(qt_safe_callback_helper&& rhs)
@@ -63,18 +65,20 @@ public:
     : QObject(0)
     , m_connect(rhs.m_connect)
     , m_cb(std::move(rhs.m_cb))
+    , m_event_id(rhs.m_event_id)
     {}
 #endif
     qt_safe_callback_helper& operator=(qt_safe_callback_helper&&)=default;
     qt_safe_callback_helper& operator=(qt_safe_callback_helper const&)=default;
     void operator()()
     {
-        QCoreApplication::postEvent(m_connect,new qt_async_safe_callback_custom_event(std::move(m_cb)));
+        QCoreApplication::postEvent(m_connect,new qt_async_safe_callback_custom_event(std::move(m_cb),m_event_id));
     }
 
 private:
    connect_functor_helper*              m_connect;
    std::function<void()>                m_cb;
+   int                                  m_event_id;
 };
 
 }}}
