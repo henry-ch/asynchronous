@@ -131,8 +131,7 @@ public:
                  [this,connect_id,cbptr](QEvent* e)
                  {
                     detail::qt_async_custom_event<boost::asynchronous::expected<f1_result_type> >* ce =
-                            static_cast<detail::qt_async_custom_event<boost::asynchronous::expected<f1_result_type> >* >
-                            (e,m_qt_async_custom_event_id);
+                            static_cast<detail::qt_async_custom_event<boost::asynchronous::expected<f1_result_type> >* >(e);
                     (*cbptr)(std::move(ce->m_future));
                     this->m_waiting_callbacks.erase(this->m_waiting_callbacks.find(connect_id));
                  }
@@ -170,8 +169,7 @@ public:
                  [this,connect_id,cbptr](QEvent* e)
                  {
                     detail::qt_async_custom_event<boost::asynchronous::expected<f1_result_type> >* ce =
-                            static_cast<detail::qt_async_custom_event<boost::asynchronous::expected<f1_result_type> >* >
-                            (e,m_qt_async_custom_event_id);
+                            static_cast<detail::qt_async_custom_event<boost::asynchronous::expected<f1_result_type> >* >(e);
                     (*cbptr)(std::move(ce->m_future));
                     this->m_waiting_callbacks.erase(this->m_waiting_callbacks.find(connect_id));
                  }
