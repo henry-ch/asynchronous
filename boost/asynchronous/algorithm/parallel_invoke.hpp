@@ -33,7 +33,8 @@ template <class ReturnType, class Job,typename... Args>
 struct parallel_invoke_helper: public boost::asynchronous::continuation_task<ReturnType>
 {
     parallel_invoke_helper(ReturnType expected_tuple,Args... args)
-        : m_expected_tuple(std::move(expected_tuple))
+        : boost::asynchronous::continuation_task<ReturnType>("parallel_invoke")
+        , m_expected_tuple(std::move(expected_tuple))
         , m_tuple(std::make_tuple(std::move(args)...))
     {
     }
@@ -68,7 +69,8 @@ template <class ReturnType, class Job,class Duration,typename... Args>
 struct parallel_invoke_helper_timeout: public boost::asynchronous::continuation_task<ReturnType>
 {
     parallel_invoke_helper_timeout(Duration const& d,ReturnType expected_tuple,Args... args)
-        : m_expected_tuple(std::move(expected_tuple))
+        : boost::asynchronous::continuation_task<ReturnType>("parallel_invoke_timeout")
+        , m_expected_tuple(std::move(expected_tuple))
         , m_tuple(std::make_tuple(std::move(args)...))
         , m_duration(d)
     {
@@ -106,7 +108,9 @@ struct parallel_invoke_helper_timeout: public boost::asynchronous::continuation_
 template <class Return, class Func>
 struct continuation_task_wrapper : public boost::asynchronous::continuation_task<Return>
 {
-    continuation_task_wrapper(Func&& f):func_(std::forward<Func>(f)){}
+    continuation_task_wrapper(Func&& f,const std::string& task_name)
+        : boost::asynchronous::continuation_task<Return>(task_name)
+        , func_(std::forward<Func>(f)){}
     void operator()()
     {
         boost::asynchronous::continuation_result<Return> task_res = this->this_task_result();
@@ -129,7 +133,9 @@ struct continuation_task_wrapper : public boost::asynchronous::continuation_task
 template <class Func>
 struct continuation_task_wrapper<void,Func> : public boost::asynchronous::continuation_task<void>
 {
-    continuation_task_wrapper(Func&& f):func_(std::forward<Func>(f)){}
+    continuation_task_wrapper(Func&& f,const std::string& task_name)
+        : boost::asynchronous::continuation_task<void>(task_name)
+        , func_(std::forward<Func>(f)){}
     void operator()()
     {
         boost::asynchronous::continuation_result<void> task_res = this->this_task_result();
@@ -151,10 +157,15 @@ struct continuation_task_wrapper<void,Func> : public boost::asynchronous::contin
     Func func_;
 };
 template <class T>
-auto to_continuation_task(T task)
+auto to_continuation_task(T task,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+           const std::string& task_name)
+#else
+           const std::string& task_name="")
+#endif
 -> boost::asynchronous::continuation_task_wrapper<decltype(task()),T>
 {
-    return boost::asynchronous::continuation_task_wrapper<decltype(task()),T>(std::move(task));
+    return boost::asynchronous::continuation_task_wrapper<decltype(task()),T>(std::move(task),task_name);
 }
 
 template <class Job, typename... Args>
