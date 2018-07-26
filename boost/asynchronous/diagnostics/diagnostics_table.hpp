@@ -16,6 +16,7 @@
 
 #include <memory>
 #include <boost/thread/mutex.hpp>
+#include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/locks.hpp>
 #include <boost/thread/condition.hpp>
 
