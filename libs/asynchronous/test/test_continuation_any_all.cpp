@@ -112,6 +112,184 @@ BOOST_AUTO_TEST_CASE(test_continuation_all_of_with_exception)
     }
 }
 
+BOOST_AUTO_TEST_CASE(test_continuation_all_of_tuple)
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<>>>(6);
+
+    auto a = generate();
+    auto b = generate();
+    auto c = std::vector<int>(10000, 42);
+
+    auto fu = boost::asynchronous::post_future(
+        scheduler,
+        [&a, &b, &c]() mutable
+        {
+            return boost::asynchronous::all_of(
+                std::make_tuple(
+                    boost::asynchronous::parallel_sort(a.begin(), a.end(), std::less<int>(), 1500, "sort a", 0),
+                    boost::asynchronous::parallel_sort(b.begin(), b.end(), std::less<int>(), 1500, "sort b", 0),
+                    boost::asynchronous::parallel_reduce(c.begin(), c.end(), std::plus<int>(), 1500, "reduce c", 0)
+                )
+            );
+        },
+        "test_continuation_all_of_tuple",
+        0
+    );
+
+    try
+    {
+        auto tup = fu.get();
+        BOOST_CHECK_MESSAGE(std::is_sorted(a.begin(), a.end()), "Vector 'a'  was not sorted");
+        BOOST_CHECK_MESSAGE(std::is_sorted(b.begin(), b.end()), "Vector 'b'  was not sorted");
+        BOOST_CHECK_MESSAGE(std::get<2>(tup) == 420000, "parallel_reduce of vector 'c' returned the wrong result (" + std::to_string(std::get<2>(tup)) + ", should have been 420000)");
+        static_assert(std::is_same<typename std::decay<decltype(std::get<0>(tup))>::type, boost::asynchronous::detail::void_wrapper>::value, "parallel_sort of 'a' returned wrong type through all(...)");
+        static_assert(std::is_same<typename std::decay<decltype(std::get<1>(tup))>::type, boost::asynchronous::detail::void_wrapper>::value, "parallel_sort of 'b' returned wrong type through all(...)");
+        static_assert(std::is_same<typename std::decay<decltype(std::get<2>(tup))>::type, int>::value, "parallel_reduce of 'c' returned wrong type through all(...)");
+    }
+    catch (...)
+    {
+        BOOST_FAIL("Unexpected exception");
+    }
+}
+
+BOOST_AUTO_TEST_CASE(test_continuation_all_of_tuple_with_exception)
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<>>>(6);
+
+    auto a = generate();
+    auto b = generate();
+
+    auto fu = boost::asynchronous::post_future(
+        scheduler,
+        [&a, &b]() mutable
+        {
+            return boost::asynchronous::all_of(
+                std::make_tuple(
+                    boost::asynchronous::parallel_sort(a.begin(), a.end(), std::less<int>(), 1500, "sort a", 0),
+                    boost::asynchronous::parallel_for(b.begin(), b.end(), [](const int&) { throw std::logic_error("Testing exception propagation"); }, 1500, "parallel_for of b", 0)
+                )
+            );
+        },
+        "test_continuation_all_of_tuple_with_exception",
+        0
+    );
+
+    try
+    {
+        fu.get();
+        BOOST_FAIL("Should have gotten an exception");
+    }
+    catch (const std::logic_error& e)
+    {
+        BOOST_CHECK_MESSAGE(e.what() == std::string("Testing exception propagation"), "Got incorrect exception message");
+    }
+    catch (...)
+    {
+        BOOST_FAIL("Unexpected exception");
+    }
+}
+
+BOOST_AUTO_TEST_CASE(test_continuation_all_of_vector)
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<>>>(6);
+
+    auto a = generate();
+    auto b = generate();
+
+    auto fu1 = boost::asynchronous::post_future(
+        scheduler,
+        [&a, &b]() mutable
+        {
+            std::vector<decltype(boost::asynchronous::parallel_sort(a.begin(), a.end(), std::less<int>(), 1500, "sort a", 0))> continuations = {
+                boost::asynchronous::parallel_sort(a.begin(), a.end(), std::less<int>(), 1500, "sort a", 0),
+                boost::asynchronous::parallel_sort(b.begin(), b.end(), std::less<int>(), 1500, "sort b", 0)
+            };
+            return boost::asynchronous::all_of(std::move(continuations));
+        },
+        "test_continuation_all_of_vector_1",
+        0
+    );
+
+    try
+    {
+        auto vec = fu1.get();
+        BOOST_CHECK_MESSAGE(std::is_sorted(a.begin(), a.end()), "Vector 'a'  was not sorted");
+        BOOST_CHECK_MESSAGE(std::is_sorted(b.begin(), b.end()), "Vector 'b'  was not sorted");
+        static_assert(std::is_same<typename std::decay<decltype(vec[0])>::type, boost::asynchronous::detail::void_wrapper>::value, "parallel_sort of 'a' returned wrong type through all(...)");
+        static_assert(std::is_same<typename std::decay<decltype(vec[1])>::type, boost::asynchronous::detail::void_wrapper>::value, "parallel_sort of 'b' returned wrong type through all(...)");
+    }
+    catch (...)
+    {
+        BOOST_FAIL("Unexpected exception");
+    }
+
+    auto c = std::vector<int>(10000, 42);
+    auto d = std::vector<int>(10000, 123);
+
+    auto fu2 = boost::asynchronous::post_future(
+        scheduler,
+        [&c, &d]() mutable
+        {
+            std::vector<decltype(boost::asynchronous::parallel_reduce(c.begin(), c.end(), std::plus<int>(), 1500, "reduce c", 0))> continuations = {
+                boost::asynchronous::parallel_reduce(c.begin(), c.end(), std::plus<int>(), 1500, "reduce c", 0),
+                boost::asynchronous::parallel_reduce(d.begin(), d.end(), std::plus<int>(), 1500, "reduce d", 0)
+            };
+            return boost::asynchronous::all_of(std::move(continuations));
+        },
+        "test_continuation_all_of_vector_2",
+        0
+    );
+
+    try
+    {
+        auto vec = fu2.get();
+        BOOST_CHECK_MESSAGE(vec.at(0) == 420000,  "parallel_reduce of vector 'c' returned the wrong result (" + std::to_string(vec.at(0)) + ", should have been 420000)");
+        BOOST_CHECK_MESSAGE(vec.at(1) == 1230000, "parallel_reduce of vector 'd' returned the wrong result (" + std::to_string(vec.at(1)) + ", should have been 1230000)");
+        static_assert(std::is_same<typename std::decay<decltype(vec[0])>::type, int>::value, "parallel_reduce of 'c' returned wrong type through all(...)");
+        static_assert(std::is_same<typename std::decay<decltype(vec[1])>::type, int>::value, "parallel_reduce of 'd' returned wrong type through all(...)");
+    }
+    catch (...)
+    {
+        BOOST_FAIL("Unexpected exception");
+    }
+}
+
+BOOST_AUTO_TEST_CASE(test_continuation_all_of_vector_with_exception)
+{
+    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<>>>(6);
+
+    auto a = generate();
+    auto b = generate();
+
+    auto fu = boost::asynchronous::post_future(
+        scheduler,
+        [&a, &b]() mutable
+        {
+            std::vector<boost::asynchronous::detail::callback_continuation<void, BOOST_ASYNCHRONOUS_DEFAULT_JOB>> continuations = {
+                boost::asynchronous::parallel_for(a.begin(), a.end(), [](const int&) { /* Does nothing. */ }, 1500, "parallel_for_of_a", 0),
+                boost::asynchronous::parallel_for(b.begin(), b.end(), [](const int&) { throw std::logic_error("Testing exception propagation"); }, 1500, "parallel_for of b", 0)
+            };
+            return boost::asynchronous::all_of(std::move(continuations));
+        },
+        "test_continuation_all_of_with_exception",
+        0
+    );
+
+    try
+    {
+        fu.get();
+        BOOST_FAIL("Should have gotten an exception");
+    }
+    catch (const std::logic_error& e)
+    {
+        BOOST_CHECK_MESSAGE(e.what() == std::string("Testing exception propagation"), "Got incorrect exception message");
+    }
+    catch (...)
+    {
+        BOOST_FAIL("Unexpected exception");
+    }
+}
+
 BOOST_AUTO_TEST_CASE(test_continuation_any_of)
 {
     auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<>>>(6);
