@@ -2997,6 +2997,12 @@ auto scheduler = boost::asynchronous::create_shared_scheduler_proxy(
                                     <entry>Iterators, moved range, continuation</entry>
                                     <entry>No</entry>
                                 </row>
+                                <row>
+                                    <entry><command xlink:href="#parallel_kmp">parallel_kmp</command></entr>
+                                    <entry>searches a range of elements for a subsequence using the Knuth-Morris-Pratt algorithm</entry>
+                                    <entry>parallel_kmp.hpp</entry>
+                                    <entry>Iterators, moved ranges, continuations</entry>
+                                    <entry>No</entry>
                             </tbody>
                         </tgroup>
                     </table></para><para></para>
@@ -4483,6 +4489,47 @@ boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Unsp
                                 continuation</para>
                         </listitem>
                     </itemizedlist></para>
+                </sect2>
+                <sect2>
+                    <title><command xml:id="parallel_kmp"/>parallel_kmp</title>
+                    <para>Searches a range of elements (such as a string) for a subsequence. On each match, a functor is called with the index of the matched subsequence. This functor can save data and is merged with other instances of this functor (like parallel_for_each). This allows the caller to either obtain a list of all matches (by keeping track of the matched indices when merging) or just performing an operation directly when the match is found. The algorithm returns the last merged instance of the functor type.</para>
+                    <programlisting>template &lt;/* see below */, class Functor, class Job=/* see below */&gt;
+boost::asynchronous::detail::callback_continuation&lt;<emphasis role="bold">Functor</emphasis>,Job>
+<emphasis role="bold">parallel_kmp</emphasis>(/* see below */, Functor functor, long cutoff, const std::string&amp; task_name="", std::size_t prio=0);</programlisting>
+                    <para>Both the range of elements that will be searched ("haystack") and the subsequence that is searched for ("needle") can be passed to parallel_kmp as either a pair of iterators (begin and end), as a range (taken by reference or moved into parallel_kmp), or as a continuation that returns the range in question</para>
+                    <para><emphasis role="underline">Return value</emphasis>: A merged instance of a
+                        functor of type Func.</para>
+                    <para><emphasis role="underline">Parameters</emphasis>: <itemizedlist>
+                        <listitem>
+                            <para>The "haystack": the range of elements to search in (as iterators, as a range, or as a continuation)</para>
+                        </listitem>
+                        <listitem>
+                            <para>The "needle": the range of elements to search for (as iterators, as a range, or as a continuation)</para>
+                        </listitem>
+                        <listitem>
+                            <para>functor: an object with:</para>
+                                <para>
+                                    <itemizedlist>
+                                        <listitem>
+                                            <para>void operator()(const index_type&amp;), where index_type is the type used to index into the haystack range</para>
+                                        </listitem>
+                                        <listitem>
+                                            <para>void merge(const Functor&amp;) or void merge(Functor&amp;&amp;) (the latter is preferred if it is available)</para>
+                                        </listitem>
+                                    </itemizedlist>
+                                </para>
+                        </listitem>
+                        <listitem>
+                            <para>cutoff: the maximum size of a sequential chunk</para>
+                        </listitem>
+                        <listitem>
+                            <para>task_name: the name displayed in the scheduler diagnostics</para>
+                        </listitem>
+                        <listitem>
+                            <para>prio: task priority </para>
+                        </listitem>
+                    </itemizedlist></para>
+                    <para>When passing iterators or a reference to a range to this algorithm, the programmer must ensure that the reference or iterators stay valid until the algorithm completes.</para>
                 </sect2>
                 <sect2>
                     <title><command xml:id="parallel_copy"/>parallel_copy</title>

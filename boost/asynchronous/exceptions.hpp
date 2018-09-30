@@ -83,5 +83,22 @@ struct task_aborted_exception : public boost::asynchronous::asynchronous_excepti
       return "task_aborted_exception";
     }
 };
+
+// Exception consisting of multiple underlying exceptions.
+struct combined_exception : public boost::asynchronous::asynchronous_exception
+{
+    combined_exception(size_t count)
+        : m_underlying(count)
+    {}
+
+    const char* what() const noexcept override { return "any_of_exception"; }
+
+    std::vector<std::exception_ptr>& underlying_exceptions() { return m_underlying; }
+    const std::vector<std::exception_ptr>& underlying_exceptions() const { return m_underlying; }
+
+private:
+    std::vector<std::exception_ptr> m_underlying;
+};
+
 }}
 #endif // BOOST_ASYNCHRON_EXCEPTIONS_HPP
