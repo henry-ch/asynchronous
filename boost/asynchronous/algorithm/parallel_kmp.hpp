@@ -137,6 +137,13 @@ struct parallel_kmp_helper : public boost::asynchronous::continuation_task<Funct
         boost::asynchronous::continuation_result<Functor> task_res = this->this_task_result();
         try
         {
+            // Never find an empty needle
+            if (matcher_.needle_size <= 0)
+            {
+                task_res.set_value(std::move(functor_));
+                return;
+            }
+
             // Advance first_, depending on the iterator type (either by the specified cutoff exactly, or to the half-way mark)
             Iterator middle = boost::asynchronous::detail::find_cutoff(first_, cutoff_, last_);
 
