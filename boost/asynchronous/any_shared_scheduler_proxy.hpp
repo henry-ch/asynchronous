@@ -342,10 +342,14 @@ public:
     typedef JOB job_type;
 
     any_shared_scheduler_proxy():my_ptr(){}
-    any_shared_scheduler_proxy(any_shared_scheduler_proxy const& other):my_ptr(other.my_ptr){}
+    any_shared_scheduler_proxy(any_shared_scheduler_proxy const& ) = default;
+    any_shared_scheduler_proxy(any_shared_scheduler_proxy&& ) = default;
     template <class U>
     any_shared_scheduler_proxy(U const& u):
         my_ptr (u){}
+
+    any_shared_scheduler_proxy& operator= (any_shared_scheduler_proxy const&) =default;
+    any_shared_scheduler_proxy& operator= (any_shared_scheduler_proxy&&) =default;
 
     /*!
      * \brief resets this proxy and releases the scheduler if no other proxy references it
