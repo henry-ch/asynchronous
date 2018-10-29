@@ -786,7 +786,7 @@ public:
 namespace detail {
 
 // Escape a string to embed in HTML documents
-std::string escape_html(std::string const& str) {
+inline std::string escape_html(std::string const& str) {
     std::string buffer;
     buffer.reserve(str.size());
     for (std::string::size_type index = 0; index < str.size(); ++index) {
@@ -1051,7 +1051,7 @@ constexpr const char* detail_button = "                <svg xmlns=\"http://www.w
                                       "                </svg>\n";
 
 // Add a table header for a full table to the document
-void begin_table(document & doc, parameters const& params, bool has_fails, bool has_interrupts) {
+inline void begin_table(document & doc, parameters const& params, bool has_fails, bool has_interrupts) {
 
     // Prepare checkboxes
     std::string check = " checked=\"checked\"";
@@ -1147,7 +1147,7 @@ void begin_table(document & doc, parameters const& params, bool has_fails, bool 
 }
 
 // Add a row to the full table.
-void add_row(document & doc, parameters const& params, summary_diagnostic_item const& item, summary_diagnostics const& data, row_detail detail, std::size_t id) {
+inline void add_row(document & doc, parameters const& params, summary_diagnostic_item const& item, summary_diagnostics const& data, row_detail detail, std::size_t id) {
 
     // Determine maxima
     bool is_max_total_scheduling = (data.maxima_present.scheduling && item.durations.scheduling.total   == data.maxima.scheduling.total);
@@ -1269,7 +1269,7 @@ void add_row(document & doc, parameters const& params, summary_diagnostic_item c
 }
 
 // Ends a full table
-void end_table(document & doc) {
+inline void end_table(document & doc) {
     doc.body << "          </tbody>" << std::endl
              << "        </table>"   << std::endl
              << "      </div>"       << std::endl;
@@ -1283,7 +1283,7 @@ void end_table(document & doc) {
 // Formatting overloads for default diagnostics types
 
 // Diagnostics for currently running job
-void format(document & doc, std::size_t /* index */, std::string const& section, parameters const& params, scheduler_diagnostics::current_type data) {
+inline void format(document & doc, std::size_t /* index */, std::string const& section, parameters const& params, scheduler_diagnostics::current_type data) {
     // Add heading
     if (params.add_subheadings) doc.body << "      <h4>" << detail::escape_html(section) << "</h4>" << std::endl;
 
@@ -1353,7 +1353,7 @@ void format(document & doc, std::size_t /* index */, std::string const& section,
 }
 
 // All diagnostics
-void format(document & doc, std::size_t /* index */, std::string const& section, parameters const& params, scheduler_diagnostics data) {
+inline void format(document & doc, std::size_t /* index */, std::string const& section, parameters const& params, scheduler_diagnostics data) {
     // Add heading
     if (params.add_subheadings) doc.body << "      <h4>" << section << "</h4>" << std::endl;
 
@@ -1374,7 +1374,7 @@ void format(document & doc, std::size_t /* index */, std::string const& section,
 }
 
 // Summary diagnostics
-void format(document & doc, std::size_t /* index */, std::string const& section, parameters const& params, summary_diagnostics data) {
+inline void format(document & doc, std::size_t /* index */, std::string const& section, parameters const& params, summary_diagnostics data) {
     // Add heading
     if (params.add_subheadings) doc.body << "      <h4>" << section << "</h4>" << std::endl;
 
@@ -1391,7 +1391,7 @@ void format(document & doc, std::size_t /* index */, std::string const& section,
 }
 
 // No diagnostics - do not show output
-void format(document & /* doc */, std::size_t /* index */, std::string const& /* section */, parameters const& /* params */, disable_diagnostics /* data */) { /* No diagnostics, no output. */ }
+inline void format(document & /* doc */, std::size_t /* index */, std::string const& /* section */, parameters const& /* params */, disable_diagnostics /* data */) { /* No diagnostics, no output. */ }
 
 // Diagnostic types must be default-constructible and copy-assignable
 // Diagnostic types must offer 'merge(boost::asynchronous::scheduler_diagnostics)'
