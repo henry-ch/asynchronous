@@ -30,6 +30,13 @@ struct range_value_type
 {
     using type = typename std::remove_reference<typename std::remove_cv<decltype(*boost::begin(std::declval<Range>()))>::type>::type;
 };
+
+// Wrapper to avoid void and void&& arguments and tuple elements
+struct void_wrapper {};
+
+template <class T> struct wrap { using type = T; };
+template <> struct wrap<void> { using type = void_wrapper; };
+
 }
 }}
 #endif // BOOST_ASYNCHRONOUS_ALGORITHMS_DETAIL_HELPERS_HPP
