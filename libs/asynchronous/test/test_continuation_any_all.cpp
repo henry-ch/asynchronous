@@ -290,42 +290,42 @@ BOOST_AUTO_TEST_CASE(test_continuation_all_of_vector_with_exception)
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_continuation_any_of)
-{
-    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<>>>(6);
+//BOOST_AUTO_TEST_CASE(test_continuation_any_of)
+//{
+//    auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<boost::asynchronous::lockfree_queue<>>>(6);
 
-    auto a = std::make_shared<std::vector<int>>(10000000, 42);
-    auto b = std::make_shared<std::vector<int>>(  100000, 42);
-    auto c = std::make_shared<std::vector<int>>(     100, 42);
-    auto d = std::make_shared<std::vector<int>>(  100000, 42);
+//    auto a = std::make_shared<std::vector<int>>(10000000, 42);
+//    auto b = std::make_shared<std::vector<int>>(  100000, 42);
+//    auto c = std::make_shared<std::vector<int>>(     100, 42);
+//    auto d = std::make_shared<std::vector<int>>(  100000, 42);
 
-    auto fu = boost::asynchronous::post_future(
-        scheduler,
-        [a, b, c, d]() mutable
-        {
-            return boost::asynchronous::any_of(
-                boost::asynchronous::parallel_reduce(std::move(*a), std::plus<int>(), 1500, "reduce a", 0),
-                boost::asynchronous::parallel_reduce(std::move(*b), std::plus<int>(), 1500, "reduce b", 0),
-                boost::asynchronous::parallel_reduce(std::move(*c), std::plus<int>(), 1500, "reduce c", 0),
-                boost::asynchronous::parallel_for(std::move(*d), [](const int&) { throw std::logic_error("Testing exception propagation"); }, 1500, "exception", 0)
-            );
-        },
-        "test_continuation_any_of",
-        0
-    );
+//    auto fu = boost::asynchronous::post_future(
+//        scheduler,
+//        [a, b, c, d]() mutable
+//        {
+//            return boost::asynchronous::any_of(
+//                boost::asynchronous::parallel_reduce(std::move(*a), std::plus<int>(), 1500, "reduce a", 0),
+//                boost::asynchronous::parallel_reduce(std::move(*b), std::plus<int>(), 1500, "reduce b", 0),
+//                boost::asynchronous::parallel_reduce(std::move(*c), std::plus<int>(), 1500, "reduce c", 0),
+//                boost::asynchronous::parallel_for(std::move(*d), [](const int&) { throw std::logic_error("Testing exception propagation"); }, 1500, "exception", 0)
+//            );
+//        },
+//        "test_continuation_any_of",
+//        0
+//    );
 
-    try
-    {
-        auto result = fu.get();
-        static_assert(std::is_same<typename std::decay<decltype(result)>::type, boost::asynchronous::any_of_result<int, int, int, std::vector<int>>>::value, "Incorrect return type for any_of");
-        BOOST_CHECK_MESSAGE(result.index() == 2, "Smallest continuation with result did not finish first");
-        BOOST_CHECK_MESSAGE(boost::get<int>(result.value()) == 4200, "Smallest continuation returned the wrong result (" + std::to_string(boost::get<int>(result.value())) + ", should have been 4200)");
-    }
-    catch (...)
-    {
-        BOOST_FAIL("Unexpected exception");
-    }
-}
+//    try
+//    {
+//        auto result = fu.get();
+//        static_assert(std::is_same<typename std::decay<decltype(result)>::type, boost::asynchronous::any_of_result<int, int, int, std::vector<int>>>::value, "Incorrect return type for any_of");
+//        BOOST_CHECK_MESSAGE(result.index() == 2, "Smallest continuation with result did not finish first");
+//        BOOST_CHECK_MESSAGE(boost::get<int>(result.value()) == 4200, "Smallest continuation returned the wrong result (" + std::to_string(boost::get<int>(result.value())) + ", should have been 4200)");
+//    }
+//    catch (...)
+//    {
+//        BOOST_FAIL("Unexpected exception");
+//    }
+//}
 
 BOOST_AUTO_TEST_CASE(test_continuation_any_of_only_exceptions)
 {
