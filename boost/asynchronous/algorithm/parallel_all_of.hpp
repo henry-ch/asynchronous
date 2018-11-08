@@ -1,5 +1,5 @@
 // Boost.Asynchronous library
-//  Copyright (C) Christophe Henry 2014
+//  Copyright (C) Christophe Henry & Alexander Shevchenko 2018
 //
 //  Use, modification and distribution is subject to the Boost
 //  Software License, Version 1.0.  (See accompanying file
@@ -46,9 +46,13 @@ struct all_of_operator
     {
         return std::all_of(beg,end,f);
     }
-    bool merge(bool b1, bool b2)const
+    constexpr bool merge(bool b1, bool b2)const
     {
         return b1 && b2;
+    }
+    constexpr bool cancel_value()
+    {
+        return merge(true, false);
     }
 };
 }
@@ -65,7 +69,7 @@ parallel_all_of(Iterator beg, Iterator end,Func func,long cutoff,
 {
     return boost::asynchronous::top_level_callback_continuation_job<bool,Job>
             (boost::asynchronous::detail::parallel_all_of_helper<Iterator,Func,boost::asynchronous::detail::all_of_operator,Job>
-                (beg,end,func,cutoff,task_name,prio));
+                (beg,end,func,cutoff,std::make_shared<std::atomic_bool>(false),task_name,prio));
 }
 
 // version for ranges returned as continuations

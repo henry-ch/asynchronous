@@ -81,8 +81,8 @@ template <class iterator, class relation, class shared_data, class JobType>
 struct partition_worker : public boost::asynchronous::continuation_task<std::pair<std::list<std::pair<iterator, iterator>>, std::list<std::pair<iterator, iterator>>>>
 {
 
-    partition_worker(shared_data* sd)
-        : boost::asynchronous::continuation_task<std::pair<std::list<std::pair<iterator, iterator>>, std::list<std::pair<iterator, iterator>>>>("partition_worker"), m_sd(sd) { }
+    partition_worker(shared_data* sd, relation rel)
+        : boost::asynchronous::continuation_task<std::pair<std::list<std::pair<iterator, iterator>>, std::list<std::pair<iterator, iterator>>>>("partition_worker"), m_sd(sd), m_rel(rel) { }
 
     void operator()()
     {
@@ -100,8 +100,9 @@ struct partition_worker : public boost::asynchronous::continuation_task<std::pai
             else
             {
                 auto sd = m_sd;
+                auto rel_ = m_rel;
                 boost::asynchronous::create_callback_continuation_job<JobType>(
-                [task_res, sd]
+                [task_res, sd, rel_]
                 (std::tuple<boost::asynchronous::expected<std::pair<std::list<std::pair<iterator, iterator>>, std::list<std::pair<iterator, iterator>>>>,boost::asynchronous::expected<std::pair<std::list<std::pair<iterator, iterator>>, std::list<std::pair<iterator, iterator>>>> > res)
                 mutable
                 {
@@ -133,18 +134,18 @@ struct partition_worker : public boost::asynchronous::continuation_task<std::pai
 
                             for(;;)
                             {
-                                //while (lbs < lbe && sd->m_r(*(lbs))) ++lbs;
-                                //while (rbs < rbe && !sd->m_r(*(rbs))) ++rbs;
+                                //while (lbs < lbe && rel(*(lbs))) ++lbs;
+                                //while (rbs < rbe && !rel(*(rbs))) ++rbs;
                                 for(auto i = lbs; i != lbe;++i)
                                 {
-                                    if (!sd->m_r(*(i)))
+                                    if (!rel_(*(i)))
                                         break;
                                     ++lbs;
 
                                 }
                                 for(auto i = rbs; i != rbe;++i)
                                 {
-                                    if (sd->m_r(*(i)))
+                                    if (rel_(*(i)))
                                         break;
                                     ++rbs;
                                 }
@@ -159,15 +160,15 @@ struct partition_worker : public boost::asynchronous::continuation_task<std::pai
                         task_res.set_value(std::make_pair(std::move(l_rest), std::move(r_rest)));
                         return;
                     }
-                    catch (std::exception& e)
+                    catch (std::exception& )
                     {
                         task_res.set_exception(std::current_exception());
                         return;
                     }
                 },
                 // future results of recursive tasks
-                partition_worker<iterator, relation, shared_data, JobType>(m_sd),
-                partition_worker<iterator, relation, shared_data, JobType>(m_sd)
+                partition_worker<iterator, relation, shared_data, JobType>(m_sd, m_rel),
+                partition_worker<iterator, relation, shared_data, JobType>(m_sd, m_rel)
                 );
             }
         }
@@ -180,6 +181,7 @@ struct partition_worker : public boost::asynchronous::continuation_task<std::pai
 private:
 
     shared_data* m_sd;
+    relation m_rel;
 
     std::pair<std::list<std::pair<iterator, iterator>>, std::list<std::pair<iterator, iterator>>> part_parallel()
     {
@@ -211,18 +213,18 @@ private:
 
             for(;;)
             {
-                //while (lbs < lbe && m_sd->m_r(*(lbs))) {++myrtrue; ++lbs;}
-                //while (rbs > rbe && !m_sd->m_r(*(rbs))) --rbs;
+                //while (lbs < lbe && m_rel(*(lbs))) {++myrtrue; ++lbs;}
+                //while (rbs > rbe && !m_rel(*(rbs))) --rbs;
                 for(auto i = lbs; i != lbe;++i)
                 {
-                    if (!m_sd->m_r(*(i)))
+                    if (!m_rel(*(i)))
                         break;
                     ++myrtrue;
                     ++lbs;
                 }
                 for(auto i = rbs; i != rbe;--i)
                 {
-                    if (m_sd->m_r(*(i)))
+                    if (m_rel(*(i)))
                         break;
                     --rbs;
                 }
@@ -234,14 +236,14 @@ private:
         std::list<std::pair<iterator, iterator>> L,R;
         if (lbs != lbe)
         {
-            for(auto i = lbs; i < lbe ; ++i) if(m_sd->m_r(*(i))) ++myrtrue;
+            for(auto i = lbs; i < lbe ; ++i) if(m_rel(*(i))) ++myrtrue;
             L.push_back(std::make_pair(lbs,lbe));
         }
         if (rbs != rbe)
         {
             ++rbe;
             ++rbs;
-            for(auto i = rbe; i < rbs ; ++i) if(m_sd->m_r(*(i))) ++myrtrue;
+            for(auto i = rbe; i < rbs ; ++i) if(m_rel(*(i))) ++myrtrue;
             R.push_back(std::make_pair(rbe,rbs));
         }
         m_sd->m_rtrue += myrtrue;
@@ -255,8 +257,8 @@ struct parallel_partition_helper : public boost::asynchronous::continuation_task
 {
     struct shared_data
     {
-        shared_data(const Iterator left, const Iterator right, relation r, const uint32_t open_threads)
-            : m_r(std::move(r)), m_BS(std::max((int)std::distance(left,right) / 1000, (int)1000)), m_left(left), m_right(right)
+        shared_data(const Iterator left, const Iterator right, const int32_t open_threads)
+            :  m_BS(std::max((int)std::distance(left,right) / 1000, (int)1000)), m_left(left), m_right(right)
             , m_open_threads(open_threads), m_size(right-left), m_lmove(0), m_rmove(right-left), m_rtrue(0)
         {
             if (m_size < 10000)
@@ -266,8 +268,8 @@ struct parallel_partition_helper : public boost::asynchronous::continuation_task
             if (m_open_threads > m_size)
                 m_open_threads = 1;
         }
-        shared_data(const Iterator left, const Iterator right, relation r, const unsigned BS, const uint32_t open_threads)
-            : m_r(std::move(r)), m_BS(BS), m_left(left), m_right(right)
+        shared_data(const Iterator left, const Iterator right, const unsigned BS, const int32_t open_threads)
+            : m_BS(BS), m_left(left), m_right(right)
             , m_open_threads(open_threads), m_size(right-left), m_lmove(0), m_rmove(right-left), m_rtrue(0)
         {
             if (m_size < 10000) m_open_threads = 1;
@@ -275,16 +277,16 @@ struct parallel_partition_helper : public boost::asynchronous::continuation_task
             if (m_open_threads > m_size) m_open_threads = 1;
         }
 
-        const relation m_r;
         const int m_BS;
         const Iterator m_left, m_right;
-        std::atomic<uint32_t> m_open_threads;
+        std::atomic<int32_t> m_open_threads;
         std::atomic<int64_t> m_size, m_lmove, m_rmove, m_rtrue;
     };
 
     parallel_partition_helper(const Iterator a, const Iterator b, relation r, const uint32_t thread_num,const std::string& task_name)
         : boost::asynchronous::continuation_task<Iterator>(task_name)
-        , m_sd(std::make_shared<shared_data>(a, b, std::move(r), thread_num))
+        , m_sd(std::make_shared<shared_data>(a, b, thread_num))
+        , m_rel(std::move(r))
     { }
 
     void operator()()
@@ -299,13 +301,13 @@ struct parallel_partition_helper : public boost::asynchronous::continuation_task
             }
 
             auto c = boost::asynchronous::top_level_callback_continuation_job<std::pair<std::list<std::pair<Iterator, Iterator>>, std::list<std::pair<Iterator, Iterator>>>, JobType>
-                    (boost::asynchronous::detail::partition_worker<Iterator, relation, shared_data, JobType>(m_sd.get()));
+                    (boost::asynchronous::detail::partition_worker<Iterator, relation, shared_data, JobType>(m_sd.get(), m_rel));
 
             shared_data* sd= m_sd.get();
             auto msd = m_sd;
-
+            auto rel = m_rel;
             c.on_done(
-               [task_res, msd,sd]
+               [task_res, msd,sd,rel]
                (std::tuple<boost::asynchronous::expected<std::pair<std::list<std::pair<Iterator, Iterator>>, std::list<std::pair<Iterator, Iterator>>>> > res)
                 mutable
             {
@@ -356,8 +358,8 @@ struct parallel_partition_helper : public boost::asynchronous::continuation_task
 
                     for(;;)
                     {
-                        while (lbs < lbe && sd->m_r(*(lbs))) ++lbs;
-                        while (rbs < rbe && !sd->m_r(*(rbs))) ++rbs;
+                        while (lbs < lbe && rel(*(lbs))) ++lbs;
+                        while (rbs < rbe && !rel(*(rbs))) ++rbs;
                         if (lbs == lbe || rbs == rbe) break;
                         std::swap(*lbs,*rbs);
                     }
@@ -374,6 +376,7 @@ struct parallel_partition_helper : public boost::asynchronous::continuation_task
     }
 private:
     std::shared_ptr<shared_data> m_sd;
+    relation m_rel;
 };
 }
 

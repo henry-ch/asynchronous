@@ -1,5 +1,5 @@
 // Boost.Asynchronous library
-//  Copyright (C) Christophe Henry 2016
+//  Copyright (C) Christophe Henry 2018
 //
 //  Use, modification and distribution is subject to the Boost
 //  Software License, Version 1.0.  (See accompanying file
@@ -12,6 +12,7 @@
 
 #include <exception>
 #include <typeindex>
+#include <vector>
 #include <boost/current_function.hpp>
 
 namespace boost { namespace asynchronous

@@ -72,11 +72,11 @@ struct register_diagnostics_type
 template <typename T>
 struct diagnostics_stats
 {
-    T total;
-    T average;
-    T max;
-    T min;
-    T recent;
+    T total = T {0};
+    T average = T {0};
+    T max = T {0};
+    T min = T {0};
+    T recent = T {0};
 };
 
 // Only stores minimum and maximum and the most recent value

@@ -23,8 +23,12 @@
 
 #include <boost/test/unit_test.hpp>
 
+// example with a thread_local pool
+thread_local boost::asynchronous::any_shared_scheduler_proxy<> threadpool;
+
 namespace
 {
+
 // main thread id
 boost::thread::id main_thread_id;
 bool task_called=false;
@@ -33,14 +37,10 @@ bool dtor_called=false;
 template <class T>
 struct Servant : boost::asynchronous::trackable_servant<>
 {
-    typedef int simple_ctor;
     // optional, dtor is simple enough not to be waited for (no complicated dependency to other servants' schedulers)
     typedef int simple_dtor;
     Servant(boost::asynchronous::any_weak_scheduler<> scheduler)
-        : boost::asynchronous::trackable_servant<>(scheduler,
-                                               boost::asynchronous::make_shared_scheduler_proxy<
-                                                   boost::asynchronous::threadpool_scheduler<
-                                                           boost::asynchronous::lockfree_queue<>>>(1))
+        : boost::asynchronous::trackable_servant<>(scheduler,threadpool)
         , m_dtor_done(new std::promise<void>)
     {
     }
@@ -93,6 +93,13 @@ BOOST_AUTO_TEST_CASE( test_trackable_servant_post )
     {
         auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
                                                                             boost::asynchronous::lockfree_queue<>>>();
+        auto pool = boost::asynchronous::make_shared_scheduler_proxy<
+                boost::asynchronous::threadpool_scheduler<
+                    boost::asynchronous::lockfree_queue<>>>(1);
+        scheduler.post([pool]()
+        {
+            threadpool=pool;
+        });
 
         std::promise<void> p;
         std::shared_future<void> end=p.get_future();
