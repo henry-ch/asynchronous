@@ -125,8 +125,6 @@ public:
             m_private_queues[i]->push(boost::asynchronous::any_callable(ttask),std::numeric_limits<std::size_t>::max());
 #endif
         }
-        // join older threads
-        m_data->cleanup_threads();
     }
 
     //TODO move?
@@ -173,7 +171,14 @@ public:
             std::promise<boost::thread*> new_thread_promise;
             std::shared_future<boost::thread*> fu = new_thread_promise.get_future();
             auto data = m_data;
-            std::function<void(boost::thread*)> d = [data](boost::thread* p)mutable{data->thread_finished(p);};
+            std::function<void(boost::thread*)> d =
+                    [data](boost::thread* p)mutable
+                    {
+                        // join older threads
+                        data->cleanup_threads();
+                        // make this thread an old thread
+                        data->thread_finished(p);
+                    };
             std::function<bool()> c = [data]()mutable{return data->test_worker_loop();};
             boost::thread* new_thread =
                      m_data->m_group->create_thread(std::bind(&io_threadpool_scheduler::run_once,this->m_queue,
@@ -194,8 +199,6 @@ public:
         this->m_queue->push(std::move(job),prio);
         // create a new thread if needed
         this->try_create_thread();
-        // join older threads
-        this->m_data->cleanup_threads();
     }
     void post(typename queue_type::job_type job)
     {
@@ -230,8 +233,6 @@ public:
 
         // create a new thread if needed
         this->try_create_thread();
-        // join older threads
-        this->m_data->cleanup_threads();
 
         return boost::asynchronous::any_interruptible(interruptible);
     }
@@ -259,8 +260,6 @@ public:
         m_queue->push(job,prio);
         // create a new thread if needed
         this->try_create_thread();
-        // join older threads
-        this->m_data->cleanup_threads();
     }
     boost::asynchronous::any_interruptible interruptible_post(typename queue_type::job_type& job, std::size_t prio=0)
     {
@@ -277,8 +276,6 @@ public:
 
         // create a new thread if needed
         this->try_create_thread();
-        // join older threads
-        m_data->cleanup_threads();
 
         return boost::asynchronous::any_interruptible(interruptible);
     }
@@ -575,13 +572,6 @@ private:
            }*/
            return res && !m_joining;
         }
-        void basic_thread_not_busy()
-        {
-            //TODO needed?
-            // update number of workers
-            //boost::mutex::scoped_lock lock(m_current_number_of_workers_mutex);
-            //--m_current_number_of_workers;
-        }
 
         void thread_finished(boost::thread* finished_thread)
         {
@@ -616,17 +606,21 @@ private:
             boost::thread_group cleanup_group;
             {
                 boost::mutex::scoped_lock lock(m_current_number_of_workers_mutex);
-                for (std::set<boost::thread*>::iterator it = to_join_threads.begin(); it != to_join_threads.end();++it)
+                if (!m_joining)
                 {
-                    m_group->remove_thread(*it);
+
+                    for (std::set<boost::thread*>::iterator it = to_join_threads.begin(); it != to_join_threads.end();++it)
+                    {
+                        m_group->remove_thread(*it);
+                    }
+                    for (std::set<boost::thread*>::iterator it = to_join_threads.begin(); it != to_join_threads.end();++it)
+                    {
+                        cleanup_group.add_thread(*it);
+                    }
+                    // join. Not blocking as all these threads are finished
+                    cleanup_group.join_all();
                 }
             }
-            for (std::set<boost::thread*>::iterator it = to_join_threads.begin(); it != to_join_threads.end();++it)
-            {
-                cleanup_group.add_thread(*it);
-            }
-            // join. Not blocking as all these threads are finished
-            cleanup_group.join_all();
         }
 
         std::set<boost::thread::id> m_thread_ids;

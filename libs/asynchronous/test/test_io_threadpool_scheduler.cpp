@@ -245,4 +245,30 @@ BOOST_AUTO_TEST_CASE( test_io_threadpool_many_tasks )
     // at this point, the dtor has been called
     BOOST_CHECK_MESSAGE(dtor_called,"servant dtor not called.");
 }
+BOOST_AUTO_TEST_CASE( test_io_threadpool_scheduler_dtor )
+{
+    typedef boost::asynchronous::any_loggable servant_job;
 
+    for (std::size_t c=0; c<2; ++c)
+    {
+        auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<
+                            boost::asynchronous::io_threadpool_scheduler<
+                                boost::asynchronous::lockfree_queue<
+                                servant_job,
+                                boost::asynchronous::lockfree_size>>>(1,8);
+        std::vector<std::future<void>> futures;
+        for (std::size_t i=0; i<6; ++i)
+        {
+            futures.emplace_back(
+            boost::asynchronous::post_future(scheduler,
+                                             [](){boost::this_thread::sleep(boost::posix_time::milliseconds(1000));},
+                                             ",0,0"));
+        }
+        boost::wait_for_all(futures.begin(), futures.end());
+        //auto fu=
+        boost::asynchronous::post_future(scheduler,
+                                         [](){boost::this_thread::sleep(boost::posix_time::milliseconds(1000));},
+                                         ",0,0");
+        //fu.get();
+    }
+}
