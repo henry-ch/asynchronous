@@ -44,12 +44,12 @@ namespace boost { namespace asynchronous
 template<typename R>
 bool is_ready(std::future<R> const& f)
 {
-    return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+    return f.valid() && f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
 }
 template<typename R>
 bool is_ready(std::shared_future<R> const& f)
 {
-    return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+    return f.valid() && f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
 }
 template<typename T>
 bool is_ready(T const& f)
