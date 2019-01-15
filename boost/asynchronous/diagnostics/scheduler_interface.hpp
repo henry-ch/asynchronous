@@ -78,10 +78,10 @@ struct scheduler_interface {
 
 namespace detail {
 
-void emplace_scheduler_interfaces(std::vector<scheduler_interface> & /* interfaces */) {}
+inline void emplace_scheduler_interfaces(std::vector<scheduler_interface> & /* interfaces */) {}
 
 template <typename Scheduler, typename... Args>
-void emplace_scheduler_interfaces(std::vector<scheduler_interface> & interfaces, Scheduler const& sched, Args const&... args)
+inline void emplace_scheduler_interfaces(std::vector<scheduler_interface> & interfaces, Scheduler const& sched, Args const&... args)
 {
     interfaces.emplace_back(boost::asynchronous::scheduler_interface(sched));
     boost::asynchronous::detail::emplace_scheduler_interfaces(interfaces, args...);
@@ -90,7 +90,7 @@ void emplace_scheduler_interfaces(std::vector<scheduler_interface> & interfaces,
 }
 
 template <typename... Args>
-std::vector<scheduler_interface> make_scheduler_interfaces(Args const&... args)
+inline std::vector<scheduler_interface> make_scheduler_interfaces(Args const&... args)
 {
     std::vector<scheduler_interface> interfaces;
     boost::asynchronous::detail::emplace_scheduler_interfaces(interfaces, args...);
