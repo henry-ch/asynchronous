@@ -71,8 +71,8 @@ struct asynchronous_exception: public std::exception
 
   std::type_index type = std::type_index(typeid(asynchronous_exception));
   const char* what_ = "asynchronous_exception";
-  const char* currentFunction_ = nullptr;
-  const char* file_ = nullptr;
+  const char* currentFunction_ = "";
+  const char* file_ = "";
   int line_ = -1;
 };
 
