@@ -225,7 +225,7 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
     }
 #endif
 #define BOOST_ASYNC_FUTURE_MEMBER(...)                                                                          \
-    BOOST_PP_OVERLOAD(BOOST_ASYNC_FUTURE_MEMBER_,__VA_ARGS__)(__VA_ARGS__)
+    BOOST_PP_CAT(BOOST_PP_OVERLOAD(BOOST_ASYNC_FUTURE_MEMBER_,__VA_ARGS__)(__VA_ARGS__), BOOST_PP_EMPTY())
 
 #ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
 #define BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK_1(funcname)                                                                                              \
@@ -379,7 +379,7 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
     }
 
 #define BOOST_ASYNC_POST_CALLBACK_MEMBER(...)                                                                                                       \
-    BOOST_PP_OVERLOAD(BOOST_ASYNC_POST_CALLBACK_MEMBER_,__VA_ARGS__)(__VA_ARGS__)    
+    BOOST_PP_OVERLOAD(BOOST_ASYNC_POST_CALLBACK_MEMBER_,__VA_ARGS__)(__VA_ARGS__)
 
 #ifdef BOOST_NO_CXX14_RETURN_TYPE_DEDUCTION
 #define BOOST_ASYNC_UNSAFE_MEMBER(funcname)                                                                                                         \
