@@ -668,7 +668,7 @@ auto post_future(S const& scheduler, F const& func,
 #else
                  const std::string& task_name="", std::size_t prio=0, typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<decltype(func())>::value>::type* =0)
 #endif
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) || defined(__clang__)
  -> std::future<typename decltype(func())::return_type>
 #endif
 
@@ -769,7 +769,7 @@ auto interruptible_post_future(S const& scheduler, F const& func,
 #else
 const std::string& task_name = "", std::size_t prio = 0, typename std::enable_if<boost::asynchronous::detail::has_is_continuation_task<decltype(func())>::value>::type* = 0)
 #endif
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) || defined(__clang__)
     ->std::tuple<std::future<typename decltype(func())::return_type>, boost::asynchronous::any_interruptible >
 #endif
 

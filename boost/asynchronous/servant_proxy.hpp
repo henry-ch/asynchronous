@@ -285,7 +285,7 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
                                     },std::move(args)...),"",p);                                                                                    \
     }
 
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) || defined(__clang__)
 #define BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK(...)                                                                          \
     BOOST_PP_OVERLOAD(BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK_,__VA_ARGS__)(__VA_ARGS__)
 #else
