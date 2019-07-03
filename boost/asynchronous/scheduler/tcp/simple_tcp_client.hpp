@@ -15,7 +15,7 @@
 #include <sstream>
 #include <atomic>
 #include <deque>
-
+#include <numeric>
 #include <boost/asio.hpp>
 
 #include <boost/asynchronous/servant_proxy.hpp>
@@ -33,13 +33,13 @@
 namespace boost { namespace asynchronous { namespace tcp {
 
 // this policy checks for work after a given time
-template <class SerializableType = boost::asynchronous::any_serializable >
-struct client_time_check_policy: boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,SerializableType>
+template <class JobType = boost::asynchronous::any_callable >
+struct client_time_check_policy: boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,JobType>
 {
     client_time_check_policy(boost::asynchronous::any_weak_scheduler<boost::asynchronous::any_callable> scheduler,
-                             boost::asynchronous::any_shared_scheduler_proxy<SerializableType> pool,
+                             boost::asynchronous::any_shared_scheduler_proxy<JobType> pool,
                              long time_in_ms_between_requests)
-        :boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,SerializableType>(scheduler,pool)
+        :boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,JobType>(scheduler,pool)
         , m_time_in_ms_between_requests(time_in_ms_between_requests){}
 
     // every policy for tcp clients must implement this
@@ -62,14 +62,14 @@ struct client_time_check_policy: boost::asynchronous::trackable_servant<boost::a
 
 // this policy checks for work if the queue size falls under a given length
 // Note: this works only with queues supporting giving their size
-template <class SerializableType = boost::asynchronous::any_serializable >
-struct queue_size_check_policy: boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,SerializableType>
+template <class JobType = boost::asynchronous::any_callable >
+struct queue_size_check_policy: boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,JobType>
 {
     queue_size_check_policy(boost::asynchronous::any_weak_scheduler<boost::asynchronous::any_callable> scheduler,
-                             boost::asynchronous::any_shared_scheduler_proxy<SerializableType> pool,
+                             boost::asynchronous::any_shared_scheduler_proxy<JobType> pool,
                              long time_in_ms_between_requests,
                              unsigned int min_queue_size)
-        :boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,SerializableType>(scheduler,pool)
+        :boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,JobType>(scheduler,pool)
         , m_time_in_ms_between_requests(time_in_ms_between_requests)
         , m_min_queue_size(min_queue_size){}
 
@@ -113,17 +113,17 @@ struct queue_size_check_policy: boost::asynchronous::trackable_servant<boost::as
     unsigned int m_min_queue_size;
 };
 
-template <class CheckPolicy, class SerializableType = boost::asynchronous::any_serializable>
-struct simple_tcp_client : boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,SerializableType>
+template <class CheckPolicy, class SerializableType = boost::asynchronous::any_serializable, class PoolJob = boost::asynchronous::any_callable>
+struct simple_tcp_client : boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,PoolJob>
 {
     template <typename... Args>
     simple_tcp_client(boost::asynchronous::any_weak_scheduler<boost::asynchronous::any_callable> scheduler,
-                      boost::asynchronous::any_shared_scheduler_proxy<SerializableType> pool,
+                      boost::asynchronous::any_shared_scheduler_proxy<PoolJob> pool,
                       const std::string& server, const std::string& path,
                       std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,
                                          std::function<void(boost::asynchronous::tcp::client_request const&)>)> const& executor,
                       Args... args)
-        : boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,SerializableType>(scheduler,pool)
+        : boost::asynchronous::trackable_servant<boost::asynchronous::any_callable,PoolJob>(scheduler,pool)
         , m_is_writing(false)
         , m_check_policy(scheduler,pool,args...)
         , m_connection_state(connection_state::none)
@@ -155,13 +155,14 @@ private:
 
     struct stealable_job
     {
-        stealable_job(boost::asynchronous::tcp::server_reponse&& resp,
+        stealable_job(std::string archive_data,
                       std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,
                                          std::function<void(boost::asynchronous::tcp::client_request const&)>)> executor,
                       boost::asynchronous::any_weak_scheduler<> this_scheduler,
                       std::function<void(std::shared_ptr<boost::asynchronous::tcp::client_request>)> done_fct)
             : m_done(done_fct)
-            , m_response(std::forward<boost::asynchronous::tcp::server_reponse>(resp))
+            , m_archive_data(std::move(archive_data))
+            , m_response(0,"","")
             , m_executor(executor)
             , m_scheduler(this_scheduler)
         {
@@ -169,34 +170,48 @@ private:
 
         void operator()()
         {
-            // if job was stolen, we need to deserialize to a string first
-            unsigned cpt_stolen=0;
-            std::size_t found = m_response.m_task_name.find_first_of("/");
-            while(found != std::string::npos)
+            // got work, deserialize message
+            auto start = std::chrono::high_resolution_clock::now();
+            std::istringstream archive_stream(m_archive_data);
+            typename SerializableType::iarchive archive(archive_stream);
+            archive >> m_response;
+            auto tmsg = (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000000);
+            if (tmsg > 50)
             {
-                m_response.m_task_name = m_response.m_task_name.substr(found+1);
-                ++cpt_stolen;
-                found = m_response.m_task_name.find_first_of("/");
+                std::cout << "msg deserialize took in ms: "<< tmsg << std::endl;
             }
-
-            while(cpt_stolen > 0)
+            // if no task, give up
+            if (!m_response.m_task.empty())
             {
-                std::istringstream task_stream(m_response.m_task);
-                typename SerializableType::iarchive task_archive(task_stream);
-                std::string as_string;
-                task_archive >> as_string;
-                // replace
-                m_response.m_task = as_string;
-                --cpt_stolen;
-            }
-            auto done_fct = m_done;
-            m_executor(m_response.m_task_name,m_response,
-                [done_fct](boost::asynchronous::tcp::client_request const& req)
+                // if job was stolen, we need to deserialize to a string first
+                unsigned cpt_stolen=0;
+                std::size_t found = m_response.m_task_name.find_first_of("/");
+                while(found != std::string::npos)
                 {
-                    std::shared_ptr<boost::asynchronous::tcp::client_request> request (std::make_shared<boost::asynchronous::tcp::client_request>(std::move(req)));
-                    done_fct(request);
+                    m_response.m_task_name = m_response.m_task_name.substr(found+1);
+                    ++cpt_stolen;
+                    found = m_response.m_task_name.find_first_of("/");
                 }
-            );
+
+                while(cpt_stolen > 0)
+                {
+                    std::istringstream task_stream(m_response.m_task);
+                    typename SerializableType::iarchive task_archive(task_stream);
+                    std::string as_string;
+                    task_archive >> as_string;
+                    // replace
+                    m_response.m_task = as_string;
+                    --cpt_stolen;
+                }
+                auto done_fct = m_done;
+                m_executor(m_response.m_task_name,m_response,
+                    [done_fct](boost::asynchronous::tcp::client_request const& req)
+                    {
+                        std::shared_ptr<boost::asynchronous::tcp::client_request> request (std::make_shared<boost::asynchronous::tcp::client_request>(std::move(req)));
+                        done_fct(request);
+                    }
+                );
+            }
         }
         std::string get_task_name()const
         {
@@ -230,6 +245,7 @@ private:
         BOOST_SERIALIZATION_SPLIT_MEMBER()
 
         std::function<void(std::shared_ptr<boost::asynchronous::tcp::client_request>)> m_done;
+        std::string m_archive_data;
         boost::asynchronous::tcp::server_reponse m_response;
         std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,
                            std::function<void(boost::asynchronous::tcp::client_request const&)>)> m_executor;
@@ -245,22 +261,13 @@ private:
             // if no data, give up
             if (!archive_data.empty())
             {
-                // got work, deserialize message
-                std::istringstream archive_stream(archive_data);
-                typename SerializableType::iarchive archive(archive_stream);
-                boost::asynchronous::tcp::server_reponse resp(0,"","");
-                archive >> resp;
-                // if no task, give up
-                if (!resp.m_task.empty())
-                {
-                    std::function<void(std::shared_ptr<boost::asynchronous::tcp::client_request>)> sending_fct =
-                            this->make_safe_callback(std::function<void(std::shared_ptr<boost::asynchronous::tcp::client_request>)>(
-                                                         [this](std::shared_ptr<boost::asynchronous::tcp::client_request> req)
-                                                         {this->send_task_result(req);}),"",0);
-                    this->get_worker().post(
-                                stealable_job(std::move(resp),m_executor,this->get_scheduler(),sending_fct)
-                    );
-                }
+                std::function<void(std::shared_ptr<boost::asynchronous::tcp::client_request>)> sending_fct =
+                        this->make_safe_callback(std::function<void(std::shared_ptr<boost::asynchronous::tcp::client_request>)>(
+                                                     [this](std::shared_ptr<boost::asynchronous::tcp::client_request> req)
+                                                     {this->send_task_result(req);}),"",0);
+                this->get_worker().post(
+                            stealable_job(std::move(archive_data),m_executor,this->get_scheduler(),sending_fct)
+                );
             }
             // delegate next work checking to policy
             m_check_policy.template prepare_check_for_work([this](){this->check_for_work();},this->get_worker().get_weak_scheduler());
@@ -485,83 +492,32 @@ private:
     enum { m_header_length = 10 };
 };
 
-// the proxy of AsioCommunicationServant for use in an external thread
-class simple_tcp_client_proxy: public boost::asynchronous::servant_proxy<simple_tcp_client_proxy,
-                               boost::asynchronous::tcp::simple_tcp_client<boost::asynchronous::tcp::client_time_check_policy<boost::asynchronous::any_serializable> > >
-{
-public:
-    // ctor arguments are forwarded to AsioCommunicationServant
-    template <class Scheduler,typename... Args>
-    simple_tcp_client_proxy(Scheduler s,
-                            boost::asynchronous::any_shared_scheduler_proxy<boost::asynchronous::any_serializable> pool,
-                            const std::string& server, const std::string& path,
-                            std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,
-                                               std::function<void(boost::asynchronous::tcp::client_request const&)>)> const& executor,
-                            Args... args):
-        boost::asynchronous::servant_proxy<simple_tcp_client_proxy,
-        boost::asynchronous::tcp::simple_tcp_client<boost::asynchronous::tcp::client_time_check_policy<boost::asynchronous::any_serializable> > >
-            (s,pool,server,path,executor,args...)
-    {}
-    // we offer a single member for posting
-    BOOST_ASYNC_FUTURE_MEMBER(run)
-};
-class simple_tcp_client_proxy_queue_size: public boost::asynchronous::servant_proxy<simple_tcp_client_proxy_queue_size,
-                                          boost::asynchronous::tcp::simple_tcp_client<boost::asynchronous::tcp::queue_size_check_policy<boost::asynchronous::any_serializable> > >
-{
-public:
-    // ctor arguments are forwarded to AsioCommunicationServant
-    template <class Scheduler,typename... Args>
-    simple_tcp_client_proxy_queue_size(Scheduler s,
-                                       boost::asynchronous::any_shared_scheduler_proxy<boost::asynchronous::any_serializable> pool,
-                                       const std::string& server, const std::string& path,
-                                       std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,
-                                               std::function<void(boost::asynchronous::tcp::client_request const&)>)> const& executor,
-                                       Args... args):
-        boost::asynchronous::servant_proxy<simple_tcp_client_proxy_queue_size,
-        boost::asynchronous::tcp::simple_tcp_client<boost::asynchronous::tcp::queue_size_check_policy<boost::asynchronous::any_serializable> > >
-            (s,pool,server,path,executor,args...)
-    {}
-    // we offer a single member for posting
-    BOOST_ASYNC_FUTURE_MEMBER(run)
-};
-
-// choose correct proxy
-template <class Job, class SerializableType = boost::asynchronous::any_serializable>
-struct get_correct_simple_tcp_client_proxy
-{
-    typedef boost::asynchronous::tcp::simple_tcp_client_proxy type;
-};
-template <>
-struct get_correct_simple_tcp_client_proxy<boost::asynchronous::tcp::queue_size_check_policy<boost::asynchronous::any_serializable>,boost::asynchronous::any_serializable>
-{
-    typedef boost::asynchronous::tcp::simple_tcp_client_proxy_queue_size type;
-};
-
 
 // the proxy of AsioCommunicationServant for use in an external thread
-template <class T = boost::asynchronous::tcp::client_time_check_policy<boost::asynchronous::any_serializable> ,
-          class SerializableType = boost::asynchronous::any_serializable>
-class simple_tcp_client_proxy_ext: public boost::asynchronous::servant_proxy<simple_tcp_client_proxy_ext<T,SerializableType>,
-                                                                         boost::asynchronous::tcp::simple_tcp_client<T> >
+template <class T = boost::asynchronous::tcp::client_time_check_policy<boost::asynchronous::any_callable> ,
+          class SerializableType = boost::asynchronous::any_serializable,
+          class PoolJob = boost::asynchronous::any_callable>
+class simple_tcp_client_proxy_ext: public boost::asynchronous::servant_proxy<simple_tcp_client_proxy_ext<T,SerializableType,PoolJob>,
+                                                                         boost::asynchronous::tcp::simple_tcp_client<T,SerializableType,PoolJob> >
 {
 public:
     // ctor arguments are forwarded to AsioCommunicationServant
     template <class Scheduler,typename... Args>
     simple_tcp_client_proxy_ext(Scheduler s,
-                            boost::asynchronous::any_shared_scheduler_proxy<SerializableType> pool,
+                            boost::asynchronous::any_shared_scheduler_proxy<PoolJob> pool,
                             const std::string& server, const std::string& path,
                             std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,
                                                std::function<void(boost::asynchronous::tcp::client_request const&)>)> const& executor,
                             Args... args):
-        boost::asynchronous::servant_proxy<simple_tcp_client_proxy_ext<T,SerializableType>,boost::asynchronous::tcp::simple_tcp_client<T> >
+        boost::asynchronous::servant_proxy<simple_tcp_client_proxy_ext<T,SerializableType,PoolJob>,boost::asynchronous::tcp::simple_tcp_client<T,SerializableType,PoolJob> >
             (s,pool,server,path,executor,args...)
     {}
     typedef typename boost::asynchronous::servant_proxy<
-                            simple_tcp_client_proxy_ext<T,SerializableType>,
-                            boost::asynchronous::tcp::simple_tcp_client<T> >::servant_type servant_type;
+                            simple_tcp_client_proxy_ext<T,SerializableType,PoolJob>,
+                            boost::asynchronous::tcp::simple_tcp_client<T,SerializableType,PoolJob> >::servant_type servant_type;
     typedef typename boost::asynchronous::servant_proxy<
-                            simple_tcp_client_proxy_ext<T,SerializableType>,
-                            boost::asynchronous::tcp::simple_tcp_client<T> >::callable_type callable_type;
+                            simple_tcp_client_proxy_ext<T,SerializableType,PoolJob>,
+                            boost::asynchronous::tcp::simple_tcp_client<T,SerializableType,PoolJob> >::callable_type callable_type;
 
     // we offer a single member for posting
     BOOST_ASYNC_FUTURE_MEMBER(run)
@@ -683,7 +639,7 @@ void deserialize_and_call_continuation_task(
 }
 
 // register callback continuations
-template <class Task, class SerializableType = boost::asynchronous::any_serializable>
+template <class Task, class Job=boost::asynchronous::any_callable ,class SerializableType = boost::asynchronous::any_serializable>
 void deserialize_and_call_callback_continuation_task(
         Task& t,boost::asynchronous::tcp::server_reponse const& resp,
         std::function<void(boost::asynchronous::tcp::client_request const&)>const& when_done)
@@ -695,7 +651,7 @@ void deserialize_and_call_callback_continuation_task(
     request.m_task_id = resp.m_task_id;
     task_archive >> t;
     // create continuation waiting for task completion
-    boost::asynchronous::create_callback_continuation_job<SerializableType>
+    boost::asynchronous::create_callback_continuation_job<Job>
         ([request,when_done](std::tuple<boost::asynchronous::expected<typename Task::return_type> > continuation_res)mutable
          {
             std::ostringstream res_archive_stream;
@@ -735,17 +691,24 @@ void deserialize_and_call_top_level_callback_continuation_task(
     request.m_task_id = resp.m_task_id;
     task_archive >> t;
     // call task
+    auto start_op = std::chrono::high_resolution_clock::now();
     auto cont = t();
-    cont.on_done([request,when_done](std::tuple<boost::asynchronous::expected<typename decltype(t())::return_type> >&& continuation_res)mutable
+    cont.on_done([request,when_done,start_op](std::tuple<boost::asynchronous::expected<typename decltype(t())::return_type> >&& continuation_res)mutable
         {
+            auto top = (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start_op).count() / 1000000);
+            std::cout << "task op() took in ms: "<< top << std::endl;
+
             std::ostringstream res_archive_stream;
             typename SerializableType::oarchive res_archive(res_archive_stream);
             try
             {
                 // serialize result
-                auto res = (std::get<0>(continuation_res)).get();
+                auto start = std::chrono::high_resolution_clock::now();
+                auto&& res = std::get<0>(continuation_res).get();
                 res_archive << res;
                 request.m_load.m_data = res_archive_stream.str();
+                auto tres = (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000000);
+                std::cout << "serialize result took in ms: "<< tres << std::endl;
             }
             catch (std::exception& e)
             {
@@ -760,8 +723,6 @@ void deserialize_and_call_top_level_callback_continuation_task(
             when_done(request);
         }
     );
-    boost::asynchronous::any_continuation ac(std::move(cont));
-    boost::asynchronous::get_continuations().emplace_front(std::move(ac));
 }
 }}}
 #endif // BOOST_ASYNCHRONOUS_SCHEDULER_TCP_SIMPLE_TCP_CLIENT_HPP
