@@ -729,6 +729,10 @@ struct callback_continuation
             else
             {
                 BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES(boost::asynchronous::any_loggable)
+//                else
+//                {
+//                    BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES(boost::asynchronous::any_serializable)
+//                }
             }
         }
         if (m_state)
@@ -756,6 +760,10 @@ struct callback_continuation
             else
             {
                 BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES(boost::asynchronous::any_loggable)
+//                else
+//                {
+//                    BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES(boost::asynchronous::any_serializable)
+//                }
             }
         }
         if (m_state)
@@ -783,6 +791,10 @@ struct callback_continuation
             else
             {
                 BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES2(boost::asynchronous::any_loggable)
+//                else
+//                {
+//                    BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES2(boost::asynchronous::any_serializable)
+//                }
             }
         }
         if (m_state)
@@ -1250,6 +1262,10 @@ struct callback_continuation_as_seq
             else
             {
                 BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES3(boost::asynchronous::any_loggable)
+//                else
+//                {
+//                    BOOST_ASYNCHRONOUS_TRY_OTHER_JOB_TYPES3(boost::asynchronous::any_serializable)
+//                }
             }
         }
         if (m_state)
