@@ -127,6 +127,10 @@ int main(int argc, char* argv[])
 
     server_address = vm["address"].as<std::string>();
     server_port = vm["port"].as<std::string>();
+    if (vm.count("job"))
+    {
+        job_getting_policy = vm["job"].as<int>();
+    }
 
     numaStride = vm["numaStride"].as<std::size_t>();
     numaBegin = vm["numaBegin"].as<std::size_t>();
@@ -136,12 +140,6 @@ int main(int argc, char* argv[])
     }
     partThreadPoolSize = vm["partThreadPoolSize"].as<std::size_t>();
 
-//    std::string server_address = (argc>1) ? argv[1]:"localhost";
-//    std::string server_port = (argc>2) ? argv[2]:"12346";
-//    int threads = (argc>3) ? strtol(argv[3],0,0) : 4;
-//    // 0 => default, try getting a job at regular time intervals
-//    // 1..n => check at regular time intervals if the queue is under the given size
-//    int job_getting_policy = (argc>4) ? strtol(argv[4],0,0):0;
     cout << "Starting connecting to " << server_address << " port " << server_port << " with " << threads << " threads" << endl;
 
     auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<

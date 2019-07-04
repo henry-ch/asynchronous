@@ -155,7 +155,7 @@ private:
 
     struct stealable_job
     {
-        stealable_job(std::string archive_data,
+        stealable_job(std::shared_ptr<std::vector<char>> archive_data,
                       std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,
                                          std::function<void(boost::asynchronous::tcp::client_request const&)>)> executor,
                       boost::asynchronous::any_weak_scheduler<> this_scheduler,
@@ -172,7 +172,8 @@ private:
         {
             // got work, deserialize message
             auto start = std::chrono::high_resolution_clock::now();
-            std::istringstream archive_stream(m_archive_data);
+            std::string archive_data(&(*m_archive_data)[0], m_archive_data->size());
+            std::istringstream archive_stream(archive_data);
             typename SerializableType::iarchive archive(archive_stream);
             archive >> m_response;
             auto tmsg = (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000000);
@@ -245,7 +246,7 @@ private:
         BOOST_SERIALIZATION_SPLIT_MEMBER()
 
         std::function<void(std::shared_ptr<boost::asynchronous::tcp::client_request>)> m_done;
-        std::string m_archive_data;
+        std::shared_ptr<std::vector<char>> m_archive_data;
         boost::asynchronous::tcp::server_reponse m_response;
         std::function<void(std::string const&,boost::asynchronous::tcp::server_reponse,
                            std::function<void(boost::asynchronous::tcp::client_request const&)>)> m_executor;
@@ -255,11 +256,11 @@ private:
     void check_for_work()
     {
         //TODO string&
-        std::function<void(std::string)> cb =
-        [this](std::string archive_data)
+        std::function<void(std::shared_ptr<std::vector<char> >)> cb =
+        [this](std::shared_ptr<std::vector<char> > archive_data)
         {
             // if no data, give up
-            if (!archive_data.empty())
+            if (!archive_data->empty())
             {
                 std::function<void(std::shared_ptr<boost::asynchronous::tcp::client_request>)> sending_fct =
                         this->make_safe_callback(std::function<void(std::shared_ptr<boost::asynchronous::tcp::client_request>)>(
@@ -274,12 +275,12 @@ private:
         };
         request_content(cb);
     }
-    void request_content(std::function<void(std::string)> cb)
+    void request_content(std::function<void(std::shared_ptr<std::vector<char> >)> cb)
     {
         if ((m_connection_state == connection_state::connecting)||(m_connection_state == connection_state::getting_work))
         {
             // we will have to wait
-            cb(std::string(""));
+            cb(std::make_shared<std::vector<char> >());
             return;
         }
         else if (m_connection_state == connection_state::connected)
@@ -301,7 +302,7 @@ private:
     }
     void handle_resolve(const boost::system::error_code& err,
                         boost::asio::ip::tcp::tcp::resolver::iterator endpoint_iterator,
-                        std::function<void(std::string)> cb)
+                        std::function<void(std::shared_ptr<std::vector<char> >)> cb)
     {
         if (!err)
         {
@@ -317,10 +318,10 @@ private:
         {
             //ignore
             m_connection_state = connection_state::none;
-            cb(std::string(""));
+            cb(std::make_shared<std::vector<char> >());
         }
     }
-    void handle_connect(const boost::system::error_code& err,std::function<void(std::string)> cb)
+    void handle_connect(const boost::system::error_code& err,std::function<void(std::shared_ptr<std::vector<char> >)> cb)
     {
         if (!err)
         {
@@ -333,15 +334,15 @@ private:
         {
             //ignore
             m_connection_state = connection_state::none;
-            cb(std::string(""));
+            cb(std::make_shared<std::vector<char> >());
         }
     }
-    void get_task(std::function<void(std::string)> cb)
+    void get_task(std::function<void(std::shared_ptr<std::vector<char> >)> cb)
     {
         if (m_is_writing)
         {
             // already writing give up
-            cb(std::string(""));
+            cb(std::make_shared<std::vector<char> >());
             return;
         }
         m_connection_state = connection_state::getting_work;
@@ -359,7 +360,7 @@ private:
         {
           // Something went wrong
           stop();
-          cb(std::string(""));
+          cb(std::make_shared<std::vector<char> >());
         }
         std::shared_ptr<std::string> outbound_header = std::make_shared<std::string>(header_stream.str());
         // Write the serialized data to the socket. We use "gather-write" to send
@@ -372,13 +373,13 @@ private:
                                                         [this,cb,outbound_buffer,outbound_header](const boost::system::error_code& err,std::size_t)mutable
                                                         {this->m_is_writing = false;this->handle_write_request(err,cb);}),"",0));
     }
-    void handle_write_request(const boost::system::error_code& err,std::function<void(std::string)> callback)
+    void handle_write_request(const boost::system::error_code& err,std::function<void(std::shared_ptr<std::vector<char> >)> callback)
     {
         if (err)
         {
             // ok, we'll try again later
             stop();
-            callback(std::string(""));
+            callback(std::make_shared<std::vector<char> >());
             return;
         }
         std::shared_ptr<std::vector<char> > inbound_header = std::make_shared<std::vector<char> >();
@@ -396,7 +397,7 @@ private:
                         // Header doesn't seem to be valid. Inform the caller.
                         // ok, we'll try again later
                         this->stop();
-                        callback(std::string(""));
+                        callback(std::make_shared<std::vector<char> >());
                         return;
                     }
                     // read message
@@ -410,20 +411,19 @@ private:
                                                 {
                                                     // ok, we'll try again later
                                                     this->stop();
-                                                    callback(std::string(""));
+                                                    callback(std::make_shared<std::vector<char> >());
                                                 }
                                                 else
                                                 {
                                                     m_connection_state = connection_state::connected;
-                                                    std::string archive_data(&(*inbound_buffer)[0], inbound_buffer->size());
-                                                    callback(archive_data);
+                                                    callback(inbound_buffer);
                                                 }
                                             }),"",0));
                 }
                 else
                 {
                     this->stop();
-                    callback(std::string(""));
+                    callback(std::make_shared<std::vector<char> >());
                 }
             }),"",0));
     }
