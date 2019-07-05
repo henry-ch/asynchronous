@@ -173,7 +173,7 @@ private:
             // got work, deserialize message
             auto start = std::chrono::high_resolution_clock::now();
             std::string archive_data(&(*m_archive_data)[0], m_archive_data->size());
-            std::istringstream archive_stream(archive_data);
+            std::istringstream archive_stream(std::move(archive_data));
             typename SerializableType::iarchive archive(archive_stream);
             archive >> m_response;
             auto tmsg = (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000000);
@@ -201,7 +201,7 @@ private:
                     std::string as_string;
                     task_archive >> as_string;
                     // replace
-                    m_response.m_task = as_string;
+                    m_response.m_task = std::move(as_string);
                     --cpt_stolen;
                 }
                 auto done_fct = m_done;
@@ -685,11 +685,17 @@ void deserialize_and_call_top_level_callback_continuation_task(
         std::function<void(boost::asynchronous::tcp::client_request const&)>const& when_done)
 {
     // deserialize job, execute code, serialize result
-    std::istringstream task_stream(resp.m_task);
+    auto start = std::chrono::high_resolution_clock::now();
+    std::istringstream task_stream(std::move(resp.m_task));
     typename SerializableType::iarchive task_archive(task_stream);
     boost::asynchronous::tcp::client_request request (BOOST_ASYNCHRONOUS_TCP_CLIENT_JOB_RESULT);
     request.m_task_id = resp.m_task_id;
     task_archive >> t;
+    auto tmsg = (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now() - start).count() / 1000000);
+    if (tmsg > 10)
+    {
+        std::cout << "task deserialize took in ms: "<< tmsg << std::endl;
+    }
     // call task
     auto start_op = std::chrono::high_resolution_clock::now();
     auto cont = t();
