@@ -83,7 +83,8 @@ struct parallel_partial_sort_helper: public boost::asynchronous::continuation_ta
                     return func(i,middleval);
                 };
 
-                auto cont = boost::asynchronous::parallel_partition<Iterator,decltype(l),Job>(beg_,end_,std::move(l),thread_num_);
+                auto cont = boost::asynchronous::parallel_partition<Iterator,decltype(l),Job>
+                    (beg_,end_,std::move(l),thread_num_,task_name,prio);
                 cont.on_done([task_res,beg,end,middle,func,size_all_partitions,original_size,cutoff,thread_num,task_name,prio]
                              (std::tuple<boost::asynchronous::expected<Iterator> >&& continuation_res) mutable
                 {
@@ -181,11 +182,11 @@ struct parallel_partial_sort_helper: public boost::asynchronous::continuation_ta
 
 template <class Iterator,class Func, class Job=BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 boost::asynchronous::detail::callback_continuation<void,Job>
-parallel_partial_sort(Iterator beg, Iterator middle, Iterator end, Func func,long cutoff,const uint32_t thread_num = 1,
-                   #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
-                   const std::string& task_name, std::size_t prio=0)
+parallel_partial_sort(Iterator beg, Iterator middle, Iterator end, Func func,long cutoff,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                   const uint32_t thread_num, const std::string& task_name, std::size_t prio=0)
 #else
-                   const std::string& task_name="", std::size_t prio =0)
+                   const uint32_t thread_num = boost::thread::hardware_concurrency(), const std::string& task_name="", std::size_t prio =0)
 #endif
 {
     return boost::asynchronous::top_level_callback_continuation_job<void,Job>
