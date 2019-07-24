@@ -353,9 +353,13 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
     }
 
 
+#if !defined(_MSC_VER) || defined(__clang__)
+#define BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK_LOG(...)                                                                          \
+    BOOST_PP_OVERLOAD(BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK_LOG_,__VA_ARGS__)(__VA_ARGS__)
+#else
 #define BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK_LOG(...)                                                                          \
     BOOST_PP_CAT(BOOST_PP_OVERLOAD(BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK_LOG_,__VA_ARGS__)(__VA_ARGS__), BOOST_PP_EMPTY())
-
+#endif
 
 #ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
 #define BOOST_ASYNC_POST_CALLBACK_MEMBER_1(funcname)                                                                                                \
