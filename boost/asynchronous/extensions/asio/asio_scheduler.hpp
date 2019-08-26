@@ -167,7 +167,7 @@ public:
         {
             for (size_t i = 0; i< std::get<1>(v) && (t < m_ioservices.size()) ;++i)
             {
-                boost::asynchronous::detail::processor_bind_task task(std::get<0>(v)+i);
+                boost::asynchronous::detail::processor_bind_task task(static_cast<unsigned int>(std::get<0>(v)+i));
                 job_type job(std::move(task));
                 this->post(std::move(job),t++);
             }
