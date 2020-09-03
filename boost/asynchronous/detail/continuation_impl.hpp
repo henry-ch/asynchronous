@@ -405,6 +405,7 @@ auto make_lambda_continuation_wrapper(Func f,
     return boost::asynchronous::detail::lambda_continuation_wrapper<Func,decltype(f())>(std::move(f),name);
 }
 
+
 // same as before but getting a task_result as argument to make it easier to build a top-level task
 // only to be used for simple case (no recursion possible)
 namespace detail
