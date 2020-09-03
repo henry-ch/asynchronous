@@ -42,7 +42,7 @@ struct color
 };
 
 // Convert time (std::chrono::nanoseconds) to string
-std::string format_duration(std::chrono::nanoseconds const& d)
+inline std::string format_duration(std::chrono::nanoseconds const& d)
 {
     // Get microsecond ticks
     std::chrono::microseconds casted = std::chrono::duration_cast<std::chrono::microseconds>(d);

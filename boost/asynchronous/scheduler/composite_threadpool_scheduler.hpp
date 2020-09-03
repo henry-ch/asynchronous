@@ -55,7 +55,7 @@ public:
     typedef Job job_type;
     typedef composite_threadpool_scheduler<Job,FindPosition> this_type;
     typedef int self_proxy_creation;
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) || defined(__clang__)
     composite_threadpool_scheduler(): FindPosition()
     {
         // just for default-init, use only if you are going to reset this object

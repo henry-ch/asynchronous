@@ -133,7 +133,7 @@ protected:
     {
     }
 #endif
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) || defined(__clang__)
     single_queue_scheduler_policy()
     {
         m_queue = std::make_shared<queue_type>();

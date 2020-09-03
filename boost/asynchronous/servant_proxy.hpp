@@ -80,7 +80,7 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
     }
 
 #define BOOST_ASYNC_POST_MEMBER(...)                                                                            \
-    BOOST_PP_OVERLOAD(BOOST_ASYNC_POST_MEMBER_,__VA_ARGS__)(__VA_ARGS__)
+    BOOST_PP_CAT(BOOST_PP_OVERLOAD(BOOST_ASYNC_POST_MEMBER_,__VA_ARGS__)(__VA_ARGS__), BOOST_PP_EMPTY())
 
 #ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
 #define BOOST_ASYNC_POST_MEMBER_LOG_2(funcname,taskname)                                                                                    \
@@ -109,7 +109,7 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
     }
 
 #define BOOST_ASYNC_POST_MEMBER_LOG(...)                                                                        \
-    BOOST_PP_OVERLOAD(BOOST_ASYNC_POST_MEMBER_LOG_,__VA_ARGS__)(__VA_ARGS__)
+    BOOST_PP_CAT(BOOST_PP_OVERLOAD(BOOST_ASYNC_POST_MEMBER_LOG_,__VA_ARGS__)(__VA_ARGS__), BOOST_PP_EMPTY())
 
 #ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
 #ifdef BOOST_NO_CXX14_RETURN_TYPE_DEDUCTION
@@ -167,7 +167,7 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
     }
 #endif
 #define BOOST_ASYNC_FUTURE_MEMBER_LOG(...)                                                                      \
-    BOOST_PP_OVERLOAD(BOOST_ASYNC_FUTURE_MEMBER_LOG_,__VA_ARGS__)(__VA_ARGS__)
+    BOOST_PP_CAT(BOOST_PP_OVERLOAD(BOOST_ASYNC_FUTURE_MEMBER_LOG_,__VA_ARGS__)(__VA_ARGS__), BOOST_PP_EMPTY())
 
 #ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
 #ifdef BOOST_NO_CXX14_RETURN_TYPE_DEDUCTION
@@ -225,7 +225,7 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
     }
 #endif
 #define BOOST_ASYNC_FUTURE_MEMBER(...)                                                                          \
-    BOOST_PP_OVERLOAD(BOOST_ASYNC_FUTURE_MEMBER_,__VA_ARGS__)(__VA_ARGS__)
+    BOOST_PP_CAT(BOOST_PP_OVERLOAD(BOOST_ASYNC_FUTURE_MEMBER_,__VA_ARGS__)(__VA_ARGS__), BOOST_PP_EMPTY())
 
 #ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
 #define BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK_1(funcname)                                                                                              \
@@ -285,8 +285,13 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
                                     },std::move(args)...),"",p);                                                                                    \
     }
 
+#if !defined(_MSC_VER) || defined(__clang__)
 #define BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK(...)                                                                          \
     BOOST_PP_OVERLOAD(BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK_,__VA_ARGS__)(__VA_ARGS__)
+#else
+#define BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK(...)                                                                          \
+    BOOST_PP_CAT(BOOST_PP_OVERLOAD(BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK_,__VA_ARGS__)(__VA_ARGS__), BOOST_PP_EMPTY())
+#endif
 
 
 #ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
@@ -348,9 +353,13 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
     }
 
 
+#if !defined(_MSC_VER) || defined(__clang__)
 #define BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK_LOG(...)                                                                          \
     BOOST_PP_OVERLOAD(BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK_LOG_,__VA_ARGS__)(__VA_ARGS__)
-
+#else
+#define BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK_LOG(...)                                                                          \
+    BOOST_PP_CAT(BOOST_PP_OVERLOAD(BOOST_ASYNC_MEMBER_UNSAFE_CALLBACK_LOG_,__VA_ARGS__)(__VA_ARGS__), BOOST_PP_EMPTY())
+#endif
 
 #ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
 #define BOOST_ASYNC_POST_CALLBACK_MEMBER_1(funcname)                                                                                                \
@@ -379,7 +388,7 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
     }
 
 #define BOOST_ASYNC_POST_CALLBACK_MEMBER(...)                                                                                                       \
-    BOOST_PP_OVERLOAD(BOOST_ASYNC_POST_CALLBACK_MEMBER_,__VA_ARGS__)(__VA_ARGS__)    
+    BOOST_PP_CAT(BOOST_PP_OVERLOAD(BOOST_ASYNC_POST_CALLBACK_MEMBER_,__VA_ARGS__)(__VA_ARGS__), BOOST_PP_EMPTY())
 
 #ifdef BOOST_NO_CXX14_RETURN_TYPE_DEDUCTION
 #define BOOST_ASYNC_UNSAFE_MEMBER(funcname)                                                                                                         \
@@ -408,7 +417,7 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
     static std::size_t get_ctor_prio() {return priority;}
 
 #define BOOST_ASYNC_SERVANT_POST_CTOR(...)                                                                      \
-    BOOST_PP_OVERLOAD(BOOST_ASYNC_SERVANT_POST_CTOR_,__VA_ARGS__)(__VA_ARGS__)
+    BOOST_PP_CAT(BOOST_PP_OVERLOAD(BOOST_ASYNC_SERVANT_POST_CTOR_,__VA_ARGS__)(__VA_ARGS__), BOOST_PP_EMPTY())
 
 #ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
 #define BOOST_ASYNC_SERVANT_POST_CTOR_LOG_1(taskname)                                                           \
@@ -420,7 +429,7 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
     static const char* get_ctor_name() {return taskname;}
 
 #define BOOST_ASYNC_SERVANT_POST_CTOR_LOG(...)                                                                  \
-    BOOST_PP_OVERLOAD(BOOST_ASYNC_SERVANT_POST_CTOR_LOG_,__VA_ARGS__)(__VA_ARGS__)
+    BOOST_PP_CAT(BOOST_PP_OVERLOAD(BOOST_ASYNC_SERVANT_POST_CTOR_LOG_,__VA_ARGS__)(__VA_ARGS__), BOOST_PP_EMPTY())
 
 #ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
 #define BOOST_ASYNC_SERVANT_POST_DTOR_0()                                                                       \
@@ -431,7 +440,7 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
     static std::size_t get_dtor_prio() {return priority;}
 
 #define BOOST_ASYNC_SERVANT_POST_DTOR(...)                                                                      \
-    BOOST_PP_OVERLOAD(BOOST_ASYNC_SERVANT_POST_DTOR_,__VA_ARGS__)(__VA_ARGS__)
+    BOOST_PP_CAT(BOOST_PP_OVERLOAD(BOOST_ASYNC_SERVANT_POST_DTOR_,__VA_ARGS__)(__VA_ARGS__), BOOST_PP_EMPTY())
 
 #ifndef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
 #define BOOST_ASYNC_SERVANT_POST_DTOR_LOG_1(taskname)                                                           \
@@ -443,7 +452,7 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(servant_type)
     static const char* get_dtor_name() {return taskname;}
 
 #define BOOST_ASYNC_SERVANT_POST_DTOR_LOG(...)                                                                  \
-    BOOST_PP_OVERLOAD(BOOST_ASYNC_SERVANT_POST_DTOR_LOG_,__VA_ARGS__)(__VA_ARGS__)
+    BOOST_PP_CAT(BOOST_PP_OVERLOAD(BOOST_ASYNC_SERVANT_POST_DTOR_LOG_,__VA_ARGS__)(__VA_ARGS__), BOOST_PP_EMPTY())
 
 
 

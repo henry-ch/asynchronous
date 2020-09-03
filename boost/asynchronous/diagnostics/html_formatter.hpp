@@ -684,10 +684,10 @@ private:
             std::string targetNode = (params.checkboxes == parameters::CHECKBOXES_GLOBAL) ? "document" : "node.parentNode";
             header << "      function fixColspans(node, increase) {"                                  << std::endl
                    << "        var candidates = " << targetNode << ".getElementsByTagName('th');"     << std::endl
-                   << "        var actual = Array.filter(candidates, function (v) {"                  << std::endl
+                   << "        var actual = Array.prototype.filter.call(candidates, function (v) {"   << std::endl
                    << "          return (' ' + v.className + ' ').indexOf(' spanned ') > -1;"         << std::endl
                    << "        });"                                                                   << std::endl
-                   << "        Array.map(actual, function (v) {"                                      << std::endl
+                   << "        actual.map(function (v) {"                                             << std::endl
                    << "          var value = parseInt(v.getAttribute('colspan'));"                    << std::endl
                    << "          var modifier = " << modifier << ";"                                  << std::endl
                    << "          if (increase) { value += modifier; } else { value -= modifier; }"    << std::endl
@@ -696,10 +696,10 @@ private:
                    << "      }"                                                                       << std::endl
                    << "      function makeTSCheckboxesActive() {"                                     << std::endl
                    << "        var candidates = document.getElementsByTagName('input');"              << std::endl
-                   << "        var actual = Array.filter(candidates, function (v) {"                  << std::endl
+                   << "        var actual = Array.prototype.filter.call(candidates, function (v) {"   << std::endl
                    << "          return (' ' + v.className + ' ').indexOf(' ts_cb ') > -1;"           << std::endl
                    << "        });"                                                                   << std::endl
-                   << "        Array.map(actual, function (v) {"                                      << std::endl
+                   << "        actual.map(function (v) {"                                             << std::endl
                    << "          var defaultOn = v.hasAttribute('checked');"                          << std::endl
                    << "          v.addEventListener('click', function() {"                            << std::endl;
             if (params.javascript_instead_of_css3)

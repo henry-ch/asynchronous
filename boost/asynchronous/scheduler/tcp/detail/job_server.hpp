@@ -81,7 +81,7 @@ struct job_server : boost::asynchronous::trackable_servant<boost::asynchronous::
                             this->m_waiting_connections.pop_front();
                         }
                     },
-                    "boost::asynchronous::tcp::job_server::serialize"
+                    "boost::asynchronous::tcp::job_server::serialize",0,0
         );
     }
     bool requests_stealing()const
@@ -265,9 +265,9 @@ public:
     }
 
     // get_data is posted, no future, no callback
-    BOOST_ASYNC_FUTURE_MEMBER(add_task)
-    BOOST_ASYNC_FUTURE_MEMBER(requests_stealing)
-    BOOST_ASYNC_FUTURE_MEMBER(no_jobs)
+    BOOST_ASYNC_FUTURE_MEMBER_LOG(add_task,"boost::asynchronous::job_server::add_task",0)
+    BOOST_ASYNC_FUTURE_MEMBER_LOG(requests_stealing,"boost::asynchronous::job_server::requests_stealing",0)
+    BOOST_ASYNC_FUTURE_MEMBER_LOG(no_jobs,"boost::asynchronous::job_server::no_jobs",0)
 
 };
 class job_server_proxy_log :
@@ -283,9 +283,9 @@ public:
     {
     }
     // get_data is posted, no future, no callback
-    BOOST_ASYNC_FUTURE_MEMBER(add_task)
-    BOOST_ASYNC_FUTURE_MEMBER(requests_stealing)
-    BOOST_ASYNC_FUTURE_MEMBER(no_jobs)
+    BOOST_ASYNC_FUTURE_MEMBER_LOG(add_task,"boost::asynchronous::job_server::add_task",0)
+    BOOST_ASYNC_FUTURE_MEMBER_LOG(requests_stealing,"boost::asynchronous::job_server::requests_stealing",0)
+    BOOST_ASYNC_FUTURE_MEMBER_LOG(no_jobs,"boost::asynchronous::job_server::no_jobs",0)
 };
 class job_server_proxy_log_serialize :
         public boost::asynchronous::servant_proxy<job_server_proxy_log_serialize,
@@ -302,9 +302,9 @@ public:
     {
     }
     // get_data is posted, no future, no callback
-    BOOST_ASYNC_FUTURE_MEMBER(add_task)
-    BOOST_ASYNC_FUTURE_MEMBER(requests_stealing)
-    BOOST_ASYNC_FUTURE_MEMBER(no_jobs)
+    BOOST_ASYNC_FUTURE_MEMBER_LOG(add_task,"boost::asynchronous::job_server::add_task",0)
+    BOOST_ASYNC_FUTURE_MEMBER_LOG(requests_stealing,"boost::asynchronous::job_server::requests_stealing",0)
+    BOOST_ASYNC_FUTURE_MEMBER_LOG(no_jobs,"boost::asynchronous::job_server::no_jobs",0)
 };
 // choose correct proxy
 template <class Job, class SerializableType = boost::asynchronous::any_serializable>
@@ -338,9 +338,9 @@ public:
     {}
 
     // get_data is posted, no future, no callback
-    BOOST_ASYNC_FUTURE_MEMBER(add_task)
-    BOOST_ASYNC_FUTURE_MEMBER(requests_stealing)
-    BOOST_ASYNC_FUTURE_MEMBER(no_jobs)
+    BOOST_ASYNC_FUTURE_MEMBER_LOG(add_task,"boost::asynchronous::job_server::add_task",0)
+    BOOST_ASYNC_FUTURE_MEMBER_LOG(requests_stealing,"boost::asynchronous::job_server::requests_stealing",0)
+    BOOST_ASYNC_FUTURE_MEMBER_LOG(no_jobs,"boost::asynchronous::job_server::no_jobs",0)
 
 };
 
