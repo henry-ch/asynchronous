@@ -603,7 +603,7 @@ auto post_future(S const& scheduler, F const& func,
         scheduler.post_log(fct,task_name,prio);
     }
 #endif
-    return std::move(fu);
+    return fu;
 }
 
 template <class F, class S>
