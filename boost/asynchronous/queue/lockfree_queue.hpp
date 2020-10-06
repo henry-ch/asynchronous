@@ -110,7 +110,7 @@ public:
         std::unique_ptr<JOB> for_cleanup(resp);
 #ifndef BOOST_NO_RVALUE_REFERENCES
         JOB res(std::move(*resp));
-        return std::move(res);
+        return res;
 #else
         JOB res(*resp);
         return res;

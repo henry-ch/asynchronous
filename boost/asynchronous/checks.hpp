@@ -225,13 +225,13 @@ template <class F, class T,class R=void>
 call_if_alive<F,T,R> check_alive(F func, std::shared_ptr<T> tracked)
 {
     call_if_alive<F,T,R> wrapped(std::move(func),std::weak_ptr<T>(tracked));
-    return std::move(wrapped);
+    return wrapped;
 }
 template <class F, class T,class R=void>
 call_if_alive<F,T,R> check_alive(F func, std::weak_ptr<T> tracked)
 {
     call_if_alive<F,T,R> wrapped(std::move(func),tracked);
-    return std::move(wrapped);
+    return wrapped;
 }
 #else
 template <class F, class T,class R=void>
@@ -254,7 +254,7 @@ template <class F, class T>
 auto check_alive_before_exec(F func, std::shared_ptr<T> tracked) -> call_if_alive_exec<F,T,decltype(func())>
 {
     call_if_alive_exec<F,T,decltype(func())> wrapped(std::move(func),std::weak_ptr<T>(tracked));
-    return std::move(wrapped);
+    return wrapped;
 }
 template <class F, class T>
 auto check_alive_before_exec(F func, std::weak_ptr<T> tracked) -> call_if_alive_exec<F,T,decltype(func())>
