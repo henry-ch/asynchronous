@@ -552,6 +552,38 @@ boost::asynchronous::detail::callback_continuation<Return,Job> top_level_callbac
     return cont;
 }
 
+namespace detail
+{
+template <class ReturnType>
+struct ready_continuation_wrapper : public boost::asynchronous::continuation_task<ReturnType>
+{
+    ready_continuation_wrapper(ReturnType res, std::string const& name)
+        : boost::asynchronous::continuation_task<ReturnType>(name)
+        , m_res(std::move(res))
+    {}
+    void operator()()
+    {
+        boost::asynchronous::continuation_result<ReturnType> task_res = this->this_task_result();
+        task_res.set_value(m_res);
+    }
+
+    ReturnType m_res;
+};
+}
+
+template <class ReturnType, class Job = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+boost::asynchronous::detail::callback_continuation<ReturnType>
+make_ready_continuation(ReturnType res,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                                      std::string const& name)
+#else
+                                      std::string const& name="")
+#endif
+{
+    return boost::asynchronous::top_level_callback_continuation_job<ReturnType,Job>
+            (boost::asynchronous::detail::ready_continuation_wrapper<ReturnType>(std::move(res),name));
+}
+
 }}
 
 #endif // BOOST_ASYNCHRONOUS_CONTINUATION_TASK_HPP

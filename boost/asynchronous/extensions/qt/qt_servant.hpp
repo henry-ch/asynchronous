@@ -15,23 +15,16 @@
 
 #include <cstddef>
 #include <map>
-#include <functional>
 #include <memory>
+#include <functional>
 
 #include <boost/mpl/eval_if.hpp>
 #include <boost/mpl/identity.hpp>
-#include <memory>
-#include <boost/asynchronous/detail/metafunctions.hpp>
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/checks.hpp>
-#include <boost/asynchronous/scheduler/tss_scheduler.hpp>
 #include <boost/asynchronous/detail/function_traits.hpp>
 #include <boost/asynchronous/detail/move_bind.hpp>
-#include <boost/asynchronous/extensions/qt/qt_post_helper.hpp>
-#include <boost/asynchronous/extensions/qt/qt_safe_callback_helper.hpp>
-
-#include <boost/system/error_code.hpp>
 
 #include <boost/thread.hpp>
 
@@ -39,8 +32,172 @@ namespace boost { namespace asynchronous
 {
 namespace detail {
 struct qt_track{};
+template <class T>
+class qt_async_custom_event : public QEvent
+{
+public:
+    qt_async_custom_event( T f, int id)
+        : QEvent(static_cast<QEvent::Type>(id))
+        , m_future(std::move(f))
+    {}
 
+    virtual ~qt_async_custom_event()
+    {}
+    T m_future;
+};
 
+class connect_functor_helper : public QObject
+{
+    Q_OBJECT
+public:
+    virtual ~connect_functor_helper(){}
+    connect_functor_helper(unsigned long id, const std::function<void(QEvent*)> &f)
+#ifdef BOOST_ASYNCHRONOUS_QT_WORKAROUND
+;
+#else
+        : QObject(0)
+        , m_id(id)
+        , m_function(f)
+    {}
+#endif
+    connect_functor_helper(connect_functor_helper const& rhs)
+#ifdef BOOST_ASYNCHRONOUS_QT_WORKAROUND
+  ;
+#else
+  :QObject(0), m_id(rhs.m_id),m_function(rhs.m_function)
+  {}
+#endif
+    unsigned long get_id()const
+    {
+        return m_id;
+    }
+    virtual void customEvent(QEvent* event)
+#ifdef BOOST_ASYNCHRONOUS_QT_WORKAROUND
+;
+#else
+    {
+        m_function(event);
+        QObject::customEvent(event);
+    }
+#endif
+
+private:
+    unsigned long m_id;
+    std::function<void(QEvent*)> m_function;
+};
+
+class qt_post_helper : public QObject
+{
+    Q_OBJECT
+public:
+    virtual ~qt_post_helper()
+#ifdef BOOST_ASYNCHRONOUS_QT_WORKAROUND
+    ;
+#else
+    {}
+#endif
+
+    typedef boost::asynchronous::any_callable job_type;
+    qt_post_helper(connect_functor_helper* c, int event_id)
+#ifdef BOOST_ASYNCHRONOUS_QT_WORKAROUND
+    ;
+#else
+    : QObject(0)
+    , m_connect(c)
+    , m_event_id(event_id)
+    {}
+#endif
+    qt_post_helper(qt_post_helper const& rhs)
+#ifdef BOOST_ASYNCHRONOUS_QT_WORKAROUND
+;
+#else
+    : QObject(0)
+    , m_connect(rhs.m_connect)
+    , m_event_id(rhs.m_event_id)
+    {}
+#endif
+
+    template <class Future>
+    void operator()(Future f)
+    {
+        QCoreApplication::postEvent(m_connect,new qt_async_custom_event<Future>(std::move(f),m_event_id));
+        QCoreApplication::sendPostedEvents();
+    }
+
+private:
+   connect_functor_helper*              m_connect;
+   int                                  m_event_id;
+};
+
+// for use by make_safe_callback
+class qt_async_safe_callback_custom_event : public QEvent
+{
+public:
+    qt_async_safe_callback_custom_event(std::function<void()>&& cb , int id)
+        : QEvent(static_cast<QEvent::Type>(id))
+        , m_cb(std::forward<std::function<void()>>(cb))
+    {}
+
+    virtual ~qt_async_safe_callback_custom_event()
+    {}
+
+    std::function<void()>                m_cb;
+};
+class qt_safe_callback_helper : public QObject
+{
+    Q_OBJECT
+public:
+    virtual ~qt_safe_callback_helper()
+#ifdef BOOST_ASYNCHRONOUS_QT_WORKAROUND
+    ;
+#else
+    {}
+#endif
+
+    typedef boost::asynchronous::any_callable job_type;
+    qt_safe_callback_helper(connect_functor_helper* c, std::function<void()>&& cb, int event_id)
+#ifdef BOOST_ASYNCHRONOUS_QT_WORKAROUND
+    ;
+#else
+    : QObject(0)
+    , m_connect(c)
+    , m_cb(std::forward<std::function<void()>>(cb))
+    , m_event_id(event_id)
+    {}
+#endif
+    qt_safe_callback_helper(qt_safe_callback_helper const& rhs)
+#ifdef BOOST_ASYNCHRONOUS_QT_WORKAROUND
+;
+#else
+    : QObject(0)
+    , m_connect(rhs.m_connect)
+    , m_cb(rhs.m_cb)
+    , m_event_id(rhs.m_event_id)
+    {}
+#endif
+    qt_safe_callback_helper(qt_safe_callback_helper&& rhs)
+#ifdef BOOST_ASYNCHRONOUS_QT_WORKAROUND
+;
+#else
+    : QObject(0)
+    , m_connect(rhs.m_connect)
+    , m_cb(std::move(rhs.m_cb))
+    , m_event_id(rhs.m_event_id)
+    {}
+#endif
+    qt_safe_callback_helper& operator=(qt_safe_callback_helper&&)=default;
+    qt_safe_callback_helper& operator=(qt_safe_callback_helper const&)=default;
+    void operator()()
+    {
+        QCoreApplication::postEvent(m_connect,new qt_async_safe_callback_custom_event(std::move(m_cb),m_event_id));
+        QCoreApplication::sendPostedEvents();
+    }
+
+private:
+   connect_functor_helper*              m_connect;
+   std::function<void()>                m_cb;
+   int                                  m_event_id;
+};
 // a stupid scheduler which just calls the functor passed. It doesn't even post as the functor already contains a post call.
 struct dummy_qt_scheduler
 {
@@ -92,7 +249,7 @@ public:
         // set_safe_callback_event_type
         assert(m_qt_async_safe_callback_custom_event_id != -1);
     }
-    virtual ~qt_servant()
+    ~qt_servant()
     {
     }
 
@@ -108,7 +265,7 @@ public:
     struct get_continuation_return
     {
         typedef typename T::return_type type;
-    };    
+    };
     template <class F1, class F2>
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
     void post_callback(F1&& func,F2&& cb_func, std::string const& task_name, std::size_t post_prio, std::size_t cb_prio)
@@ -169,7 +326,8 @@ public:
                  [this,connect_id,cbptr](QEvent* e)
                  {
                     detail::qt_async_custom_event<boost::asynchronous::expected<f1_result_type> >* ce =
-                            static_cast<detail::qt_async_custom_event<boost::asynchronous::expected<f1_result_type> >* >(e);
+                            static_cast<detail::qt_async_custom_event<boost::asynchronous::expected<f1_result_type> >* >
+                            (e,m_qt_async_custom_event_id);
                     (*cbptr)(std::move(ce->m_future));
                     this->m_waiting_callbacks.erase(this->m_waiting_callbacks.find(connect_id));
                  }
@@ -177,15 +335,15 @@ public:
         m_waiting_callbacks[m_next_helper_id] = c;
         ++m_next_helper_id;
         return boost::asynchronous::interruptible_post_callback(
-                    m_worker,
-                    boost::asynchronous::check_alive_before_exec(std::move(func),m_tracking),
-                    boost::asynchronous::detail::dymmy_weak_qt_scheduler(),
-                    boost::asynchronous::check_alive(
-                           boost::asynchronous::detail::qt_post_helper(c.get(),m_qt_async_custom_event_id),
-                           m_tracking),
-                    task_name,
-                    post_prio,
-                    cb_prio);
+                                        m_worker,
+                                        boost::asynchronous::check_alive_before_exec(std::move(func),m_tracking),
+                                        boost::asynchronous::detail::dymmy_weak_qt_scheduler(),
+                                        boost::asynchronous::check_alive(
+                                               boost::asynchronous::detail::qt_post_helper(c.get(),m_qt_async_custom_event_id),
+                                               m_tracking),
+                                        task_name,
+                                        post_prio,
+                                        cb_prio);
     }
 
 
@@ -198,6 +356,12 @@ public:
 #endif
      -> std::future<typename boost::asynchronous::detail::get_return_type_if_possible_continuation<decltype(func())>::type>
     {
+        typedef typename ::boost::mpl::eval_if<
+            typename boost::asynchronous::detail::has_is_continuation_task<decltype(func())>::type,
+            get_continuation_return<decltype(func())>,
+            ::boost::mpl::identity<decltype(func())>
+        >::type f1_result_type;
+
         unsigned long connect_id = m_next_helper_id;
 
         std::shared_ptr<boost::asynchronous::detail::connect_functor_helper> c =
@@ -258,7 +422,6 @@ public:
         std::weak_ptr<boost::asynchronous::detail::qt_track> tracking (m_tracking);
         return [tracking](){return !tracking.expired();};
     }
-
 protected:
     boost::asynchronous::any_shared_scheduler_proxy<WJOB> const& get_worker()const
     {
@@ -277,7 +440,6 @@ private:
                                                      const std::string& task_name="", std::size_t prio=0)
 #endif
     {
-        std::weak_ptr<boost::asynchronous::detail::qt_track> tracking (m_tracking);
         // now we are sure about our thread id
         m_own_thread_id = boost::this_thread::get_id();
         auto thread_id=m_own_thread_id;
@@ -289,25 +451,24 @@ private:
         std::shared_ptr<boost::asynchronous::detail::connect_functor_helper> c =
                 std::make_shared<boost::asynchronous::detail::connect_functor_helper>
                 (m_next_helper_id,
-                 [this,connect_id,tracking](QEvent* e)mutable
+                 [this,connect_id](QEvent* e)mutable
                  {
                     detail::qt_async_safe_callback_custom_event* ce =
                             static_cast<detail::qt_async_safe_callback_custom_event* >(e);
                     ce->m_cb();
-                    // not possible to erase connect_id as safe callback can be called again and again
                  }
                 );
         m_waiting_callbacks[m_next_helper_id] = c;
         ++m_next_helper_id;
+        std::weak_ptr<boost::asynchronous::detail::qt_track> tracking (m_tracking);
 
         std::function<void(Args...)> res = [this,tracking,func_ptr,task_name,prio,thread_id,c,connect_id](Args... as)mutable
         {
             if (thread_id == boost::this_thread::get_id())
             {
                 // our thread, call if servant alive
-                boost::asynchronous::move_bind( boost::asynchronous::check_alive([func_ptr](Args... args){(*func_ptr)(std::move(args)...);},tracking),
-                                                std::move(as)...)();
-                // not possible to erase connect_id as safe callback can be called again and again
+               boost::asynchronous::move_bind( boost::asynchronous::check_alive([func_ptr](Args... args){(*func_ptr)(std::move(args)...);},tracking),
+                                               std::move(as)...)();
             }
             else
             {
@@ -318,7 +479,7 @@ private:
                                                  boost::asynchronous::check_alive(
                                                      boost::asynchronous::detail::qt_safe_callback_helper
                                                         (c.get(),std::move(safe_cb),m_qt_async_safe_callback_custom_event_id),
-                                                     m_tracking),
+                                                 tracking),
                                                  task_name,prio);
             }
         };
@@ -326,6 +487,7 @@ private:
     }
     // tracking object for callbacks / tasks
     std::shared_ptr<boost::asynchronous::detail::qt_track> m_tracking;
+
 private:
     // our worker pool
     boost::asynchronous::any_shared_scheduler_proxy<WJOB> m_worker;
@@ -342,7 +504,6 @@ template <class WJOB>
 int qt_servant<WJOB>::m_qt_async_custom_event_id=61256;
 template <class WJOB>
 int qt_servant<WJOB>::m_qt_async_safe_callback_custom_event_id=61257;
-
 }}
 
 #endif // BOOST_ASYNCHRONOUS_QT_SERVANT_HPP
