@@ -146,7 +146,26 @@ public:
 #endif
     -> decltype(boost::asynchronous::make_function(std::move(func)))
     {
-        return this->make_safe_callback_helper(boost::asynchronous::make_function(std::move(func)),task_name,prio);
+        return this->make_safe_callback_helper(boost::asynchronous::make_function(std::move(func)),false,task_name,prio);
+    }
+
+    /*!
+     * \brief Makes a callback, which always posts
+     * \brief In any case, it will check if this object is still alive.
+     * \param func a functor will will safely be executed
+     * \param task_name which will be displayed in the diagnostic of the servant's scheduler.
+     * \param prio The priority of the functor within the servant's scheduler.
+     */
+    template<class T>
+    auto make_safe_post_callback(T func,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+                                                     const std::string& task_name, std::size_t prio) const
+#else
+                                                     const std::string& task_name="", std::size_t prio=0) const
+#endif
+    -> decltype(boost::asynchronous::make_function(std::move(func)))
+    {
+        return this->make_safe_callback_helper(boost::asynchronous::make_function(std::move(func)),true,task_name,prio);
     }
 
     /*!
@@ -579,6 +598,7 @@ private:
 
     template<typename... Args>
     std::function<void(Args... )> make_safe_callback_helper(std::function<void(Args... )> func,
+                                                            bool force_post,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
                                                      const std::string& task_name, std::size_t prio) const
 #else
@@ -591,13 +611,13 @@ private:
         std::shared_ptr<std::function<void(Args... )>> func_ptr =
                 std::make_shared<std::function<void(Args... )>>(std::move(func));
 
-        std::function<void(Args...)> res = [func_ptr,tracking,wscheduler,task_name,prio](Args... as)mutable
+        std::function<void(Args...)> res = [func_ptr,tracking,wscheduler,force_post,task_name,prio](Args... as)mutable
         {
             boost::asynchronous::any_shared_scheduler<JOB> sched = wscheduler.lock();
             if (sched.is_valid())
             {
                 std::vector<boost::thread::id> ids = sched.thread_ids();
-                if (ids.size() == 1 && (ids[0] == boost::this_thread::get_id()))
+                if (!force_post && ids.size() == 1 && (ids[0] == boost::this_thread::get_id()))
                 {
                     auto weak_diagnostics = boost::asynchronous::get_scheduler_diagnostics<JOB>();
                     auto diagnostics = weak_diagnostics.lock();
