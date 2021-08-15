@@ -22,12 +22,14 @@ namespace boost { namespace asynchronous
 struct no_cpu_load_saving
 {
 public:
+    // all threads handled same way
+    static unsigned no_load_save_threads() {return 0;}
     // called each time a job is popped and executed
-    void popped_job()
+    void popped_job(bool=false)
     {
         // nothing to do
     }
-    void loop_done_no_job()
+    void loop_done_no_job(bool=false)
     {
         // nothing to do
     }
@@ -38,15 +40,17 @@ struct default_save_cpu_load
 {
 public:
     default_save_cpu_load():m_cpt_nojob(0),m_start( std::chrono::high_resolution_clock::now()){}
+    // all threads handled same way
+    static unsigned no_load_save_threads() {return 0;}
     // called each time a job is popped and executed
-    void popped_job()
+    void popped_job(bool=false)
     {
         // reset counter and timer
         m_cpt_nojob=0;
         m_start = std::chrono::high_resolution_clock::now();
     }
     // called each time a loop on all queues is done and no job was found
-    void loop_done_no_job()
+    void loop_done_no_job(bool=false)
     {
         ++m_cpt_nojob;
         if (m_cpt_nojob >= Loops)
@@ -63,6 +67,39 @@ public:
 private:
     unsigned int m_cpt_nojob;
     std::chrono::high_resolution_clock::time_point m_start;
+};
+
+// will call no_cpu_load_saving for some threads and default_save_cpu_load for all others
+template <unsigned NoSaveLoadThreads=1, unsigned Loops=10, unsigned MinDurationUs=80000, unsigned SleepTimeUs=5000>
+struct some_save_cpu_load
+{
+    static unsigned no_load_save_threads() {return NoSaveLoadThreads;}
+
+    void popped_job(bool save_load_thread=true)
+    {
+        if(save_load_thread)
+        {
+            m_save.popped_job();
+        }
+        else
+        {
+            m_no_save.popped_job();
+        }
+    }
+    void loop_done_no_job(bool save_load_thread=true)
+    {
+        if(save_load_thread)
+        {
+            m_save.loop_done_no_job();
+        }
+        else
+        {
+            m_no_save.loop_done_no_job();
+        }
+    }
+
+    boost::asynchronous::no_cpu_load_saving m_no_save;
+    boost::asynchronous::default_save_cpu_load<Loops,MinDurationUs,SleepTimeUs> m_save;
 };
 
 }} // boost::asynchronous::scheduler

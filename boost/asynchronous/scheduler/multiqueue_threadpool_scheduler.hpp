@@ -93,13 +93,23 @@ public:
         m_diagnostics = std::make_shared<diag_type>(m_number_of_workers);
         m_thread_ids.reserve(m_number_of_workers);
         m_group.reset(new boost::thread_group);
+        // prepare for possible different thread load
+        unsigned no_load_save_threads = CPULoad::no_load_save_threads();
+
+        int load_thread_interval = 0;
+        if (no_load_save_threads > 0)
+        {
+            load_thread_interval = m_number_of_workers / no_load_save_threads;
+        }
         for (size_t i = 0; i< m_number_of_workers;++i)
         {
+            bool save_load_thread = (no_load_save_threads > 0)?(i % load_thread_interval != 0):false;
             std::promise<boost::thread*> new_thread_promise;
             std::shared_future<boost::thread*> fu = new_thread_promise.get_future();
             boost::thread* new_thread =
                     m_group->create_thread(std::bind(&multiqueue_threadpool_scheduler::run,this->m_queues,
-                                                       m_private_queues[i],i,m_diagnostics,fu,weak_self));
+                                                       m_private_queues[i],i,m_diagnostics,fu,weak_self,
+                                                       save_load_thread));
             new_thread_promise.set_value(new_thread);
             m_thread_ids.push_back(new_thread->get_id());
         }
@@ -206,7 +216,7 @@ public:
 
     // try to execute a job, return true
     static bool execute_one_job(std::vector<std::shared_ptr<queue_type> > const& queues,size_t index,CPULoad& cpu_load,std::shared_ptr<diag_type> diagnostics,
-                                std::list<boost::asynchronous::any_continuation>& waiting)
+                                std::list<boost::asynchronous::any_continuation>& waiting,bool save_load_thread)
     {
         bool popped = false;
         // get a job
@@ -234,7 +244,7 @@ public:
             // did we manage to pop or steal?
             if (popped)
             {
-                cpu_load.popped_job();
+                cpu_load.popped_job(save_load_thread);
                 // log time
                 boost::asynchronous::job_traits<typename Q::job_type>::set_started_time(job);
                 // log thread
@@ -289,7 +299,8 @@ public:
                     std::shared_ptr<boost::asynchronous::lockfree_queue<boost::asynchronous::any_callable> > const& private_queue,
                     size_t index,std::shared_ptr<diag_type> diagnostics,
                     std::shared_future<boost::thread*> self,
-                    std::weak_ptr<this_type> this_)
+                    std::weak_ptr<this_type> this_,
+                    bool save_load_thread)
     {
         boost::thread* t = self.get();
         boost::asynchronous::detail::multi_queue_scheduler_policy<Q,FindPosition>::m_self_thread.reset(new thread_ptr_wrapper(t));
@@ -306,10 +317,10 @@ public:
             try
             {
                 {
-                    bool popped = execute_one_job(queues,index,cpu_load,diagnostics,waiting);
+                    bool popped = execute_one_job(queues,index,cpu_load,diagnostics,waiting,save_load_thread);
                     if (!popped)
                     {
-                        cpu_load.loop_done_no_job();
+                        cpu_load.loop_done_no_job(save_load_thread);
                         // nothing for us to do, give up our time slice
                         boost::this_thread::yield();
                     }
@@ -327,7 +338,7 @@ public:
             catch(boost::asynchronous::detail::shutdown_exception&)
             {
                 // we are done, execute jobs posted short before to the end, then shutdown
-                while(execute_one_job(queues,index,cpu_load,diagnostics,waiting));
+                while(execute_one_job(queues,index,cpu_load,diagnostics,waiting,save_load_thread));
                 delete boost::asynchronous::detail::multi_queue_scheduler_policy<Q,FindPosition>::m_self_thread.release();
                 return;
             }
