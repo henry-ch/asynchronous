@@ -227,7 +227,7 @@ struct any_shared_scheduler_proxy_concept
     /*!
      * \brief virtual destructor
      */
-    virtual ~any_shared_scheduler_proxy_concept<JOB>(){}
+    virtual ~any_shared_scheduler_proxy_concept(){}
 
     /*!
      * \brief posts a job into the scheduler queue

@@ -93,7 +93,7 @@ struct any_shared_scheduler_ptr: boost::type_erasure::any<boost::asynchronous::a
 template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 struct any_shared_scheduler_concept
 {
-    virtual ~any_shared_scheduler_concept<JOB>(){}
+    virtual ~any_shared_scheduler_concept(){}
     virtual void post(JOB) =0;
     virtual void post(JOB, std::size_t) =0;
     virtual boost::asynchronous::any_interruptible interruptible_post(JOB) =0;

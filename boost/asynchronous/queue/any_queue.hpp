@@ -87,7 +87,7 @@ struct any_queue: public boost::type_erasure::any<boost::asynchronous::any_queue
 template <class JOB>
 struct any_queue_concept
 {
-    virtual ~any_queue_concept<JOB>(){}
+    virtual ~any_queue_concept(){}
     virtual void push(JOB&&,std::size_t)=0;
     virtual void push(JOB&&)=0;
     virtual JOB pop()=0;
