@@ -1,4 +1,4 @@
 asynchronous
 ============
-   [Please look at the generated documentation](libs/asynchronous/doc/asynchronous.html)
-You might need to force browser reloading (F5)
+   Please have a look at the [HTML](https://github.com/henry-ch/asynchronous/blob/master/libs/asynchronous/doc/asynchronous.html) documentation
+
