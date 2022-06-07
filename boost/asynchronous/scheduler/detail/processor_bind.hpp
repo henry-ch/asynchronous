@@ -41,7 +41,17 @@ struct processor_bind_task
         cpu_set_t cpuset;
         CPU_ZERO( & cpuset);
         CPU_SET( proc_, & cpuset);
+    #if defined(__ANDROID__)
+        // Android doesn't have pthread_setaffinity_np, we need to use the non-pthread interface.
+        // Some sources claim that this affects the whole process, but that is incorrect.
+        // A PID of 0 in the system call will always use the kernel's `current` task, i.e. the
+        // currently running thread. In general, the `pid` argument is actually what userspace
+        // sometimes calls a TID (= PID in the Linux kernel, see gettid()), not what userspace
+        // claims to be the PID (= TGID in the kernel, the PID of the thread group leader).
+        ::sched_setaffinity(0 /* current thread */, sizeof(cpuset), &cpuset);
+    #else
         ::pthread_setaffinity_np( ::pthread_self(), sizeof( cpuset), & cpuset);
+    #endif
 #endif
 # if defined(WINVER)
         ::SetThreadAffinityMask( ::GetCurrentThread(), ( DWORD_PTR)1 << proc_);
