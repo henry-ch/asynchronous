@@ -10,19 +10,18 @@
 #ifndef BOOST_ASYNC_QUEUE_GUARDED_DEQUE_HPP
 #define BOOST_ASYNC_QUEUE_GUARDED_DEQUE_HPP
 
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/locks.hpp>
-#include <boost/thread/condition.hpp>
 #include <functional>
+#include <mutex>
+#include <chrono>
+#include <deque>
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/queue/queue_base.hpp>
-#include <deque>
 #include <boost/asynchronous/queue/any_queue.hpp>
 
 namespace boost { namespace asynchronous
 {
 
-template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB, class Size=void >
+template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB, int WaitTime=5 >
 class guarded_deque: 
 #ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
         public boost::asynchronous::any_queue_concept<JOB>,
@@ -30,9 +29,9 @@ class guarded_deque:
         public boost::asynchronous::queue_base<JOB>
 {
 public:
-    typedef guarded_deque<JOB,Size> this_type;
-    typedef boost::mutex  mutex_type;
-    typedef boost::unique_lock<mutex_type> lock_type;
+    typedef guarded_deque<JOB,WaitTime> this_type;
+    typedef std::mutex  mutex_type;
+    typedef std::unique_lock<mutex_type> lock_type;
     template<typename... Args>
     guarded_deque(Args... ){}
     guarded_deque(const guarded_deque&) = delete;
@@ -109,6 +108,17 @@ public:
             m_jobs.pop_back();
             return true;
         }
+        else
+        {
+            // lock with short waiting time
+            m_not_empty.wait_for(lock, std::chrono::milliseconds(WaitTime), std::bind(&this_type::is_not_empty, this));
+            if (is_not_empty())
+            {
+                job = m_jobs.back();
+                m_jobs.pop_back();
+                return true;
+            }
+        }
         return false;
     }
     //TODO at other end
@@ -127,7 +137,7 @@ public:
 private:
     std::deque<JOB> m_jobs;
     std::size_t m_max_size=0;
-    boost::condition m_not_empty;
+    std::condition_variable m_not_empty;
     mutex_type m_mutex;
 };
 
