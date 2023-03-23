@@ -94,9 +94,9 @@ public:
         m_thread_ids.reserve(m_number_of_workers);
         m_group.reset(new boost::thread_group);
         // prepare for possible different thread load
-        unsigned no_load_save_threads = CPULoad::no_load_save_threads();
+        std::size_t no_load_save_threads = CPULoad::no_load_save_threads();
 
-        int load_thread_interval = 0;
+        std::size_t load_thread_interval = 0;
         if (no_load_save_threads > 0)
         {
             load_thread_interval = m_number_of_workers / no_load_save_threads;
@@ -191,7 +191,7 @@ public:
         size_t t = 0;
         for(auto const& v : p)
         {
-            for (size_t i = 0; i< std::get<1>(v) && (t < m_number_of_workers);++i)
+            for (unsigned int i = 0; i< std::get<1>(v) && (t < m_number_of_workers);++i)
             {
                 boost::asynchronous::detail::processor_bind_task task(std::get<0>(v)+i);
                 boost::asynchronous::any_callable job(std::move(task));

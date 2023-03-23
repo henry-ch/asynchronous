@@ -23,7 +23,7 @@ struct no_cpu_load_saving
 {
 public:
     // all threads handled same way
-    static unsigned no_load_save_threads() {return 0;}
+    static std::size_t no_load_save_threads() {return 0;}
     // called each time a job is popped and executed
     void popped_job(bool=false)
     {
@@ -41,7 +41,7 @@ struct default_save_cpu_load
 public:
     default_save_cpu_load():m_cpt_nojob(0),m_start( std::chrono::high_resolution_clock::now()){}
     // all threads handled same way
-    static unsigned no_load_save_threads() {return 0;}
+    static std::size_t no_load_save_threads() {return 0;}
     // called each time a job is popped and executed
     void popped_job(bool=false)
     {
@@ -73,7 +73,7 @@ private:
 template <unsigned NoSaveLoadThreads=1, unsigned Loops=10, unsigned MinDurationUs=80000, unsigned SleepTimeUs=5000>
 struct some_save_cpu_load
 {
-    static unsigned no_load_save_threads() {return NoSaveLoadThreads;}
+    static std::size_t no_load_save_threads() {return NoSaveLoadThreads;}
 
     void popped_job(bool save_load_thread=true)
     {
