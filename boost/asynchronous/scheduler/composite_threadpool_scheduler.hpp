@@ -45,10 +45,10 @@ namespace boost { namespace asynchronous
 //TODO boost.parameter
 template<class Job = BOOST_ASYNCHRONOUS_DEFAULT_JOB,
          class FindPosition=boost::asynchronous::default_find_position< >>
-class composite_threadpool_scheduler: 
+class composite_threadpool_scheduler:
 #ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
         public any_shared_scheduler_proxy_concept<Job>, public internal_scheduler_aspect_concept<Job>,
-#endif        
+#endif
         public FindPosition, public std::enable_shared_from_this<composite_threadpool_scheduler<Job,FindPosition> >
 {
 public:
@@ -83,7 +83,7 @@ public:
         for (typename std::vector<subpool_type>::const_iterator it = m_subpools.begin(); it != m_subpools.end();++it)
         {
             auto one_queue_vec = (*it).get_queue_size();
-            res.push_back(std::accumulate(one_queue_vec.begin(),one_queue_vec.end(),0,
+            res.push_back(std::accumulate(one_queue_vec.begin(),one_queue_vec.end(), (std::size_t)0,
                                           [](std::size_t rhs,std::size_t lhs){return rhs + lhs;}));
         }
         return res;
@@ -94,7 +94,7 @@ public:
         for (typename std::vector<subpool_type>::const_iterator it = m_subpools.begin(); it != m_subpools.end();++it)
         {
             auto one_queue_vec = (*it).get_max_queue_size();
-            res.push_back(std::accumulate(one_queue_vec.begin(),one_queue_vec.end(),0,
+            res.push_back(std::accumulate(one_queue_vec.begin(),one_queue_vec.end(),(std::size_t)0,
                                           [](std::size_t rhs,std::size_t lhs){return std::max(rhs,lhs);}));
         }
         return res;
@@ -145,7 +145,7 @@ public:
         }
         return true;
     }
-    
+
     std::vector<boost::thread::id> thread_ids()const override
     {
         std::vector<boost::thread::id> ids;
@@ -228,7 +228,7 @@ public:
 //        {
 //            (*it).processor_bind(p);
 //            auto one_queue_vec = (*it).get_queue_size();
-//            p += std::accumulate(one_queue_vec.begin(),one_queue_vec.end(),0,
+//            p += std::accumulate(one_queue_vec.begin(),one_queue_vec.end(),(std::size_t)0,
 //                                 [](std::size_t rhs,std::size_t lhs){return rhs + lhs;});
 //        }
     }
@@ -262,7 +262,7 @@ public:
 private:
     typedef boost::asynchronous::any_shared_scheduler_proxy<Job> subpool_type;
     std::vector<subpool_type> m_subpools;
-    
+
     template <class T,class S>
     typename std::enable_if< std::is_same<job_type, typename S::job_type>::value,void >::type
     add_scheduler_helper(T& t,S& s)
@@ -309,14 +309,14 @@ private:
         ctor_queue_helper(t,queues,tail...);
     }
     void ctor_pool_helper(std::vector<std::vector<boost::asynchronous::any_queue_ptr<job_type> > > const& queues,std::vector<subpool_type>& subs)
-    {   
+    {
         for (std::size_t i=0; i< subs.size(); ++i)
         {
             std::vector<boost::asynchronous::any_queue_ptr<job_type> > steal_from;
             for (std::size_t j=0; j< queues.size(); ++j)
             {
                 if (i!=j)
-                {                    
+                {
                     steal_from.insert(steal_from.end(),queues[j].begin(),queues[j].end());
                 }
             }
@@ -325,10 +325,10 @@ private:
     }
     // shared scheduler for use in the servant context
     // implements any_shared_scheduler_concept
-    struct lockable_shared_scheduler : 
+    struct lockable_shared_scheduler :
 #ifndef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
             public any_shared_scheduler_concept<job_type>,
-#endif       
+#endif
             public FindPosition
     {
         typedef typename this_type::job_type job_type;
@@ -412,7 +412,7 @@ private:
             for (typename std::vector<boost::asynchronous::any_shared_scheduler<job_type> >::const_iterator it = m_schedulers.begin(); it != m_schedulers.end();++it)
             {
                 auto one_queue_vec = (*it).get_queue_size();
-                res.push_back(std::accumulate(one_queue_vec.begin(),one_queue_vec.end(),0,
+                res.push_back(std::accumulate(one_queue_vec.begin(),one_queue_vec.end(), (std::size_t)0,
                                               [](std::size_t rhs,std::size_t lhs){return rhs + lhs;}));
             }
             return res;
@@ -424,7 +424,7 @@ private:
             for (typename std::vector<boost::asynchronous::any_shared_scheduler<job_type> >::const_iterator it = m_schedulers.begin(); it != m_schedulers.end();++it)
             {
                 auto one_queue_vec = (*it).get_max_queue_size();
-                res.push_back(std::accumulate(one_queue_vec.begin(),one_queue_vec.end(),0,
+                res.push_back(std::accumulate(one_queue_vec.begin(),one_queue_vec.end(), (std::size_t)0,
                                               [](std::size_t rhs,std::size_t lhs){return std::max(rhs,lhs);}));
             }
             return res;
@@ -491,7 +491,7 @@ private:
 //            {
 //                 (*it).processor_bind(p);
 //                 auto one_queue_vec = (*it).get_queue_size();
-//                 p += std::accumulate(one_queue_vec.begin(),one_queue_vec.end(),0,
+//                 p += std::accumulate(one_queue_vec.begin(),one_queue_vec.end(),(std::size_t)0,
 //                                  [](std::size_t rhs,std::size_t lhs){return rhs + lhs;});
 //            }
         }
@@ -514,7 +514,7 @@ private:
         }
     private:
         std::vector<boost::asynchronous::any_shared_scheduler<job_type> > m_schedulers;
-    };  
+    };
     // weak scheduler for use in the servant context
     // implements any_weak_scheduler_concept
     struct composite_lockable_weak_scheduler
@@ -531,7 +531,7 @@ private:
         {
             std::vector<boost::asynchronous::any_shared_scheduler<job_type> > locked_schedulers;
             locked_schedulers.reserve(m_schedulers.size());
-            for (typename std::vector<boost::asynchronous::any_weak_scheduler<job_type> >::const_iterator it = m_schedulers.begin(); 
+            for (typename std::vector<boost::asynchronous::any_weak_scheduler<job_type> >::const_iterator it = m_schedulers.begin();
                  it != m_schedulers.end(); ++it)
             {
                 // only add if valid

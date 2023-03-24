@@ -350,7 +350,7 @@ public:
         // get a job
         typename Q::job_type job;
         try
-        {            
+        {
             // try from queue
             popped = queue->try_pop(job);
             // did we manage to pop or steal?
@@ -558,7 +558,7 @@ private:
         std::size_t calculate_queue_size()const
         {
              std::vector<std::size_t> vec_sizes = this->m_queue->get_queue_size();
-             return std::accumulate(vec_sizes.begin(),vec_sizes.end(),0,[](std::size_t a, std::size_t b){return a+b;});
+             return std::accumulate(vec_sizes.begin(),vec_sizes.end(), (std::size_t)0,[](std::size_t a, std::size_t b){return a+b;});
         }
         // checks if worker thread should continue
         // if queue not empty, continue

@@ -76,7 +76,7 @@ public:
         for (typename queues_type::const_iterator it = m_queues.begin(); it != m_queues.end();++it)
         {
             auto one_queue_vec = (*((*it).first)).get_queue_size();
-            res.push_back(std::accumulate(one_queue_vec.begin(),one_queue_vec.end(),0,
+            res.push_back(std::accumulate(one_queue_vec.begin(),one_queue_vec.end(),(std::size_t)0,
                                           [](std::size_t rhs,std::size_t lhs){return rhs + lhs;}));
         }
         return res;
@@ -87,7 +87,7 @@ public:
         for (typename queues_type::const_iterator it = m_queues.begin(); it != m_queues.end();++it)
         {
             auto one_queue_vec = (*((*it).first)).get_max_queue_size();
-            res.push_back(std::accumulate(one_queue_vec.begin(),one_queue_vec.end(),0,
+            res.push_back(std::accumulate(one_queue_vec.begin(),one_queue_vec.end(),(std::size_t)0,
                                           [](std::size_t rhs,std::size_t lhs){return std::max(rhs,lhs);}));
         }
         return res;

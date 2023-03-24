@@ -50,7 +50,7 @@ inline std::string format_duration(std::chrono::nanoseconds const& d)
 
     // Extract values
     boost::int_least64_t seconds = ticks / 1000000;
-    boost::int_least16_t milliseconds = (ticks % 1000000) / 1000;
+    boost::int_least16_t milliseconds = (boost::int_least16_t)((double)(ticks % 1000000) / 1000);
     boost::int_least16_t microseconds = ticks % 1000;
 
     // Convert to string and return
@@ -158,3 +158,4 @@ public:
 }}
 
 #endif // BOOST_ASYNCHRONOUS_BASIC_FORMATTER_HPP
+
