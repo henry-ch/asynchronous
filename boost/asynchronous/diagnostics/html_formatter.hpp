@@ -753,7 +753,7 @@ private:
              << "      <h1>" << params.title << "</h1>" << std::endl;
     }
 
-    void generate_footer(parameters const& params)
+    void generate_footer(parameters const& /*params*/)
     {
         footer << "    </div>"                            << std::endl
                << "    <div id=\"bottom_spacing\"></div>" << std::endl // <div /> is not parsed correctly
@@ -829,7 +829,7 @@ struct histogram
     {
         if (bins.size() == 0) throw std::logic_error("Invalid histogram with 0 bins");
         if (max < value || min > value) throw std::logic_error("Cannot insert value into histogram: Boundaries exceeded.");
-        std::size_t bin = ((double) (value.count() - min.count())) / ((double) (max.count() - min.count() + 1)) * bins.size();
+        std::size_t bin = (size_t)(((double)(value.count() - min.count())) / ((double)(max.count() - min.count() + 1)) * bins.size());
         ++(bins[bin].count);
         bins[bin].total += value;
     }
@@ -841,27 +841,27 @@ struct histogram
         // Coordinates and sizes
 
         // Use 20 viewbox pixels per bin plus 1/9 in spacing.
-        std::size_t viewbox_width = bins.size() * 20 * (10.0 / 9.0);
-        std::size_t viewbox_height = viewbox_width * 0.6;
+        std::size_t viewbox_width = (std::size_t)(bins.size() * 20 * (10.0 / 9.0));
+        std::size_t viewbox_height = (std::size_t)(viewbox_width * 0.6);
 
         // Add 50% of the viewbox for the labels
-        std::size_t label_width = viewbox_width * 0.5;
+        std::size_t label_width = (std::size_t)(viewbox_width * 0.5);
 
-        std::size_t x_left = viewbox_width * 0.1;
-        std::size_t x_right = viewbox_width * 0.9;
-        std::size_t y_top = viewbox_height * 0.1;
-        std::size_t y_bottom = viewbox_height * 0.9;
+        std::size_t x_left = (std::size_t)(viewbox_width * 0.1);
+        std::size_t x_right = (std::size_t)(viewbox_width * 0.9);
+        std::size_t y_top = (std::size_t)(viewbox_height * 0.1);
+        std::size_t y_bottom = (std::size_t)(viewbox_height * 0.9);
 
         std::size_t label_left = viewbox_width;
-        std::size_t label_right = viewbox_width + label_width - (viewbox_width * 0.1);
-        std::size_t label_top = viewbox_height * 0.4;
-        std::size_t label_bottom = viewbox_height * 0.6;
+        std::size_t label_right = (std::size_t)(viewbox_width + label_width - (viewbox_width * 0.1));
+        std::size_t label_top = (std::size_t)(viewbox_height * 0.4);
+        std::size_t label_bottom = (std::size_t)(viewbox_height * 0.6);
 
         std::size_t label_height = label_bottom - label_top;
 
-        std::size_t label_text_left = label_left + (label_width * 0.1);
-        std::size_t label_text_top = label_top + (label_height * 0.1);
-        std::size_t label_text_bottom = label_bottom - (label_height * 0.1);
+        std::size_t label_text_left = (std::size_t)(label_left + (label_width * 0.1));
+        std::size_t label_text_top = (std::size_t)(label_top + (label_height * 0.1));
+        std::size_t label_text_bottom = (std::size_t)(label_bottom - (label_height * 0.1));
 
         // Drawing common elements
 
