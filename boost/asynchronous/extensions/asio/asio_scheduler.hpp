@@ -173,7 +173,7 @@ public:
             }
         }
     }
-    std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c) override
+    BOOST_ATTRIBUTE_NODISCARD std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c) override
     {
         // our thread (queue) index. 0 means "don't care" and is therefore not desirable)
         size_t t = 1;

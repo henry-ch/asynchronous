@@ -23,6 +23,7 @@
 #include <boost/mpl/identity.hpp>
 #include <chrono>
 #include <boost/thread/thread.hpp>
+#include <boost/config.hpp>
 
 #include <boost/type_erasure/any.hpp>
 #include <boost/type_erasure/builtin.hpp>
@@ -110,7 +111,7 @@ struct any_shared_scheduler_concept
     virtual void clear_diagnostics() =0;
     virtual std::string get_name()const =0;
     virtual void processor_bind(std::vector<std::tuple<unsigned int/*first core*/,unsigned int /*number of threads*/>> )=0;
-    virtual std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable)=0;
+    BOOST_ATTRIBUTE_NODISCARD virtual std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable)=0;
     virtual void enable_queue(std::size_t,bool) =0;
 };
 

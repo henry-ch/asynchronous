@@ -16,6 +16,7 @@
 #include <boost/mpl/vector.hpp>
 #include <memory>
 #include <boost/thread/thread.hpp>
+#include <boost/config.hpp>
 
 #include <boost/type_erasure/any.hpp>
 #include <boost/type_erasure/builtin.hpp>
@@ -333,7 +334,7 @@ struct any_shared_scheduler_proxy_concept
      * \param c callable object
      * \return futures indicating when tasks have been executed
      */
-    virtual std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable)=0;
+    BOOST_ATTRIBUTE_NODISCARD virtual std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable)=0;
 };
 template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 class any_shared_scheduler_proxy
@@ -511,7 +512,7 @@ public:
      * \param c callable object
      * \return futures indicating when tasks have been executed
      */
-    std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c)
+    BOOST_ATTRIBUTE_NODISCARD std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c)
     {
         return (*my_ptr).execute_in_all_threads(std::move(c));
     }

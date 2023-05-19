@@ -20,10 +20,6 @@
 #include <chrono>
 #include <boost/thread/thread.hpp>
 
-//TODO find better
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
-
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_set_posted_time), set_posted_time, 0);
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_set_started_time), set_started_time, 0);
 BOOST_TYPE_ERASURE_MEMBER((boost)(asynchronous)(has_set_finished_time), set_finished_time, 0);
@@ -56,9 +52,6 @@ struct any_loggable: boost::type_erasure::any<any_loggable_concept>
     template <class U>
     any_loggable(U const& u): boost::type_erasure::any< boost::asynchronous::any_loggable_concept> (u){}
     any_loggable(): boost::type_erasure::any< boost::asynchronous::any_loggable_concept> (){}
-    // dummies
-    typedef boost::archive::text_oarchive oarchive;
-    typedef boost::archive::text_iarchive iarchive;
 };
 
 }} // boost::async

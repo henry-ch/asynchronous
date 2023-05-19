@@ -19,6 +19,7 @@
 
 #include <boost/thread/thread.hpp>
 #include <boost/thread/tss.hpp>
+#include <boost/config.hpp>
 
 #include <boost/asynchronous/scheduler/detail/scheduler_helpers.hpp>
 #include <boost/asynchronous/scheduler/detail/exceptions.hpp>
@@ -201,7 +202,7 @@ public:
             }
         }
     }
-    std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c)
+    BOOST_ATTRIBUTE_NODISCARD std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c)
     {
         std::vector<std::future<void>> res;
         res.reserve(m_number_of_workers);

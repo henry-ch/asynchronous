@@ -232,7 +232,7 @@ public:
 //                                 [](std::size_t rhs,std::size_t lhs){return rhs + lhs;});
 //        }
     }
-    std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c) override
+    BOOST_ATTRIBUTE_NODISCARD std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c) override
     {
         std::vector<std::future<void>> res;
         for (typename std::vector<subpool_type>::iterator it = m_subpools.begin(); it != m_subpools.end();++it)

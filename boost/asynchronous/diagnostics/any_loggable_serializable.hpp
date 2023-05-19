@@ -29,7 +29,7 @@ struct any_loggable_serializable: public boost::type_erasure::any<any_loggable_s
 #ifdef BOOST_ASYNCHRONOUS_USE_PORTABLE_BINARY_ARCHIVE
     typedef portable_binary_oarchive oarchive;
     typedef portable_binary_iarchive iarchive;
-#else
+#elif BOOST_ASYNCHRONOUS_USE_DEFAULT_ARCHIVE
     typedef boost::archive::text_oarchive oarchive;
     typedef boost::archive::text_iarchive iarchive;
 #endif

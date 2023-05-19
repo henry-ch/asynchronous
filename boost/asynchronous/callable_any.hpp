@@ -19,9 +19,6 @@
 #include <boost/type_erasure/any_cast.hpp>
 #include <boost/type_erasure/member.hpp>
 #include <boost/type_erasure/callable.hpp>
-//TODO find better
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
 
 // the basic and minimum job type of every scheduler
 // The minimum a job has to do is to be callable: void task()
@@ -62,10 +59,6 @@ struct any_callable
     {
         m_inner();
     }
-
-    // dummies
-    typedef boost::archive::text_oarchive oarchive;
-    typedef boost::archive::text_iarchive iarchive;
 private:
     boost::asynchronous::any_callable_helper m_inner;
 };

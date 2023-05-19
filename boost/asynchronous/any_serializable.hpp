@@ -12,13 +12,14 @@
 
 #include <string>
 
+// define one of them before using
 #ifdef BOOST_ASYNCHRONOUS_USE_PORTABLE_BINARY_ARCHIVE
 #include <portable_binary_oarchive.hpp>
 #include <portable_binary_iarchive.hpp>
 #elif defined BOOST_ASYNCHRONOUS_USE_BINARY_ARCHIVE
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
-#else
+#elif BOOST_ASYNCHRONOUS_USE_DEFAULT_ARCHIVE
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #endif
@@ -46,7 +47,7 @@ typedef boost::mpl::vector<
 #elif defined BOOST_ASYNCHRONOUS_USE_BINARY_ARCHIVE
     boost::asynchronous::has_save<void(boost::archive::binary_oarchive&,const unsigned int)>,
     boost::asynchronous::has_load<void(boost::archive::binary_iarchive&,const unsigned int)>,
-#else
+#elif BOOST_ASYNCHRONOUS_USE_DEFAULT_ARCHIVE
     boost::asynchronous::has_save<void(boost::archive::text_oarchive&,const unsigned int)>,
     boost::asynchronous::has_load<void(boost::archive::text_iarchive&,const unsigned int)>,
 #endif
@@ -70,7 +71,7 @@ struct any_serializable: public boost::asynchronous::any_serializable_helper
 #elif defined BOOST_ASYNCHRONOUS_USE_BINARY_ARCHIVE
     typedef boost::archive::binary_oarchive oarchive;
     typedef boost::archive::binary_iarchive iarchive;
-#else
+#elif BOOST_ASYNCHRONOUS_USE_DEFAULT_ARCHIVE
     typedef boost::archive::text_oarchive oarchive;
     typedef boost::archive::text_iarchive iarchive;
 #endif

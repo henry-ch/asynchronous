@@ -22,9 +22,9 @@
 #include<list>
 #include <string>
 #include <limits>
-
 #include <memory>
 
+#include <boost/config.hpp>
 
 #include <boost/asynchronous/any_shared_scheduler_proxy.hpp>
 #include <boost/asynchronous/job_traits.hpp>
@@ -170,7 +170,7 @@ public:
         m_scheduler->processor_bind(std::move(p));
     }
 
-    std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c)
+    BOOST_ATTRIBUTE_NODISCARD std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c)
     {
         return m_scheduler->execute_in_all_threads(std::move(c));
     }
@@ -388,7 +388,7 @@ public:
      * \param c callable object
      * \return futures indicating when tasks have been executed
      */
-    std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c)
+    BOOST_ATTRIBUTE_NODISCARD std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c)
     {
         return m_impl->execute_in_all_threads(std::move(c));
     }

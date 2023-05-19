@@ -319,7 +319,7 @@ public:
             }
         }
     }
-    std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c)
+    BOOST_ATTRIBUTE_NODISCARD std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable c)
     {
         std::vector<std::future<void>> res;
         std::size_t idsize=0;
