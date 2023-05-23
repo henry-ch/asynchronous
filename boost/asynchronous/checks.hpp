@@ -11,6 +11,7 @@
 #define BOOST_ASYNCHRON_CHECKS_HPP
 
 #include <type_traits>
+#include <string>
 
 
 #include <memory>
@@ -156,6 +157,8 @@ struct call_if_alive_exec
     Func m_wrapped;
     std::weak_ptr<T> m_tracked;
 };
+
+#if defined BOOST_ASYNCHRONOUS_USE_PORTABLE_BINARY_ARCHIVE || defined BOOST_ASYNCHRONOUS_USE_BINARY_ARCHIVE || defined BOOST_ASYNCHRONOUS_USE_DEFAULT_ARCHIVE
 template <class Func, class T,class R>
 struct call_if_alive_exec<Func,T,R,typename std::enable_if<boost::asynchronous::detail::is_serializable<Func>::value >::type>
 {
@@ -219,6 +222,7 @@ struct call_if_alive_exec<Func,T,R,typename std::enable_if<boost::asynchronous::
     Func m_wrapped;
     std::weak_ptr<T> m_tracked;
 };
+#endif
 
 #ifndef BOOST_NO_RVALUE_REFERENCES
 template <class F, class T,class R=void>
