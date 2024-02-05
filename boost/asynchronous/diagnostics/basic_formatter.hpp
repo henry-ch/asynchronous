@@ -127,6 +127,13 @@ public:
         return format(diagnostics.size(), std::move(names), std::move(queue_sizes), std::move(running), std::move(current), std::move(all));
     }
 
+
+    // Registers an additional scheduler with the formatter
+    void register_scheduler(boost::asynchronous::scheduler_interface interface)
+    {
+        m_interfaces.push_back(std::move(interface));
+    }
+
     // Clearing data
 
     void clear_schedulers() {

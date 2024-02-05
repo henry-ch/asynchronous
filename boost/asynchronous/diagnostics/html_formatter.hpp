@@ -1406,6 +1406,7 @@ public:
 
     // Enable use of basic_formatter's diagnostics retrieval
     using boost::asynchronous::basic_formatter<Current, All>::format;
+    using boost::asynchronous::basic_formatter<Current, All>::register_scheduler;
 
     // Constructors
 
