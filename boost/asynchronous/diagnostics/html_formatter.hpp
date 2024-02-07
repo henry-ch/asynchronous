@@ -13,6 +13,7 @@
 #include <sstream>
 #include <type_traits>
 #include <vector>
+#include <algorithm>
 
 #include <boost/asynchronous/scheduler_diagnostics.hpp>
 #include <boost/asynchronous/diagnostics/basic_formatter.hpp>
@@ -828,7 +829,11 @@ struct histogram
     void add(std::chrono::nanoseconds const& value)
     {
         if (bins.size() == 0) throw std::logic_error("Invalid histogram with 0 bins");
-        if (max < value || min > value) throw std::logic_error("Cannot insert value into histogram: Boundaries exceeded.");
+        if (max < value || min > value)
+        {
+            // should not happen
+            return;
+        }
         std::size_t bin = (size_t)(((double)(value.count() - min.count())) / ((double)(max.count() - min.count() + 1)) * bins.size());
         ++(bins[bin].count);
         bins[bin].total += value;
@@ -997,7 +1002,10 @@ struct row_detail
     {
         if (!has_histograms) return;
         histogram scheduling_hist { summary_item.durations.scheduling.min, summary_item.durations.scheduling.max, params.histogram_bin_count };
-        histogram execution_hist  { summary_item.durations.success.min,    summary_item.durations.success.max,    params.histogram_bin_count };
+        histogram execution_hist  { 
+            std::min(summary_item.durations.success.min,std::min(summary_item.durations.failure.min,summary_item.durations.interruption.min)),
+            std::max(summary_item.durations.success.max,std::max(summary_item.durations.failure.max,summary_item.durations.interruption.max)),
+            params.histogram_bin_count };
         histogram total_hist      { summary_item.durations.total.min,      summary_item.durations.total.max,      params.histogram_bin_count };
 
         for (simple_diagnostic_item const& item : items) {
@@ -1406,7 +1414,10 @@ public:
 
     // Enable use of basic_formatter's diagnostics retrieval
     using boost::asynchronous::basic_formatter<Current, All>::format;
+    using boost::asynchronous::basic_formatter<Current, All>::clear_schedulers;
+    using boost::asynchronous::basic_formatter<Current, All>::clear_current;
     using boost::asynchronous::basic_formatter<Current, All>::register_scheduler;
+    using boost::asynchronous::basic_formatter<Current, All>::clear_all;
 
     // Constructors
 
