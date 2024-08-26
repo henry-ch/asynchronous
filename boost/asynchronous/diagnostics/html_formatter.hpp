@@ -1312,9 +1312,9 @@ inline void format(document & doc, std::size_t /* index */, std::string const& s
 
     // Maximum values for font coloring
 
-    std::chrono::nanoseconds max_scheduling;
-    std::chrono::nanoseconds max_execution;
-    std::chrono::nanoseconds max_total;
+    std::chrono::nanoseconds max_scheduling{ 0 };
+    std::chrono::nanoseconds max_execution{ 0 };
+    std::chrono::nanoseconds max_total{ 0 };
 
     bool extrema_set = false;
 
