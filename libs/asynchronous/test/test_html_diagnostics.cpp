@@ -27,6 +27,7 @@
 #include <boost/asynchronous/diagnostics/formatter.hpp>
 #include <boost/asynchronous/diagnostics/html_formatter.hpp>
 
+#include <boost/asynchronous/helpers/recursive_future_get.hpp>
 
 #include <boost/test/unit_test.hpp>
 
@@ -153,17 +154,16 @@ BOOST_AUTO_TEST_CASE(test_html_diagnostics_call)
     {
         // Create proxy
         ServantProxy proxy(scheduler, pool);
-        std::future<std::future<void> > fu = proxy.foo();
+        auto fu = proxy.foo();
 
         // Sleep
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
         // Wait for the task to finish
-        std::future<void> resfu = fu.get();
-        resfu.get();
+        boost::asynchronous::recursive_future_get(std::move(fu));
 
         // Output intermediate statistics
-        auto formatted = formatter.format().get();
+        auto formatted = boost::asynchronous::recursive_future_get(formatter.format());
 
         // Clear schedulers
         formatter.clear_schedulers();

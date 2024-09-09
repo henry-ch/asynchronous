@@ -13,6 +13,7 @@
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/trackable_servant.hpp>
 #include <boost/asynchronous/continuation_task.hpp>
+#include <boost/asynchronous/helpers/recursive_future_get.hpp>
 
 #include "test_common.hpp"
 #include <boost/test/unit_test.hpp>
@@ -143,9 +144,7 @@ BOOST_AUTO_TEST_CASE( test_fibonacci_30_18 )
                                                                             boost::asynchronous::lockfree_queue<>>>();
         {
             ServantProxy proxy(scheduler);
-            auto fu = proxy.calc_fibonacci(fibo_val,cutoff);
-            auto resfu = fu.get();
-            long res = resfu.get();
+            long res = boost::asynchronous::recursive_future_get(proxy.calc_fibonacci(fibo_val, cutoff));
             BOOST_CHECK_MESSAGE(sres == res,"fibonacci parallel and serial version found different results");
         }
     }

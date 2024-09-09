@@ -24,6 +24,7 @@
 #include <boost/asynchronous/algorithm/parallel_sort.hpp>
 #include <boost/asynchronous/algorithm/parallel_for.hpp>
 #include <boost/asynchronous/algorithm/parallel_sort_inplace.hpp>
+#include <boost/asynchronous/helpers/recursive_future_get.hpp>
 
 #include "test_common.hpp"
 
@@ -770,11 +771,9 @@ BOOST_AUTO_TEST_CASE( test_parallel_sort )
 
         main_thread_id = boost::this_thread::get_id();
         ServantProxy proxy(scheduler);
-        auto fuv = proxy.start_parallel_sort();
         try
         {
-            auto resfuv = fuv.get();
-            resfuv.get();
+            boost::asynchronous::recursive_future_get(proxy.start_parallel_sort());
         }
         catch(...)
         {
