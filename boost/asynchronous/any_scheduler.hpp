@@ -17,6 +17,9 @@
 #include <vector>
 #include <tuple>
 #include <future>
+#include <typeindex>
+#include <any>
+#include <utility>
 
 #include <boost/pointee.hpp>
 #include <boost/mpl/vector.hpp>
@@ -40,6 +43,8 @@
 #include <boost/asynchronous/detail/concept_members.hpp>
 #include <boost/asynchronous/detail/any_interruptible.hpp>
 #include <boost/asynchronous/scheduler_diagnostics.hpp>
+#include <boost/asynchronous/notification/local_subscription.hpp>
+#include <boost/asynchronous/detail/function_traits.hpp>
 
 namespace boost { namespace asynchronous
 {
@@ -129,6 +134,46 @@ struct any_shared_scheduler_ptr: std::shared_ptr<boost::asynchronous::any_shared
 };
 #endif
 
+using scheduler_event_dispatch_t = std::map<std::type_index, std::function<void(std::any)>>;
+
+struct scheduler_event_dispatching
+{
+
+    template <class Sub>
+    void subscribe(Sub&& sub)
+    {
+        boost::asynchronous::subscription::subscribe_(std::forward<Sub>(sub));
+        using traits = boost::asynchronous::function_traits<Sub>;
+        using arg0 = typename traits::template remove_ref_cv_arg_<0>::type;
+        std::weak_ptr<track> tracking(m_tracking);
+        m_event_names[typeid(arg0)] = 
+            [tracking=std::move(tracking), this](std::any a)
+            {
+                if (!tracking.expired())
+                {
+                    arg0 ev = std::any_cast<arg0>(std::move(a));
+                    publish(std::move(ev));
+                }
+            };
+    }
+
+    template <class Event>
+    void publish(Event&& e)
+    {
+        bool someone_handled = boost::asynchronous::subscription::publish_(std::forward<Event>(e));
+        if (!someone_handled)
+        {
+            m_event_names.erase(typeid(Event));
+        }
+    }
+private:
+    struct track {};
+    std::shared_ptr<track> m_tracking = std::make_shared<scheduler_event_dispatching::track>();
+
+    // all events to which anyone within this scheduler context subscribed
+    boost::asynchronous::scheduler_event_dispatch_t m_event_names;
+};
+
 // asynchronous hides all schedulers behind this type.
 // type seen often in future continuations
 // for example:
@@ -137,7 +182,7 @@ struct any_shared_scheduler_ptr: std::shared_ptr<boost::asynchronous::any_shared
 // asynchronous registers a weak scheduler in every thread where it is running. This allows tasks to post tasks themselves
 
 template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-class any_shared_scheduler
+class any_shared_scheduler : public scheduler_event_dispatching
 {
 public:
     typedef JOB job_type;

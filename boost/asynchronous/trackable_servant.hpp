@@ -583,6 +583,47 @@ public:
         return m_scheduler;
     }
 
+    template <class Sub>
+    void subscribe(Sub sub,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+        const std::string& task_name, std::size_t prio) const
+#else
+        const std::string& task_name = "", std::size_t prio = 0) const
+#endif        
+    {
+        auto sched = get_scheduler().lock();
+        if (sched.is_valid())
+        {
+            // wrap the functor in a wrapper, which will check for servant to be alive,
+            // similar to a safe callback. If not alive, subscription will automatically unsubscribe
+
+            using traits = boost::asynchronous::function_traits<Sub>;
+            using arg0 = typename traits::template remove_ref_cv_arg_<0>::type;
+            std::weak_ptr<track> tracking(m_tracking);
+            // we will add a safe callback, why take chances that the subscriber goes away?
+            auto wrapped = [sub = this->make_safe_callback(std::move(sub), task_name,prio), tracking = std::move(tracking)](arg0 const& ev)
+            {
+                if (!tracking.expired())
+                {
+                    sub(ev);
+                    return std::optional<bool>{true};
+                }
+                return std::optional<bool>{false};
+            };
+            sched.subscribe(std::move(wrapped));
+        }
+    }
+
+    template <class Event>
+    void publish(Event&& e)
+    {
+        auto sched = get_scheduler().lock();
+        if (sched.is_valid())
+        {
+            sched.publish(std::forward<Event>(e));
+        }
+    }
+
 private:
 
     template <class Fct>
