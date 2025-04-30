@@ -45,6 +45,7 @@
 #include <boost/asynchronous/scheduler_diagnostics.hpp>
 #include <boost/asynchronous/notification/local_subscription.hpp>
 #include <boost/asynchronous/detail/function_traits.hpp>
+#include <boost/asynchronous/notification/any_notification_servant.hpp>
 
 namespace boost { namespace asynchronous
 {
@@ -166,12 +167,13 @@ struct scheduler_event_dispatching
             m_event_names.erase(typeid(Event));
         }
     }
+   
 private:
     struct track {};
     std::shared_ptr<track> m_tracking = std::make_shared<scheduler_event_dispatching::track>();
 
     // all events to which anyone within this scheduler context subscribed
-    boost::asynchronous::scheduler_event_dispatch_t m_event_names;
+    boost::asynchronous::scheduler_event_dispatch_t m_event_names;    
 };
 
 // asynchronous hides all schedulers behind this type.
@@ -272,8 +274,25 @@ public:
     {
         (*my_ptr).enable_queue(priority,enable);
     }
+
+    boost::asynchronous::subscription::any_notification_servant::update_subscribers_t get_scheduler_event_update_callback()
+    {
+        return [this](auto scheduler_subscribers)mutable
+            {
+                m_other_schedulers_callback = std::move(scheduler_subscribers);
+            };
+    }
+
+protected:
+    boost::asynchronous::subscription::any_notification_servant::subscribers_t get_other_schedulers_event_callbacks() const
+    {
+        return m_other_schedulers_callback;
+    }
+
 private:
     any_shared_scheduler_ptr<JOB> my_ptr;
+    // to get updatesfrom other schedulers
+    boost::asynchronous::subscription::any_notification_servant::subscribers_t m_other_schedulers_callback;
 };
 
 // a weak scheduler's only purpose is to deliver a shared scheduler when needed.
