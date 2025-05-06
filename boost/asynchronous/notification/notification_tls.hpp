@@ -10,20 +10,21 @@
 #ifndef BOOST_ASYNCHRONOUS_NOTIFICATION_TLS_HPP
 #define BOOST_ASYNCHRONOUS_NOTIFICATION_TLS_HPP
 
+#include <memory>
 
-#include <boost/asynchronous/notification/any_notification_servant.hpp>
+#include <boost/asynchronous/notification/notification_proxy.hpp>
 
 namespace boost { namespace asynchronous { namespace subscription
 {
 
-inline thread_local boost::asynchronous::subscription::any_notification_servant_shared_ptr notification_proxy_;
+inline thread_local std::shared_ptr<boost::asynchronous::subscription::notification_proxy> notification_proxy_;
 
-inline static void set_notification_tls(boost::asynchronous::subscription::any_notification_servant_shared_ptr notification) noexcept
+inline static void set_notification_tls(auto notification) noexcept
 {
 	notification_proxy_ = std::move(notification);
 }
 
-inline static boost::asynchronous::subscription::any_notification_servant_shared_ptr get_notification_tls() noexcept
+inline static auto get_notification_tls() noexcept
 {
 	return notification_proxy_;
 }

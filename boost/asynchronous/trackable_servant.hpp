@@ -601,7 +601,7 @@ public:
             using traits = boost::asynchronous::function_traits<Sub>;
             using arg0 = typename traits::template remove_ref_cv_arg_<0>::type;
             std::weak_ptr<track> tracking(m_tracking);
-            auto wrapped = [sub = std::move(sub), tracking = std::move(tracking)](arg0 const& ev)
+            auto wrapped = [sub = this->make_safe_callback(std::move(sub),task_name,prio), tracking = std::move(tracking)](arg0 const& ev)
             {
                 if (!tracking.expired())
                 {

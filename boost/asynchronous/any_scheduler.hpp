@@ -144,36 +144,22 @@ struct scheduler_event_dispatching
     void subscribe(Sub&& sub)
     {
         boost::asynchronous::subscription::subscribe_(std::forward<Sub>(sub));
-        using traits = boost::asynchronous::function_traits<Sub>;
-        using arg0 = typename traits::template remove_ref_cv_arg_<0>::type;
-        std::weak_ptr<track> tracking(m_tracking);
-        m_event_names[typeid(arg0)] = 
-            [tracking=std::move(tracking), this](std::any a)
-            {
-                if (!tracking.expired())
-                {
-                    arg0 ev = std::any_cast<arg0>(std::move(a));
-                    publish(std::move(ev));
-                }
-            };
+    }
+
+    template <class Sub>
+    void subscribe_other_schedulers(Sub&& sub)
+    {
+        boost::asynchronous::subscription::subscribe_scheduler_(std::forward<Sub>(sub));
     }
 
     template <class Event>
     void publish(Event&& e)
     {
         bool someone_handled = boost::asynchronous::subscription::publish_(std::forward<Event>(e));
-        if (!someone_handled)
-        {
-            m_event_names.erase(typeid(Event));
-        }
+        // TODO unsubscribe
     }
    
-private:
-    struct track {};
-    std::shared_ptr<track> m_tracking = std::make_shared<scheduler_event_dispatching::track>();
-
-    // all events to which anyone within this scheduler context subscribed
-    boost::asynchronous::scheduler_event_dispatch_t m_event_names;    
+private:  
 };
 
 // asynchronous hides all schedulers behind this type.
@@ -184,7 +170,7 @@ private:
 // asynchronous registers a weak scheduler in every thread where it is running. This allows tasks to post tasks themselves
 
 template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-class any_shared_scheduler : public scheduler_event_dispatching
+class any_shared_scheduler : public boost::asynchronous::scheduler_event_dispatching
 {
 public:
     typedef JOB job_type;
