@@ -34,12 +34,12 @@ namespace
 {
 // main thread id
 boost::thread::id main_thread_id;
-bool servant_dtor = false;
 struct some_event
 {
     int data = 0;
 };
 
+// pure subscriber
 struct Servant : boost::asynchronous::trackable_servant<>
 {
 
@@ -51,7 +51,6 @@ struct Servant : boost::asynchronous::trackable_servant<>
     ~Servant()
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant dtor not posted.");
-        servant_dtor = true;
     }
     std::future<int> wait_for_some_event()
     {
@@ -71,7 +70,6 @@ struct Servant : boost::asynchronous::trackable_servant<>
     }
     
 };
-
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant>
 {
 public:
@@ -83,6 +81,7 @@ public:
 
 };
 
+// pure publisher
 struct Servant2 : boost::asynchronous::trackable_servant<>
 {
 
@@ -94,15 +93,45 @@ struct Servant2 : boost::asynchronous::trackable_servant<>
     ~Servant2()
     {
         BOOST_CHECK_MESSAGE(main_thread_id != boost::this_thread::get_id(), "servant dtor not posted.");
-        servant_dtor = true;
     }
     void trigger_some_event()
     {
         this->publish(some_event{ 42 });
     }
+    void trigger_some_event_in_threadpool()
+    {
+        this->post_callback(
+            []() {
+                auto wsched = boost::asynchronous::get_thread_scheduler<>();
+                auto sched = wsched.lock();
+                if (sched.is_valid())
+                {
+                    sched.publish(some_event{ 42 });
+                }
+            },
+            [](auto res) {},
+            "",0
+        );
+        this->publish(some_event{ 42 });
+    }
+    std::future<int> wait_for_some_event()
+    {
+        std::shared_ptr<std::promise<int> > p(new std::promise<int>);
+        auto fu = p->get_future();
+        boost::thread::id threadid = boost::this_thread::get_id();
+
+        auto cb = [p = std::move(p), threadid](some_event const& e)
+            {
+                BOOST_CHECK_MESSAGE(threadid == boost::this_thread::get_id(), "notification callback in wrong thread.");
+                p->set_value(42);
+            };
+        this->subscribe(std::move(cb));
+
+
+        return fu;
+    }
 
 };
-
 class ServantProxy2 : public boost::asynchronous::servant_proxy<ServantProxy2, Servant2>
 {
 public:
@@ -111,6 +140,8 @@ public:
         boost::asynchronous::servant_proxy<ServantProxy2, Servant2>(s, p)
     {}
     BOOST_ASYNC_FUTURE_MEMBER(trigger_some_event)
+    BOOST_ASYNC_FUTURE_MEMBER(trigger_some_event_in_threadpool)
+    BOOST_ASYNC_FUTURE_MEMBER(wait_for_some_event)
 
 };
 
@@ -119,7 +150,6 @@ public:
 
 BOOST_AUTO_TEST_CASE( test_full_notification )
 {
-    servant_dtor=false;
     auto scheduler1 = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
                                                                             boost::asynchronous::guarded_deque<>>>();
     auto scheduler2 = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
@@ -158,7 +188,6 @@ BOOST_AUTO_TEST_CASE( test_full_notification )
 
 BOOST_AUTO_TEST_CASE(test_full_notification2)
 {
-    servant_dtor = false;
     auto scheduler1 = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
         boost::asynchronous::guarded_deque<>>>();
     auto scheduler2 = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
@@ -191,6 +220,131 @@ BOOST_AUTO_TEST_CASE(test_full_notification2)
     {
         BOOST_FAIL("unexpected exception");
     }
-
 }
 
+BOOST_AUTO_TEST_CASE(test_full_notification_pub_and_sub)
+{
+    auto scheduler1 = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+        boost::asynchronous::guarded_deque<>>>();
+    auto scheduler2 = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+        boost::asynchronous::guarded_deque<>>>();
+
+    auto pool = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<
+        boost::asynchronous::guarded_deque<>>>(2);
+
+    auto scheduler_notify = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+        boost::asynchronous::guarded_deque<>>>();
+    auto notification_ptr = std::make_shared<boost::asynchronous::subscription::notification_proxy>
+        (scheduler_notify, pool);
+
+
+    //boost::asynchronous::subscription::set_notification_tls(notification_ptr);
+    boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1.get_weak_scheduler(), notification_ptr);
+    boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification_ptr);
+
+    ServantProxy proxy(scheduler1, pool);
+    ServantProxy2 proxy2(scheduler2, pool);
+
+    try
+    {
+
+        auto res_fu = proxy.wait_for_some_event().get();
+        auto res_fu2 = proxy2.wait_for_some_event().get();
+        proxy2.trigger_some_event().get();
+
+        auto res = boost::asynchronous::recursive_future_get(std::move(res_fu));
+        BOOST_CHECK_MESSAGE(res == 42, "invalid result");
+        auto res2 = boost::asynchronous::recursive_future_get(std::move(res_fu2));
+        BOOST_CHECK_MESSAGE(res2 == 42, "invalid result");
+
+    }
+    catch (...)
+    {
+        BOOST_FAIL("unexpected exception");
+    }
+}
+
+BOOST_AUTO_TEST_CASE(test_full_notification_multiple_subs)
+{
+    auto scheduler1 = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+        boost::asynchronous::guarded_deque<>>>();
+    auto scheduler2 = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+        boost::asynchronous::guarded_deque<>>>();
+    auto scheduler3 = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+        boost::asynchronous::guarded_deque<>>>();
+
+    auto pool = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<
+        boost::asynchronous::guarded_deque<>>>(2);
+
+    auto scheduler_notify = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+        boost::asynchronous::guarded_deque<>>>();
+    auto notification_ptr = std::make_shared<boost::asynchronous::subscription::notification_proxy>
+        (scheduler_notify, pool);
+
+
+    //boost::asynchronous::subscription::set_notification_tls(notification_ptr);
+    boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1.get_weak_scheduler(), notification_ptr);
+    boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification_ptr);
+    boost::asynchronous::subscription::register_scheduler_to_notification(scheduler3.get_weak_scheduler(), notification_ptr);
+
+    ServantProxy proxy(scheduler1, pool);
+    ServantProxy2 proxy2(scheduler2, pool);
+    ServantProxy proxy3(scheduler3, pool);
+
+    try
+    {
+
+        auto res_fu = proxy.wait_for_some_event().get();
+        auto res_fu3 = proxy3.wait_for_some_event().get();
+        proxy2.trigger_some_event().get();
+
+        auto res = boost::asynchronous::recursive_future_get(std::move(res_fu));
+        BOOST_CHECK_MESSAGE(res == 42, "invalid result");
+        auto res3 = boost::asynchronous::recursive_future_get(std::move(res_fu3));
+        BOOST_CHECK_MESSAGE(res3 == 42, "invalid result");
+
+    }
+    catch (...)
+    {
+        BOOST_FAIL("unexpected exception");
+    }
+}
+
+BOOST_AUTO_TEST_CASE(test_full_notification_threadpool)
+{
+    auto scheduler1 = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+        boost::asynchronous::guarded_deque<>>>();
+    auto scheduler2 = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+        boost::asynchronous::guarded_deque<>>>();
+    auto pool = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<
+        boost::asynchronous::guarded_deque<>>>(2);
+
+    auto scheduler_notify = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+        boost::asynchronous::guarded_deque<>>>();
+    auto notification_ptr = std::make_shared<boost::asynchronous::subscription::notification_proxy>
+        (scheduler_notify, pool);
+
+
+    //boost::asynchronous::subscription::set_notification_tls(notification_ptr);
+    boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1.get_weak_scheduler(), notification_ptr);
+    boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification_ptr);
+    boost::asynchronous::subscription::register_scheduler_to_notification(pool.get_weak_scheduler(), notification_ptr);
+
+    ServantProxy proxy(scheduler1, pool);
+    ServantProxy2 proxy2(scheduler2, pool);
+
+    try
+    {
+
+        auto res_fu = proxy.wait_for_some_event().get();
+        proxy2.trigger_some_event_in_threadpool().get();
+
+        auto res = boost::asynchronous::recursive_future_get(std::move(res_fu));
+        BOOST_CHECK_MESSAGE(res == 42, "invalid result");
+
+    }
+    catch (...)
+    {
+        BOOST_FAIL("unexpected exception");
+    }
+}

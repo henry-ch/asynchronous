@@ -85,16 +85,34 @@ BOOST_AUTO_TEST_CASE( test_local_notification )
                                                                             boost::asynchronous::guarded_deque<>>>();
     auto pool = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<
                                                                             boost::asynchronous::guarded_deque<>>>(3);
-    ServantProxy proxy(scheduler,pool);
-    try
     {
-        auto res = boost::asynchronous::recursive_future_get(proxy.trigger());
-        BOOST_CHECK_MESSAGE(res == 42, "invalid result");
+        ServantProxy proxy(scheduler, pool);
+        try
+        {
+            auto res = boost::asynchronous::recursive_future_get(proxy.trigger());
+            BOOST_CHECK_MESSAGE(res == 42, "invalid result");
 
+        }
+        catch (...)
+        {
+            BOOST_FAIL("unexpected exception");
+        }
     }
-    catch (...)
+    // servant gone, check for removal
+    auto wsched = scheduler.get_weak_scheduler();
+    auto sched = wsched.lock();
+    std::shared_ptr<std::promise<void> > p(new std::promise<void>);
+    auto fu = p->get_future();
+    if (sched.is_valid())
     {
-        BOOST_FAIL("unexpected exception");
+        sched.post([p=std::move(p)]() mutable
+            {
+                boost::asynchronous::subscription::publish_(some_event{ 42 });
+                BOOST_CHECK_MESSAGE(boost::asynchronous::subscription::local_subscription_store_<some_event>.m_internal_subscribers.empty(), "local subscribers not removed");
+                p->set_value();
+            });
     }
+    fu.get();
+
 }
 
