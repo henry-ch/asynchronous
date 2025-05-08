@@ -14,6 +14,7 @@
 #include <functional>
 #include <optional>
 #include <future>
+#include <cstdint>
 
 #include <boost/asynchronous/detail/function_traits.hpp>
 
@@ -25,33 +26,49 @@ struct local_subscription
     using subscriber_t = std::function<std::optional<bool>(Event const&)>;
     
     template <class Sub>
-    void subscribe(Sub&& sub)
+    void subscribe(Sub&& sub, std::uint64_t token)
     {
         const bool was_empty = m_internal_subscribers.empty();
-        m_internal_subscribers.push_back(std::forward<Sub>(sub));
-        // inform scheduler if was empty
+        m_internal_subscribers.insert_or_assign(token, std::forward<Sub>(sub));
     }
 
     template <class Sub>
-    void subscribe_scheduler(Sub&& sub)
+    void subscribe_scheduler(Sub&& sub, std::vector<boost::thread::id> scheduler_thread_ids)
     {
-        m_scheduler_subscribers.push_back(std::forward<Sub>(sub));
+        m_scheduler_subscribers.insert_or_assign(std::move(scheduler_thread_ids),std::forward<Sub>(sub));
     }
 
-    // TODO value?
+    // unsubscribes servant, return true if no more servant
+    bool unsubscribe(std::uint64_t token)
+    {
+        auto it = m_internal_subscribers.find(token);
+        if (it != m_internal_subscribers.end())
+        {
+            m_internal_subscribers.erase(it);
+        }
+        // something left?
+        return m_internal_subscribers.empty();
+    }
+
+    void unsubscribe_scheduler(std::vector<boost::thread::id> scheduler_thread_ids)
+    {
+        m_scheduler_subscribers.erase(scheduler_thread_ids);
+    }
+    
     template <class Ev>
     bool publish(Ev&& e)
     {
         // inform first other schedulers
         // to avoid event order inversion in case processing an event would send another event
+        // external schedulers execute publishing asynchronously and therefore are not counted as handling the event
         for (auto& sched_sub : m_scheduler_subscribers)
         {
-            sched_sub(e);
+            sched_sub.second(e);
         }
         bool someone_handled = false;
         for(auto it = m_internal_subscribers.begin(); it != m_internal_subscribers.end();)
         {
-            auto handled = (*it)(e);
+            auto handled = ((*it).second)(e);
             if(handled.has_value() && handled.value())
             {
                 ++it;
@@ -66,8 +83,8 @@ struct local_subscription
         return someone_handled;
     }
 
-    std::vector<subscriber_t> m_internal_subscribers;
-    std::vector<subscriber_t> m_scheduler_subscribers;
+    std::map<std::uint64_t, subscriber_t> m_internal_subscribers;
+    std::map<std::vector<boost::thread::id>, subscriber_t> m_scheduler_subscribers;
 };
 
 // inline thread local subscriptions
@@ -79,34 +96,49 @@ inline thread_local std::vector< std::function<void(std::function<void()>)>> oth
 
 
 template <class Sub>
-void subscribe_(Sub&& sub)
+void subscribe_(Sub&& sub, std::vector<boost::thread::id> scheduler_thread_ids, std::uint64_t token)
 {
     using traits = boost::asynchronous::function_traits<Sub>;
     using arg0 = typename traits::template remove_ref_cv_arg_<0>::type;
     static_assert(traits::arity == 1, "callback should have only one argument");
 
-    boost::asynchronous::subscription::local_subscription_store_<arg0>.subscribe(sub);
+    boost::asynchronous::subscription::local_subscription_store_<arg0>.subscribe(sub, token);
 
     for (auto& other_scheduler : boost::asynchronous::subscription::other_schedulers_)
     {
         if (!!other_scheduler)
         {        
-            other_scheduler([sub]()mutable
+            other_scheduler([sub, scheduler_thread_ids]()mutable
             {
-                boost::asynchronous::subscription::local_subscription_store_<arg0>.subscribe_scheduler(std::move(sub));
+                boost::asynchronous::subscription::local_subscription_store_<arg0>.subscribe_scheduler(std::move(sub),std::move(scheduler_thread_ids));
             });
         }
     }
 }
 
-template <class Sub>
-void subscribe_scheduler_(Sub&& sub)
+template <class Event>
+void unsubscribe_(std::uint64_t token, std::vector<boost::thread::id> scheduler_thread_ids)
 {
-    using traits = boost::asynchronous::function_traits<Sub>;
-    using arg0 = typename traits::template remove_ref_cv_arg_<0>::type;
-    static_assert(traits::arity == 1, "callback should have only one argument");
-    boost::asynchronous::subscription::local_subscription_store_<arg0>.subscribe_scheduler(std::forward<Sub>(sub));
+    // remove servant from list of internal subscribers
+    bool empty = boost::asynchronous::subscription::local_subscription_store_<Event>.unsubscribe(token);
+    if (empty)
+    {
+        // if it was the last servant subscribed to this event type for this scheduler
+        // unsubscribe scheduler from other schedulers
+        for (auto& other_scheduler : boost::asynchronous::subscription::other_schedulers_)
+        {
+            if (!!other_scheduler)
+            {
+                other_scheduler([scheduler_thread_ids]()mutable
+                    {
+                        boost::asynchronous::subscription::local_subscription_store_<Event>.unsubscribe_scheduler(std::move(scheduler_thread_ids));
+                    });
+            }
+        }
+    }
+
 }
+
 
 template <class Event>
 bool publish_(Event&& e)

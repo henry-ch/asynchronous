@@ -20,6 +20,7 @@
 #include <typeindex>
 #include <any>
 #include <utility>
+#include <cstdint>
 
 #include <boost/pointee.hpp>
 #include <boost/mpl/vector.hpp>
@@ -137,29 +138,32 @@ struct any_shared_scheduler_ptr: std::shared_ptr<boost::asynchronous::any_shared
 
 using scheduler_event_dispatch_t = std::map<std::type_index, std::function<void(std::any)>>;
 
+// We need CRTP to get access to scheduler's thread ids
+template <class Derived>
 struct scheduler_event_dispatching
 {
 
     template <class Sub>
-    void subscribe(Sub&& sub)
+    std::uint64_t subscribe(Sub&& sub)
     {
-        boost::asynchronous::subscription::subscribe_(std::forward<Sub>(sub));
+        boost::asynchronous::subscription::subscribe_(std::forward<Sub>(sub), static_cast<Derived*>(this)->thread_ids(), m_token);
+        return m_token++;
     }
 
-    template <class Sub>
-    void subscribe_other_schedulers(Sub&& sub)
+    template <class Event>
+    void unsubscribe(std::uint64_t token)
     {
-        boost::asynchronous::subscription::subscribe_scheduler_(std::forward<Sub>(sub));
+        boost::asynchronous::subscription::unsubscribe_<Event>(token, static_cast<Derived*>(this)->thread_ids());
     }
 
     template <class Event>
     void publish(Event&& e)
     {
-        bool someone_handled = boost::asynchronous::subscription::publish_(std::forward<Event>(e));
-        // TODO unsubscribe
+        boost::asynchronous::subscription::publish_(std::forward<Event>(e));
     }
    
 private:  
+    std::uint64_t   m_token = 0;
 };
 
 // asynchronous hides all schedulers behind this type.
@@ -170,7 +174,7 @@ private:
 // asynchronous registers a weak scheduler in every thread where it is running. This allows tasks to post tasks themselves
 
 template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-class any_shared_scheduler : public boost::asynchronous::scheduler_event_dispatching
+class any_shared_scheduler : public boost::asynchronous::scheduler_event_dispatching< any_shared_scheduler<JOB>>
 {
 public:
     typedef JOB job_type;

@@ -11,9 +11,11 @@
 #define BOOST_ASYNCHRON_TRACKABLE_SERVANT_HPP
 
 #include <cstddef>
+#include <memory>
+#include <map>
+#include <cstdint>
 
 #include <boost/asynchronous/detail/function_traits.hpp>
-#include <memory>
 #include <boost/asynchronous/callable_any.hpp>
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/checks.hpp>
@@ -589,7 +591,7 @@ public:
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
         const std::string& task_name, std::size_t prio) const
 #else
-        const std::string& task_name = "", std::size_t prio = 0) const
+        const std::string& task_name = "", std::size_t prio = 0)
 #endif        
     {
         auto sched = get_scheduler().lock();
@@ -610,7 +612,21 @@ public:
                 }
                 return std::optional<bool>{false};
             };
-            sched.subscribe(std::move(wrapped));
+            // ignore multiple subscribes, only one per servant per event makes sense
+            if (m_tokens.find(std::type_index(typeid(arg0))) == m_tokens.end())
+            {
+                m_tokens[std::type_index(typeid(arg0))] = sched.subscribe(std::move(wrapped));
+            }
+        }
+    }
+
+    template<class Event>
+    void unsubscribe()
+    {
+        auto sched = get_scheduler().lock();
+        if (sched.is_valid())
+        {
+            sched.unsubscribe<Event>(m_tokens[std::type_index(typeid(Event))]);
         }
     }
 
@@ -712,6 +728,8 @@ private:
     boost::asynchronous::any_weak_scheduler<JOB> m_scheduler;
     // our worker pool
     boost::asynchronous::any_shared_scheduler_proxy<WJOB> m_worker;
+    // event tokens
+    std::map< std::type_index, std::uint64_t> m_tokens;
 
 };
 

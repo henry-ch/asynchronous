@@ -65,8 +65,11 @@ struct Servant : boost::asynchronous::trackable_servant<>
         };
         this->subscribe(std::move(cb));
 
-
         return fu;
+    }
+    void force_unsubscribe()
+    {
+        unsubscribe<some_event>();
     }
     
 };
@@ -78,6 +81,7 @@ public:
         boost::asynchronous::servant_proxy<ServantProxy,Servant>(s,p)
     {}
     BOOST_ASYNC_FUTURE_MEMBER(wait_for_some_event)
+    BOOST_ASYNC_FUTURE_MEMBER(force_unsubscribe)
 
 };
 
@@ -127,7 +131,6 @@ struct Servant2 : boost::asynchronous::trackable_servant<>
             };
         this->subscribe(std::move(cb));
 
-
         return fu;
     }
 
@@ -163,21 +166,37 @@ BOOST_AUTO_TEST_CASE( test_full_notification )
                                 (scheduler_notify,pool);
 
 
-    //boost::asynchronous::subscription::set_notification_tls(notification_ptr);
     boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1.get_weak_scheduler(), notification_ptr);
     boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification_ptr);
 
-    ServantProxy proxy(scheduler1,pool);
+    std::shared_ptr<ServantProxy> proxy = std::make_shared<ServantProxy>(scheduler1,pool);
     ServantProxy2 proxy2(scheduler2, pool);
 
     try
     {
 
-        auto res_fu = proxy.wait_for_some_event().get();
+        auto res_fu = proxy->wait_for_some_event().get();
         proxy2.trigger_some_event().get();
         
         auto res = boost::asynchronous::recursive_future_get(std::move(res_fu));
         BOOST_CHECK_MESSAGE(res == 42, "invalid result");
+
+        proxy->force_unsubscribe().get();
+
+        // servant gone, check for removal
+        auto wsched = scheduler2.get_weak_scheduler();
+        auto sched = wsched.lock();
+        std::shared_ptr<std::promise<void> > p(new std::promise<void>);
+        auto fu = p->get_future();
+        if (sched.is_valid())
+        {
+            sched.post([p = std::move(p)]() mutable
+                {
+                    p->set_value();
+                    BOOST_CHECK_MESSAGE(boost::asynchronous::subscription::local_subscription_store_<some_event>.m_scheduler_subscribers.empty(), "scheduler subscribers not removed");
+                });
+        }
+        fu.get();
 
     }
     catch (...)

@@ -105,7 +105,6 @@ namespace boost { namespace asynchronous { namespace subscription
                 }
             };
 
-        // TODO move to scheduler impl
         std::function<void(std::vector< std::function<void(std::function<void()>)>>)> notify_me_for_new_schedulers =
             [wsched](std::vector< std::function<void(std::function<void()>)>> others)
             {
