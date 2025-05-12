@@ -613,9 +613,10 @@ public:
                 return std::optional<bool>{false};
             };
             // ignore multiple subscribes, only one per servant per event makes sense
-            if (m_tokens.find(std::type_index(typeid(arg0))) == m_tokens.end())
+            auto it = std::find_if(m_tokens.begin(), m_tokens.end(), [](auto const& t) {return t.first == std::type_index(typeid(arg0)); });
+            if(it == m_tokens.end())
             {
-                m_tokens[std::type_index(typeid(arg0))] = sched.subscribe(std::move(wrapped));
+                m_tokens.emplace_back(std::make_pair(std::type_index(typeid(arg0)),sched.subscribe(std::move(wrapped))));
             }
         }
     }
@@ -626,7 +627,11 @@ public:
         auto sched = get_scheduler().lock();
         if (sched.is_valid())
         {
-            sched.unsubscribe<Event>(m_tokens[std::type_index(typeid(Event))]);
+            auto it = std::find_if(m_tokens.begin(), m_tokens.end(), [](auto const& t) {return t.first == std::type_index(typeid(Event)); });
+            if (it != m_tokens.end())
+            {
+                sched.unsubscribe<Event>((*it).second);
+            }
         }
     }
 
@@ -729,7 +734,7 @@ private:
     // our worker pool
     boost::asynchronous::any_shared_scheduler_proxy<WJOB> m_worker;
     // event tokens
-    std::map< std::type_index, std::uint64_t> m_tokens;
+    std::vector< std::pair<std::type_index, std::uint64_t>> m_tokens;
 
 };
 
