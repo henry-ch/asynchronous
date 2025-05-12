@@ -612,15 +612,18 @@ public:
                 }
                 return std::optional<bool>{false};
             };
-            // ignore multiple subscribes, only one per servant per event makes sense
+            auto new_token = sched.subscribe(std::move(wrapped));
+            // ignore multiple tokens, only one per servant per event makes sense
             auto it = std::find_if(m_tokens.begin(), m_tokens.end(), [](auto const& t) {return t.first == std::type_index(typeid(arg0)); });
             if(it == m_tokens.end())
             {
-                m_tokens.emplace_back(std::make_pair(std::type_index(typeid(arg0)),sched.subscribe(std::move(wrapped))));
+                m_tokens.emplace_back(std::make_pair(std::type_index(typeid(arg0)), new_token));
             }
         }
     }
 
+    // in most cases, unsubscribe is not necessary, a servant not processing an event will be removed from the subscribers list
+    // unsubscribe is provided only for corner cases or unit tests (test_full_notification)
     template<class Event>
     void unsubscribe()
     {
