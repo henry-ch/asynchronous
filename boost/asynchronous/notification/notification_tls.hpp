@@ -17,16 +17,18 @@
 namespace boost { namespace asynchronous { namespace subscription
 {
 
-inline thread_local std::shared_ptr<boost::asynchronous::subscription::notification_proxy> notification_proxy_;
+template <class Callable>
+inline thread_local std::shared_ptr<boost::asynchronous::subscription::notification_proxy<Callable>> notification_proxy_;
 
 inline static void set_notification_tls(auto notification) noexcept
 {
 	notification_proxy_ = std::move(notification);
 }
 
+template <class Callable>
 inline static auto get_notification_tls() noexcept
 {
-	return notification_proxy_;
+	return notification_proxy_<Callable>;
 }
 
 

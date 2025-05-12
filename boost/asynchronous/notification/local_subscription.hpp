@@ -28,7 +28,6 @@ struct local_subscription
     template <class Sub>
     void subscribe(Sub&& sub, std::uint64_t token)
     {
-        const bool was_empty = m_internal_subscribers.empty();
         m_internal_subscribers.insert_or_assign(token, std::forward<Sub>(sub));
     }
 

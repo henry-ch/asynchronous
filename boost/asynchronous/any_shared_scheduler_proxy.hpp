@@ -336,13 +336,6 @@ struct any_shared_scheduler_proxy_concept
      */
     BOOST_ATTRIBUTE_NODISCARD virtual std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable)=0;
 
-     /*!
-     * \brief pass a functor so that the scheduler can inform about event types it wishes to (un)subscribe
-     * \param functor
-     * \param bool: true for subscribe, false for unsubscribe (in this case, functor does not matter)
-     */
-    //virtual void interested_in_events(std::function<void(boost::asynchronous::scheduler_event_dispatch_t), bool>) = 0;
-
 };
 template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 class any_shared_scheduler_proxy

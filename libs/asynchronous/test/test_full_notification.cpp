@@ -162,7 +162,7 @@ BOOST_AUTO_TEST_CASE( test_full_notification )
 
     auto scheduler_notify = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
                                                                             boost::asynchronous::guarded_deque<>>>();
-    auto notification_ptr = std::make_shared<boost::asynchronous::subscription::notification_proxy>
+    auto notification_ptr = std::make_shared<boost::asynchronous::subscription::notification_proxy<>>
                                 (scheduler_notify,pool);
 
 
@@ -216,7 +216,7 @@ BOOST_AUTO_TEST_CASE(test_full_notification2)
 
     auto scheduler_notify = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
         boost::asynchronous::guarded_deque<>>>();
-    auto notification_ptr = std::make_shared<boost::asynchronous::subscription::notification_proxy>
+    auto notification_ptr = std::make_shared<boost::asynchronous::subscription::notification_proxy<>>
         (scheduler_notify, pool);
 
     //boost::asynchronous::subscription::set_notification_tls(notification_ptr);
@@ -253,7 +253,7 @@ BOOST_AUTO_TEST_CASE(test_full_notification_pub_and_sub)
 
     auto scheduler_notify = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
         boost::asynchronous::guarded_deque<>>>();
-    auto notification_ptr = std::make_shared<boost::asynchronous::subscription::notification_proxy>
+    auto notification_ptr = std::make_shared<boost::asynchronous::subscription::notification_proxy<>>
         (scheduler_notify, pool);
 
 
@@ -297,7 +297,7 @@ BOOST_AUTO_TEST_CASE(test_full_notification_multiple_subs)
 
     auto scheduler_notify = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
         boost::asynchronous::guarded_deque<>>>();
-    auto notification_ptr = std::make_shared<boost::asynchronous::subscription::notification_proxy>
+    auto notification_ptr = std::make_shared<boost::asynchronous::subscription::notification_proxy<>>
         (scheduler_notify, pool);
 
 
@@ -340,7 +340,7 @@ BOOST_AUTO_TEST_CASE(test_full_notification_threadpool)
 
     auto scheduler_notify = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
         boost::asynchronous::guarded_deque<>>>();
-    auto notification_ptr = std::make_shared<boost::asynchronous::subscription::notification_proxy>
+    auto notification_ptr = std::make_shared<boost::asynchronous::subscription::notification_proxy<>>
         (scheduler_notify, pool);
 
 

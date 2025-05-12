@@ -24,7 +24,7 @@
 
 namespace boost { namespace asynchronous { namespace subscription
 {
-    // TODO make template with job type?
+    template <class T>
     struct notification_servant : boost::asynchronous::trackable_servant<>
     {
         struct scheduler_notify_entry_t
@@ -78,14 +78,17 @@ namespace boost { namespace asynchronous { namespace subscription
         std::vector<notification_servant::scheduler_notify_entry_t> m_schedulers;
     };
 
-    // TODO make template with job type?
-    class notification_proxy : public boost::asynchronous::servant_proxy<notification_proxy, notification_servant>
+    template <class Callable = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+    class notification_proxy : public boost::asynchronous::servant_proxy<notification_proxy<Callable>, notification_servant<Callable>>
     {
     public:
         template <class Scheduler, class Threadpool>
         notification_proxy(Scheduler s, Threadpool p) :
-            boost::asynchronous::servant_proxy<notification_proxy, notification_servant>(s, p)
+            boost::asynchronous::servant_proxy<notification_proxy<Callable>, notification_servant<Callable>>(s, p)
         {}
+        using servant_type = typename boost::asynchronous::servant_proxy<notification_proxy<Callable>, notification_servant<Callable>>::servant_type;
+        using callable_type = typename boost::asynchronous::servant_proxy<notification_proxy<Callable>, notification_servant<Callable>>::callable_type;
+
         BOOST_ASYNC_POST_MEMBER_LOG(add_scheduler, "add_scheduler")
     };
 
