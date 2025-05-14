@@ -22,7 +22,6 @@
 #include <boost/asynchronous/notification/local_subscription.hpp>
 #include <boost/asynchronous/helpers/recursive_future_get.hpp>
 #include <boost/asynchronous/notification/notification_proxy.hpp>
-#include <boost/asynchronous/notification/notification_tls.hpp>
 #include <boost/asynchronous/notification/local_subscription.hpp>
 
 #include "test_common.hpp"
@@ -219,7 +218,6 @@ BOOST_AUTO_TEST_CASE(test_full_notification2)
     auto notification_ptr = std::make_shared<boost::asynchronous::subscription::notification_proxy<>>
         (scheduler_notify, pool);
 
-    //boost::asynchronous::subscription::set_notification_tls(notification_ptr);
     boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification_ptr);
     boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1.get_weak_scheduler(), notification_ptr);
 
@@ -257,7 +255,6 @@ BOOST_AUTO_TEST_CASE(test_full_notification_pub_and_sub)
         (scheduler_notify, pool);
 
 
-    //boost::asynchronous::subscription::set_notification_tls(notification_ptr);
     boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1.get_weak_scheduler(), notification_ptr);
     boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification_ptr);
 
@@ -301,7 +298,6 @@ BOOST_AUTO_TEST_CASE(test_full_notification_multiple_subs)
         (scheduler_notify, pool);
 
 
-    //boost::asynchronous::subscription::set_notification_tls(notification_ptr);
     boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1.get_weak_scheduler(), notification_ptr);
     boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification_ptr);
     boost::asynchronous::subscription::register_scheduler_to_notification(scheduler3.get_weak_scheduler(), notification_ptr);
@@ -344,7 +340,6 @@ BOOST_AUTO_TEST_CASE(test_full_notification_threadpool)
         (scheduler_notify, pool);
 
 
-    //boost::asynchronous::subscription::set_notification_tls(notification_ptr);
     boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1.get_weak_scheduler(), notification_ptr);
     boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification_ptr);
     boost::asynchronous::subscription::register_scheduler_to_notification(pool.get_weak_scheduler(), notification_ptr);
