@@ -22,7 +22,6 @@
 #include <boost/asynchronous/notification/local_subscription.hpp>
 #include <boost/asynchronous/helpers/recursive_future_get.hpp>
 #include <boost/asynchronous/notification/notification_proxy.hpp>
-#include <boost/asynchronous/notification/local_subscription.hpp>
 
 #include "test_common.hpp"
 

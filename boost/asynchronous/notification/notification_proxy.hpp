@@ -16,6 +16,7 @@
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/servant_proxy.hpp>
 #include <boost/asynchronous/trackable_servant.hpp>
+#include <boost/asynchronous/notification/local_subscription.hpp>
 
 
 // the task of notification servant and proxy is to distribute (de)registrations among schedulers within an application. 
