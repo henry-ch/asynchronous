@@ -117,7 +117,9 @@ namespace boost { namespace asynchronous { namespace subscription
                 {
                     sched.post([others = std::move(others)]() mutable
                         {
-                            boost::asynchronous::subscription::other_schedulers_ = std::move(others);
+                            // sad that we do not have append_range yet
+                            boost::asynchronous::subscription::other_schedulers_.insert(
+                                boost::asynchronous::subscription::other_schedulers_.end(), others.begin(), others.end());
                         });
                 }
             };
