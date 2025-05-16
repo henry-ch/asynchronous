@@ -145,8 +145,8 @@ struct scheduler_event_dispatching
     template <class Sub>
     std::uint64_t subscribe(Sub&& sub)
     {
-        boost::asynchronous::subscription::subscribe_(std::forward<Sub>(sub), static_cast<Derived*>(this)->thread_ids(), m_token);
-        return m_token++;
+        boost::asynchronous::subscription::subscribe_(std::forward<Sub>(sub), static_cast<Derived*>(this)->thread_ids(), *m_token);
+        return (*m_token)++;
     }
 
     template <class Event>
@@ -162,7 +162,7 @@ struct scheduler_event_dispatching
     }
    
 private:  
-    std::uint64_t   m_token = 0;
+    std::shared_ptr<std::uint64_t>   m_token = std::make_shared<std::uint64_t>(0);
 };
 
 // asynchronous hides all schedulers behind this type.
