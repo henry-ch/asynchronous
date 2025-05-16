@@ -105,6 +105,11 @@ namespace boost { namespace asynchronous { namespace subscription
                 auto sched = wsched.lock();
                 if (sched.is_valid())
                 {
+                    //sched.execute_in_all_threads(
+                    //    [fct]()
+                    //    {
+                    //        fct();
+                    //    });
                     boost::asynchronous::post_future(sched,
                         [fct = std::move(fct)]()
                         {
@@ -119,6 +124,13 @@ namespace boost { namespace asynchronous { namespace subscription
                 auto sched = wsched.lock();
                 if (sched.is_valid())
                 {
+                    //sched.execute_in_all_threads(
+                    //    [others]()
+                    //    {
+                    //        // sad that we do not have append_range yet
+                    //        boost::asynchronous::subscription::other_schedulers_.insert(
+                    //            boost::asynchronous::subscription::other_schedulers_.end(), others.begin(), others.end());
+                    //    });
                     boost::asynchronous::post_future(sched,
                         [others = std::move(others)]() mutable
                         {

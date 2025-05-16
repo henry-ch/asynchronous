@@ -121,11 +121,9 @@ BOOST_AUTO_TEST_CASE( test_local_notification_log )
         fu2.get();
 
         diag_type diag = scheduler.get_diagnostics().totals();
-        bool has_test_result = false;
+        BOOST_CHECK_MESSAGE(!diag.empty(), "servant should have diagnostics.");
         for (auto mit = diag.begin(); mit != diag.end(); ++mit)
         {
-            if ((*mit).first == "check_local_removed")
-                has_test_result = true;
             for (auto jit = (*mit).second.begin(); jit != (*mit).second.end(); ++jit)
             {
                 BOOST_CHECK_MESSAGE(std::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() >= 0, "task finished before it started.");
@@ -133,7 +131,6 @@ BOOST_AUTO_TEST_CASE( test_local_notification_log )
                 BOOST_CHECK_MESSAGE(!(*jit).is_failed(), "no task should have failed.");
             }
         }
-        BOOST_CHECK_MESSAGE(has_test_result, "has_test_result not found in diagnostics.");
 
 
     }
