@@ -75,7 +75,7 @@ public:
     ServantProxy(Scheduler s, Threadpool p):
         boost::asynchronous::servant_proxy<ServantProxy,Servant, servant_job>(s,p)
     {}
-    BOOST_ASYNC_FUTURE_MEMBER(trigger)
+    BOOST_ASYNC_FUTURE_MEMBER_LOG(trigger,"trigger",1)
 
 };
 
@@ -104,11 +104,12 @@ BOOST_AUTO_TEST_CASE( test_local_notification_log )
     // servant gone, check for removal
     auto wsched = scheduler.get_weak_scheduler();
     auto sched = wsched.lock();
-    std::shared_ptr<std::promise<void> > p(new std::promise<void>);
-    auto fu = p->get_future();
     if (sched.is_valid())
     {
-        boost::asynchronous::post_future(sched,
+        std::shared_ptr<std::promise<void> > p(new std::promise<void>);
+        auto fu = p->get_future();
+
+        auto fu2 = boost::asynchronous::post_future(sched,
             [p = std::move(p)]() mutable
             {
                 boost::asynchronous::subscription::publish_(some_event{ 42 });
@@ -116,23 +117,25 @@ BOOST_AUTO_TEST_CASE( test_local_notification_log )
                 p->set_value();
             },"check_local_removed",0);
 
-    }
-    fu.get();
+        fu.get();
+        fu2.get();
 
-    diag_type diag = scheduler.get_diagnostics().totals();
-    bool has_test_result = false;
-    for (auto mit = diag.begin(); mit != diag.end(); ++mit)
-    {
-        if ((*mit).first == "check_local_removed")
-            has_test_result = true;
-        for (auto jit = (*mit).second.begin(); jit != (*mit).second.end(); ++jit)
+        diag_type diag = scheduler.get_diagnostics().totals();
+        bool has_test_result = false;
+        for (auto mit = diag.begin(); mit != diag.end(); ++mit)
         {
-            BOOST_CHECK_MESSAGE(std::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() >= 0, "task finished before it started.");
-            BOOST_CHECK_MESSAGE(!(*jit).is_interrupted(), "no task should have been interrupted.");
-            BOOST_CHECK_MESSAGE(!(*jit).is_failed(), "no task should have failed.");
+            if ((*mit).first == "check_local_removed")
+                has_test_result = true;
+            for (auto jit = (*mit).second.begin(); jit != (*mit).second.end(); ++jit)
+            {
+                BOOST_CHECK_MESSAGE(std::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() >= 0, "task finished before it started.");
+                BOOST_CHECK_MESSAGE(!(*jit).is_interrupted(), "no task should have been interrupted.");
+                BOOST_CHECK_MESSAGE(!(*jit).is_failed(), "no task should have failed.");
+            }
         }
-    }
-    BOOST_CHECK_MESSAGE(has_test_result, "has_test_result not found in diagnostics.");
+        BOOST_CHECK_MESSAGE(has_test_result, "has_test_result not found in diagnostics.");
 
+
+    }
 }
 

@@ -16,6 +16,7 @@
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/servant_proxy.hpp>
 #include <boost/asynchronous/trackable_servant.hpp>
+#include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/notification/local_subscription.hpp>
 
 
@@ -25,8 +26,8 @@
 
 namespace boost { namespace asynchronous { namespace subscription
 {
-    template <class T>
-    struct notification_servant : boost::asynchronous::trackable_servant<>
+    template <class Callable>
+    struct notification_servant : boost::asynchronous::trackable_servant<Callable, Callable>
     {
         struct scheduler_notify_entry_t
         {
@@ -39,8 +40,8 @@ namespace boost { namespace asynchronous { namespace subscription
         };
 
         template <class Threadpool>
-        notification_servant(boost::asynchronous::any_weak_scheduler<> scheduler, Threadpool p)
-            : boost::asynchronous::trackable_servant<>(scheduler, p)
+        notification_servant(boost::asynchronous::any_weak_scheduler<Callable> scheduler, Threadpool p)
+            : boost::asynchronous::trackable_servant<Callable, Callable>(scheduler, p)
         {
         }
 
@@ -80,17 +81,19 @@ namespace boost { namespace asynchronous { namespace subscription
     };
 
     template <class Callable = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-    class notification_proxy : public boost::asynchronous::servant_proxy<notification_proxy<Callable>, notification_servant<Callable>>
+    class notification_proxy : public boost::asynchronous::servant_proxy<notification_proxy<Callable>, notification_servant<Callable>, Callable>
     {
     public:
         template <class Scheduler, class Threadpool>
         notification_proxy(Scheduler s, Threadpool p) :
-            boost::asynchronous::servant_proxy<notification_proxy<Callable>, notification_servant<Callable>>(s, p)
+            boost::asynchronous::servant_proxy<notification_proxy<Callable>, notification_servant<Callable>, Callable>(s, p)
         {}
-        using servant_type = typename boost::asynchronous::servant_proxy<notification_proxy<Callable>, notification_servant<Callable>>::servant_type;
-        using callable_type = typename boost::asynchronous::servant_proxy<notification_proxy<Callable>, notification_servant<Callable>>::callable_type;
+        using servant_type = typename boost::asynchronous::servant_proxy<notification_proxy<Callable>, notification_servant<Callable>, Callable>::servant_type;
+        using callable_type = typename boost::asynchronous::servant_proxy<notification_proxy<Callable>, notification_servant<Callable>, Callable>::callable_type;
 
-        BOOST_ASYNC_POST_MEMBER_LOG(add_scheduler, "add_scheduler")
+        BOOST_ASYNC_SERVANT_POST_CTOR_LOG("notification_proxy::ctor", 1);
+        BOOST_ASYNC_SERVANT_POST_DTOR_LOG("notification_proxy::dtor", 1);
+        BOOST_ASYNC_POST_MEMBER_LOG(add_scheduler, "add_scheduler",1)
     };
 
 
@@ -102,10 +105,11 @@ namespace boost { namespace asynchronous { namespace subscription
                 auto sched = wsched.lock();
                 if (sched.is_valid())
                 {
-                    sched.post([fct = std::move(fct)]()
+                    boost::asynchronous::post_future(sched,
+                        [fct = std::move(fct)]()
                         {
                             fct();
-                        });
+                        }, "boost::asynchronous::subscription::notification_proxy::register_scheduler_to_notification::f", 0);
                 }
             };
 
@@ -115,12 +119,13 @@ namespace boost { namespace asynchronous { namespace subscription
                 auto sched = wsched.lock();
                 if (sched.is_valid())
                 {
-                    sched.post([others = std::move(others)]() mutable
+                    boost::asynchronous::post_future(sched,
+                        [others = std::move(others)]() mutable
                         {
                             // sad that we do not have append_range yet
                             boost::asynchronous::subscription::other_schedulers_.insert(
                                 boost::asynchronous::subscription::other_schedulers_.end(), others.begin(), others.end());
-                        });
+                        }, "boost::asynchronous::subscription::notification_proxy::register_scheduler_to_notification::notify_me_for_new_schedulers", 0);
                 }
             };
         notification_ptr->add_scheduler(wsched.lock().thread_ids(), f, notify_me_for_new_schedulers);
