@@ -153,7 +153,7 @@ void unsubscribe_(std::uint64_t token, std::vector<boost::thread::id> scheduler_
 template <class Event>
 bool publish_(Event&& e)
 {
-    return boost::asynchronous::subscription::local_subscription_store_<Event>.publish(std::forward<Event>(e));
+    return boost::asynchronous::subscription::local_subscription_store_<std::remove_cv_t<std::remove_reference_t<Event>>>.publish(std::forward<Event>(e));
 }
 
 

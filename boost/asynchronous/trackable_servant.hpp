@@ -93,7 +93,7 @@ public:
      * \brief Move-Constructor. Does not throw
      */
     trackable_servant(trackable_servant&& rhs) noexcept
-        : m_tracking(std::make_shared<boost::asynchronous::track>())
+        : m_tracking(std::move(rhs.m_tracking))
         , m_scheduler(std::move(rhs.m_scheduler))
         , m_worker(std::move(rhs.m_worker))
     {
@@ -633,7 +633,7 @@ public:
             auto it = std::find_if(m_tokens.begin(), m_tokens.end(), [](auto const& t) {return t.first == std::type_index(typeid(Event)); });
             if (it != m_tokens.end())
             {
-                sched.unsubscribe<Event>((*it).second);
+                sched.template unsubscribe<Event>((*it).second);
             }
         }
     }
