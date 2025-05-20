@@ -333,43 +333,43 @@ BOOST_AUTO_TEST_CASE(test_full_notification_multiple_subs)
     }
 }
 
-//BOOST_AUTO_TEST_CASE(test_full_notification_threadpool)
-//{
-//    auto scheduler1 = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
-//        boost::asynchronous::guarded_deque<>>>();
-//    auto scheduler2 = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
-//        boost::asynchronous::guarded_deque<>>>();
-//    auto pool = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<
-//        boost::asynchronous::guarded_deque<>>>(4);
-//
-//    auto scheduler_notify = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
-//        boost::asynchronous::guarded_deque<>>>();
-//    auto notification_ptr = std::make_shared<boost::asynchronous::subscription::notification_proxy<>>
-//        (scheduler_notify, pool);
-//
-//
-//    boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1.get_weak_scheduler(), notification_ptr);
-//    boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification_ptr);
-//    boost::asynchronous::subscription::register_scheduler_to_notification(pool.get_weak_scheduler(), notification_ptr);
-//
-//    ServantProxy proxy(scheduler1, pool);
-//    ServantProxy2 proxy2(scheduler2, pool);
-//
-//    try
-//    {
-//
-//        auto res_fu = proxy.wait_for_some_event().get();
-//        proxy2.trigger_some_event_in_threadpool().get();
-//
-//        auto res = boost::asynchronous::recursive_future_get(std::move(res_fu));
-//        BOOST_CHECK_MESSAGE(res == 42, "invalid result");
-//        BOOST_CHECK_MESSAGE(proxy.cb_called().get() == 1, "got wrong number of events");
-//    }
-//    catch (...)
-//    {
-//        BOOST_FAIL("unexpected exception");
-//    }
-//}
+BOOST_AUTO_TEST_CASE(test_full_notification_threadpool)
+{
+    auto scheduler1 = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+        boost::asynchronous::guarded_deque<>>>();
+    auto scheduler2 = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+        boost::asynchronous::guarded_deque<>>>();
+    auto pool = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<
+        boost::asynchronous::guarded_deque<>>>(4);
+
+    auto scheduler_notify = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+        boost::asynchronous::guarded_deque<>>>();
+    auto notification_ptr = std::make_shared<boost::asynchronous::subscription::notification_proxy<>>
+        (scheduler_notify, pool);
+
+
+    boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1.get_weak_scheduler(), notification_ptr);
+    boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification_ptr);
+    boost::asynchronous::subscription::register_scheduler_to_notification(pool.get_weak_scheduler(), notification_ptr);
+
+    ServantProxy proxy(scheduler1, pool);
+    ServantProxy2 proxy2(scheduler2, pool);
+
+    try
+    {
+
+        auto res_fu = proxy.wait_for_some_event().get();
+        proxy2.trigger_some_event_in_threadpool().get();
+
+        auto res = boost::asynchronous::recursive_future_get(std::move(res_fu));
+        BOOST_CHECK_MESSAGE(res == 42, "invalid result");
+        BOOST_CHECK_MESSAGE(proxy.cb_called().get() == 1, "got wrong number of events");
+    }
+    catch (...)
+    {
+        BOOST_FAIL("unexpected exception");
+    }
+}
 
 BOOST_AUTO_TEST_CASE(test_full_notification_multiple_notification_buses)
 {

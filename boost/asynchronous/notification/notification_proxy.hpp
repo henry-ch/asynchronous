@@ -18,7 +18,7 @@
 #include <boost/asynchronous/trackable_servant.hpp>
 #include <boost/asynchronous/post.hpp>
 #include <boost/asynchronous/notification/local_subscription.hpp>
-
+#include <boost/thread/futures/wait_for_all.hpp>
 
 // the task of notification servant and proxy is to distribute (de)registrations among schedulers within an application. 
 // Using TLS, it can be accessed from within the schedulers.
@@ -93,7 +93,7 @@ namespace boost { namespace asynchronous { namespace subscription
 
         BOOST_ASYNC_SERVANT_POST_CTOR_LOG("notification_proxy::ctor", 1);
         BOOST_ASYNC_SERVANT_POST_DTOR_LOG("notification_proxy::dtor", 1);
-        BOOST_ASYNC_POST_MEMBER_LOG(add_scheduler, "add_scheduler",1)
+        BOOST_ASYNC_FUTURE_MEMBER_LOG(add_scheduler, "add_scheduler",1)
     };
 
 
@@ -105,16 +105,13 @@ namespace boost { namespace asynchronous { namespace subscription
                 auto sched = wsched.lock();
                 if (sched.is_valid())
                 {
-                    //sched.execute_in_all_threads(
-                    //    [fct]()
-                    //    {
-                    //        fct();
-                    //    });
-                    boost::asynchronous::post_future(sched,
-                        [fct = std::move(fct)]()
+                    auto fus = sched.execute_in_all_threads(
+                        [fct]()
                         {
                             fct();
-                        }, "boost::asynchronous::subscription::notification_proxy::register_scheduler_to_notification::f", 0);
+                        }
+                    );
+                    boost::wait_for_all(fus.begin(), fus.end());
                 }
             };
 
@@ -124,23 +121,17 @@ namespace boost { namespace asynchronous { namespace subscription
                 auto sched = wsched.lock();
                 if (sched.is_valid())
                 {
-                    //sched.execute_in_all_threads(
-                    //    [others]()
-                    //    {
-                    //        // sad that we do not have append_range yet
-                    //        boost::asynchronous::subscription::other_schedulers_.insert(
-                    //            boost::asynchronous::subscription::other_schedulers_.end(), others.begin(), others.end());
-                    //    });
-                    boost::asynchronous::post_future(sched,
-                        [others = std::move(others)]() mutable
+                    auto fus = sched.execute_in_all_threads(
+                        [others]()
                         {
                             // sad that we do not have append_range yet
                             boost::asynchronous::subscription::other_schedulers_.insert(
                                 boost::asynchronous::subscription::other_schedulers_.end(), others.begin(), others.end());
-                        }, "boost::asynchronous::subscription::notification_proxy::register_scheduler_to_notification::notify_me_for_new_schedulers", 0);
+                        });
+                    boost::wait_for_all(fus.begin(), fus.end());
                 }
             };
-        notification_ptr->add_scheduler(wsched.lock().thread_ids(), f, notify_me_for_new_schedulers);
+        notification_ptr->add_scheduler(wsched.lock().thread_ids(), f, notify_me_for_new_schedulers).get();
     }
 
 }}}
