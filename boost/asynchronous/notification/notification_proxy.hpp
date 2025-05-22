@@ -98,7 +98,7 @@ namespace boost { namespace asynchronous { namespace subscription
 
 
     // register a scheduler to a notification proxy, effectively adding it to its "event bus"
-    void register_scheduler_to_notification(auto wsched, auto notification_ptr)
+    BOOST_ATTRIBUTE_NODISCARD auto register_scheduler_to_notification(auto wsched, auto notification_ptr)
     {
         auto f = [wsched](std::function<void()> fct)
             {
@@ -125,13 +125,12 @@ namespace boost { namespace asynchronous { namespace subscription
                         [others]()
                         {
                             // sad that we do not have append_range yet
-                            boost::asynchronous::subscription::other_schedulers_.insert(
-                                boost::asynchronous::subscription::other_schedulers_.end(), others.begin(), others.end());
+                            boost::asynchronous::subscription::other_schedulers_ = std::move(others);
                         });
                     boost::wait_for_all(fus.begin(), fus.end());
                 }
             };
-        notification_ptr->add_scheduler(wsched.lock().thread_ids(), f, notify_me_for_new_schedulers).get();
+        return notification_ptr->add_scheduler(wsched.lock().thread_ids(), f, notify_me_for_new_schedulers);
     }
 
 }}}
