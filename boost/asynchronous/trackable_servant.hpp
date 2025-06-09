@@ -586,8 +586,10 @@ public:
         return m_scheduler;
     }
 
+    // token should be saved for unsubscribe
+    // though forgetting an unsuscribe is usually ok as callback is wrapped by a make_safe_callback
     template <class Sub>
-    void subscribe(Sub sub,
+    boost::asynchronous::subscription_token subscribe(Sub sub,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
         const std::string& task_name, std::size_t prio) const
 #else
@@ -612,30 +614,20 @@ public:
                 }
                 return std::optional<bool>{false};
             };
-            auto new_token = sched.subscribe(std::move(wrapped));
-            // ignore multiple tokens, only one per servant per event makes sense
-            auto it = std::find_if(m_tokens.begin(), m_tokens.end(), [](auto const& t) {return t.first == std::type_index(typeid(arg0)); });
-            if(it == m_tokens.end())
-            {
-                m_tokens.emplace_back(std::make_pair(std::type_index(typeid(arg0)), new_token));
-            }
+            // allow multiple calls to subscribe, though caller is responsible for not subscribing endless to an event
+            return sched.subscribe(std::move(wrapped));
         }
+        // return invalid token
+        return boost::asynchronous::invalid_subscription_token();
     }
 
     // in most cases, unsubscribe is not necessary, a servant not processing an event will be removed from the subscribers list
     // unsubscribe is provided only for corner cases or unit tests (test_full_notification)
     template<class Event>
-    void unsubscribe()
+    void unsubscribe(boost::asynchronous::subscription_token token)
     {
         auto sched = get_scheduler().lock();
-        if (sched.is_valid())
-        {
-            auto it = std::find_if(m_tokens.begin(), m_tokens.end(), [](auto const& t) {return t.first == std::type_index(typeid(Event)); });
-            if (it != m_tokens.end())
-            {
-                sched.template unsubscribe<Event>((*it).second);
-            }
-        }
+        sched.template unsubscribe<Event>(token);       
     }
 
     template <class Event>
@@ -736,9 +728,6 @@ private:
     boost::asynchronous::any_weak_scheduler<JOB> m_scheduler;
     // our worker pool
     boost::asynchronous::any_shared_scheduler_proxy<WJOB> m_worker;
-    // event tokens
-    std::vector< std::pair<std::type_index, std::uint64_t>> m_tokens;
-
 };
 
 }}

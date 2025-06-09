@@ -49,6 +49,13 @@
 
 namespace boost { namespace asynchronous
 {
+
+    struct subscription_token
+    {
+        std::int64_t token = -1;
+    };
+    constexpr boost::asynchronous::subscription_token invalid_subscription_token() { return boost::asynchronous::subscription_token{}; }
+
 // concept for all scheduler implementations, single_thread_scheduler oder all threadpools
 #ifdef BOOST_ASYNCHRONOUS_USE_TYPE_ERASURE
 template <class JOB>
@@ -83,7 +90,9 @@ struct any_shared_scheduler_concept :
     boost::asynchronous::has_get_name<std::string(), const boost::type_erasure::_a>,
     boost::asynchronous::has_processor_bind<void(std::vector<std::tuple<unsigned int,unsigned int>>), boost::type_erasure::_a>,
     boost::asynchronous::has_execute_in_all_threads<std::vector<std::future<void>>(boost::asynchronous::any_callable), boost::type_erasure::_a>
-> {};
+> {
+    std::shared_ptr<boost::asynchronous::subscription_token>   m_token = std::make_shared<boost::asynchronous::subscription_token>(boost::asynchronous::subscription_token{ 0 });
+};
 
 template <class T = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 struct any_shared_scheduler_ptr: boost::type_erasure::any<boost::asynchronous::any_shared_scheduler_concept<T> >
@@ -143,16 +152,18 @@ struct scheduler_event_dispatching
 {
 
     template <class Sub>
-    std::uint64_t subscribe(Sub&& sub)
+    boost::asynchronous::subscription_token subscribe(Sub&& sub)
     {
-        boost::asynchronous::subscription::subscribe_(std::forward<Sub>(sub), static_cast<Derived*>(this)->thread_ids(), *m_token);
-        return (*m_token)++;
+        boost::asynchronous::subscription::subscribe_(std::forward<Sub>(sub), static_cast<Derived*>(this)->thread_ids(), (*m_token).token);
+        boost::asynchronous::subscription_token new_token = (*m_token);
+        (*m_token).token++;
+        return new_token;
     }
 
     template <class Event>
-    void unsubscribe(std::uint64_t token)
+    void unsubscribe(boost::asynchronous::subscription_token token)
     {
-        boost::asynchronous::subscription::unsubscribe_<Event>(token, static_cast<Derived*>(this)->thread_ids());
+        boost::asynchronous::subscription::unsubscribe_<Event>(token.token, static_cast<Derived*>(this)->thread_ids());
     }
 
     template <class Event>
@@ -162,7 +173,7 @@ struct scheduler_event_dispatching
     }
    
 private:  
-    std::shared_ptr<std::uint64_t>   m_token = std::make_shared<std::uint64_t>(0);
+    std::shared_ptr<boost::asynchronous::subscription_token>   m_token = std::make_shared<boost::asynchronous::subscription_token>(boost::asynchronous::subscription_token{ 0 });
 };
 
 // asynchronous hides all schedulers behind this type.
@@ -173,7 +184,7 @@ private:
 // asynchronous registers a weak scheduler in every thread where it is running. This allows tasks to post tasks themselves
 
 template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-class any_shared_scheduler : public boost::asynchronous::scheduler_event_dispatching< any_shared_scheduler<JOB>>
+class any_shared_scheduler //: public boost::asynchronous::scheduler_event_dispatching< any_shared_scheduler<JOB>>
 {
 public:
     typedef JOB job_type;
@@ -263,9 +274,30 @@ public:
     {
         (*my_ptr).enable_queue(priority,enable);
     }
+    template <class Sub>
+    boost::asynchronous::subscription_token subscribe(Sub&& sub)
+    {
+        boost::asynchronous::subscription::subscribe_(std::forward<Sub>(sub), this->thread_ids(), m_token->token);
+        boost::asynchronous::subscription_token new_token = *(m_token);
+        m_token->token++;
+        return new_token;
+    }
 
+    template <class Event>
+    void unsubscribe(boost::asynchronous::subscription_token token)
+    {
+        boost::asynchronous::subscription::unsubscribe_<Event>(token.token,this->thread_ids());
+    }
+
+    template <class Event>
+    void publish(Event&& e)
+    {
+        boost::asynchronous::subscription::publish_(std::forward<Event>(e));
+    }
 private:
     any_shared_scheduler_ptr<JOB> my_ptr;
+    std::shared_ptr<boost::asynchronous::subscription_token>   m_token = std::make_shared<boost::asynchronous::subscription_token>(boost::asynchronous::subscription_token{ 0 });
+
 };
 
 // a weak scheduler's only purpose is to deliver a shared scheduler when needed.

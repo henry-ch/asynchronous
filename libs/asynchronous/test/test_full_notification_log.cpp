@@ -64,15 +64,17 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job, servant_job
             BOOST_CHECK_MESSAGE(threadid == boost::this_thread::get_id(), "notification callback in wrong thread.");
             p->set_value(42); 
         };
-        this->subscribe(std::move(cb),"ServantSubscribe",0);
+        token_ = this->subscribe(std::move(cb),"ServantSubscribe",0);
 
         return fu;
     }
     void force_unsubscribe()
     {
-        unsubscribe<some_event>();
+        unsubscribe<some_event>(token_);
     }
-    
+
+    boost::asynchronous::subscription_token token_;
+
 };
 class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy,Servant, servant_job>
 {

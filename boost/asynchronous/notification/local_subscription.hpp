@@ -26,7 +26,7 @@ struct local_subscription
     using subscriber_t = std::function<std::optional<bool>(Event const&)>;
     
     template <class Sub>
-    void subscribe(Sub&& sub, std::uint64_t token)
+    void subscribe(Sub&& sub, std::int64_t token)
     {
         m_internal_subscribers.insert_or_assign(token, std::forward<Sub>(sub));
     }
@@ -34,19 +34,11 @@ struct local_subscription
     template <class Sub>
     void subscribe_scheduler(Sub&& sub, std::vector<boost::thread::id> scheduler_thread_ids)
     {
-        auto it = std::find_if(m_scheduler_subscribers.begin(), m_scheduler_subscribers.end(), [&](auto const& sub) {return scheduler_thread_ids == sub.first; });
-        if (it == m_scheduler_subscribers.end())
-        {
-            m_scheduler_subscribers.emplace_back(std::make_pair(std::move(scheduler_thread_ids), std::forward<Sub>(sub)));
-        }
-        else
-        {
-            *it = std::make_pair(std::move(scheduler_thread_ids), std::forward<Sub>(sub));
-        }
+        m_scheduler_subscribers.emplace_back(std::make_pair(std::move(scheduler_thread_ids), std::forward<Sub>(sub)));
     }
 
     // unsubscribes servant, return true if no more servant
-    bool unsubscribe(std::uint64_t token)
+    bool unsubscribe(std::int64_t token)
     {
         auto it = m_internal_subscribers.find(token);
         if (it != m_internal_subscribers.end())
@@ -93,7 +85,7 @@ struct local_subscription
         return someone_handled;
     }
 
-    std::map<std::uint64_t, subscriber_t> m_internal_subscribers;
+    std::map<std::int64_t, subscriber_t> m_internal_subscribers;
     std::vector<std::pair<std::vector<boost::thread::id>, subscriber_t>> m_scheduler_subscribers;
 };
 
