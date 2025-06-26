@@ -91,11 +91,18 @@ struct local_subscription
 
 // inline thread local subscriptions
 template <class Event>
-inline thread_local local_subscription<Event> local_subscription_store_;    
+local_subscription<Event>& get_local_subscription_store_() 
+{
+    static thread_local local_subscription<Event> subs;
+    return subs;
+}
 
 // every other scheduler we know of can add a function to be called within its thread context
-inline thread_local std::vector< std::function<void(std::function<void()>)>> other_schedulers_;
-
+inline std::vector<std::function<void(std::function<void()>)>>& get_other_schedulers_() 
+{
+    static thread_local std::vector< std::function<void(std::function<void()>)>> others;
+    return others;
+}
 
 template <class Sub>
 void subscribe_(Sub&& sub, std::vector<boost::thread::id> scheduler_thread_ids, std::uint64_t token)
@@ -104,15 +111,15 @@ void subscribe_(Sub&& sub, std::vector<boost::thread::id> scheduler_thread_ids, 
     using arg0 = typename traits::template remove_ref_cv_arg_<0>::type;
     static_assert(traits::arity == 1, "callback should have only one argument");
 
-    boost::asynchronous::subscription::local_subscription_store_<arg0>.subscribe(sub, token);
+    boost::asynchronous::subscription::get_local_subscription_store_<arg0>().subscribe(sub, token);
 
-    for (auto& other_scheduler : boost::asynchronous::subscription::other_schedulers_)
+    for (auto& other_scheduler : boost::asynchronous::subscription::get_other_schedulers_())
     {
         if (!!other_scheduler)
         {        
             other_scheduler([sub, scheduler_thread_ids]()mutable
             {
-                boost::asynchronous::subscription::local_subscription_store_<arg0>.subscribe_scheduler(std::move(sub),std::move(scheduler_thread_ids));
+                boost::asynchronous::subscription::get_local_subscription_store_<arg0>().subscribe_scheduler(std::move(sub), std::move(scheduler_thread_ids));
             });
         }
     }
@@ -122,18 +129,18 @@ template <class Event>
 void unsubscribe_(std::uint64_t token, std::vector<boost::thread::id> scheduler_thread_ids)
 {
     // remove servant from list of internal subscribers
-    bool empty = boost::asynchronous::subscription::local_subscription_store_<Event>.unsubscribe(token);
+    bool empty = boost::asynchronous::subscription::get_local_subscription_store_<Event>().unsubscribe(token);
     if (empty)
     {
         // if it was the last servant subscribed to this event type for this scheduler
         // unsubscribe scheduler from other schedulers
-        for (auto& other_scheduler : boost::asynchronous::subscription::other_schedulers_)
+        for (auto& other_scheduler : boost::asynchronous::subscription::get_other_schedulers_())
         {
             if (!!other_scheduler)
             {
                 other_scheduler([scheduler_thread_ids]()mutable
                     {
-                        boost::asynchronous::subscription::local_subscription_store_<Event>.unsubscribe_scheduler(std::move(scheduler_thread_ids));
+                        boost::asynchronous::subscription::get_local_subscription_store_<Event>().unsubscribe_scheduler(std::move(scheduler_thread_ids));
                     });
             }
         }
@@ -145,7 +152,7 @@ void unsubscribe_(std::uint64_t token, std::vector<boost::thread::id> scheduler_
 template <class Event>
 bool publish_(Event&& e)
 {
-    return boost::asynchronous::subscription::local_subscription_store_<std::remove_cv_t<std::remove_reference_t<Event>>>.publish(std::forward<Event>(e));
+    return boost::asynchronous::subscription::get_local_subscription_store_<std::remove_cv_t<std::remove_reference_t<Event>>>().publish(std::forward<Event>(e));
 }
 
 

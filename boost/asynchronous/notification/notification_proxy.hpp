@@ -125,7 +125,7 @@ namespace boost { namespace asynchronous { namespace subscription
                         [others]()
                         {
                             // sad that we do not have append_range yet
-                            boost::asynchronous::subscription::other_schedulers_ = std::move(others);
+                            boost::asynchronous::subscription::get_other_schedulers_() = others;
                         });
                     boost::wait_for_all(fus.begin(), fus.end());
                 }

@@ -208,7 +208,7 @@ BOOST_AUTO_TEST_CASE( test_full_notification_log )
                 [p = std::move(p)]() mutable
                 {
                     p->set_value();
-                    BOOST_CHECK_MESSAGE(boost::asynchronous::subscription::local_subscription_store_<some_event>.m_scheduler_subscribers.empty(), "scheduler subscribers not removed");
+                    BOOST_CHECK_MESSAGE(boost::asynchronous::subscription::get_local_subscription_store_<some_event>().m_scheduler_subscribers.empty(), "scheduler subscribers not removed");
                 }, "check_local_removed", 0);
 
             fu.get();
@@ -470,7 +470,7 @@ BOOST_AUTO_TEST_CASE(test_full_notification_multiple_notification_buses_log)
                 [p = std::move(p)]() mutable
                 {
                     p->set_value();
-                    BOOST_CHECK_MESSAGE(boost::asynchronous::subscription::local_subscription_store_<some_event>.m_scheduler_subscribers.empty(), "scheduler subscribers not removed");
+                    BOOST_CHECK_MESSAGE(boost::asynchronous::subscription::get_local_subscription_store_<some_event>().m_scheduler_subscribers.empty(), "scheduler subscribers not removed");
                 }, "check_local_removed", 0);
         }
         fu.get();
