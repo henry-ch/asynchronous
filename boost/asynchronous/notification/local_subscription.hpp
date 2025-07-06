@@ -117,9 +117,9 @@ void subscribe_(Sub&& sub, std::vector<boost::thread::id> scheduler_thread_ids, 
     {
         if (!!other_scheduler)
         {        
-            other_scheduler([sub, scheduler_thread_ids]()mutable
+            other_scheduler([sub, scheduler_thread_ids]()
             {
-                boost::asynchronous::subscription::get_local_subscription_store_<arg0>().subscribe_scheduler(std::move(sub), std::move(scheduler_thread_ids));
+                boost::asynchronous::subscription::get_local_subscription_store_<arg0>().subscribe_scheduler(sub, scheduler_thread_ids);
             });
         }
     }
@@ -138,9 +138,9 @@ void unsubscribe_(std::uint64_t token, std::vector<boost::thread::id> scheduler_
         {
             if (!!other_scheduler)
             {
-                other_scheduler([scheduler_thread_ids]()mutable
+                other_scheduler([scheduler_thread_ids]()
                     {
-                        boost::asynchronous::subscription::get_local_subscription_store_<Event>().unsubscribe_scheduler(std::move(scheduler_thread_ids));
+                        boost::asynchronous::subscription::get_local_subscription_store_<Event>().unsubscribe_scheduler(scheduler_thread_ids);
                     });
             }
         }
