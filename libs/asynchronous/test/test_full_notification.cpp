@@ -76,13 +76,13 @@ struct Servant : boost::asynchronous::trackable_servant<>
 
         boost::thread::id threadid = boost::this_thread::get_id();
 
-        auto cb2 = [p2 = std::move(p2), threadid, this](some_event const& e)
+        auto cb2 = [p2 = std::move(p2), threadid, this](auto const& e)
             {
                 ++cb_called_;
                 BOOST_CHECK_MESSAGE(threadid == boost::this_thread::get_id(), "notification callback in wrong thread.");
                 p2->set_value(42);
             };
-        token2_ = this->subscribe(std::move(cb2));
+        token2_ = this->subscribe<some_event>(std::move(cb2));
 
         auto cb = [p = std::move(p), threadid, this](some_event const& e)
             {

@@ -14,6 +14,7 @@
 #include <memory>
 #include <map>
 #include <cstdint>
+#include <type_traits>
 
 #include <boost/asynchronous/detail/function_traits.hpp>
 #include <boost/asynchronous/callable_any.hpp>
@@ -24,13 +25,13 @@
 #include <boost/asynchronous/job_traits.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/asynchronous/any_scheduler.hpp>
-// #include <boost/signals2/signal.hpp>
 #include <boost/thread/thread.hpp>
 
 namespace boost { namespace asynchronous
 {
 //TODO in detail
 struct track{};
+
 
 // simple class for post and callback management
 // hides threadpool and weak scheduler, adds automatic trackability for callbacks and tasks
@@ -585,6 +586,30 @@ public:
     {
         return m_scheduler;
     }
+    template <class Sub, class Event>
+    boost::asynchronous::subscription_token subscribe_helper(Sub sub, const std::string& task_name, std::size_t prio)
+    {
+        auto sched = get_scheduler().lock();
+        if (sched.is_valid())
+        {
+            // wrap the functor in a wrapper, which will check for servant to be alive,
+            // similar to a safe callback. If not alive, subscription will automatically unsubscribe            
+            std::weak_ptr<track> tracking(m_tracking);
+            auto wrapped = [sub = this->make_safe_callback_helper<Event>(std::move(sub),false, task_name, prio), tracking = std::move(tracking)](Event const& ev)
+                {
+                    if (!tracking.expired())
+                    {
+                        sub(ev);
+                        return std::optional<bool>{true};
+                    }
+                    return std::optional<bool>{false};
+                };
+            // allow multiple calls to subscribe, though caller is responsible for not subscribing endless to an event
+            return sched.subscribe(std::move(wrapped));
+        }
+        // return invalid token
+        return boost::asynchronous::invalid_subscription_token();
+    }
 
     // token should be saved for unsubscribe
     // though forgetting an unsuscribe is usually ok as callback is wrapped by a make_safe_callback
@@ -596,29 +621,23 @@ public:
         const std::string& task_name = "", std::size_t prio = 0)
 #endif        
     {
-        auto sched = get_scheduler().lock();
-        if (sched.is_valid())
-        {
-            // wrap the functor in a wrapper, which will check for servant to be alive,
-            // similar to a safe callback. If not alive, subscription will automatically unsubscribe
+        using traits = boost::asynchronous::function_traits<Sub>;
+        using arg0 = typename traits::template remove_ref_cv_arg_<0>::type;
 
-            using traits = boost::asynchronous::function_traits<Sub>;
-            using arg0 = typename traits::template remove_ref_cv_arg_<0>::type;
-            std::weak_ptr<track> tracking(m_tracking);
-            auto wrapped = [sub = this->make_safe_callback(std::move(sub),task_name,prio), tracking = std::move(tracking)](arg0 const& ev)
-            {
-                if (!tracking.expired())
-                {
-                    sub(ev);
-                    return std::optional<bool>{true};
-                }
-                return std::optional<bool>{false};
-            };
-            // allow multiple calls to subscribe, though caller is responsible for not subscribing endless to an event
-            return sched.subscribe(std::move(wrapped));
-        }
-        // return invalid token
-        return boost::asynchronous::invalid_subscription_token();
+        return subscribe_helper<Sub,arg0>(std::move(sub), task_name, prio);       
+    }
+
+    template <class Event, class Sub>
+    auto subscribe(Sub sub,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+        const std::string& task_name, std::size_t prio) const
+#else
+        const std::string& task_name = "", std::size_t prio = 0)
+#endif        
+       -> typename std::enable_if<std::is_invocable_v<Sub, Event>,
+                                  boost::asynchronous::subscription_token>::type
+    {
+        return subscribe_helper<Sub, Event>(std::move(sub), task_name, prio);
     }
 
     // in most cases, unsubscribe is not necessary, a servant not processing an event will be removed from the subscribers list
