@@ -176,8 +176,8 @@ BOOST_AUTO_TEST_CASE( test_full_notification_log )
                                 (scheduler_notify,pool);
 
     std::vector<std::future<void>> notification_futures;
-    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1.get_weak_scheduler(), notification_ptr));
-    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification_ptr));
+    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1.get_weak_scheduler(), notification_ptr, true));
+    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification_ptr, true));
     boost::wait_for_all(notification_futures.begin(), notification_futures.end());
 
     std::shared_ptr<ServantProxy> proxy = std::make_shared<ServantProxy>(scheduler1,pool);
@@ -262,8 +262,8 @@ BOOST_AUTO_TEST_CASE(test_full_notification2_log)
         (scheduler_notify, pool);
 
     std::vector<std::future<void>> notification_futures;
-    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification_ptr));
-    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1.get_weak_scheduler(), notification_ptr));
+    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification_ptr, true));
+    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1.get_weak_scheduler(), notification_ptr, true));
     boost::wait_for_all(notification_futures.begin(), notification_futures.end());
 
 
@@ -301,8 +301,8 @@ BOOST_AUTO_TEST_CASE(test_full_notification_pub_and_sub_log)
 
 
     std::vector<std::future<void>> notification_futures;
-    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1.get_weak_scheduler(), notification_ptr));
-    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification_ptr));
+    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1.get_weak_scheduler(), notification_ptr, true));
+    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification_ptr, true));
     boost::wait_for_all(notification_futures.begin(), notification_futures.end());
 
     ServantProxy proxy(scheduler1, pool);
@@ -346,9 +346,9 @@ BOOST_AUTO_TEST_CASE(test_full_notification_multiple_subs_log)
 
 
     std::vector<std::future<void>> notification_futures;
-    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1.get_weak_scheduler(), notification_ptr));
-    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification_ptr));
-    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler3.get_weak_scheduler(), notification_ptr));
+    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1.get_weak_scheduler(), notification_ptr, true));
+    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification_ptr, true));
+    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler3.get_weak_scheduler(), notification_ptr, true));
     boost::wait_for_all(notification_futures.begin(), notification_futures.end());
 
     ServantProxy proxy(scheduler1, pool);
@@ -390,9 +390,9 @@ BOOST_AUTO_TEST_CASE(test_full_notification_threadpool_log)
 
 
     std::vector<std::future<void>> notification_futures;
-    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1.get_weak_scheduler(), notification_ptr));
-    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification_ptr));
-    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(pool.get_weak_scheduler(), notification_ptr));
+    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1.get_weak_scheduler(), notification_ptr, true));
+    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification_ptr, true));
+    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(pool.get_weak_scheduler(), notification_ptr, true));
     boost::wait_for_all(notification_futures.begin(), notification_futures.end());
 
     ServantProxy proxy(scheduler1, pool);
@@ -434,10 +434,10 @@ BOOST_AUTO_TEST_CASE(test_full_notification_multiple_notification_buses_log)
 
 
     std::vector<std::future<void>> notification_futures;
-    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1.get_weak_scheduler(), notification_ptr));
-    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification_ptr));
-    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1bis.get_weak_scheduler(), notification2_ptr));
-    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification2_ptr));
+    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1.get_weak_scheduler(), notification_ptr, true));
+    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification_ptr, true));
+    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1bis.get_weak_scheduler(), notification2_ptr, true));
+    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification2_ptr, true));
     boost::wait_for_all(notification_futures.begin(), notification_futures.end());
 
     std::shared_ptr<ServantProxy> proxy = std::make_shared<ServantProxy>(scheduler1, pool);

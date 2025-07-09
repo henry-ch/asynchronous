@@ -98,9 +98,10 @@ namespace boost { namespace asynchronous { namespace subscription
 
 
     // register a scheduler to a notification proxy, effectively adding it to its "event bus"
-    BOOST_ATTRIBUTE_NODISCARD auto register_scheduler_to_notification(auto wsched, auto notification_ptr)
+    // for unit tests, we can force waiting that the registration has been completed
+    BOOST_ATTRIBUTE_NODISCARD auto register_scheduler_to_notification(auto wsched, auto notification_ptr, bool wait_until_done = false)
     {
-        auto f = [wsched](std::function<void()> fct)
+        auto f = [wsched, wait_until_done](std::function<void()> fct)
             {
                 auto sched = wsched.lock();
                 if (sched.is_valid())
@@ -111,7 +112,10 @@ namespace boost { namespace asynchronous { namespace subscription
                             fct();
                         }
                     );
-                    boost::wait_for_all(fus.begin(), fus.end());
+                    if (wait_until_done)
+                    {
+                        boost::wait_for_all(fus.begin(), fus.end());
+                    }
                 }
             };
 
