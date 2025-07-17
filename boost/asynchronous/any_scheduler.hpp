@@ -298,7 +298,7 @@ public:
     template <class Event>
     void unsubscribe(boost::asynchronous::subscription_token token)
     {
-        (*my_ptr).unsubscribe<Event>(std::move(token));
+        (*my_ptr).template unsubscribe<Event>(std::move(token));
     }
 
     template <class Event>
