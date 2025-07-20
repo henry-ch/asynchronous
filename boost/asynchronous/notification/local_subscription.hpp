@@ -119,7 +119,7 @@ void subscribe_(Sub&& sub, std::vector<boost::thread::id> scheduler_thread_ids, 
         {        
             other_scheduler([sub, scheduler_thread_ids]()
             {
-                boost::asynchronous::subscription::get_local_subscription_store_<arg0>().subscribe_scheduler(sub, scheduler_thread_ids);
+                    boost::asynchronous::subscription::get_local_subscription_store_<arg0>().subscribe_scheduler(sub, scheduler_thread_ids);
             });
         }
     }

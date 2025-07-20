@@ -586,26 +586,76 @@ public:
     {
         return m_scheduler;
     }
-    template <class Sub, class Event>
+    template <class Sub, class Event, class ReturnType>
     boost::asynchronous::subscription_token subscribe_helper(Sub sub, const std::string& task_name, std::size_t prio)
     {
         auto sched = get_scheduler().lock();
+        auto weak = get_scheduler();
+        ;
         if (sched.is_valid())
         {
+            std::vector<boost::thread::id> ids = sched.thread_ids();
             // wrap the functor in a wrapper, which will check for servant to be alive,
             // similar to a safe callback. If not alive, subscription will automatically unsubscribe            
             std::weak_ptr<track> tracking(m_tracking);
-            auto wrapped = [sub = this->make_safe_callback_helper<Event>(std::move(sub),false, task_name, prio), tracking = std::move(tracking)](Event const& ev)
-                {
-                    if (!tracking.expired())
+            if constexpr (!std::is_same_v<ReturnType,bool>)
+            {
+                auto wrapped = [sub=std::move(sub), tracking = std::move(tracking), ids, weak, task_name, prio]
+                               (Event const& ev)
                     {
-                        sub(ev);
-                        return std::optional<bool>{true};
-                    }
-                    return std::optional<bool>{false};
-                };
-            // allow multiple calls to subscribe, though caller is responsible for not subscribing endless to an event
-            return sched.subscribe(std::move(wrapped));
+                        if (ids.size() == 1 && (ids[0] == boost::this_thread::get_id()))
+                        {
+                            if (!tracking.expired())
+                            {
+                                sub(ev);
+                                return std::optional<bool>{true};
+                            }
+                        }
+                        else
+                        {
+                            auto sched = weak.lock();
+                            if (sched.is_valid())
+                            {
+                                // not in our thread, post
+                                boost::asynchronous::post_future(sched,
+                                    boost::asynchronous::move_bind(boost::asynchronous::check_alive([sub](Event const& ev) 
+                                        {
+                                            sub(ev); 
+                                        }, tracking),ev),
+                                    task_name, prio);
+                                
+                            }
+                        }
+                        return std::optional<bool>{false};
+                    };
+                // allow multiple calls to subscribe, though caller is responsible for not subscribing endless to an event
+                return sched.subscribe(std::move(wrapped));
+            }
+            //else
+            //{
+            //    auto p = std::make_shared< std::promise<bool>>();
+            //    auto fu = std::make_shared<std::future<bool>> (p->get_future());
+            //    auto l = [p = std::move(p), sub = std::move(sub)](Event const& ev) mutable 
+            //        {
+            //            bool ret = sub(ev); 
+            //            p->set_value(ret); 
+            //        };
+            //    auto wrapped = [sub = this->make_safe_callback_helper<Event>(std::move(l), false, task_name, prio), 
+            //                    fu=std::move(fu),
+            //                    tracking = std::move(tracking)]
+            //                  (Event const& ev)mutable
+            //        {
+            //            if (!tracking.expired())
+            //            {
+            //                sub(ev);
+            //                bool res = fu->get();
+            //                return std::optional<bool>{res};
+            //            }
+            //            return std::optional<bool>{false};
+            //        };
+            //    // allow multiple calls to subscribe, though caller is responsible for not subscribing endless to an event
+            //    return sched.subscribe(std::move(wrapped));
+            //}
         }
         // return invalid token
         return boost::asynchronous::invalid_subscription_token();
@@ -623,8 +673,9 @@ public:
     {
         using traits = boost::asynchronous::function_traits<Sub>;
         using arg0 = typename traits::template remove_ref_cv_arg_<0>::type;
+        using return_t = typename traits::result_type;
 
-        return subscribe_helper<Sub,arg0>(std::move(sub), task_name, prio);       
+        return subscribe_helper<Sub,arg0, return_t>(std::move(sub), task_name, prio);
     }
 
     template <class Event, class Sub>
@@ -637,7 +688,7 @@ public:
        -> typename std::enable_if<std::is_invocable_v<Sub, Event>,
                                   boost::asynchronous::subscription_token>::type
     {
-        return subscribe_helper<Sub, Event>(std::move(sub), task_name, prio);
+        return subscribe_helper<Sub, Event,void>(std::move(sub), task_name, prio);
     }
 
     // in most cases, unsubscribe is not necessary, a servant not processing an event will be removed from the subscribers list
