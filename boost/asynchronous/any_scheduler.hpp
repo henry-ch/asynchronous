@@ -147,10 +147,10 @@ struct any_shared_scheduler_concept
     BOOST_ATTRIBUTE_NODISCARD virtual std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable)=0;
     virtual void enable_queue(std::size_t,bool) =0;
 
-    template <class Sub>
-    boost::asynchronous::subscription_token subscribe(Sub&& sub)
+    template <class Sub, class Internal>
+    boost::asynchronous::subscription_token subscribe(Sub&& sub, Internal&& internal)
     {
-        boost::asynchronous::subscription::subscribe_(std::forward<Sub>(sub), this->thread_ids(), m_token->token);
+        boost::asynchronous::subscription::subscribe_(std::forward<Sub>(sub), std::forward<Internal>(internal), this->thread_ids(), m_token->token);
         boost::asynchronous::subscription_token new_token = *(m_token);
         m_token->token++;
         return new_token;
@@ -289,10 +289,10 @@ public:
     {
         (*my_ptr).enable_queue(priority,enable);
     }
-    template <class Sub>
-    boost::asynchronous::subscription_token subscribe(Sub&& sub)
+    template <class Sub, class Internal>
+    boost::asynchronous::subscription_token subscribe(Sub&& sub, Internal&& internal)
     {
-        return (*my_ptr).subscribe(std::forward<Sub>(sub));
+        return (*my_ptr).subscribe(std::forward<Sub>(sub), std::forward<Internal>(internal));
     }
 
     template <class Event>
@@ -306,6 +306,13 @@ public:
     {
         boost::asynchronous::subscription::publish_(std::forward<Event>(e));
     }
+
+    template <class Event>
+    void publish_internal(Event&& e)
+    {
+        boost::asynchronous::subscription::publish_internal(std::forward<Event>(e));
+    }
+
 private:
     any_shared_scheduler_ptr<JOB> my_ptr;
 

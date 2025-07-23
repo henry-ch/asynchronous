@@ -15,6 +15,7 @@
 #include <optional>
 #include <future>
 #include <cstdint>
+#include <iostream>
 
 #include <boost/asynchronous/detail/function_traits.hpp>
 
@@ -34,7 +35,15 @@ struct local_subscription
     template <class Sub>
     void subscribe_scheduler(Sub&& sub, std::vector<boost::thread::id> scheduler_thread_ids)
     {
-        m_scheduler_subscribers.emplace_back(std::make_pair(std::move(scheduler_thread_ids), std::forward<Sub>(sub)));
+        // do not register double entries
+        if (std::find_if(m_scheduler_subscribers.begin(), m_scheduler_subscribers.end(),
+            [&](const auto& s)
+            {
+                return scheduler_thread_ids == s.first;
+            }) == m_scheduler_subscribers.end())
+        {
+            m_scheduler_subscribers.emplace_back(std::make_pair(std::move(scheduler_thread_ids), std::forward<Sub>(sub)));
+        }
     }
 
     // unsubscribes servant, return true if no more servant
@@ -67,11 +76,17 @@ struct local_subscription
         {
             sched_sub.second(e);
         }
+        return publish_internal(std::forward<Ev>(e));
+    }
+
+    template <class Ev>
+    bool publish_internal(Ev&& e)
+    {
         bool someone_handled = false;
-        for(auto it = m_internal_subscribers.begin(); it != m_internal_subscribers.end();)
+        for (auto it = m_internal_subscribers.begin(); it != m_internal_subscribers.end();)
         {
             auto handled = ((*it).second)(e);
-            if(handled.has_value() && handled.value())
+            if (handled.has_value() && handled.value())
             {
                 ++it;
                 someone_handled = true;
@@ -104,22 +119,24 @@ inline std::vector<std::function<void(std::function<void()>)>>& get_other_schedu
     return others;
 }
 
-template <class Sub>
-void subscribe_(Sub&& sub, std::vector<boost::thread::id> scheduler_thread_ids, std::uint64_t token)
+template <class Sub, class Internal>
+void subscribe_(Sub&& sub, Internal&& internal, std::vector<boost::thread::id> scheduler_thread_ids, std::uint64_t token)
 {
-    using traits = boost::asynchronous::function_traits<Sub>;
+    using traits = boost::asynchronous::function_traits<Internal>;
     using arg0 = typename traits::template remove_ref_cv_arg_<0>::type;
     static_assert(traits::arity == 1, "callback should have only one argument");
 
-    boost::asynchronous::subscription::get_local_subscription_store_<arg0>().subscribe(sub, token);
+    // register subscriber
+    boost::asynchronous::subscription::get_local_subscription_store_<arg0>().subscribe(std::move(sub), token);
 
+    // register our internal scheduler to other schedulers (will call publish)
     for (auto& other_scheduler : boost::asynchronous::subscription::get_other_schedulers_())
     {
         if (!!other_scheduler)
         {        
-            other_scheduler([sub, scheduler_thread_ids]()
+            other_scheduler([internal, scheduler_thread_ids]()
             {
-                    boost::asynchronous::subscription::get_local_subscription_store_<arg0>().subscribe_scheduler(sub, scheduler_thread_ids);
+                    boost::asynchronous::subscription::get_local_subscription_store_<arg0>().subscribe_scheduler(internal, scheduler_thread_ids);
             });
         }
     }
@@ -155,7 +172,11 @@ bool publish_(Event&& e)
     return boost::asynchronous::subscription::get_local_subscription_store_<std::remove_cv_t<std::remove_reference_t<Event>>>().publish(std::forward<Event>(e));
 }
 
-
+template <class Event>
+bool publish_internal(Event&& e)
+{
+    return boost::asynchronous::subscription::get_local_subscription_store_<std::remove_cv_t<std::remove_reference_t<Event>>>().publish_internal(std::forward<Event>(e));
+}
 
 }}}
 #endif // BOOST_ASYNCHRONOUS_NOTIFICATION_LOCAL_SUBSCRIPTION_HPP

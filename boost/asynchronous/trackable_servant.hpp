@@ -600,36 +600,38 @@ public:
             std::weak_ptr<track> tracking(m_tracking);
             if constexpr (!std::is_same_v<ReturnType,bool>)
             {
-                auto wrapped = [sub=std::move(sub), tracking = std::move(tracking), ids, weak, task_name, prio]
+                auto wrapped = [tracking, ids, weak, task_name, prio]
                                (Event const& ev)
-                    {
-                        if (ids.size() == 1 && (ids[0] == boost::this_thread::get_id()))
+                    {                        
+                        auto sched = weak.lock();
+                        if (sched.is_valid())
                         {
-                            if (!tracking.expired())
-                            {
-                                sub(ev);
-                                return std::optional<bool>{true};
-                            }
-                        }
-                        else
-                        {
-                            auto sched = weak.lock();
-                            if (sched.is_valid())
-                            {
-                                // not in our thread, post
-                                boost::asynchronous::post_future(sched,
-                                    boost::asynchronous::move_bind(boost::asynchronous::check_alive([sub](Event const& ev) 
+                            // not in our thread, post
+                            boost::asynchronous::post_future(sched,
+                                boost::asynchronous::move_bind(boost::asynchronous::check_alive([weak](Event const& ev) 
+                                    {
+                                        auto sched = weak.lock();
+                                        if (sched.is_valid())
                                         {
-                                            sub(ev); 
-                                        }, tracking),ev),
-                                    task_name, prio);
-                                
-                            }
+                                            sched.publish_internal(ev);
+                                        }
+                                    }, tracking),ev),
+                                task_name, prio);                                
+                        }                        
+                        return std::optional<bool>{false};
+                    };
+
+                auto sub_ = [sub=std::move(sub), tracking](Event const& ev)
+                    {
+                        if (!tracking.expired())
+                        {
+                            sub(ev);
+                            return std::optional<bool>{true};
                         }
                         return std::optional<bool>{false};
                     };
                 // allow multiple calls to subscribe, though caller is responsible for not subscribing endless to an event
-                return sched.subscribe(std::move(wrapped));
+                return sched.subscribe(std::move(sub_),std::move(wrapped));
             }
             //else
             //{
