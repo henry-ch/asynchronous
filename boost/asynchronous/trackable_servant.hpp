@@ -598,29 +598,33 @@ public:
             // wrap the functor in a wrapper, which will check for servant to be alive,
             // similar to a safe callback. If not alive, subscription will automatically unsubscribe            
             std::weak_ptr<track> tracking(m_tracking);
+
+            // publishing to other schedulers will mean calling this function, 
+            // which will post_future to our scheduler
+            auto wrapped = [tracking, ids, weak, task_name, prio]
+            (Event const& ev)
+                {
+                    auto sched = weak.lock();
+                    if (sched.is_valid())
+                    {
+                        // not in our thread, post
+                        boost::asynchronous::post_future(sched,
+                            boost::asynchronous::move_bind(boost::asynchronous::check_alive([weak](Event const& ev)
+                                {
+                                    auto sched = weak.lock();
+                                    if (sched.is_valid())
+                                    {
+                                        sched.publish_internal(ev);
+                                    }
+                                }, tracking), ev),
+                            task_name, prio);
+                    }
+                    return std::optional<bool>{false};
+                };
+            // register to our local notification the subscriber functor
             if constexpr (!std::is_same_v<ReturnType,bool>)
             {
-                auto wrapped = [tracking, ids, weak, task_name, prio]
-                               (Event const& ev)
-                    {                        
-                        auto sched = weak.lock();
-                        if (sched.is_valid())
-                        {
-                            // not in our thread, post
-                            boost::asynchronous::post_future(sched,
-                                boost::asynchronous::move_bind(boost::asynchronous::check_alive([weak](Event const& ev) 
-                                    {
-                                        auto sched = weak.lock();
-                                        if (sched.is_valid())
-                                        {
-                                            sched.publish_internal(ev);
-                                        }
-                                    }, tracking),ev),
-                                task_name, prio);                                
-                        }                        
-                        return std::optional<bool>{false};
-                    };
-
+                // subscribe will be used until unsubscribed or servant gone
                 auto sub_ = [sub=std::move(sub), tracking](Event const& ev)
                     {
                         if (!tracking.expired())
@@ -630,34 +634,21 @@ public:
                         }
                         return std::optional<bool>{false};
                     };
-                // allow multiple calls to subscribe, though caller is responsible for not subscribing endless to an event
-                return sched.subscribe(std::move(sub_),std::move(wrapped));
+                return sched.subscribe(std::move(sub_), std::move(wrapped));
             }
-            //else
-            //{
-            //    auto p = std::make_shared< std::promise<bool>>();
-            //    auto fu = std::make_shared<std::future<bool>> (p->get_future());
-            //    auto l = [p = std::move(p), sub = std::move(sub)](Event const& ev) mutable 
-            //        {
-            //            bool ret = sub(ev); 
-            //            p->set_value(ret); 
-            //        };
-            //    auto wrapped = [sub = this->make_safe_callback_helper<Event>(std::move(l), false, task_name, prio), 
-            //                    fu=std::move(fu),
-            //                    tracking = std::move(tracking)]
-            //                  (Event const& ev)mutable
-            //        {
-            //            if (!tracking.expired())
-            //            {
-            //                sub(ev);
-            //                bool res = fu->get();
-            //                return std::optional<bool>{res};
-            //            }
-            //            return std::optional<bool>{false};
-            //        };
-            //    // allow multiple calls to subscribe, though caller is responsible for not subscribing endless to an event
-            //    return sched.subscribe(std::move(wrapped));
-            //}
+            else
+            {
+                // single-shot subscription
+                auto sub_ = [sub = std::move(sub), tracking](Event const& ev)
+                    {
+                        if (!tracking.expired())
+                        {
+                            return std::optional<bool>{sub(ev)};
+                        }
+                        return std::optional<bool>{false};
+                    };
+                return sched.subscribe(std::move(sub_), std::move(wrapped));
+            }
         }
         // return invalid token
         return boost::asynchronous::invalid_subscription_token();
