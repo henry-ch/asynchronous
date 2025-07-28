@@ -40,6 +40,16 @@ struct some_event
     int data = 0;
 };
 
+
+// helper to make sure a subscribe has completed
+void wait_for_subscribe(auto& proxy)
+{
+    auto p = std::make_shared< std::promise<void>>();
+    auto fu = p->get_future();
+    boost::asynchronous::post_future(proxy, [p = std::move(p)]()mutable {p->set_value(); });
+    fu.get();
+}
+
 // pure subscriber
 struct Servant : boost::asynchronous::trackable_servant<servant_job, servant_job>
 {
@@ -68,11 +78,37 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job, servant_job
 
         return fu;
     }
+
+    std::future <int> wait_for_some_event_single_shot()
+    {
+        std::shared_ptr<std::promise<int> > p(new std::promise<int>);
+        auto fu = p->get_future();
+        boost::thread::id threadid = boost::this_thread::get_id();
+
+        auto cb = [p = std::move(p), threadid, this](some_event const& e)
+            {
+                ++cb_called_;
+                BOOST_CHECK_MESSAGE(threadid == boost::this_thread::get_id(), "notification callback in wrong thread.");
+                p->set_value(42);
+                // false => do not keep me subscribed
+                return false;
+            };
+        token_ = this->subscribe(std::move(cb));
+
+        return fu;
+    }
+
     void force_unsubscribe()
     {
         unsubscribe<some_event>(token_);
     }
 
+    int cb_called()const
+    {
+        return cb_called_;
+    }
+
+    int cb_called_ = 0;
     boost::asynchronous::subscription_token token_;
 
 };
@@ -88,7 +124,9 @@ public:
     BOOST_ASYNC_SERVANT_POST_DTOR_LOG("ServantProxy::dtor", 1);
 
     BOOST_ASYNC_FUTURE_MEMBER_LOG(wait_for_some_event,"wait_for_some_event",1)
+    BOOST_ASYNC_FUTURE_MEMBER_LOG(wait_for_some_event_single_shot, "wait_for_some_event_single_shot", 1)
     BOOST_ASYNC_FUTURE_MEMBER_LOG(force_unsubscribe,"force_unsubscribe",1)
+    BOOST_ASYNC_FUTURE_MEMBER_LOG(cb_called, "cb_called", 1)
 
 };
 
@@ -475,6 +513,63 @@ BOOST_AUTO_TEST_CASE(test_full_notification_multiple_notification_buses_log)
         }
         fu.get();
 
+    }
+    catch (...)
+    {
+        BOOST_FAIL("unexpected exception");
+    }
+}
+
+BOOST_AUTO_TEST_CASE(test_full_notification_auto_unsubscribe_log)
+{
+    auto scheduler1 = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+        boost::asynchronous::guarded_deque<servant_job>>>();
+    auto scheduler2 = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+        boost::asynchronous::guarded_deque<servant_job>>>();
+    auto pool = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<
+        boost::asynchronous::guarded_deque<servant_job>>>(2);
+
+    auto scheduler_notify = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+        boost::asynchronous::guarded_deque<servant_job>>>();
+    auto notification_ptr = std::make_shared<boost::asynchronous::subscription::notification_proxy<servant_job>>
+        (scheduler_notify, pool);
+
+    std::vector<std::future<void>> notification_futures;
+    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1.get_weak_scheduler(), notification_ptr, true));
+    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification_ptr, true));
+    boost::wait_for_all(notification_futures.begin(), notification_futures.end());
+
+
+    std::shared_ptr<ServantProxy> proxy = std::make_shared<ServantProxy>(scheduler1, pool);
+    ServantProxy2 proxy2(scheduler2, pool);
+
+    try
+    {
+
+        auto res_fu = proxy->wait_for_some_event_single_shot().get();
+        proxy2.trigger_some_event().get();
+        proxy2.trigger_some_event().get();
+
+        auto res = boost::asynchronous::recursive_future_get(std::move(res_fu));
+        BOOST_CHECK_MESSAGE(res == 42, "invalid result");
+
+        // servant gone, check for removal
+        wait_for_subscribe(scheduler2);
+        auto wsched = scheduler1.get_weak_scheduler();
+        auto sched = wsched.lock();
+        std::shared_ptr<std::promise<void> > p(new std::promise<void>);
+        auto fu = p->get_future();
+        if (sched.is_valid())
+        {
+            boost::asynchronous::post_future(sched,[p = std::move(p)]() mutable
+                {
+                    p->set_value();
+                    BOOST_CHECK_MESSAGE(boost::asynchronous::subscription::get_local_subscription_store_<some_event>().m_internal_subscribers.empty(), "internal subscribers not removed");
+                }, "check_local_removed", 0);
+        }
+        fu.get();
+
+        BOOST_CHECK_MESSAGE(proxy->cb_called().get() == 1, "got wrong number of events");
     }
     catch (...)
     {
