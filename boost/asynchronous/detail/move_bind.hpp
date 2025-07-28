@@ -45,7 +45,7 @@ namespace boost { namespace asynchronous
             static auto doit(Func* f, std::tuple<Params...>* t, Args... args)
             -> decltype(helper<Tuple,i-1>::doit(f,t,std::move(std::get<i-1>(*t)),std::move(args)...))
             {
-                return helper<Tuple,i-1>::template doit(f,t,std::move(std::get<i-1>(*t)),std::move(args)...);
+                return helper<Tuple,i-1>::doit(f,t,std::move(std::get<i-1>(*t)),std::move(args)...);
             }
         };
         template <class Tuple>
