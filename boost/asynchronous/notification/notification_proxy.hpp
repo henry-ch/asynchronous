@@ -107,7 +107,7 @@ namespace boost { namespace asynchronous { namespace subscription
                 if (sched.is_valid())
                 {
                     // servants need a higher prios, and they are running in single thread schedulers
-                    // TODO is there a scenario, where threadppols would have the same issue?
+                    // TODO solution for threadpools
                     if (sched.thread_ids().size() > 1)
                     {
                         auto fus = sched.execute_in_all_threads(
@@ -123,7 +123,8 @@ namespace boost { namespace asynchronous { namespace subscription
                     }
                     else
                     {
-                        boost::asynchronous::post_future(sched, [fct]() {fct(); }, "notification_proxy::register_scheduler_to_notification", 0);
+                        // post with highest prio
+                        boost::asynchronous::post_future(sched, [fct]() {fct(); }, "notification_proxy::register_scheduler_to_notification", 1);
                     }
                 }
             };
