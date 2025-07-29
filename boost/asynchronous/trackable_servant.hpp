@@ -625,7 +625,7 @@ public:
             if constexpr (!std::is_same_v<ReturnType,bool>)
             {
                 // subscribe will be used until unsubscribed or servant gone
-                auto sub_ = [sub=std::move(sub), tracking](Event const& ev)
+                auto sub_ = [sub=std::move(sub), tracking](Event const& ev)mutable
                     {
                         if (!tracking.expired())
                         {
@@ -639,7 +639,7 @@ public:
             else
             {
                 // single-shot subscription
-                auto sub_ = [sub = std::move(sub), tracking](Event const& ev)
+                auto sub_ = [sub = std::move(sub), tracking](Event const& ev)mutable
                     {
                         if (!tracking.expired())
                         {
@@ -690,7 +690,10 @@ public:
     void unsubscribe(boost::asynchronous::subscription_token token)
     {
         auto sched = get_scheduler().lock();
-        sched.template unsubscribe<Event>(token);       
+        if (sched.is_valid())
+        {
+            sched.template unsubscribe<Event>(token);
+        }
     }
 
     template <class Event>

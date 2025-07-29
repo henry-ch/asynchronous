@@ -26,10 +26,29 @@ struct local_subscription
 {
     using subscriber_t = std::function<std::optional<bool>(Event const&)>;
     
+    using internal_subscriber_t = std::pair<
+        std::function<std::optional<bool>(Event const&)>, // subscriber
+        bool>; // true: to be removed 
+
+    void cleanup_subscriber()
+    {
+        for (auto it = m_internal_subscribers.begin(); it != m_internal_subscribers.end(); ) 
+        {
+            if ((*it).second.second)
+            {
+                it = m_internal_subscribers.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+    }
+
     template <class Sub>
     void subscribe(Sub&& sub, std::int64_t token)
     {
-        m_internal_subscribers.insert_or_assign(token, std::forward<Sub>(sub));
+        m_internal_subscribers.insert_or_assign(token, std::make_pair(std::forward<Sub>(sub),false));
     }
 
     template <class Sub>
@@ -49,12 +68,25 @@ struct local_subscription
     // unsubscribes servant, return true if no more servant
     bool unsubscribe(std::int64_t token)
     {
-        auto it = m_internal_subscribers.find(token);
-        if (it != m_internal_subscribers.end())
+        if (m_in_publish)
         {
-            m_internal_subscribers.erase(it);
+            // only mark
+            auto it = m_internal_subscribers.find(token);
+            if (it != m_internal_subscribers.end())
+            {
+                (*it).second.second = true; // mark as removeable
+            }
         }
-        // something left?
+        else
+        {
+            auto it = m_internal_subscribers.find(token);
+            if (it != m_internal_subscribers.end())
+            {
+                // we can immediately remove
+                m_internal_subscribers.erase(it);
+            }
+        }
+        // something left? As only marked as removeable, real removal will need a publish
         return m_internal_subscribers.empty();
     }
 
@@ -82,26 +114,32 @@ struct local_subscription
     template <class Ev>
     bool publish_internal(Ev&& e)
     {
+        m_in_publish = true;
         bool someone_handled = false;
-        for (auto it = m_internal_subscribers.begin(); it != m_internal_subscribers.end();)
+        for (auto it = m_internal_subscribers.begin(); it != m_internal_subscribers.end();++it)
         {
-            auto handled = ((*it).second)(e);
-            if (handled.has_value() && handled.value())
+            if ((*it).second.first && !(*it).second.second)
             {
-                ++it;
-                someone_handled = true;
-            }
-            else
-            {
-                it = m_internal_subscribers.erase(it);
-                // add here unsusbscribe to schedulers if no subscribers
+                auto handled = ((*it).second.first)(e);
+                if (handled.has_value() && handled.value())
+                {
+                    someone_handled = true;
+                }
+                else
+                {
+                    (*it).second.second = true;
+                }
             }
         }
+        // now we can safely cleanup
+        cleanup_subscriber();
+        m_in_publish = false;
         return someone_handled;
     }
 
-    std::map<std::int64_t, subscriber_t> m_internal_subscribers;
-    std::vector<std::pair<std::vector<boost::thread::id>, subscriber_t>> m_scheduler_subscribers;
+    bool                                                                    m_in_publish = false;
+    std::map<std::int64_t, internal_subscriber_t>                           m_internal_subscribers;
+    std::vector<std::pair<std::vector<boost::thread::id>, subscriber_t>>    m_scheduler_subscribers;
 };
 
 // inline thread local subscriptions
