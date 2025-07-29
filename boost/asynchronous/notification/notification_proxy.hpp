@@ -106,15 +106,24 @@ namespace boost { namespace asynchronous { namespace subscription
                 auto sched = wsched.lock();
                 if (sched.is_valid())
                 {
-                    auto fus = sched.execute_in_all_threads(
-                        [fct]()
-                        {
-                            fct();
-                        }
-                    );
-                    if (wait_until_done)
+                    // servants need a higher prios, and they are running in single thread schedulers
+                    // TODO is there a scenario, where threadppols would have the same issue?
+                    if (sched.thread_ids().size() > 1)
                     {
-                        boost::wait_for_all(fus.begin(), fus.end());
+                        auto fus = sched.execute_in_all_threads(
+                            [fct]()
+                            {
+                                fct();
+                            }
+                        );
+                        if (wait_until_done)
+                        {
+                            boost::wait_for_all(fus.begin(), fus.end());
+                        }
+                    }
+                    else
+                    {
+                        boost::asynchronous::post_future(sched, [fct]() {fct(); }, "notification_proxy::register_scheduler_to_notification", 0);
                     }
                 }
             };

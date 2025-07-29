@@ -681,7 +681,6 @@ BOOST_AUTO_TEST_CASE(test_full_notification_self_unsubscribe)
 
         auto res_fu = proxy->wait_for_some_event_self_unsubscribe().get();
         proxy2.trigger_some_event().get();
-        //proxy2.trigger_some_event().get();
 
         auto res = boost::asynchronous::recursive_future_get(std::move(res_fu));
         BOOST_CHECK_MESSAGE(res == 42, "invalid result");
