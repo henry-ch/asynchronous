@@ -619,6 +619,11 @@ public:
                                 }, tracking), ev),
                             task_name, prio);
                     }
+                    else
+                    {
+                        // we can safely unsubscribe scheduler
+                        boost::asynchronous::subscription::get_local_subscription_store_<Event>().unsubscribe_scheduler(ids);
+                    }
                     return std::optional<bool>{false};
                 };
             // register to our local notification the subscriber functor
