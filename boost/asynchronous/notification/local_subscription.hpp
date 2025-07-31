@@ -55,13 +55,20 @@ struct local_subscription
     void subscribe_scheduler(Sub&& sub, std::vector<boost::thread::id> scheduler_thread_ids)
     {
         // do not register double entries
-        if (std::find_if(m_scheduler_subscribers.begin(), m_scheduler_subscribers.end(),
+        auto it = std::find_if(m_scheduler_subscribers.begin(), m_scheduler_subscribers.end(),
             [&](const auto& s)
             {
                 return scheduler_thread_ids == s.first;
-            }) == m_scheduler_subscribers.end())
+            });
+
+        if (it == m_scheduler_subscribers.end())
         {
             m_scheduler_subscribers.emplace_back(std::make_pair(std::move(scheduler_thread_ids), std::forward<Sub>(sub)));
+        }
+        else
+        {
+            // replace entry
+            *it = std::make_pair(std::move(scheduler_thread_ids), std::forward<Sub>(sub));
         }
     }
 
