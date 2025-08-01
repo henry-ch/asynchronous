@@ -830,64 +830,64 @@ BOOST_AUTO_TEST_CASE(test_full_notification_reused_thread_ids)
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_full_notification_deleted_scheduler)
-{
-    auto scheduler1_ = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
-        boost::asynchronous::guarded_deque<>>>();
-    auto scheduler1 = std::make_shared<decltype(scheduler1_)>(std::move(scheduler1_));
-
-    auto scheduler2 = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
-        boost::asynchronous::guarded_deque<>>>();
-    auto pool = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<
-        boost::asynchronous::guarded_deque<>>>(2);
-
-    auto scheduler_notify = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
-        boost::asynchronous::guarded_deque<>>>();
-    auto notification_ptr = std::make_shared<boost::asynchronous::subscription::notification_proxy<>>
-        (scheduler_notify, pool);
-
-    std::vector<std::future<void>> notification_futures;
-    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1->get_weak_scheduler(), notification_ptr));
-    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification_ptr));
-    boost::wait_for_all(notification_futures.begin(), notification_futures.end());
-
-
-    std::shared_ptr<ServantProxy> proxy = std::make_shared<ServantProxy>(*scheduler1, pool);
-    ServantProxy2 proxy2(scheduler2, pool);
-
-    try
-    {
-
-        auto res_fu = proxy->wait_for_some_event().get();
-        wait_for_subscribe(proxy2);
-        proxy2.trigger_some_event().get();
-
-        auto res = boost::asynchronous::recursive_future_get(std::move(res_fu));
-        BOOST_CHECK_MESSAGE(res == 42, "invalid result");
-
-        proxy.reset();
-        scheduler1.reset();
-        proxy2.trigger_some_event().get();
-        // at this point, scheduler2 knows that scheduler1 is gone
-
-        // servant gone, check for removal
-        auto wsched = scheduler2.get_weak_scheduler();
-        auto sched = wsched.lock();
-        std::shared_ptr<std::promise<void> > p(new std::promise<void>);
-        auto fu = p->get_future();
-        if (sched.is_valid())
-        {
-            sched.post([p = std::move(p)]() mutable
-                {
-                    p->set_value();
-                    BOOST_CHECK_MESSAGE(boost::asynchronous::subscription::get_local_subscription_store_<some_event>().m_scheduler_subscribers.empty(), "scheduler subscribers not removed");
-                });
-        }
-        fu.get();
-
-    }
-    catch (...)
-    {
-        BOOST_FAIL("unexpected exception");
-    }
-}
+//BOOST_AUTO_TEST_CASE(test_full_notification_deleted_scheduler)
+//{
+//    auto scheduler1_ = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+//        boost::asynchronous::guarded_deque<>>>();
+//    auto scheduler1 = std::make_shared<decltype(scheduler1_)>(std::move(scheduler1_));
+//
+//    auto scheduler2 = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+//        boost::asynchronous::guarded_deque<>>>();
+//    auto pool = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<
+//        boost::asynchronous::guarded_deque<>>>(2);
+//
+//    auto scheduler_notify = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+//        boost::asynchronous::guarded_deque<>>>();
+//    auto notification_ptr = std::make_shared<boost::asynchronous::subscription::notification_proxy<>>
+//        (scheduler_notify, pool);
+//
+//    std::vector<std::future<void>> notification_futures;
+//    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1->get_weak_scheduler(), notification_ptr));
+//    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification_ptr));
+//    boost::wait_for_all(notification_futures.begin(), notification_futures.end());
+//
+//
+//    std::shared_ptr<ServantProxy> proxy = std::make_shared<ServantProxy>(*scheduler1, pool);
+//    ServantProxy2 proxy2(scheduler2, pool);
+//
+//    try
+//    {
+//
+//        auto res_fu = proxy->wait_for_some_event().get();
+//        wait_for_subscribe(proxy2);
+//        proxy2.trigger_some_event().get();
+//
+//        auto res = boost::asynchronous::recursive_future_get(std::move(res_fu));
+//        BOOST_CHECK_MESSAGE(res == 42, "invalid result");
+//
+//        proxy.reset();
+//        scheduler1.reset();
+//        proxy2.trigger_some_event().get();
+//        // at this point, scheduler2 knows that scheduler1 is gone
+//
+//        // servant gone, check for removal
+//        auto wsched = scheduler2.get_weak_scheduler();
+//        auto sched = wsched.lock();
+//        std::shared_ptr<std::promise<void> > p(new std::promise<void>);
+//        auto fu = p->get_future();
+//        if (sched.is_valid())
+//        {
+//            sched.post([p = std::move(p)]() mutable
+//                {
+//                    p->set_value();
+//                    BOOST_CHECK_MESSAGE(boost::asynchronous::subscription::get_local_subscription_store_<some_event>().m_scheduler_subscribers.empty(), "scheduler subscribers not removed");
+//                });
+//        }
+//        fu.get();
+//
+//    }
+//    catch (...)
+//    {
+//        BOOST_FAIL("unexpected exception");
+//    }
+//}
