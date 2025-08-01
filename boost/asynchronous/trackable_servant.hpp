@@ -621,8 +621,9 @@ public:
                     }
                     else
                     {
+                        // remove until better solution, linux seems to reuse thred ids
                         // we can safely unsubscribe scheduler
-                        boost::asynchronous::subscription::get_local_subscription_store_<Event>().unsubscribe_scheduler(ids);
+                        //boost::asynchronous::subscription::get_local_subscription_store_<Event>().unsubscribe_scheduler(ids);
                     }
                     return std::optional<bool>{false};
                 };
