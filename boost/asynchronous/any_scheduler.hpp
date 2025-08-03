@@ -28,6 +28,8 @@
 #include <chrono>
 #include <boost/thread/thread.hpp>
 #include <boost/config.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/random_generator.hpp>
 
 #include <boost/type_erasure/any.hpp>
 #include <boost/type_erasure/builtin.hpp>
@@ -128,6 +130,12 @@ template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
 struct any_shared_scheduler_concept
 {
     virtual ~any_shared_scheduler_concept(){}
+    any_shared_scheduler_concept() = default;
+    any_shared_scheduler_concept(any_shared_scheduler_concept const& other) = default;
+    any_shared_scheduler_concept(any_shared_scheduler_concept&& other) = default;
+    any_shared_scheduler_concept& operator= (any_shared_scheduler_concept const& other) = default;
+    any_shared_scheduler_concept& operator= (any_shared_scheduler_concept&& other) = default;
+
     virtual void post(JOB) =0;
     virtual void post(JOB, std::size_t) =0;
     virtual boost::asynchronous::any_interruptible interruptible_post(JOB) =0;
@@ -147,10 +155,15 @@ struct any_shared_scheduler_concept
     BOOST_ATTRIBUTE_NODISCARD virtual std::vector<std::future<void>> execute_in_all_threads(boost::asynchronous::any_callable)=0;
     virtual void enable_queue(std::size_t,bool) =0;
 
+    boost::uuids::uuid get_uuid() const
+    {
+        return m_uuid;
+    }
+
     template <class Sub, class Internal>
     boost::asynchronous::subscription_token subscribe(Sub&& sub, Internal&& internal)
     {
-        boost::asynchronous::subscription::subscribe_(std::forward<Sub>(sub), std::forward<Internal>(internal), this->thread_ids(), m_token->token);
+        boost::asynchronous::subscription::subscribe_(std::forward<Sub>(sub), std::forward<Internal>(internal), this->get_uuid(), m_token->token);
         boost::asynchronous::subscription_token new_token = *(m_token);
         m_token->token++;
         return new_token;
@@ -159,11 +172,11 @@ struct any_shared_scheduler_concept
     template <class Event>
     void unsubscribe(boost::asynchronous::subscription_token token)
     {
-        boost::asynchronous::subscription::unsubscribe_<Event>(token.token, this->thread_ids());
+        boost::asynchronous::subscription::unsubscribe_<Event>(token.token, this->get_uuid());
     }
 
     std::shared_ptr<boost::asynchronous::subscription_token>   m_token = std::make_shared<boost::asynchronous::subscription_token>(boost::asynchronous::subscription_token{ 0 });
-
+    boost::uuids::uuid m_uuid = boost::uuids::random_generator()();
 };
 
 // concept for shared pointer to a scheduler
@@ -289,6 +302,12 @@ public:
     {
         (*my_ptr).enable_queue(priority,enable);
     }
+
+    boost::uuids::uuid get_uuid() const
+    {
+        return (*my_ptr).get_uuid();
+    }
+
     template <class Sub, class Internal>
     boost::asynchronous::subscription_token subscribe(Sub&& sub, Internal&& internal)
     {

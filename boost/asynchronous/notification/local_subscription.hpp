@@ -18,6 +18,7 @@
 #include <iostream>
 
 #include <boost/asynchronous/detail/function_traits.hpp>
+#include <boost/uuid/uuid.hpp>
 
 namespace boost { namespace asynchronous { namespace subscription
 {
@@ -52,23 +53,23 @@ struct local_subscription
     }
 
     template <class Sub>
-    void subscribe_scheduler(Sub&& sub, std::vector<boost::thread::id> scheduler_thread_ids)
+    void subscribe_scheduler(Sub&& sub, boost::uuids::uuid scheduler_id)
     {
         // do not register double entries
         auto it = std::find_if(m_scheduler_subscribers.begin(), m_scheduler_subscribers.end(),
             [&](const auto& s)
             {
-                return scheduler_thread_ids == s.first;
+                return scheduler_id == s.first;
             });
 
         if (it == m_scheduler_subscribers.end())
         {
-            m_scheduler_subscribers.emplace_back(std::make_pair(std::move(scheduler_thread_ids), std::forward<Sub>(sub)));
+            m_scheduler_subscribers.emplace_back(std::make_pair(std::move(scheduler_id), std::forward<Sub>(sub)));
         }
         else
         {
             // replace entry
-            *it = std::make_pair(std::move(scheduler_thread_ids), std::forward<Sub>(sub));
+            *it = std::make_pair(std::move(scheduler_id), std::forward<Sub>(sub));
         }
     }
 
@@ -97,11 +98,11 @@ struct local_subscription
         return m_internal_subscribers.empty();
     }
 
-    void unsubscribe_scheduler(std::vector<boost::thread::id> scheduler_thread_ids)
+    void unsubscribe_scheduler(boost::uuids::uuid scheduler_id)
     {
         m_scheduler_subscribers.erase(
             std::remove_if(m_scheduler_subscribers.begin(), m_scheduler_subscribers.end(),
-                [&](auto const& sub) {return sub.first == scheduler_thread_ids; }),
+                [&](auto const& sub) {return sub.first == scheduler_id; }),
             m_scheduler_subscribers.end());
     }
     
@@ -144,9 +145,9 @@ struct local_subscription
         return someone_handled;
     }
 
-    bool                                                                    m_in_publish = false;
-    std::map<std::int64_t, internal_subscriber_t>                           m_internal_subscribers;
-    std::vector<std::pair<std::vector<boost::thread::id>, subscriber_t>>    m_scheduler_subscribers;
+    bool                                                        m_in_publish = false;
+    std::map<std::int64_t, internal_subscriber_t>               m_internal_subscribers;
+    std::vector<std::pair<boost::uuids::uuid, subscriber_t>>    m_scheduler_subscribers;
 };
 
 // inline thread local subscriptions
@@ -165,7 +166,7 @@ inline std::vector<std::function<void(std::function<void()>)>>& get_other_schedu
 }
 
 template <class Sub, class Internal>
-void subscribe_(Sub&& sub, Internal&& internal, std::vector<boost::thread::id> scheduler_thread_ids, std::uint64_t token)
+void subscribe_(Sub&& sub, Internal&& internal, boost::uuids::uuid scheduler_id, std::uint64_t token)
 {
     using traits = boost::asynchronous::function_traits<Internal>;
     using arg0 = typename traits::template remove_ref_cv_arg_<0>::type;
@@ -179,16 +180,16 @@ void subscribe_(Sub&& sub, Internal&& internal, std::vector<boost::thread::id> s
     {
         if (!!other_scheduler)
         {        
-            other_scheduler([internal, scheduler_thread_ids]()
+            other_scheduler([internal, scheduler_id]()
             {
-                    boost::asynchronous::subscription::get_local_subscription_store_<arg0>().subscribe_scheduler(internal, scheduler_thread_ids);
+                    boost::asynchronous::subscription::get_local_subscription_store_<arg0>().subscribe_scheduler(internal, scheduler_id);
             });
         }
     }
 }
 
 template <class Event>
-void unsubscribe_(std::uint64_t token, std::vector<boost::thread::id> scheduler_thread_ids)
+void unsubscribe_(std::uint64_t token, boost::uuids::uuid scheduler_id)
 {
     // remove servant from list of internal subscribers
     bool empty = boost::asynchronous::subscription::get_local_subscription_store_<Event>().unsubscribe(token);
@@ -200,9 +201,9 @@ void unsubscribe_(std::uint64_t token, std::vector<boost::thread::id> scheduler_
         {
             if (!!other_scheduler)
             {
-                other_scheduler([scheduler_thread_ids]()
+                other_scheduler([scheduler_id]()
                     {
-                        boost::asynchronous::subscription::get_local_subscription_store_<Event>().unsubscribe_scheduler(scheduler_thread_ids);
+                        boost::asynchronous::subscription::get_local_subscription_store_<Event>().unsubscribe_scheduler(scheduler_id);
                     });
             }
         }

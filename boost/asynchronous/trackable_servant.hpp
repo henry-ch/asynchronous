@@ -591,17 +591,16 @@ public:
     {
         auto sched = get_scheduler().lock();
         auto weak = get_scheduler();
-        ;
         if (sched.is_valid())
         {
-            std::vector<boost::thread::id> ids = sched.thread_ids();
+            auto uid = sched.get_uuid();
             // wrap the functor in a wrapper, which will check for servant to be alive,
             // similar to a safe callback. If not alive, subscription will automatically unsubscribe            
             std::weak_ptr<track> tracking(m_tracking);
 
             // publishing to other schedulers will mean calling this function, 
             // which will post_future to our scheduler
-            auto wrapped = [tracking, ids, weak, task_name, prio]
+            auto wrapped = [tracking, uid, weak, task_name, prio]
             (Event const& ev)
                 {
                     auto sched = weak.lock();
@@ -621,9 +620,8 @@ public:
                     }
                     else
                     {
-                        // remove until better solution, linux seems to reuse thred ids
                         // we can safely unsubscribe scheduler
-                        //boost::asynchronous::subscription::get_local_subscription_store_<Event>().unsubscribe_scheduler(ids);
+                        boost::asynchronous::subscription::get_local_subscription_store_<Event>().unsubscribe_scheduler(uid);
                     }
                     return std::optional<bool>{false};
                 };
