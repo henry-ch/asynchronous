@@ -165,12 +165,35 @@ inline std::vector<std::function<void(std::function<void()>)>>& get_other_schedu
     return others;
 }
 
+inline std::vector<std::function<void()>>& get_waiting_subscribes()
+{
+    static thread_local std::vector<std::function<void()>> waiting_subscribes;
+    return waiting_subscribes;
+}
+
 template <class Sub, class Internal>
 void subscribe_(Sub&& sub, Internal&& internal, boost::uuids::uuid scheduler_id, std::uint64_t token)
 {
     using traits = boost::asynchronous::function_traits<Internal>;
     using arg0 = typename traits::template remove_ref_cv_arg_<0>::type;
     static_assert(traits::arity == 1, "callback should have only one argument");
+
+    // remember subscribe
+    boost::asynchronous::subscription::get_waiting_subscribes().push_back(
+        [internal, scheduler_id]()
+        {
+            for (auto& other_scheduler : boost::asynchronous::subscription::get_other_schedulers_())
+            {
+                if (!!other_scheduler)
+                {
+                    other_scheduler([internal, scheduler_id]()
+                        {
+                            boost::asynchronous::subscription::get_local_subscription_store_<arg0>().subscribe_scheduler(internal, scheduler_id);
+                        });
+                }
+            }
+        }
+    );
 
     // register subscriber
     boost::asynchronous::subscription::get_local_subscription_store_<arg0>().subscribe(std::move(sub), token);

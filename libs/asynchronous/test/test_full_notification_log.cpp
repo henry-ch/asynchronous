@@ -576,3 +576,89 @@ BOOST_AUTO_TEST_CASE(test_full_notification_auto_unsubscribe_log)
         BOOST_FAIL("unexpected exception");
     }
 }
+
+BOOST_AUTO_TEST_CASE(test_full_notification_delayed_log)
+{
+    auto scheduler1 = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+        boost::asynchronous::guarded_deque<servant_job>>>();
+    auto scheduler2 = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+        boost::asynchronous::guarded_deque<servant_job>>>();
+    auto pool = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<
+        boost::asynchronous::guarded_deque<servant_job>>>(2);
+
+    auto scheduler_notify = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+        boost::asynchronous::guarded_deque<servant_job>>>();
+    auto notification_ptr = std::make_shared<boost::asynchronous::subscription::notification_proxy<servant_job>>
+        (scheduler_notify, pool);
+
+   boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification_ptr).get();
+
+    std::shared_ptr<ServantProxy> proxy = std::make_shared<ServantProxy>(scheduler1, pool);
+    ServantProxy2 proxy2(scheduler2, pool);
+
+    try
+    {
+
+        auto res_fu = proxy->wait_for_some_event().get();
+        // delayed subscribe call
+        boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1.get_weak_scheduler(), notification_ptr).get();
+
+        proxy2.trigger_some_event().get();
+
+        auto res = boost::asynchronous::recursive_future_get(std::move(res_fu));
+        BOOST_CHECK_MESSAGE(res == 42, "invalid result");
+
+        proxy->force_unsubscribe().get();
+
+
+        // servant gone, check for removal
+        auto wsched2 = scheduler2.get_weak_scheduler();
+        auto sched2 = wsched2.lock();
+
+        if (sched2.is_valid())
+        {
+            std::shared_ptr<std::promise<void> > p(new std::promise<void>);
+            auto fu = p->get_future();
+
+            auto fu2 = boost::asynchronous::post_future(sched2,
+                [p = std::move(p)]() mutable
+                {
+                    p->set_value();
+                    BOOST_CHECK_MESSAGE(boost::asynchronous::subscription::get_local_subscription_store_<some_event>().m_scheduler_subscribers.empty(), "scheduler subscribers not removed");
+                }, "check_local_removed", 0);
+
+            fu.get();
+            fu2.get();
+
+            diag_type diag = scheduler2.get_diagnostics().totals();
+            BOOST_CHECK_MESSAGE(!diag.empty(), "servant should have diagnostics.");
+            for (auto mit = diag.begin(); mit != diag.end(); ++mit)
+            {
+                BOOST_CHECK_MESSAGE(!(*mit).first.empty(), "no job should have an empty name.");
+                for (auto jit = (*mit).second.begin(); jit != (*mit).second.end(); ++jit)
+                {
+                    BOOST_CHECK_MESSAGE(std::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() >= 0, "task finished before it started.");
+                    BOOST_CHECK_MESSAGE(!(*jit).is_interrupted(), "no task should have been interrupted.");
+                    BOOST_CHECK_MESSAGE(!(*jit).is_failed(), "no task should have failed.");
+                }
+            }
+        }
+    }
+    catch (...)
+    {
+        BOOST_FAIL("unexpected exception");
+    }
+
+    diag_type diag = scheduler1.get_diagnostics().totals();
+    BOOST_CHECK_MESSAGE(!diag.empty(), "servant should have diagnostics.");
+    for (auto mit = diag.begin(); mit != diag.end(); ++mit)
+    {
+        BOOST_CHECK_MESSAGE(!(*mit).first.empty(), "no job should have an empty name.");
+        for (auto jit = (*mit).second.begin(); jit != (*mit).second.end(); ++jit)
+        {
+            BOOST_CHECK_MESSAGE(std::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() >= 0, "task finished before it started.");
+            BOOST_CHECK_MESSAGE(!(*jit).is_interrupted(), "no task should have been interrupted.");
+            BOOST_CHECK_MESSAGE(!(*jit).is_failed(), "no task should have failed.");
+        }
+    }
+}
