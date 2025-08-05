@@ -148,6 +148,8 @@ struct Servant : boost::asynchronous::trackable_servant<>
     {
         unsubscribe<some_event>(token_);
         unsubscribe<some_event>(token2_);
+        // check cleanup
+        BOOST_CHECK_MESSAGE(boost::asynchronous::subscription::get_waiting_subscribes().empty(), "missing cleanup in waiting subscribes");
     }
 
     int cb_called()const

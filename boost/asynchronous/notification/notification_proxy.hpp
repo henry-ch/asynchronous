@@ -142,7 +142,7 @@ namespace boost { namespace asynchronous { namespace subscription
                             // if we have waiting subscribes, call them
                             for (auto const& w : boost::asynchronous::subscription::get_waiting_subscribes())
                             {
-                                w();
+                                w.second();
                             }
                         });
                     boost::wait_for_all(fus.begin(), fus.end());

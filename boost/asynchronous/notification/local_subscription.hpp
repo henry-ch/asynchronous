@@ -22,6 +22,13 @@
 
 namespace boost { namespace asynchronous { namespace subscription
 {
+inline std::map<std::uint64_t, std::function<void()>>& get_waiting_subscribes()
+{
+    static thread_local std::map<std::uint64_t, std::function<void()>> waiting_subscribes;
+    return waiting_subscribes;
+}
+
+
 template <class Event>
 struct local_subscription
 {
@@ -37,6 +44,8 @@ struct local_subscription
         {
             if ((*it).second.second)
             {
+                // remove waiting subscription
+                boost::asynchronous::subscription::get_waiting_subscribes().erase((*it).first);
                 it = m_internal_subscribers.erase(it);
             }
             else
@@ -92,6 +101,8 @@ struct local_subscription
             {
                 // we can immediately remove
                 m_internal_subscribers.erase(it);
+                // remove waiting subscription
+                boost::asynchronous::subscription::get_waiting_subscribes().erase(token);
             }
         }
         // something left? As only marked as removeable, real removal will need a publish
@@ -165,12 +176,6 @@ inline std::vector<std::function<void(std::function<void()>)>>& get_other_schedu
     return others;
 }
 
-inline std::vector<std::function<void()>>& get_waiting_subscribes()
-{
-    static thread_local std::vector<std::function<void()>> waiting_subscribes;
-    return waiting_subscribes;
-}
-
 template <class Sub, class Internal>
 void subscribe_(Sub&& sub, Internal&& internal, boost::uuids::uuid scheduler_id, std::uint64_t token)
 {
@@ -179,7 +184,7 @@ void subscribe_(Sub&& sub, Internal&& internal, boost::uuids::uuid scheduler_id,
     static_assert(traits::arity == 1, "callback should have only one argument");
 
     // remember subscribe
-    boost::asynchronous::subscription::get_waiting_subscribes().push_back(
+    boost::asynchronous::subscription::get_waiting_subscribes()[token] =
         [internal, scheduler_id]()
         {
             for (auto& other_scheduler : boost::asynchronous::subscription::get_other_schedulers_())
@@ -192,8 +197,7 @@ void subscribe_(Sub&& sub, Internal&& internal, boost::uuids::uuid scheduler_id,
                         });
                 }
             }
-        }
-    );
+        };
 
     // register subscriber
     boost::asynchronous::subscription::get_local_subscription_store_<arg0>().subscribe(std::move(sub), token);
