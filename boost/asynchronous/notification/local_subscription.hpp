@@ -85,7 +85,7 @@ struct local_subscription
     // unsubscribes servant, return true if no more servant
     bool unsubscribe(std::int64_t token)
     {
-        if (m_in_publish)
+        if (m_publish_counter > 0)
         {
             // only mark
             auto it = m_internal_subscribers.find(token);
@@ -133,7 +133,7 @@ struct local_subscription
     template <class Ev>
     bool publish_internal(Ev&& e)
     {
-        m_in_publish = true;
+        ++m_publish_counter;
         bool someone_handled = false;
         for (auto it = m_internal_subscribers.begin(); it != m_internal_subscribers.end();++it)
         {
@@ -150,13 +150,18 @@ struct local_subscription
                 }
             }
         }
-        // now we can safely cleanup
-        cleanup_subscriber();
-        m_in_publish = false;
+        --m_publish_counter;
+        if(m_publish_counter == 0)
+        {
+            // now we can safely cleanup
+            cleanup_subscriber();
+        }
+
+
         return someone_handled;
     }
 
-    bool                                                        m_in_publish = false;
+    std::int16_t                                                m_publish_counter = 0;
     std::map<std::int64_t, internal_subscriber_t>               m_internal_subscribers;
     std::vector<std::pair<boost::uuids::uuid, subscriber_t>>    m_scheduler_subscribers;
 };
