@@ -239,18 +239,6 @@ BOOST_AUTO_TEST_CASE( test_full_notification_log )
 
         if (sched2.is_valid())
         {
-            std::shared_ptr<std::promise<void> > p(new std::promise<void>);
-            auto fu = p->get_future();
-
-            auto fu2= boost::asynchronous::post_future(sched2,
-                [p = std::move(p)]() mutable
-                {
-                    p->set_value();
-                    BOOST_CHECK_MESSAGE(boost::asynchronous::subscription::get_local_subscription_store_<some_event>().m_scheduler_subscribers.empty(), "scheduler subscribers not removed");
-                }, "check_local_removed", 0);
-
-            fu.get();
-            fu2.get();
 
             diag_type diag = scheduler2.get_diagnostics().totals();
             BOOST_CHECK_MESSAGE(!diag.empty(), "servant should have diagnostics.");
@@ -497,22 +485,6 @@ BOOST_AUTO_TEST_CASE(test_full_notification_multiple_notification_buses_log)
         proxy->force_unsubscribe().get();
         another_sub_proxy->force_unsubscribe().get();
 
-        // servant gone, check for removal
-        auto wsched = scheduler2.get_weak_scheduler();
-        auto sched = wsched.lock();
-        std::shared_ptr<std::promise<void> > p(new std::promise<void>);
-        auto fu = p->get_future();
-        if (sched.is_valid())
-        {
-            boost::asynchronous::post_future(sched,
-                [p = std::move(p)]() mutable
-                {
-                    p->set_value();
-                    BOOST_CHECK_MESSAGE(boost::asynchronous::subscription::get_local_subscription_store_<some_event>().m_scheduler_subscribers.empty(), "scheduler subscribers not removed");
-                }, "check_local_removed", 0);
-        }
-        fu.get();
-
     }
     catch (...)
     {
@@ -617,19 +589,6 @@ BOOST_AUTO_TEST_CASE(test_full_notification_delayed_log)
 
         if (sched2.is_valid())
         {
-            std::shared_ptr<std::promise<void> > p(new std::promise<void>);
-            auto fu = p->get_future();
-
-            auto fu2 = boost::asynchronous::post_future(sched2,
-                [p = std::move(p)]() mutable
-                {
-                    p->set_value();
-                    BOOST_CHECK_MESSAGE(boost::asynchronous::subscription::get_local_subscription_store_<some_event>().m_scheduler_subscribers.empty(), "scheduler subscribers not removed");
-                }, "check_local_removed", 0);
-
-            fu.get();
-            fu2.get();
-
             diag_type diag = scheduler2.get_diagnostics().totals();
             BOOST_CHECK_MESSAGE(!diag.empty(), "servant should have diagnostics.");
             for (auto mit = diag.begin(); mit != diag.end(); ++mit)

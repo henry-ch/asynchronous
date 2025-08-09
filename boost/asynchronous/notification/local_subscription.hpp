@@ -111,12 +111,22 @@ struct local_subscription
 
     void unsubscribe_scheduler(boost::uuids::uuid scheduler_id)
     {
-        m_scheduler_subscribers.erase(
-            std::remove_if(m_scheduler_subscribers.begin(), m_scheduler_subscribers.end(),
-                [&](auto const& sub) {return sub.first == scheduler_id; }),
-            m_scheduler_subscribers.end());
+        m_deleted_scheduler_subscribers.emplace_back(std::move(scheduler_id));
     }
     
+    void cleanup_deleted_schedulers()
+    {
+        m_scheduler_subscribers.erase(
+            std::remove_if(m_scheduler_subscribers.begin(), m_scheduler_subscribers.end(),
+                [&](auto const& sub) 
+                {
+                    return std::find_if(m_deleted_scheduler_subscribers.begin(), m_deleted_scheduler_subscribers.end(),
+                        [sub_id = sub.first](auto const& deleted_uid) {return deleted_uid == sub_id; }) != m_deleted_scheduler_subscribers.end();
+                }),
+            m_scheduler_subscribers.end());
+        m_deleted_scheduler_subscribers.clear();
+    }
+
     template <class Ev>
     bool publish(Ev&& e)
     {
@@ -127,7 +137,9 @@ struct local_subscription
         {
             sched_sub.second(e);
         }
-        return publish_internal(std::forward<Ev>(e));
+        bool res = publish_internal(std::forward<Ev>(e));
+        cleanup_deleted_schedulers();
+        return res;
     }
 
     template <class Ev>
@@ -164,6 +176,8 @@ struct local_subscription
     std::int16_t                                                m_publish_counter = 0;
     std::map<std::int64_t, internal_subscriber_t>               m_internal_subscribers;
     std::vector<std::pair<boost::uuids::uuid, subscriber_t>>    m_scheduler_subscribers;
+    // in order not to invalidate iterators during publish, remember deleted ids and cleanup later
+    std::vector< boost::uuids::uuid>                            m_deleted_scheduler_subscribers;
 };
 
 // inline thread local subscriptions

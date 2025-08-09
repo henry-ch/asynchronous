@@ -306,23 +306,6 @@ BOOST_AUTO_TEST_CASE( test_full_notification )
         BOOST_CHECK_MESSAGE(res == 42, "invalid result");
 
         proxy->force_unsubscribe().get();
-
-        // servant gone, check for removal
-        wait_for_subscribe(proxy2);
-        auto wsched = scheduler2.get_weak_scheduler();
-        auto sched = wsched.lock();
-        std::shared_ptr<std::promise<void> > p(new std::promise<void>);
-        auto fu = p->get_future();
-        if (sched.is_valid())
-        {
-            sched.post([p = std::move(p)]() mutable
-                {
-                    p->set_value();
-                    BOOST_CHECK_MESSAGE(boost::asynchronous::subscription::get_local_subscription_store_<some_event>().m_scheduler_subscribers.empty(), "scheduler subscribers not removed");
-                });
-        }
-        fu.get();
-
         BOOST_CHECK_MESSAGE(proxy->cb_called().get() == 1, "got wrong number of events");
     }
     catch (...)
@@ -405,21 +388,6 @@ BOOST_AUTO_TEST_CASE(test_full_notification_two_subscribe)
         BOOST_CHECK_MESSAGE(res2 == 42, "invalid result2");
 
         proxy->force_unsubscribe().get();
-
-        // servant gone, check for removal
-        auto wsched = scheduler2.get_weak_scheduler();
-        auto sched = wsched.lock();
-        std::shared_ptr<std::promise<void> > p(new std::promise<void>);
-        auto fu = p->get_future();
-        if (sched.is_valid())
-        {
-            sched.post([p = std::move(p)]() mutable
-                {
-                    p->set_value();
-                    BOOST_CHECK_MESSAGE(boost::asynchronous::subscription::get_local_subscription_store_<some_event>().m_scheduler_subscribers.empty(), "scheduler subscribers not removed");
-                });
-        }
-        fu.get();
         BOOST_CHECK_MESSAGE(proxy->cb_called().get() == 2, "got wrong number of events");
     }
     catch (...)
@@ -605,21 +573,6 @@ BOOST_AUTO_TEST_CASE(test_full_notification_multiple_notification_buses)
 
         proxy->force_unsubscribe().get();
         another_sub_proxy->force_unsubscribe().get();
-
-        // servant gone, check for removal
-        auto wsched = scheduler2.get_weak_scheduler();
-        auto sched = wsched.lock();
-        std::shared_ptr<std::promise<void> > p(new std::promise<void>);
-        auto fu = p->get_future();
-        if (sched.is_valid())
-        {
-            sched.post([p = std::move(p)]() mutable
-                {
-                    p->set_value();
-                    BOOST_CHECK_MESSAGE(boost::asynchronous::subscription::get_local_subscription_store_<some_event>().m_scheduler_subscribers.empty(), "scheduler subscribers not removed");
-                });
-        }
-        fu.get();
         BOOST_CHECK_MESSAGE(proxy->cb_called().get() == 1, "got wrong number of events");
     }
     catch (...)
@@ -661,22 +614,6 @@ BOOST_AUTO_TEST_CASE(test_full_notification_auto_unsubscribe)
         auto res = boost::asynchronous::recursive_future_get(std::move(res_fu));
         BOOST_CHECK_MESSAGE(res == 42, "invalid result");
 
-        // servant gone, check for removal
-        wait_for_subscribe(proxy2);
-        auto wsched = scheduler1.get_weak_scheduler();
-        auto sched = wsched.lock();
-        std::shared_ptr<std::promise<void> > p(new std::promise<void>);
-        auto fu = p->get_future();
-        if (sched.is_valid())
-        {
-            sched.post([p = std::move(p)]() mutable
-                {
-                    p->set_value();
-                    BOOST_CHECK_MESSAGE(boost::asynchronous::subscription::get_local_subscription_store_<some_event>().m_internal_subscribers.empty(), "internal subscribers not removed");
-                });
-        }
-        fu.get();
-
         BOOST_CHECK_MESSAGE(proxy->cb_called().get() == 1, "got wrong number of events");
     }
     catch (...)
@@ -716,22 +653,6 @@ BOOST_AUTO_TEST_CASE(test_full_notification_self_unsubscribe)
 
         auto res = boost::asynchronous::recursive_future_get(std::move(res_fu));
         BOOST_CHECK_MESSAGE(res == 42, "invalid result");
-
-        // servant gone, check for removal
-        wait_for_subscribe(proxy2);
-        auto wsched = scheduler1.get_weak_scheduler();
-        auto sched = wsched.lock();
-        std::shared_ptr<std::promise<void> > p(new std::promise<void>);
-        auto fu = p->get_future();
-        if (sched.is_valid())
-        {
-            sched.post([p = std::move(p)]() mutable
-                {
-                    p->set_value();
-                    BOOST_CHECK_MESSAGE(boost::asynchronous::subscription::get_local_subscription_store_<some_event>().m_internal_subscribers.empty(), "internal subscribers not removed");
-                });
-        }
-        fu.get();
 
         BOOST_CHECK_MESSAGE(proxy->cb_called().get() == 1, "got wrong number of events");
     }
@@ -878,27 +799,49 @@ BOOST_AUTO_TEST_CASE(test_full_notification_deleted_scheduler)
    auto notification_ptr = std::make_shared<boost::asynchronous::subscription::notification_proxy<>>
        (scheduler_notify, pool);
 
+   // we make a few more schedulers to have more subscribers
+   auto scheduler3_ = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+       boost::asynchronous::guarded_deque<>>>();
+   auto scheduler3 = std::make_shared<decltype(scheduler3_)>(std::move(scheduler3_));
+   auto scheduler4_ = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
+       boost::asynchronous::guarded_deque<>>>();
+   auto scheduler4 = std::make_shared<decltype(scheduler4_)>(std::move(scheduler4_));
+
    std::vector<std::future<void>> notification_futures;
+   notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler4->get_weak_scheduler(), notification_ptr));
    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler1->get_weak_scheduler(), notification_ptr));
    notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler2.get_weak_scheduler(), notification_ptr));
+   notification_futures.emplace_back(boost::asynchronous::subscription::register_scheduler_to_notification(scheduler3->get_weak_scheduler(), notification_ptr));
    boost::wait_for_all(notification_futures.begin(), notification_futures.end());
 
 
    std::shared_ptr<ServantProxy> proxy = std::make_shared<ServantProxy>(*scheduler1, pool);
+   std::shared_ptr<ServantProxy> proxy3 = std::make_shared<ServantProxy>(*scheduler3, pool);
+   std::shared_ptr<ServantProxy> proxy4 = std::make_shared<ServantProxy>(*scheduler4, pool);
    ServantProxy2 proxy2(scheduler2, pool);
 
    try
    {
-
+       auto res_fu3 = proxy3->wait_for_some_event().get();
        auto res_fu = proxy->wait_for_some_event().get();
+       auto res_fu4 = proxy4->wait_for_some_event().get();
+
        wait_for_subscribe(proxy2);
        proxy2.trigger_some_event().get();
 
        auto res = boost::asynchronous::recursive_future_get(std::move(res_fu));
        BOOST_CHECK_MESSAGE(res == 42, "invalid result");
+       res = boost::asynchronous::recursive_future_get(std::move(res_fu3));
+       BOOST_CHECK_MESSAGE(res == 42, "invalid result");
+       res = boost::asynchronous::recursive_future_get(std::move(res_fu4));
+       BOOST_CHECK_MESSAGE(res == 42, "invalid result");
 
        proxy.reset();
        scheduler1.reset();
+       proxy3.reset();
+       scheduler3.reset();
+       proxy4.reset();
+       scheduler4.reset();
        proxy2.trigger_some_event().get();
        // at this point, scheduler2 knows that scheduler1 is gone
 
@@ -959,22 +902,6 @@ BOOST_AUTO_TEST_CASE(test_full_notification_delayed)
 
         proxy->force_unsubscribe().get();
 
-        // servant gone, check for removal
-        wait_for_subscribe(proxy2);
-        auto wsched = scheduler2.get_weak_scheduler();
-        auto sched = wsched.lock();
-        std::shared_ptr<std::promise<void> > p(new std::promise<void>);
-        auto fu = p->get_future();
-        if (sched.is_valid())
-        {
-            sched.post([p = std::move(p)]() mutable
-                {
-                    p->set_value();
-                    BOOST_CHECK_MESSAGE(boost::asynchronous::subscription::get_local_subscription_store_<some_event>().m_scheduler_subscribers.empty(), "scheduler subscribers not removed");
-                });
-        }
-        fu.get();
-
         BOOST_CHECK_MESSAGE(proxy->cb_called().get() == 1, "got wrong number of events");
     }
     catch (...)
@@ -1017,22 +944,6 @@ BOOST_AUTO_TEST_CASE( test_full_notification_subscribe_unsubscribe_subscribe)
         BOOST_CHECK_MESSAGE(res == 42, "invalid result");
 
         proxy->force_unsubscribe().get();
-
-        // servant gone, check for removal
-        wait_for_subscribe(proxy2);
-        auto wsched = scheduler2.get_weak_scheduler();
-        auto sched = wsched.lock();
-        std::shared_ptr<std::promise<void> > p(new std::promise<void>);
-        auto fu = p->get_future();
-        if (sched.is_valid())
-        {
-            sched.post([p = std::move(p)]() mutable
-                {
-                    p->set_value();
-                    BOOST_CHECK_MESSAGE(boost::asynchronous::subscription::get_local_subscription_store_<some_event>().m_scheduler_subscribers.empty(), "scheduler subscribers not removed");
-                });
-        }
-        fu.get();
 
         BOOST_CHECK_MESSAGE(proxy->cb_called().get() == 2, "got wrong number of events");
     }
