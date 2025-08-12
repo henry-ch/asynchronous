@@ -23,6 +23,8 @@
 #include <boost/asynchronous/scheduler/tss_scheduler.hpp>
 #include <boost/asynchronous/detail/move_bind.hpp>
 #include <boost/asynchronous/job_traits.hpp>
+#include <boost/asynchronous/notification/topics.hpp>
+
 #include <boost/system/error_code.hpp>
 #include <boost/asynchronous/any_scheduler.hpp>
 #include <boost/thread/thread.hpp>
@@ -586,8 +588,8 @@ public:
     {
         return m_scheduler;
     }
-    template <class Sub, class Event, class ReturnType>
-    boost::asynchronous::subscription_token subscribe_helper(Sub sub, const std::string& task_name, std::size_t prio)
+    template <class Sub, class Event, class Topic, class ReturnType>
+    boost::asynchronous::subscription_token subscribe_helper(Sub sub, Topic const& topic, const std::string& task_name, std::size_t prio)
     {
         auto sched = get_scheduler().lock();
         auto weak = get_scheduler();
@@ -600,7 +602,7 @@ public:
 
             // publishing to other schedulers will mean calling this function, 
             // which will post_future to our scheduler
-            auto wrapped = [tracking, uid, weak, task_name, prio]
+            auto wrapped = [tracking, uid, weak, topic, task_name, prio]
             (Event const& ev)
                 {
                     auto sched = weak.lock();
@@ -608,12 +610,12 @@ public:
                     {
                         // not in our thread, post
                         boost::asynchronous::post_future(sched,
-                            boost::asynchronous::move_bind(boost::asynchronous::check_alive([weak](Event const& ev)
+                            boost::asynchronous::move_bind(boost::asynchronous::check_alive([weak, topic](Event const& ev)
                                 {
                                     auto sched = weak.lock();
                                     if (sched.is_valid())
                                     {
-                                        sched.publish_internal(ev);
+                                        sched.publish_internal(ev, topic);
                                     }
                                 }, tracking), ev),
                             task_name, prio);
@@ -621,7 +623,7 @@ public:
                     else
                     {
                         // we can safely unsubscribe scheduler
-                        boost::asynchronous::subscription::get_local_subscription_store_<Event>().unsubscribe_scheduler(uid);
+                        boost::asynchronous::subscription::get_local_subscription_store_<Event, Topic>().unsubscribe_scheduler(uid);
                     }
                     return std::optional<bool>{false};
                 };
@@ -638,7 +640,7 @@ public:
                         }
                         return std::optional<bool>{false};
                     };
-                return sched.subscribe(std::move(sub_), std::move(wrapped));
+                return sched.subscribe(std::move(sub_), std::move(wrapped), topic);
             }
             else
             {
@@ -651,7 +653,7 @@ public:
                         }
                         return std::optional<bool>{false};
                     };
-                return sched.subscribe(std::move(sub_), std::move(wrapped));
+                return sched.subscribe(std::move(sub_), std::move(wrapped), topic);
             }
         }
         // return invalid token
@@ -672,11 +674,11 @@ public:
         using arg0 = typename traits::template remove_ref_cv_arg_<0>::type;
         using return_t = typename traits::result_type;
 
-        return subscribe_helper<Sub,arg0, return_t>(std::move(sub), task_name, prio);
+        return subscribe_helper<Sub, arg0, boost::asynchronous::subscription::no_topic, return_t>(std::move(sub), boost::asynchronous::subscription::no_topic{}, task_name, prio);
     }
 
     template <class Event, class Sub>
-    auto subscribe(Sub sub,
+    auto subscribe(Sub sub, 
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
         const std::string& task_name, std::size_t prio) const
 #else
@@ -685,7 +687,7 @@ public:
        -> typename std::enable_if<std::is_invocable_v<Sub, Event>,
                                   boost::asynchronous::subscription_token>::type
     {
-        return subscribe_helper<Sub, Event,void>(std::move(sub), task_name, prio);
+        return subscribe_helper<Sub, Event, boost::asynchronous::subscription::no_topic, void>(std::move(sub), boost::asynchronous::subscription::no_topic{}, task_name, prio);
     }
 
     // in most cases, unsubscribe is not necessary, a servant not processing an event will be removed from the subscribers list
@@ -696,7 +698,7 @@ public:
         auto sched = get_scheduler().lock();
         if (sched.is_valid())
         {
-            sched.template unsubscribe<Event>(token);
+            sched.template unsubscribe<Event>(token, boost::asynchronous::subscription::no_topic{});
         }
     }
 
@@ -706,7 +708,58 @@ public:
         auto sched = get_scheduler().lock();
         if (sched.is_valid())
         {
-            sched.publish(std::forward<Event>(e));
+            sched.publish(std::forward<Event>(e), boost::asynchronous::subscription::no_topic{});
+        }
+    }
+
+    // same with topics
+    template <class Sub, class Topic>
+    boost::asynchronous::subscription_token subscribe_topic(Sub sub, Topic const& topic,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+        const std::string& task_name, std::size_t prio) const
+#else
+        const std::string& task_name = "", std::size_t prio = 0)
+#endif        
+    {
+        using traits = boost::asynchronous::function_traits<Sub>;
+        using arg0 = typename traits::template remove_ref_cv_arg_<0>::type;
+        using return_t = typename traits::result_type;
+
+        return subscribe_helper<Sub, arg0, Topic, return_t>(std::move(sub), topic, task_name, prio);
+    }
+
+    template <class Event, class Sub, class Topic>
+    auto subscribe_topic(Sub sub, Topic const& topic,
+#ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
+        const std::string& task_name, std::size_t prio) const
+#else
+        const std::string& task_name = "", std::size_t prio = 0)
+#endif        
+        -> typename std::enable_if<std::is_invocable_v<Sub, Event>,
+        boost::asynchronous::subscription_token>::type
+    {
+        return subscribe_helper<Sub, Event, Topic, void>(std::move(sub), topic, task_name, prio);
+    }
+
+
+
+    template<class Event, class Topic = boost::asynchronous::subscription::no_topic>
+    void unsubscribe_topic(boost::asynchronous::subscription_token token, Topic const& topic)
+    {
+        auto sched = get_scheduler().lock();
+        if (sched.is_valid())
+        {
+            sched.template unsubscribe<Event>(token, topic);
+        }
+    }
+
+    template <class Event, class Topic = boost::asynchronous::subscription::no_topic>
+    void publish_topic(Event&& e, Topic const& topic)
+    {
+        auto sched = get_scheduler().lock();
+        if (sched.is_valid())
+        {
+            sched.publish(std::forward<Event>(e), topic);
         }
     }
 

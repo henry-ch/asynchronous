@@ -17,8 +17,10 @@
 #include <cstdint>
 #include <iostream>
 
-#include <boost/asynchronous/detail/function_traits.hpp>
 #include <boost/uuid/uuid.hpp>
+
+#include <boost/asynchronous/detail/function_traits.hpp>
+#include <boost/asynchronous/notification/topics.hpp>
 
 namespace boost { namespace asynchronous { namespace subscription
 {
@@ -29,7 +31,7 @@ inline std::map<std::uint64_t, std::function<void()>>& get_waiting_subscribes()
 }
 
 
-template <class Event>
+template <class Event, class Topic>
 struct local_subscription
 {
     using subscriber_t = std::function<std::optional<bool>(Event const&)>;
@@ -181,10 +183,10 @@ struct local_subscription
 };
 
 // inline thread local subscriptions
-template <class Event>
-local_subscription<Event>& get_local_subscription_store_() 
+template <class Event, class Topic= boost::asynchronous::subscription::no_topic>
+local_subscription<Event, Topic>& get_local_subscription_store_() 
 {
-    static thread_local local_subscription<Event> subs;
+    static thread_local local_subscription<Event, Topic> subs;
     return subs;
 }
 
@@ -195,8 +197,8 @@ inline std::vector<std::function<void(std::function<void()>)>>& get_other_schedu
     return others;
 }
 
-template <class Sub, class Internal>
-void subscribe_(Sub&& sub, Internal&& internal, boost::uuids::uuid scheduler_id, std::uint64_t token)
+template <class Sub, class Internal, class Topic>
+void subscribe(Sub&& sub, Internal&& internal, boost::uuids::uuid scheduler_id, std::uint64_t token, Topic const& topic)
 {
     using traits = boost::asynchronous::function_traits<Internal>;
     using arg0 = typename traits::template remove_ref_cv_arg_<0>::type;
@@ -212,14 +214,14 @@ void subscribe_(Sub&& sub, Internal&& internal, boost::uuids::uuid scheduler_id,
                 {
                     other_scheduler([internal, scheduler_id]()
                         {
-                            boost::asynchronous::subscription::get_local_subscription_store_<arg0>().subscribe_scheduler(internal, scheduler_id);
+                            boost::asynchronous::subscription::get_local_subscription_store_<arg0, Topic>().subscribe_scheduler(internal, scheduler_id);
                         });
                 }
             }
         };
 
     // register subscriber
-    boost::asynchronous::subscription::get_local_subscription_store_<arg0>().subscribe(std::move(sub), token);
+    boost::asynchronous::subscription::get_local_subscription_store_<arg0, Topic>().subscribe(std::move(sub), token);
 
     // register our internal scheduler to other schedulers (will call publish)
     for (auto& other_scheduler : boost::asynchronous::subscription::get_other_schedulers_())
@@ -228,17 +230,17 @@ void subscribe_(Sub&& sub, Internal&& internal, boost::uuids::uuid scheduler_id,
         {        
             other_scheduler([internal, scheduler_id]()
             {
-                    boost::asynchronous::subscription::get_local_subscription_store_<arg0>().subscribe_scheduler(internal, scheduler_id);
+                    boost::asynchronous::subscription::get_local_subscription_store_<arg0, Topic>().subscribe_scheduler(internal, scheduler_id);
             });
         }
     }
 }
 
-template <class Event>
-void unsubscribe_(std::uint64_t token, boost::uuids::uuid scheduler_id)
+template <class Event, class Topic>
+void unsubscribe(std::uint64_t token, boost::uuids::uuid scheduler_id, Topic const& topic  )
 {
     // remove servant from list of internal subscribers
-    bool empty = boost::asynchronous::subscription::get_local_subscription_store_<Event>().unsubscribe(token);
+    bool empty = boost::asynchronous::subscription::get_local_subscription_store_<Event, Topic>().unsubscribe(token);
     if (empty)
     {
         // if it was the last servant subscribed to this event type for this scheduler
@@ -249,7 +251,7 @@ void unsubscribe_(std::uint64_t token, boost::uuids::uuid scheduler_id)
             {
                 other_scheduler([scheduler_id]()
                     {
-                        boost::asynchronous::subscription::get_local_subscription_store_<Event>().unsubscribe_scheduler(scheduler_id);
+                        boost::asynchronous::subscription::get_local_subscription_store_<Event, Topic>().unsubscribe_scheduler(scheduler_id);
                     });
             }
         }
@@ -257,17 +259,23 @@ void unsubscribe_(std::uint64_t token, boost::uuids::uuid scheduler_id)
 
 }
 
-
 template <class Event>
-bool publish_(Event&& e)
+bool publish(Event&& e)
 {
-    return boost::asynchronous::subscription::get_local_subscription_store_<std::remove_cv_t<std::remove_reference_t<Event>>>().publish(std::forward<Event>(e));
+    return boost::asynchronous::subscription::get_local_subscription_store_<
+        std::remove_cv_t<std::remove_reference_t<Event>>, boost::asynchronous::subscription::no_topic>().publish(std::forward<Event>(e));
 }
 
-template <class Event>
-bool publish_internal(Event&& e)
+template <class Event, class Topic>
+bool publish_topic(Event&& e, Topic const& topic)
 {
-    return boost::asynchronous::subscription::get_local_subscription_store_<std::remove_cv_t<std::remove_reference_t<Event>>>().publish_internal(std::forward<Event>(e));
+    return boost::asynchronous::subscription::get_local_subscription_store_<std::remove_cv_t<std::remove_reference_t<Event>>, Topic>().publish(std::forward<Event>(e));
+}
+
+template <class Event, class Topic>
+bool publish_internal(Event&& e, Topic const&)
+{
+    return boost::asynchronous::subscription::get_local_subscription_store_<std::remove_cv_t<std::remove_reference_t<Event>>, Topic>().publish_internal(std::forward<Event>(e));
 }
 
 }}}
