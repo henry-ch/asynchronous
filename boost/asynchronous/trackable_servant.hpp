@@ -623,7 +623,7 @@ public:
                     else
                     {
                         // we can safely unsubscribe scheduler
-                        boost::asynchronous::subscription::get_local_subscription_store_<Event, Topic>().unsubscribe_scheduler(uid);
+                        boost::asynchronous::subscription::get_local_subscription_store_<Event, Topic>().unsubscribe_scheduler_all_topics(uid);
                     }
                     return std::optional<bool>{false};
                 };

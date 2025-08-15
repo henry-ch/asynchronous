@@ -36,15 +36,21 @@ struct local_subscription
 {
     using subscriber_t = std::function<std::optional<bool>(Event const&)>;
     
-    using internal_subscriber_t = std::pair<
-        std::function<std::optional<bool>(Event const&)>, // subscriber
+    using internal_subscriber_t = std::tuple<
+        subscriber_t, // subscriber
+        Topic, // topic for this object 
         bool>; // true: to be removed 
+
+    using scheduler_subscriber_t = std::tuple<
+        boost::uuids::uuid, // scheduler uuid
+        Topic, // topic entry for this scheduler
+        subscriber_t>; //callback
 
     void cleanup_subscriber()
     {
         for (auto it = m_internal_subscribers.begin(); it != m_internal_subscribers.end(); ) 
         {
-            if ((*it).second.second)
+            if (std::get<bool>((*it).second))
             {
                 // remove waiting subscription
                 boost::asynchronous::subscription::get_waiting_subscribes().erase((*it).first);
@@ -57,49 +63,49 @@ struct local_subscription
         }
     }
 
-    template <class Sub>
-    void subscribe(Sub&& sub, std::int64_t token)
+    template <class Sub, class Topic>
+    void subscribe(Sub&& sub, std::int64_t token, Topic const& topic)
     {
-        m_internal_subscribers.insert_or_assign(token, std::make_pair(std::forward<Sub>(sub),false));
+        m_internal_subscribers.insert_or_assign(token, std::make_tuple(std::forward<Sub>(sub),topic, false));
     }
 
     template <class Sub>
-    void subscribe_scheduler(Sub&& sub, boost::uuids::uuid scheduler_id)
+    void subscribe_scheduler(Sub&& sub, boost::uuids::uuid scheduler_id, Topic const& topic)
     {
         // do not register double entries
         auto it = std::find_if(m_scheduler_subscribers.begin(), m_scheduler_subscribers.end(),
             [&](const auto& s)
             {
-                return scheduler_id == s.first;
+                return (scheduler_id == std::get<boost::uuids::uuid>(s)) && (topic == std::get<Topic>(s));
             });
 
         if (it == m_scheduler_subscribers.end())
         {
-            m_scheduler_subscribers.emplace_back(std::make_pair(std::move(scheduler_id), std::forward<Sub>(sub)));
+            m_scheduler_subscribers.emplace_back(std::make_tuple(std::move(scheduler_id), topic, std::forward<Sub>(sub)));
         }
         else
         {
             // replace entry
-            *it = std::make_pair(std::move(scheduler_id), std::forward<Sub>(sub));
+            *it = std::make_tuple(std::move(scheduler_id), topic, std::forward<Sub>(sub));
         }
     }
 
     // unsubscribes servant, return true if no more servant
-    bool unsubscribe(std::int64_t token)
+    bool unsubscribe(std::int64_t token, Topic const& topic)
     {
         if (m_publish_counter > 0)
         {
             // only mark
             auto it = m_internal_subscribers.find(token);
-            if (it != m_internal_subscribers.end())
+            if (it != m_internal_subscribers.end() && std::get<Topic>((*it).second) == topic)
             {
-                (*it).second.second = true; // mark as removeable
+                std::get<bool>((*it).second) = true; // mark as removeable
             }
         }
         else
         {
             auto it = m_internal_subscribers.find(token);
-            if (it != m_internal_subscribers.end())
+            if (it != m_internal_subscribers.end() && std::get<Topic>((*it).second) == topic)
             {
                 // we can immediately remove
                 m_internal_subscribers.erase(it);
@@ -108,12 +114,22 @@ struct local_subscription
             }
         }
         // something left? As only marked as removeable, real removal will need a publish
-        return m_internal_subscribers.empty();
+        // return true (no more subscriber) if m_internal_subscribers is empty or has no more this topic
+        return std::count_if(m_internal_subscribers.begin(), m_internal_subscribers.end(),
+            [&](auto const& i)
+            {
+                return std::get<Topic>(i.second) == topic;
+            }) == 0;
     }
 
-    void unsubscribe_scheduler(boost::uuids::uuid scheduler_id)
+    void unsubscribe_scheduler(boost::uuids::uuid scheduler_id, Topic const& topic)
     {
-        m_deleted_scheduler_subscribers.emplace_back(std::move(scheduler_id));
+        m_deleted_scheduler_subscribers.emplace_back(std::make_tuple(std::move(scheduler_id), std::optional<Topic>{topic}));
+    }
+
+    void unsubscribe_scheduler_all_topics(boost::uuids::uuid scheduler_id)
+    {
+        m_deleted_scheduler_subscribers.emplace_back(std::move(scheduler_id), std::nullopt);
     }
     
     void cleanup_deleted_schedulers()
@@ -122,45 +138,60 @@ struct local_subscription
             std::remove_if(m_scheduler_subscribers.begin(), m_scheduler_subscribers.end(),
                 [&](auto const& sub) 
                 {
+                    // cleanup scheduler if:
                     return std::find_if(m_deleted_scheduler_subscribers.begin(), m_deleted_scheduler_subscribers.end(),
-                        [sub_id = sub.first](auto const& deleted_uid) {return deleted_uid == sub_id; }) != m_deleted_scheduler_subscribers.end();
+                        [sub_id = std::get<boost::uuids::uuid>(sub), sub_topic = std::get<Topic>(sub)]
+                        (auto const& deleted) 
+                        {
+                            return 
+                                // match uid and
+                                (std::get<boost::uuids::uuid>(deleted) == sub_id) 
+                                // either cleanup for any topic (no topic set)
+                              &&(!std::get<std::optional<Topic>>(deleted)
+                                // or cleanup given topic
+                                || (std::get<std::optional<Topic>>(deleted).value() == sub_topic));
+                        }
+                    ) != m_deleted_scheduler_subscribers.end();
                 }),
             m_scheduler_subscribers.end());
         m_deleted_scheduler_subscribers.clear();
     }
 
     template <class Ev>
-    bool publish(Ev&& e)
+    bool publish(Ev&& e, Topic const& other_topic)
     {
         // inform first other schedulers
         // to avoid event order inversion in case processing an event would send another event
         // external schedulers execute publishing asynchronously and therefore are not counted as handling the event
         for (auto& sched_sub : m_scheduler_subscribers)
         {
-            sched_sub.second(e);
+            if (std::get<Topic>(sched_sub).matches(other_topic))
+            {
+                std::get<subscriber_t>(sched_sub)(e);
+            }
         }
-        bool res = publish_internal(std::forward<Ev>(e));
+        bool res = publish_internal(std::forward<Ev>(e), other_topic);
         cleanup_deleted_schedulers();
         return res;
     }
 
     template <class Ev>
-    bool publish_internal(Ev&& e)
+    bool publish_internal(Ev&& e, Topic const& other_topic)
     {
         ++m_publish_counter;
         bool someone_handled = false;
         for (auto it = m_internal_subscribers.begin(); it != m_internal_subscribers.end();++it)
         {
-            if ((*it).second.first && !(*it).second.second)
+            if (std::get<subscriber_t>((*it).second) && !std::get<bool>((*it).second) && std::get<Topic>((*it).second).matches(other_topic))
             {
-                auto handled = ((*it).second.first)(e);
+                auto handled = (std::get<subscriber_t>((*it).second))(e);
                 if (handled.has_value() && handled.value())
                 {
                     someone_handled = true;
                 }
                 else
                 {
-                    (*it).second.second = true;
+                    std::get<bool>((*it).second) = true;
                 }
             }
         }
@@ -175,11 +206,11 @@ struct local_subscription
         return someone_handled;
     }
 
-    std::int16_t                                                m_publish_counter = 0;
-    std::map<std::int64_t, internal_subscriber_t>               m_internal_subscribers;
-    std::vector<std::pair<boost::uuids::uuid, subscriber_t>>    m_scheduler_subscribers;
+    std::int16_t                                                        m_publish_counter = 0;
+    std::map<std::int64_t, internal_subscriber_t>                       m_internal_subscribers;
+    std::vector<scheduler_subscriber_t>                                 m_scheduler_subscribers;
     // in order not to invalidate iterators during publish, remember deleted ids and cleanup later
-    std::vector< boost::uuids::uuid>                            m_deleted_scheduler_subscribers;
+    std::vector< std::tuple<boost::uuids::uuid, std::optional<Topic>>>  m_deleted_scheduler_subscribers;
 };
 
 // inline thread local subscriptions
@@ -206,41 +237,41 @@ void subscribe(Sub&& sub, Internal&& internal, boost::uuids::uuid scheduler_id, 
 
     // remember subscribe
     boost::asynchronous::subscription::get_waiting_subscribes()[token] =
-        [internal, scheduler_id]()
+        [internal, scheduler_id, topic]()
         {
             for (auto& other_scheduler : boost::asynchronous::subscription::get_other_schedulers_())
             {
                 if (!!other_scheduler)
                 {
-                    other_scheduler([internal, scheduler_id]()
+                    other_scheduler([internal, scheduler_id, topic]()
                         {
-                            boost::asynchronous::subscription::get_local_subscription_store_<arg0, Topic>().subscribe_scheduler(internal, scheduler_id);
+                            boost::asynchronous::subscription::get_local_subscription_store_<arg0, Topic>().subscribe_scheduler(internal, scheduler_id, topic);
                         });
                 }
             }
         };
 
     // register subscriber
-    boost::asynchronous::subscription::get_local_subscription_store_<arg0, Topic>().subscribe(std::move(sub), token);
+    boost::asynchronous::subscription::get_local_subscription_store_<arg0, Topic>().subscribe(std::move(sub), token, topic);
 
     // register our internal scheduler to other schedulers (will call publish)
     for (auto& other_scheduler : boost::asynchronous::subscription::get_other_schedulers_())
     {
         if (!!other_scheduler)
         {        
-            other_scheduler([internal, scheduler_id]()
+            other_scheduler([internal, scheduler_id, topic]()
             {
-                    boost::asynchronous::subscription::get_local_subscription_store_<arg0, Topic>().subscribe_scheduler(internal, scheduler_id);
+                    boost::asynchronous::subscription::get_local_subscription_store_<arg0, Topic>().subscribe_scheduler(internal, scheduler_id, topic);
             });
         }
     }
 }
 
 template <class Event, class Topic>
-void unsubscribe(std::uint64_t token, boost::uuids::uuid scheduler_id, Topic const& topic  )
+void unsubscribe(std::uint64_t token, boost::uuids::uuid scheduler_id, Topic const& topic)
 {
     // remove servant from list of internal subscribers
-    bool empty = boost::asynchronous::subscription::get_local_subscription_store_<Event, Topic>().unsubscribe(token);
+    bool empty = boost::asynchronous::subscription::get_local_subscription_store_<Event, Topic>().unsubscribe(token, topic);
     if (empty)
     {
         // if it was the last servant subscribed to this event type for this scheduler
@@ -249,9 +280,10 @@ void unsubscribe(std::uint64_t token, boost::uuids::uuid scheduler_id, Topic con
         {
             if (!!other_scheduler)
             {
-                other_scheduler([scheduler_id]()
+                other_scheduler([scheduler_id, topic]()
                     {
-                        boost::asynchronous::subscription::get_local_subscription_store_<Event, Topic>().unsubscribe_scheduler(scheduler_id);
+                        // unsubscribe only for this topic
+                        boost::asynchronous::subscription::get_local_subscription_store_<Event, Topic>().unsubscribe_scheduler(scheduler_id, topic);
                     });
             }
         }
@@ -263,19 +295,19 @@ template <class Event>
 bool publish(Event&& e)
 {
     return boost::asynchronous::subscription::get_local_subscription_store_<
-        std::remove_cv_t<std::remove_reference_t<Event>>, boost::asynchronous::subscription::no_topic>().publish(std::forward<Event>(e));
+        std::remove_cv_t<std::remove_reference_t<Event>>, boost::asynchronous::subscription::no_topic>().publish(std::forward<Event>(e), boost::asynchronous::subscription::no_topic{});
 }
 
 template <class Event, class Topic>
 bool publish_topic(Event&& e, Topic const& topic)
 {
-    return boost::asynchronous::subscription::get_local_subscription_store_<std::remove_cv_t<std::remove_reference_t<Event>>, Topic>().publish(std::forward<Event>(e));
+    return boost::asynchronous::subscription::get_local_subscription_store_<std::remove_cv_t<std::remove_reference_t<Event>>, Topic>().publish(std::forward<Event>(e), topic);
 }
 
 template <class Event, class Topic>
-bool publish_internal(Event&& e, Topic const&)
+bool publish_internal(Event&& e, Topic const& topic)
 {
-    return boost::asynchronous::subscription::get_local_subscription_store_<std::remove_cv_t<std::remove_reference_t<Event>>, Topic>().publish_internal(std::forward<Event>(e));
+    return boost::asynchronous::subscription::get_local_subscription_store_<std::remove_cv_t<std::remove_reference_t<Event>>, Topic>().publish_internal(std::forward<Event>(e), topic);
 }
 
 }}}

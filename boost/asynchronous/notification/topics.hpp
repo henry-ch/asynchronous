@@ -18,11 +18,14 @@
 namespace boost { namespace asynchronous { namespace subscription
 {
 
-	// Default topic matching everything => same as no topic
-	struct no_topic
-	{
-		inline constexpr bool matches(no_topic const&)const { return true; }
-	};
+    // Default topic matching everything => same as no topic
+    struct no_topic
+    {
+        constexpr bool matches(no_topic const&)const { return true; }
+
+        inline constexpr bool operator == (no_topic const&) const{return true;}
+        inline constexpr bool operator != (no_topic const&) const { return false; }
+    };
 
 }}}
 #endif // BOOST_ASYNCHRONOUS_NOTIFICATION_TOPICS_HPP
