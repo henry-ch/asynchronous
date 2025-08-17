@@ -714,7 +714,8 @@ public:
 
     // same with topics
     template <class Sub, class Topic>
-    boost::asynchronous::subscription_token subscribe_topic(Sub sub, Topic const& topic,
+    requires boost::asynchronous::subscription::topic_concept<Topic>
+    boost::asynchronous::subscription_token subscribe(Sub sub, Topic const& topic,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
         const std::string& task_name, std::size_t prio) const
 #else
@@ -729,7 +730,8 @@ public:
     }
 
     template <class Event, class Sub, class Topic>
-    auto subscribe_topic(Sub sub, Topic const& topic,
+    requires boost::asynchronous::subscription::topic_concept<Topic>
+    auto subscribe(Sub sub, Topic const& topic,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
         const std::string& task_name, std::size_t prio) const
 #else
@@ -744,7 +746,8 @@ public:
 
 
     template<class Event, class Topic = boost::asynchronous::subscription::no_topic>
-    void unsubscribe_topic(boost::asynchronous::subscription_token token, Topic const& topic)
+    requires boost::asynchronous::subscription::topic_concept<Topic>
+    void unsubscribe(boost::asynchronous::subscription_token token, Topic const& topic)
     {
         auto sched = get_scheduler().lock();
         if (sched.is_valid())
@@ -754,7 +757,8 @@ public:
     }
 
     template <class Event, class Topic = boost::asynchronous::subscription::no_topic>
-    void publish_topic(Event&& e, Topic const& topic)
+    requires boost::asynchronous::subscription::topic_concept<Topic>
+    void publish(Event&& e, Topic const& topic)
     {
         auto sched = get_scheduler().lock();
         if (sched.is_valid())

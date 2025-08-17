@@ -354,7 +354,7 @@ public:
     template <class Event, class Topic>
     void publish(Event&& e, Topic const& topic)
     {
-        boost::asynchronous::subscription::publish_topic(std::forward<Event>(e), topic);
+        boost::asynchronous::subscription::publish(std::forward<Event>(e), topic);
     }
 
     template <class Event, class Topic>

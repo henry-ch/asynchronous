@@ -299,7 +299,8 @@ bool publish(Event&& e)
 }
 
 template <class Event, class Topic>
-bool publish_topic(Event&& e, Topic const& topic)
+requires boost::asynchronous::subscription::topic_concept<Topic>
+bool publish(Event&& e, Topic const& topic)
 {
     return boost::asynchronous::subscription::get_local_subscription_store_<std::remove_cv_t<std::remove_reference_t<Event>>, Topic>().publish(std::forward<Event>(e), topic);
 }

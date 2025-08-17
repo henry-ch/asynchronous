@@ -17,6 +17,13 @@
 
 namespace boost { namespace asynchronous { namespace subscription
 {
+    template<typename T>
+    concept topic_concept = requires(T a)
+    {
+        { a.matches(a) } -> std::convertible_to<bool>;
+        { a == a } -> std::convertible_to<bool>;
+        { a != a } -> std::convertible_to<bool>;
+    };
 
     // Default topic matching everything => same as no topic
     struct no_topic
@@ -25,6 +32,15 @@ namespace boost { namespace asynchronous { namespace subscription
 
         inline constexpr bool operator == (no_topic const&) const{return true;}
         inline constexpr bool operator != (no_topic const&) const { return false; }
+    };
+
+    template <class T>
+    struct exact_topic
+    {
+        inline constexpr bool operator == (auto const& t) const { return  t == m_topic; }
+        inline constexpr bool operator != (auto const& t) const { return t != m_topic; }
+        constexpr bool matches(auto const& t)const { return t == m_topic; }
+        T m_topic;
     };
 
 }}}
