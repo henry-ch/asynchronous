@@ -34,7 +34,7 @@ inline std::map<std::uint64_t, std::function<void()>>& get_waiting_subscribes()
 template <class Event, class Topic>
 struct local_subscription
 {
-    using subscriber_t = std::function<std::optional<bool>(Event const&)>;
+    using subscriber_t = std::function<std::optional<bool>(Event const&, Topic const&)>;
     
     using internal_subscriber_t = std::tuple<
         subscriber_t, // subscriber
@@ -167,7 +167,7 @@ struct local_subscription
         {
             if (std::get<Topic>(sched_sub).matches(other_topic))
             {
-                std::get<subscriber_t>(sched_sub)(e);
+                std::get<subscriber_t>(sched_sub)(e, other_topic);
             }
         }
         bool res = publish_internal(std::forward<Ev>(e), other_topic);
@@ -184,7 +184,15 @@ struct local_subscription
         {
             if (std::get<subscriber_t>((*it).second) && !std::get<bool>((*it).second) && std::get<Topic>((*it).second).matches(other_topic))
             {
-                auto handled = (std::get<subscriber_t>((*it).second))(e);
+                std::optional<bool> handled;
+                if constexpr (std::is_same_v<Topic, boost::asynchronous::subscription::no_topic>)
+                {
+                    handled = (std::get<subscriber_t>((*it).second))(e, other_topic);
+                }
+                else
+                {
+                    handled = (std::get<subscriber_t>((*it).second))(e, other_topic);
+                }
                 if (handled.has_value() && handled.value())
                 {
                     someone_handled = true;
@@ -233,7 +241,7 @@ void subscribe(Sub&& sub, Internal&& internal, boost::uuids::uuid scheduler_id, 
 {
     using traits = boost::asynchronous::function_traits<Internal>;
     using arg0 = typename traits::template remove_ref_cv_arg_<0>::type;
-    static_assert(traits::arity == 1, "callback should have only one argument");
+    static_assert(traits::arity <= 2, "callback should have only one or two arguments");
 
     // remember subscribe
     boost::asynchronous::subscription::get_waiting_subscribes()[token] =

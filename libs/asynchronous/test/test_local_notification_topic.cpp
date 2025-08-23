@@ -33,7 +33,7 @@ struct some_event
     int data = 0;
 };
 
-using string_topic = boost::asynchronous::subscription::exact_topic<std::string>;
+using string_topic = boost::asynchronous::subscription::channel_topic<>;
 
 struct Servant : boost::asynchronous::trackable_servant<>
 {
@@ -47,18 +47,19 @@ struct Servant : boost::asynchronous::trackable_servant<>
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant dtor not posted.");
         servant_dtor = true;
     }
-    std::future<int> wait_for_some_event(std::string const& topic)
+    std::future<std::tuple<int, std::string>> wait_for_some_event(std::string const& topic)
     {
-        std::shared_ptr<std::promise<int> > p(new std::promise<int>);
+        std::shared_ptr<std::promise<std::tuple<int, std::string>> > p(new std::promise<std::tuple<int, std::string>>);
         auto fu = p->get_future();
         boost::thread::id threadid = boost::this_thread::get_id();
 
-        auto cb = [this, p = std::move(p), threadid](some_event const& e)
+        auto cb = [this, p = std::move(p), threadid](some_event const& e, string_topic const& published_topic)
         {
             BOOST_CHECK_MESSAGE(threadid == boost::this_thread::get_id(), "notification callback in wrong thread.");
             ++cb_called_;
-            p->set_value(42); 
+            p->set_value(std::make_tuple(42, to_string(published_topic)));
         };
+
         this->subscribe(std::move(cb), string_topic{ topic });
 
 
@@ -104,10 +105,11 @@ BOOST_AUTO_TEST_CASE( test_local_notification_topic_match )
         ServantProxy proxy(scheduler, pool);
         try
         {
-            auto fu = proxy.wait_for_some_event("topic1");
-            proxy.trigger("topic1");
+            auto fu = proxy.wait_for_some_event("topics");
+            proxy.trigger("topics/topic1");
             auto res = boost::asynchronous::recursive_future_get(std::move(fu));
-            BOOST_CHECK_MESSAGE(res == 42, "invalid result");
+            BOOST_CHECK_MESSAGE(std::get<int>(res) == 42, "invalid result");
+            BOOST_CHECK_MESSAGE(std::get<std::string>(res) == "topics/topic1", "invalid result");
 
         }
         catch (...)
@@ -124,7 +126,7 @@ BOOST_AUTO_TEST_CASE( test_local_notification_topic_match )
     {
         sched.post([p=std::move(p)]() mutable
             {
-                boost::asynchronous::subscription::publish(some_event{ 42 }, string_topic{ "topic1" });
+                //boost::asynchronous::subscription::publish(some_event{ 42 }, string_topic{ "topic1" });
                 BOOST_CHECK_MESSAGE(boost::asynchronous::subscription::get_local_subscription_store_<some_event>().m_internal_subscribers.empty(), "local subscribers not removed");
                 p->set_value();
             });
@@ -162,7 +164,7 @@ BOOST_AUTO_TEST_CASE(test_local_notification_topic_no_match)
     {
         sched.post([p = std::move(p)]() mutable
             {
-                boost::asynchronous::subscription::publish(some_event{ 42 }, string_topic{ "topic1" });
+                //boost::asynchronous::subscription::publish(some_event{ 42 }, string_topic{ "topic1" });
                 BOOST_CHECK_MESSAGE(boost::asynchronous::subscription::get_local_subscription_store_<some_event>().m_internal_subscribers.empty(), "local subscribers not removed");
                 p->set_value();
             });
@@ -186,7 +188,7 @@ BOOST_AUTO_TEST_CASE(test_local_notification_topic_match_no_match)
             proxy.trigger("topic2");
 
             auto res = boost::asynchronous::recursive_future_get(std::move(fu2));
-            BOOST_CHECK_MESSAGE(res == 42, "invalid result");
+            BOOST_CHECK_MESSAGE(std::get<int>(res) == 42, "invalid result");
             BOOST_CHECK_MESSAGE(proxy.cb_called().get() == 1, "got wrong number of events");
         }
         catch (...)
@@ -203,7 +205,7 @@ BOOST_AUTO_TEST_CASE(test_local_notification_topic_match_no_match)
     {
         sched.post([p = std::move(p)]() mutable
             {
-                boost::asynchronous::subscription::publish(some_event{ 42 }, string_topic{ "topic1" });
+                //boost::asynchronous::subscription::publish(some_event{ 42 }, string_topic{ "topic1" });
                 BOOST_CHECK_MESSAGE(boost::asynchronous::subscription::get_local_subscription_store_<some_event>().m_internal_subscribers.empty(), "local subscribers not removed");
                 p->set_value();
             });

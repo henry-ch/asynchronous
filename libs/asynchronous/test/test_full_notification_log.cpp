@@ -106,7 +106,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job, servant_job
         auto fu = p->get_future();
         boost::thread::id threadid = boost::this_thread::get_id();
 
-        auto cb = [p = std::move(p), threadid, this](some_event const& e)
+        auto cb = [p = std::move(p), threadid, this](some_event const& e, string_topic const&)
             {
                 ++cb_called_;
                 BOOST_CHECK_MESSAGE(threadid == boost::this_thread::get_id(), "notification callback in wrong thread.");

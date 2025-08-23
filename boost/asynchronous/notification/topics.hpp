@@ -24,6 +24,7 @@ namespace boost { namespace asynchronous { namespace subscription
         { a.matches(a) } -> std::convertible_to<bool>;
         { a == a } -> std::convertible_to<bool>;
         { a != a } -> std::convertible_to<bool>;
+        {to_string(a) } -> std::convertible_to<std::string>;
     };
 
     // Default topic matching everything => same as no topic
@@ -33,15 +34,32 @@ namespace boost { namespace asynchronous { namespace subscription
 
         inline constexpr bool operator == (no_topic const&) const{return true;}
         inline constexpr bool operator != (no_topic const&) const { return false; }
+        std::string to_string() const
+        {
+            return "no_topic";
+        }
     };
 
     template <class T>
     struct exact_topic
     {
+        exact_topic(std::string const& channel)
+            :m_topic(channel)
+        {
+        }
+        exact_topic(std::string&& channel)
+            : m_topic(std::move(channel))
+        {
+        }
         inline constexpr bool operator == (auto const& t) const { return  t == m_topic; }
         inline constexpr bool operator != (auto const& t) const { return t != m_topic; }
         constexpr bool matches(exact_topic const& t)const { return t.m_topic == m_topic; }
         constexpr bool matches(T const& t)const { return t == m_topic; }
+        std::string to_string() const
+        {
+            return m_topic;
+        }
+    private:
         T m_topic;
     };
 
@@ -66,6 +84,10 @@ namespace boost { namespace asynchronous { namespace subscription
         constexpr bool matches(channel_topic const& t)const
         {
             return matches(t.m_topic, m_topic);
+        }
+        std::string to_string() const
+        {
+            return m_topic;
         }
     private:
         static std::string_view trim_trailing_slash(std::string_view path) 
@@ -117,6 +139,22 @@ namespace boost { namespace asynchronous { namespace subscription
         }
         std::string m_topic;
     };
+
+    // for ADL
+    inline std::string to_string(boost::asynchronous::subscription::no_topic const& t)
+    {
+        return t.to_string();
+    }
+    template <class T>
+    inline std::string to_string(boost::asynchronous::subscription::exact_topic<T> const& t)
+    {
+        return t.to_string();
+    }
+    template <char Separator,char Wildcard>
+    inline std::string to_string(boost::asynchronous::subscription::channel_topic< Separator, Wildcard> const& t)
+    {
+        return t.to_string();
+    }
 
 }}}
 #endif // BOOST_ASYNCHRONOUS_NOTIFICATION_TOPICS_HPP

@@ -589,7 +589,7 @@ public:
         return m_scheduler;
     }
     template <class Sub, class Event, class Topic, class ReturnType>
-    boost::asynchronous::subscription_token subscribe_helper(Sub sub, Topic const& topic, const std::string& task_name, std::size_t prio)
+    boost::asynchronous::subscription_token subscribe_helper(Sub sub, Topic const& subscribed_topic, const std::string& task_name, std::size_t prio)
     {
         auto sched = get_scheduler().lock();
         auto weak = get_scheduler();
@@ -602,22 +602,22 @@ public:
 
             // publishing to other schedulers will mean calling this function, 
             // which will post_future to our scheduler
-            auto wrapped = [tracking, uid, weak, topic, task_name, prio]
-            (Event const& ev)
+            auto wrapped = [tracking, uid, weak, task_name, prio]
+            (Event const& ev, Topic const& published_topic)
                 {
                     auto sched = weak.lock();
                     if (sched.is_valid())
                     {
                         // not in our thread, post
                         boost::asynchronous::post_future(sched,
-                            boost::asynchronous::move_bind(boost::asynchronous::check_alive([weak, topic](Event const& ev)
+                            boost::asynchronous::move_bind(boost::asynchronous::check_alive([weak](Event const& ev, Topic const& published_topic)
                                 {
                                     auto sched = weak.lock();
                                     if (sched.is_valid())
                                     {
-                                        sched.publish_internal(ev, topic);
+                                        sched.publish_internal(ev, published_topic);
                                     }
-                                }, tracking), ev),
+                                }, tracking), ev, published_topic),
                             task_name, prio);
                     }
                     else
@@ -631,29 +631,43 @@ public:
             if constexpr (!std::is_same_v<ReturnType,bool>)
             {
                 // subscribe will be used until unsubscribed or servant gone
-                auto sub_ = [sub=std::move(sub), tracking](Event const& ev)mutable
+                auto sub_ = [sub=std::move(sub), tracking](Event const& ev, Topic const& published_topic)mutable
                     {
                         if (!tracking.expired())
                         {
-                            sub(ev);
+                            if constexpr (std::is_same_v<Topic, boost::asynchronous::subscription::no_topic>)
+                            {
+                                sub(ev);
+                            }
+                            else
+                            {
+                                sub(ev, published_topic);
+                            }
                             return std::optional<bool>{true};
                         }
                         return std::optional<bool>{false};
                     };
-                return sched.subscribe(std::move(sub_), std::move(wrapped), topic);
+                return sched.subscribe(std::move(sub_), std::move(wrapped), subscribed_topic);
             }
             else
             {
                 // single-shot subscription
-                auto sub_ = [sub = std::move(sub), tracking](Event const& ev)mutable
+                auto sub_ = [sub = std::move(sub), tracking](Event const& ev, Topic const& published_topic)mutable
                     {
                         if (!tracking.expired())
                         {
-                            return std::optional<bool>{sub(ev)};
+                            if constexpr (std::is_same_v<Topic, boost::asynchronous::subscription::no_topic>)
+                            {
+                                return std::optional<bool>{sub(ev)};
+                            }
+                            else
+                            {
+                                return std::optional<bool>{sub(ev, published_topic)};
+                            }
                         }
                         return std::optional<bool>{false};
                     };
-                return sched.subscribe(std::move(sub_), std::move(wrapped), topic);
+                return sched.subscribe(std::move(sub_), std::move(wrapped), subscribed_topic);
             }
         }
         // return invalid token

@@ -183,7 +183,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
         auto fu = p->get_future();
         boost::thread::id threadid = boost::this_thread::get_id();
 
-        auto cb = [p = std::move(p), threadid, this](some_event const& e)
+        auto cb = [p = std::move(p), threadid, this](some_event const& e, string_topic const&)
             {
                 ++cb_called_;
                 BOOST_CHECK_MESSAGE(threadid == boost::this_thread::get_id(), "notification callback in wrong thread.");
@@ -194,17 +194,17 @@ struct Servant : boost::asynchronous::trackable_servant<>
         return fu;
     }
 
-    std::future<int> wait_for_some_event_channel_topic(std::string const& topic)
+    std::future<std::tuple<int,std::string>> wait_for_some_event_channel_topic(std::string const& topic)
     {
-        std::shared_ptr<std::promise<int> > p(new std::promise<int>);
+        std::shared_ptr<std::promise<std::tuple<int, std::string>> > p(new std::promise<std::tuple<int, std::string>>);
         auto fu = p->get_future();
         boost::thread::id threadid = boost::this_thread::get_id();
 
-        auto cb = [p = std::move(p), threadid, this](some_event const& e)
+        auto cb = [p = std::move(p), threadid, this](some_event const& e, channel_topic_t const& published_topic)
             {
                 ++cb_called_;
                 BOOST_CHECK_MESSAGE(threadid == boost::this_thread::get_id(), "notification callback in wrong thread.");
-                p->set_value(42);
+                p->set_value(std::make_tuple(42, to_string(published_topic)));
             };
         token_ = this->subscribe(std::move(cb), channel_topic_t{ topic });
 
@@ -1133,7 +1133,8 @@ BOOST_AUTO_TEST_CASE(test_full_notification_exact_channel_topic_match)
         proxy2.trigger_some_event_channel_topic("A/B/C").get();
 
         auto res = boost::asynchronous::recursive_future_get(std::move(res_fu));
-        BOOST_CHECK_MESSAGE(res == 42, "invalid result");
+        BOOST_CHECK_MESSAGE(std::get<int>(res) == 42, "invalid result");
+        BOOST_CHECK_MESSAGE(std::get<std::string>(res) == "A/B/C", "invalid result");
 
         proxy->force_unsubscribe_channel_topic("A/B").get();
         BOOST_CHECK_MESSAGE(proxy->cb_called().get() == 1, "got wrong number of events");
