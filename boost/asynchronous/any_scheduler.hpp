@@ -48,6 +48,7 @@
 #include <boost/asynchronous/scheduler_diagnostics.hpp>
 #include <boost/asynchronous/notification/local_subscription.hpp>
 #include <boost/asynchronous/detail/function_traits.hpp>
+#include <boost/asynchronous/notification/topics.hpp>
 
 namespace boost { namespace asynchronous
 {
@@ -163,7 +164,9 @@ struct any_shared_scheduler_concept
     template <class Sub, class Internal>
     boost::asynchronous::subscription_token subscribe(Sub&& sub, Internal&& internal)
     {
-        boost::asynchronous::subscription::subscribe_(std::forward<Sub>(sub), std::forward<Internal>(internal), this->get_uuid(), m_token->token);
+        boost::asynchronous::subscription::subscribe(std::forward<Sub>(sub), std::forward<Internal>(internal), 
+                                                      this->get_uuid(), m_token->token,
+                                                      boost::asynchronous::subscription::no_topic{});
         boost::asynchronous::subscription_token new_token = *(m_token);
         m_token->token++;
         return new_token;
@@ -172,7 +175,23 @@ struct any_shared_scheduler_concept
     template <class Event>
     void unsubscribe(boost::asynchronous::subscription_token token)
     {
-        boost::asynchronous::subscription::unsubscribe_<Event>(token.token, this->get_uuid());
+        boost::asynchronous::subscription::unsubscribe<Event, boost::asynchronous::subscription::no_topic>(
+            token.token, this->get_uuid(), boost::asynchronous::subscription::no_topic{});
+    }
+
+    template <class Sub, class Internal, class Topic>
+    boost::asynchronous::subscription_token subscribe_topic(Sub&& sub, Internal&& internal, Topic const& topic)
+    {
+        boost::asynchronous::subscription::subscribe(std::forward<Sub>(sub), std::forward<Internal>(internal), this->get_uuid(), m_token->token, topic);
+        boost::asynchronous::subscription_token new_token = *(m_token);
+        m_token->token++;
+        return new_token;
+    }
+
+    template <class Event, class Topic>
+    void unsubscribe_topic(boost::asynchronous::subscription_token token, Topic const& topic)
+    {
+        boost::asynchronous::subscription::unsubscribe<Event, Topic>(token.token, this->get_uuid(), topic);
     }
 
     std::shared_ptr<boost::asynchronous::subscription_token>   m_token = std::make_shared<boost::asynchronous::subscription_token>(boost::asynchronous::subscription_token{ 0 });
@@ -308,28 +327,40 @@ public:
         return (*my_ptr).get_uuid();
     }
 
-    template <class Sub, class Internal>
-    boost::asynchronous::subscription_token subscribe(Sub&& sub, Internal&& internal)
+    template <class Sub, class Internal, class Topic>
+    boost::asynchronous::subscription_token subscribe(Sub&& sub, Internal&& internal, Topic const& topic)
     {
-        return (*my_ptr).subscribe(std::forward<Sub>(sub), std::forward<Internal>(internal));
+        return (*my_ptr).subscribe_topic(std::forward<Sub>(sub), std::forward<Internal>(internal), topic);
     }
 
-    template <class Event>
-    void unsubscribe(boost::asynchronous::subscription_token token)
+    template <class Event, class Topic>
+    void unsubscribe(boost::asynchronous::subscription_token token, Topic const& topic)
     {
-        (*my_ptr).template unsubscribe<Event>(std::move(token));
+        (*my_ptr).template unsubscribe_topic<Event>(std::move(token), topic);
     }
 
     template <class Event>
     void publish(Event&& e)
     {
-        boost::asynchronous::subscription::publish_(std::forward<Event>(e));
+        boost::asynchronous::subscription::publish(std::forward<Event>(e));
     }
 
     template <class Event>
     void publish_internal(Event&& e)
     {
         boost::asynchronous::subscription::publish_internal(std::forward<Event>(e));
+    }
+
+    template <class Event, class Topic>
+    void publish(Event&& e, Topic const& topic)
+    {
+        boost::asynchronous::subscription::publish(std::forward<Event>(e), topic);
+    }
+
+    template <class Event, class Topic>
+    void publish_internal(Event&& e, Topic const& topic)
+    {
+        boost::asynchronous::subscription::publish_internal(std::forward<Event>(e), topic);
     }
 
 private:

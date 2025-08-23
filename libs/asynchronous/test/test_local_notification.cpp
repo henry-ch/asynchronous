@@ -107,7 +107,7 @@ BOOST_AUTO_TEST_CASE( test_local_notification )
     {
         sched.post([p=std::move(p)]() mutable
             {
-                boost::asynchronous::subscription::publish_(some_event{ 42 });
+                boost::asynchronous::subscription::publish(some_event{ 42 });
                 BOOST_CHECK_MESSAGE(boost::asynchronous::subscription::get_local_subscription_store_<some_event>().m_internal_subscribers.empty(), "local subscribers not removed");
                 p->set_value();
             });
