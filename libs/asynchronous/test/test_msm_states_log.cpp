@@ -37,6 +37,9 @@ using namespace msm::front;
 
 namespace
 {
+typedef boost::asynchronous::any_loggable servant_job;
+typedef std::map<std::string, std::list<boost::asynchronous::diagnostic_item> > diag_type;
+
 // main thread id
 boost::thread::id main_thread_id;
 bool servant_dtor = false;
@@ -55,7 +58,7 @@ struct fsm_ : public msm::front::state_machine_def<fsm_>
         }
     };
 
-    struct State1 : public boost::asynchronous::msm::state<boost::msm::front::state<>>
+    struct State1 : public boost::asynchronous::msm::state<boost::msm::front::state<>, servant_job, servant_job>
     {
         template <class Event, class FSM>
         void on_entry(Event const&, FSM&) { ++entry_counter; }
@@ -64,7 +67,7 @@ struct fsm_ : public msm::front::state_machine_def<fsm_>
         int entry_counter=0;
         int exit_counter=0;
     };
-    struct State2 : public boost::asynchronous::msm::state<boost::msm::front::state<>>
+    struct State2 : public boost::asynchronous::msm::state<boost::msm::front::state<>, servant_job, servant_job>
     {
         template <class Event, class FSM>
         void on_entry(Event const&, FSM& fsm) 
@@ -106,11 +109,11 @@ struct fsm_ : public msm::front::state_machine_def<fsm_>
 };
 using fsm = msm::back11::state_machine<fsm_>;
 
-struct Servant : boost::asynchronous::trackable_servant<>
+struct Servant : boost::asynchronous::trackable_servant<servant_job, servant_job>
 {
     template <class Threadpool>
-    Servant(boost::asynchronous::any_weak_scheduler<> scheduler, Threadpool p)
-        : boost::asynchronous::trackable_servant<>(scheduler, p)
+    Servant(boost::asynchronous::any_weak_scheduler<servant_job> scheduler, Threadpool p)
+        : boost::asynchronous::trackable_servant<servant_job, servant_job>(scheduler, p)
     {
     }
 
@@ -140,33 +143,47 @@ struct Servant : boost::asynchronous::trackable_servant<>
     fsm m_fsm;
 };
 
-class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy, Servant>
+class ServantProxy : public boost::asynchronous::servant_proxy<ServantProxy, Servant, servant_job>
 {
 public:
     template <class Scheduler, class Threadpool>
     ServantProxy(Scheduler s, Threadpool p) :
-        boost::asynchronous::servant_proxy<ServantProxy, Servant>(s, p)
+        boost::asynchronous::servant_proxy<ServantProxy, Servant, servant_job>(s, p)
     {
     }
-    BOOST_ASYNC_FUTURE_MEMBER(process_event)
-    BOOST_ASYNC_FUTURE_MEMBER(publish_event)
-    BOOST_ASYNC_FUTURE_MEMBER(start)
-    BOOST_ASYNC_FUTURE_MEMBER(test)
+    BOOST_ASYNC_FUTURE_MEMBER_LOG(process_event, "process_event", 1)
+    BOOST_ASYNC_FUTURE_MEMBER_LOG(publish_event, "publish_event", 1)
+    BOOST_ASYNC_FUTURE_MEMBER_LOG(start, "start", 1)
+    BOOST_ASYNC_FUTURE_MEMBER_LOG(test, "test",1)
 };
 
 }
 
-BOOST_AUTO_TEST_CASE( test_servant_states )
+BOOST_AUTO_TEST_CASE( test_servant_states_log )
 {
     auto scheduler = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::single_thread_scheduler<
-        boost::asynchronous::guarded_deque<>>>();
+        boost::asynchronous::guarded_deque<servant_job>>>();
     auto pool = boost::asynchronous::make_shared_scheduler_proxy<boost::asynchronous::threadpool_scheduler<
-        boost::asynchronous::guarded_deque<>>>(3);
+        boost::asynchronous::guarded_deque<servant_job>>>(3);
     
     ServantProxy proxy(scheduler, pool);
     proxy.start();
     proxy.process_event(event1{}).get();
     proxy.process_event(event1{}).get();
-    proxy.test();
+    proxy.test().get();
+
+    diag_type diag = scheduler.get_diagnostics().totals();
+    BOOST_CHECK_MESSAGE(!diag.empty(), "servant should have diagnostics.");
+    for (auto mit = diag.begin(); mit != diag.end(); ++mit)
+    {
+        BOOST_CHECK_MESSAGE(!(*mit).first.empty(), "no job should have an empty name.");
+        for (auto jit = (*mit).second.begin(); jit != (*mit).second.end(); ++jit)
+        {
+            BOOST_CHECK_MESSAGE(std::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() >= 0, "task finished before it started.");
+            BOOST_CHECK_MESSAGE(!(*jit).is_interrupted(), "no task should have been interrupted.");
+            BOOST_CHECK_MESSAGE(!(*jit).is_failed(), "no task should have failed.");
+        }
+    }
+
 }
 

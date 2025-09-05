@@ -17,8 +17,8 @@
 
 namespace boost { namespace asynchronous { namespace msm
 {
-    template <class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB, class WJOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
-    struct state : public boost::msm::front::state<>
+    template <class StateType, class JOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB, class WJOB = BOOST_ASYNCHRONOUS_DEFAULT_JOB>
+    struct state : public StateType
                  , public boost::asynchronous::trackable_servant<JOB, WJOB>
     {
 

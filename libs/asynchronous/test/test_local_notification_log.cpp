@@ -58,7 +58,7 @@ struct Servant : boost::asynchronous::trackable_servant<servant_job, servant_job
             BOOST_CHECK_MESSAGE(threadid == boost::this_thread::get_id(), "notification callback in wrong thread.");
             p->set_value(42); 
         };
-        this->subscribe(std::move(cb));
+        this->subscribe(std::move(cb),"subscribe");
 
         this->publish(some_event{42});
 
@@ -124,6 +124,7 @@ BOOST_AUTO_TEST_CASE( test_local_notification_log )
         BOOST_CHECK_MESSAGE(!diag.empty(), "servant should have diagnostics.");
         for (auto mit = diag.begin(); mit != diag.end(); ++mit)
         {
+            BOOST_CHECK_MESSAGE(!(*mit).first.empty(), "no job should have an empty name.");
             for (auto jit = (*mit).second.begin(); jit != (*mit).second.end(); ++jit)
             {
                 BOOST_CHECK_MESSAGE(std::chrono::nanoseconds((*jit).get_finished_time() - (*jit).get_started_time()).count() >= 0, "task finished before it started.");
