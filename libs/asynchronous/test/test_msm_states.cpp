@@ -7,7 +7,6 @@
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 // For more information, see http://www.boost.org
-#include <iostream>
 #include <boost/asynchronous/scheduler/single_thread_scheduler.hpp>
 #include <boost/asynchronous/scheduler_shared_proxy.hpp>
 #include <boost/asynchronous/scheduler/threadpool_scheduler.hpp>
@@ -44,7 +43,7 @@ bool servant_dtor = false;
 
 struct event1 {};
 struct event2 {};
-struct fsm_ : public msm::front::state_machine_def<fsm_>
+struct fsm_ : public boost::asynchronous::msm::state<msm::front::state_machine_def<fsm_>>
 {
     struct publish_event2
     {
@@ -54,6 +53,16 @@ struct fsm_ : public msm::front::state_machine_def<fsm_>
             src.publish(event2{});
         }
     };
+
+    template <class Event, class FSM>
+    void on_entry(Event const&, FSM& fsm)
+    {
+        this->subscribe(
+            [&fsm](event1 const& e) mutable
+            {
+                fsm.process_event(e);
+            });
+    }
 
     struct State1 : public boost::asynchronous::msm::state<boost::msm::front::state<>>
     {
@@ -121,7 +130,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
 
     auto publish_event(auto ev)
     {
-        return publish(ev);
+        return m_fsm.publish(ev);
     }
 
     void start()
@@ -166,7 +175,7 @@ BOOST_AUTO_TEST_CASE( test_servant_states )
     ServantProxy proxy(scheduler, pool);
     proxy.start();
     proxy.process_event(event1{}).get();
-    proxy.process_event(event1{}).get();
+    proxy.publish_event(event1{}).get();
     proxy.test();
 }
 
