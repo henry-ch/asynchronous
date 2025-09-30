@@ -9,12 +9,12 @@ namespace boost { namespace asynchronous
 
 struct tss_io_service_wrapper
 {
-    tss_io_service_wrapper(boost::asio::io_service* ios):m_io_service(ios){}
-    boost::asio::io_service* m_io_service;
+    tss_io_service_wrapper(boost::asio::io_context* ios):m_io_service(ios){}
+    boost::asio::io_context* m_io_service;
 };
 
 template <class T=void>
-boost::asio::io_service* get_io_service(boost::asio::io_service* ioservice= 0 )
+boost::asio::io_context* get_io_service(boost::asio::io_context* ioservice= 0 )
 {
     static boost::thread_specific_ptr<boost::asynchronous::tss_io_service_wrapper> s_io_service;
     if (ioservice != 0)

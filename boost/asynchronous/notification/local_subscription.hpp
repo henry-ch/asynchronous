@@ -63,7 +63,7 @@ struct local_subscription
         }
     }
 
-    template <class Sub, class Topic>
+    template <class Sub>
     void subscribe(Sub&& sub, std::int64_t token, Topic const& topic)
     {
         m_internal_subscribers.insert_or_assign(token, std::make_tuple(std::forward<Sub>(sub),topic, false));
