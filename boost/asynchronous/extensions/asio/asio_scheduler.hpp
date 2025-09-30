@@ -94,14 +94,14 @@ public:
         for (size_t i=0; i<number_of_workers; ++i)
         {
             // create worker
-            std::shared_ptr<boost::asio::io_service> ioservice = std::make_shared<boost::asio::io_service>();
+            std::shared_ptr<boost::asio::io_context> ioservice = std::make_shared<boost::asio::io_context>();
             m_ioservices.push_back(ioservice);
-            m_works.push_back(std::make_shared<boost::asio::io_service::work>(*ioservice));
+            m_works.push_back(boost::asio::make_work_guard(*ioservice));
         }
         for (size_t i=0; i<number_of_workers; ++i)
         {
             // a worker gets the other io_services, so that he can try to steal
-            std::vector<std::shared_ptr<boost::asio::io_service > > other_ioservices(m_ioservices);
+            std::vector<std::shared_ptr<boost::asio::io_context > > other_ioservices(m_ioservices);
             other_ioservices.erase(other_ioservices.begin()+i);
             // create thread and add to group
             std::promise<boost::thread*> new_thread_promise;
@@ -225,13 +225,13 @@ public:
         if (prio == std::numeric_limits<std::size_t>::max())
         {
             std::size_t pos = m_next_shutdown_bucket.load()% m_ioservices.size();
-            m_ioservices[pos]->post(std::move(job));
+            boost::asio::post(m_ioservices[pos]->get_executor(), std::move(job));
             ++m_next_shutdown_bucket;
         }
         else
         {
             std::size_t pos = this->find_position(prio,m_ioservices.size());
-            m_ioservices[pos]->post(std::move(job));
+            boost::asio::post(m_ioservices[pos]->get_executor(), std::move(job));
         }
     }
     void post(job_type job) override
@@ -267,13 +267,13 @@ public:
         if (prio == std::numeric_limits<std::size_t>::max())
         {
             std::size_t pos = m_next_shutdown_bucket.load()% m_ioservices.size();
-            m_ioservices[pos]->post(std::move(ijob));
+            boost::asio::post(m_ioservices[pos]->get_executor(), std::move(ijob));
             ++m_next_shutdown_bucket;
         }
         else
         {
             std::size_t pos = this->find_position(prio,m_ioservices.size());
-            m_ioservices[pos]->post(std::move(ijob));
+            boost::asio::post(m_ioservices[pos]->get_executor(), std::move(ijob));
         }
         
         std::future<boost::thread*> fu = wpromise->get_future();
@@ -381,9 +381,9 @@ public:
     static boost::thread_specific_ptr<thread_ptr_wrapper> m_self_thread;
     
 private:
-    static void run(std::shared_ptr<boost::asio::io_service> ioservice,std::shared_future<boost::thread*> self,
+    static void run(std::shared_ptr<boost::asio::io_context> ioservice,std::shared_future<boost::thread*> self,
                     std::shared_ptr<std::promise<void> > started,
-                    std::vector<std::shared_ptr<boost::asio::io_service > > other_ioservices,
+                    std::vector<std::shared_ptr<boost::asio::io_context > > other_ioservices,
                     std::vector<boost::asynchronous::any_queue_ptr<job_type> > other_queues,
                     std::weak_ptr<this_type> this_)
     {
@@ -490,8 +490,8 @@ private:
     
     std::atomic<size_t> m_next_shutdown_bucket;
     size_t m_number_of_workers;
-    std::vector<std::shared_ptr<boost::asio::io_service::work> > m_works;
-    std::vector<std::shared_ptr<boost::asio::io_service > > m_ioservices;
+    std::vector<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>> m_works;
+    std::vector<std::shared_ptr<boost::asio::io_context > > m_ioservices;
     std::shared_ptr<boost::thread_group> m_group;
     std::vector<boost::thread::id> m_thread_ids;
     std::weak_ptr<this_type> m_weak_self;
