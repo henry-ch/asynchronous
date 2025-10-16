@@ -20,20 +20,20 @@ public:
 
     asio_deadline_timer(boost::asynchronous::any_weak_scheduler<> scheduler)
         : boost::asynchronous::trackable_servant<>(scheduler)
-        , m_timer(new boost::asio::deadline_timer(*boost::asynchronous::get_io_service<>()))
+        , m_timer(new boost::asio::steady_timer(*boost::asynchronous::get_io_service<>()))
     {
     }
     template <class Duration>
     asio_deadline_timer(boost::asynchronous::any_weak_scheduler<> scheduler, Duration timer_duration)
         : boost::asynchronous::trackable_servant<>(scheduler)
-        , m_timer(new boost::asio::deadline_timer(*boost::asynchronous::get_io_service<>(),timer_duration))
+        , m_timer(new boost::asio::steady_timer(*boost::asynchronous::get_io_service<>(),timer_duration))
     {        
     }
     template <class Duration>
     asio_deadline_timer(boost::asynchronous::any_weak_scheduler<> scheduler, Duration timer_duration,
                         std::function<void(const::boost::system::error_code&)> fct)
         : boost::asynchronous::trackable_servant<>(scheduler)
-        , m_timer(new boost::asio::deadline_timer(*boost::asynchronous::get_io_service<>(),timer_duration))
+        , m_timer(new boost::asio::steady_timer(*boost::asynchronous::get_io_service<>(),timer_duration))
     {
         m_timer->async_wait(std::move(fct));
     }
@@ -54,7 +54,7 @@ public:
     template <typename Duration>
     void reset(Duration duration)
     {
-        m_timer.reset(new boost::asio::deadline_timer(*boost::asynchronous::get_io_service<>(),duration));
+        m_timer.reset(new boost::asio::steady_timer(*boost::asynchronous::get_io_service<>(),duration));
     }
     template <class Duration>
     void reset(Duration timer_duration, std::function<void(const::boost::system::error_code&)> fct)
@@ -63,7 +63,7 @@ public:
         m_timer->async_wait(std::move(fct));
     }
 private:
-   std::shared_ptr<boost::asio::deadline_timer> m_timer; 
+   std::shared_ptr<boost::asio::steady_timer> m_timer; 
 };
 
 class asio_deadline_timer_proxy : public boost::asynchronous::servant_proxy< boost::asynchronous::asio_deadline_timer_proxy, boost::asynchronous::asio_deadline_timer >
