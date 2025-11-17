@@ -28,7 +28,7 @@ public:
     queue_converter(const queue_converter&) = delete;
     queue_converter& operator=(const queue_converter&) = delete;
 
-    virtual ~queue_converter<To,From>(){}
+    virtual ~queue_converter(){}
     virtual void push(To&&,std::size_t)
     {
         // not implemented
