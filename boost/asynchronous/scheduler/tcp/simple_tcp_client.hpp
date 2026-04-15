@@ -49,7 +49,7 @@ struct client_time_check_policy: boost::asynchronous::trackable_servant<boost::a
         // start timer to check for work again later
         std::shared_ptr<boost::asio::deadline_timer> atimer
                 (std::make_shared<boost::asio::deadline_timer>(*boost::asynchronous::get_io_service<>(),
-                                                                 boost::posix_time::milliseconds(m_time_in_ms_between_requests)));
+                                                                 std::chrono::milliseconds(m_time_in_ms_between_requests)));
 
         std::function<void(const boost::system::error_code&)> checked =
                 [atimer,cb](const boost::system::error_code&){cb();};
@@ -80,7 +80,7 @@ struct queue_size_check_policy: boost::asynchronous::trackable_servant<boost::as
         // start timer to check for work again later
         std::shared_ptr<boost::asio::deadline_timer> atimer
                 (std::make_shared<boost::asio::deadline_timer>(*boost::asynchronous::get_io_service<>(),
-                                                                 boost::posix_time::milliseconds(m_time_in_ms_between_requests)));
+                                                                 std::chrono::milliseconds(m_time_in_ms_between_requests)));
 
         std::function<void(const boost::system::error_code&)> checked =
                 [atimer,cb,this,weak_scheduler](const boost::system::error_code& err)

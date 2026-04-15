@@ -18,7 +18,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                    // as timer servant we use an asio-based scheduler with 1 thread
                                                    boost::asynchronous::create_shared_scheduler_proxy(
                                                        new boost::asynchronous::asio_scheduler<>(1)))
-        , m_timer(get_worker(),boost::posix_time::milliseconds(1000))
+        , m_timer(get_worker(),std::chrono::milliseconds(1000))
     {
     }
     void start_timer()
@@ -34,7 +34,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     void cancel_timer()
     {
         // cancel timer by replacing it by a new one
-        m_timer =  boost::asynchronous::asio_deadline_timer_proxy(get_worker(),boost::posix_time::milliseconds(1000));
+        m_timer =  boost::asynchronous::asio_deadline_timer_proxy(get_worker(),std::chrono::milliseconds(1000));
     }
 private:
     boost::asynchronous::asio_deadline_timer_proxy m_timer;

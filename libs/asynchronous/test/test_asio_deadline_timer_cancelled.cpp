@@ -27,7 +27,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
                                                    // as timer servant we use an asio-based scheduler with 1 thread
                                                    boost::asynchronous::make_shared_scheduler_proxy<
                                                        boost::asynchronous::asio_scheduler<>>(1))
-        , m_timer(get_worker(),boost::posix_time::milliseconds(500))
+        , m_timer(get_worker(),std::chrono::milliseconds(500))
     {
         BOOST_CHECK_MESSAGE(main_thread_id!=boost::this_thread::get_id(),"servant ctor not posted.");
         m_threadid = boost::this_thread::get_id();
@@ -59,7 +59,7 @@ struct Servant : boost::asynchronous::trackable_servant<>
     }
     void timer_cancelled(std::shared_ptr<std::promise<void> > p)
     {
-        m_timer =  boost::asynchronous::asio_deadline_timer_proxy(get_worker(),boost::posix_time::milliseconds(50000));
+        m_timer =  boost::asynchronous::asio_deadline_timer_proxy(get_worker(),std::chrono::milliseconds(50000));
         boost::asynchronous::any_shared_scheduler<> s = get_scheduler().lock();
         std::vector<boost::thread::id> ids = s.thread_ids();
         BOOST_CHECK_MESSAGE(contains_id(ids.begin(),ids.end(),boost::this_thread::get_id()),"timer_cancelled running in wrong thread.");
