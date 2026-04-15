@@ -589,7 +589,7 @@ public:
         return m_scheduler;
     }
     template <class Sub, class Event, class Topic, class ReturnType>
-    boost::asynchronous::subscription_token subscribe_helper(Sub sub, Topic const& subscribed_topic, const std::string& task_name, std::size_t prio)
+    boost::asynchronous::subscription_token subscribe_helper(Sub sub, Topic const& subscribed_topic, const std::string& task_name, std::size_t prio) const
     {
         auto sched = get_scheduler().lock();
         auto weak = get_scheduler();
@@ -681,7 +681,7 @@ public:
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
         const std::string& task_name, std::size_t prio) const
 #else
-        const std::string& task_name = "", std::size_t prio = 0)
+        const std::string& task_name = "", std::size_t prio = 0) const
 #endif        
     {
         using traits = boost::asynchronous::function_traits<Sub>;
@@ -696,7 +696,7 @@ public:
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
         const std::string& task_name, std::size_t prio) const
 #else
-        const std::string& task_name = "", std::size_t prio = 0)
+        const std::string& task_name = "", std::size_t prio = 0) const
 #endif        
        -> typename std::enable_if<std::is_invocable_v<Sub, Event>,
                                   boost::asynchronous::subscription_token>::type
@@ -707,7 +707,7 @@ public:
     // in most cases, unsubscribe is not necessary, a servant not processing an event will be removed from the subscribers list
     // unsubscribe is provided only for corner cases or unit tests (test_full_notification)
     template<class Event>
-    void unsubscribe(boost::asynchronous::subscription_token token)
+    void unsubscribe(boost::asynchronous::subscription_token token) const
     {
         auto sched = get_scheduler().lock();
         if (sched.is_valid())
@@ -733,7 +733,7 @@ public:
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
         const std::string& task_name, std::size_t prio) const
 #else
-        const std::string& task_name = "", std::size_t prio = 0)
+        const std::string& task_name = "", std::size_t prio = 0) const
 #endif        
     {
         using traits = boost::asynchronous::function_traits<Sub>;
@@ -749,7 +749,7 @@ public:
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
         const std::string& task_name, std::size_t prio) const
 #else
-        const std::string& task_name = "", std::size_t prio = 0)
+        const std::string& task_name = "", std::size_t prio = 0) const
 #endif        
         -> typename std::enable_if<std::is_invocable_v<Sub, Event>,
         boost::asynchronous::subscription_token>::type
@@ -761,7 +761,7 @@ public:
 
     template<class Event, class Topic = boost::asynchronous::subscription::no_topic>
     requires boost::asynchronous::subscription::topic_concept<Topic>
-    void unsubscribe(boost::asynchronous::subscription_token token, Topic const& topic)
+    void unsubscribe(boost::asynchronous::subscription_token token, Topic const& topic) const
     {
         auto sched = get_scheduler().lock();
         if (sched.is_valid())
@@ -772,7 +772,7 @@ public:
 
     template <class Event, class Topic = boost::asynchronous::subscription::no_topic>
     requires boost::asynchronous::subscription::topic_concept<Topic>
-    void publish(Event&& e, Topic const& topic)
+    void publish(Event&& e, Topic const& topic) const
     {
         auto sched = get_scheduler().lock();
         if (sched.is_valid())
