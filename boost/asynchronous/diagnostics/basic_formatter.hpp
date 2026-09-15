@@ -142,7 +142,7 @@ public:
         // Separate loops to make sure the diagnostics are fetched as closely to one another as possible
         // Of course, this does not prohibit the compiler from joining the loops, but it may serve as a hint...
         for (std::size_t index = 0; index < m_interfaces.size(); ++index) {
-            diagnostics[index] = m_interfaces[index].clear();
+            diagnostics[index] = m_interfaces[index].get_and_clear();
         }
         // Resize storage as needed
         if (m_current_diagnostics.size() < diagnostics.size()) m_current_diagnostics.resize(diagnostics.size());
