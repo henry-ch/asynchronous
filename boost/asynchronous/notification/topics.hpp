@@ -14,10 +14,12 @@
 #include <string>
 #include <string_view>
 
+#include <boost/asynchronous/detail/has_cpp20.hpp>
 
 
 namespace boost { namespace asynchronous { namespace subscription
 {
+#if BOOST_ASYNCRONOUS_HAS_CPP20
     template<typename T>
     concept topic_concept = requires(T a)
     {
@@ -26,6 +28,7 @@ namespace boost { namespace asynchronous { namespace subscription
         { a != a } -> std::convertible_to<bool>;
         {to_string(a) } -> std::convertible_to<std::string>;
     };
+#endif
 
     // Default topic matching everything => same as no topic
     struct no_topic

@@ -728,7 +728,9 @@ public:
 
     // same with topics
     template <class Sub, class Topic>
+#if BOOST_ASYNCRONOUS_HAS_CPP20
     requires boost::asynchronous::subscription::topic_concept<Topic>
+#endif
     boost::asynchronous::subscription_token subscribe(Sub sub, Topic const& topic,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
         const std::string& task_name, std::size_t prio) const
@@ -744,7 +746,9 @@ public:
     }
 
     template <class Event, class Sub, class Topic>
-    requires boost::asynchronous::subscription::topic_concept<Topic>
+#if BOOST_ASYNCRONOUS_HAS_CPP20
+        requires boost::asynchronous::subscription::topic_concept<Topic>
+#endif
     auto subscribe(Sub sub, Topic const& topic,
 #ifdef BOOST_ASYNCHRONOUS_REQUIRE_ALL_ARGUMENTS
         const std::string& task_name, std::size_t prio) const
@@ -760,7 +764,9 @@ public:
 
 
     template<class Event, class Topic = boost::asynchronous::subscription::no_topic>
-    requires boost::asynchronous::subscription::topic_concept<Topic>
+#if BOOST_ASYNCRONOUS_HAS_CPP20
+        requires boost::asynchronous::subscription::topic_concept<Topic>
+#endif
     void unsubscribe(boost::asynchronous::subscription_token token, Topic const& topic) const
     {
         auto sched = get_scheduler().lock();
@@ -771,7 +777,9 @@ public:
     }
 
     template <class Event, class Topic = boost::asynchronous::subscription::no_topic>
-    requires boost::asynchronous::subscription::topic_concept<Topic>
+#if BOOST_ASYNCRONOUS_HAS_CPP20
+        requires boost::asynchronous::subscription::topic_concept<Topic>
+#endif
     void publish(Event&& e, Topic const& topic) const
     {
         auto sched = get_scheduler().lock();
