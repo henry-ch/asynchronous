@@ -39,7 +39,8 @@ struct some_event
 };
 
 // helper to make sure a subscribe has completed
-void wait_for_subscribe(auto& proxy)
+template <class T>
+void wait_for_subscribe(T& proxy)
 {
     auto p = std::make_shared< std::promise<void>>();
     auto fu = p->get_future();

@@ -55,7 +55,11 @@ namespace boost { namespace asynchronous { namespace subscription
                            std::function<void(std::vector< std::function<void(std::function<void()>)>>)> notify_me_for_new_schedulers)
         {
             // add newcomer
-            m_schedulers.emplace_back(std::move(sched_thread_ids), std::move(exec_in_sched), std::move(notify_me_for_new_schedulers));
+            m_schedulers.emplace_back(scheduler_notify_entry_t{
+                    std::move(sched_thread_ids),
+                    std::move(exec_in_sched),
+                    std::move(notify_me_for_new_schedulers)
+                });
 
             // send newcomer to all already known schedulers
             for (auto& s : m_schedulers)
@@ -109,7 +113,8 @@ namespace boost { namespace asynchronous { namespace subscription
 
     // register a scheduler to a notification proxy, effectively adding it to its "event bus"
     // for unit tests, we can force waiting that the registration has been completed
-    BOOST_ATTRIBUTE_NODISCARD auto register_scheduler_to_notification(auto wsched, auto notification_ptr, bool wait_until_done = false)
+    template <class T, class U>
+    BOOST_ATTRIBUTE_NODISCARD auto register_scheduler_to_notification(T wsched, U notification_ptr, bool wait_until_done = false)
     {
         auto f = [wsched, wait_until_done](std::function<void()> fct)
             {

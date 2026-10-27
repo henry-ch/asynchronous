@@ -54,8 +54,12 @@ namespace boost { namespace asynchronous { namespace subscription
             : m_topic(std::move(channel))
         {
         }
-        inline constexpr bool operator == (auto const& t) const { return  t == m_topic; }
-        inline constexpr bool operator != (auto const& t) const { return t != m_topic; }
+        template <class T>
+        constexpr bool operator == (T const& t) const { return  t == m_topic; }
+
+        template <class T>
+        constexpr bool operator != (T const& t) const { return t != m_topic; }
+
         constexpr bool matches(exact_topic const& t)const { return t.m_topic == m_topic; }
         constexpr bool matches(T const& t)const { return t == m_topic; }
         std::string to_string() const
@@ -78,8 +82,12 @@ namespace boost { namespace asynchronous { namespace subscription
         {
         }
 
-        inline constexpr bool operator == (auto const& t) const { return  t == m_topic; }
-        inline constexpr bool operator != (auto const& t) const { return t != m_topic; }
+        template <class T>
+        constexpr bool operator == (T const& t) const { return  t == m_topic; }
+
+        template <class T>
+        constexpr bool operator != (T const& t) const { return t != m_topic; }
+
         constexpr bool matches(std::string const& t)const 
         { 
             return matches(t, m_topic); 
@@ -132,7 +140,11 @@ namespace boost { namespace asynchronous { namespace subscription
                     return false;
                 }
 
-                if (!((current_token.starts_with(Wildcard) && current_token.size() == 1) || current_token == input_token))
+                const bool is_wildcard =
+                    current_token.size() == 1 &&
+                    current_token.front() == Wildcard;
+
+                if (!is_wildcard && current_token != input_token)
                 {
                     return false;
                 }
