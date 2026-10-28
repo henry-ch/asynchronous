@@ -54,11 +54,11 @@ namespace boost { namespace asynchronous { namespace subscription
             : m_topic(std::move(channel))
         {
         }
-        template <class T>
-        constexpr bool operator == (T const& t) const { return  t == m_topic; }
+        template <class U>
+        constexpr bool operator == (U const& t) const { return  t == m_topic; }
 
-        template <class T>
-        constexpr bool operator != (T const& t) const { return t != m_topic; }
+        template <class U>
+        constexpr bool operator != (U const& t) const { return t != m_topic; }
 
         constexpr bool matches(exact_topic const& t)const { return t.m_topic == m_topic; }
         constexpr bool matches(T const& t)const { return t == m_topic; }
